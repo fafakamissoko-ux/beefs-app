@@ -1,0 +1,46 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+
+export default function NotificationsPage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login?redirect=/notifications');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white font-semibold">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <h1 className="text-4xl font-black text-white mb-8">Notifications</h1>
+        <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl p-12 text-center border border-gray-700">
+          <div className="text-6xl mb-4">🔔</div>
+          <h2 className="text-2xl font-bold text-white mb-2">Bientôt disponible</h2>
+          <p className="text-gray-400">
+            Les notifications seront disponibles prochainement pour te tenir informé de l'activité.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,1385 @@
+'use client';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, Gift, Share2, Heart, X, MoreVertical } from 'lucide-react';
+import { ChatPanel } from './ChatPanel';
+import { PreJoinScreen } from './PreJoinScreen';
+import { TensionButton } from './TensionButton';
+import { ParticipantVideo } from './ParticipantVideo';
+import { useDailyCall } from '@/hooks/useDailyCall';
+import { supabase } from '@/lib/supabase/client';
+import { MultiParticipantGrid } from './MultiParticipantGrid';
+import { InviteParticipantModal } from './InviteParticipantModal';
+
+// Updated: Multi-participant system (2-6 people on the ring)
+
+interface RingParticipant {
+  id: string;
+  name: string;
+  avatar?: string;
+  isMainParticipant: boolean; // Les 2 personnes principales en beef
+  isSpeaking?: boolean;
+  isMuted?: boolean;
+}
+
+interface Participant {
+  id: string;
+  name: string;
+  avatar?: string;
+  isHost: boolean;
+}
+
+interface TikTokStyleArenaProps {
+  host: Participant;
+  challenger?: Participant | null;
+  roomId: string;
+  userId: string;
+  userName: string;
+  viewerCount?: number;
+  tension: number;
+  points: number;
+  debateTitle?: string;
+  dailyRoomUrl?: string | null;
+  onReaction: (emoji: string) => void;
+  onTap: () => void;
+  onGift: () => void;
+  onShare: () => void;
+}
+
+// 🔥 TOP 10 RÉACTIONS (affichées par défaut)
+const TOP_10_REACTIONS = [
+  '👍', '😂', '🔥', '💯', '👏', '😮', '💀', '❤️', '🎉', '🚀'
+];
+
+// 🔥 TOUTES LES RÉACTIONS POPULAIRES (24)
+const POPULAR_REACTIONS = [
+  '👍', '👎', '😂', '🔥', '💯', '👏', '🤔', '😮', '💀', 
+  '🎯', '⚡', '💪', '🧠', '👀', '🤯', '😡', '❤️', '🎉', 
+  '🙌', '💎', '🌟', '✨', '🚀', '💥'
+];
+
+interface VisibleMessage {
+  id: string;
+  user_name: string;
+  content: string;
+  timestamp: number;
+}
+
+interface ParticipationRequest {
+  id: string;
+  user_name: string;
+  user_id: string;
+  timestamp: number;
+}
+
+interface Debater {
+  id: string;
+  name: string;
+  isMuted: boolean;
+  speakingTime: number;
+}
+
+interface UserProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  avatar?: string;
+  bio?: string;
+  isPrivate: boolean;
+  joinedDate: string;
+  stats: {
+    debates: number;
+    wins: number;
+    followers: number;
+    following: number;
+  };
+}
+
+export function TikTokStyleArena({
+  host,
+  challenger,
+  roomId,
+  userId,
+  userName,
+  viewerCount = 0,
+  tension,
+  points,
+  debateTitle = 'Débat en direct',
+  dailyRoomUrl,
+  onReaction,
+  onTap,
+  onGift,
+  onShare,
+}: TikTokStyleArenaProps) {
+  const router = useRouter();
+  // Always start with pre-join screen, regardless of dailyRoomUrl availability
+  const [hasJoined, setHasJoined] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+
+  // Daily.co callObject — gives individual video tracks
+  const { join, leave, toggleMic, toggleCam, isJoined, isJoining, micEnabled, camEnabled,
+    localParticipant, remoteParticipants, error: callError } = useDailyCall(dailyRoomUrl ?? null, userName);
+
+  // Auto-join when user clicked "Rejoindre" AND dailyRoomUrl becomes available
+  useEffect(() => {
+    if (hasJoined && dailyRoomUrl && !isJoined && !isJoining) {
+      join();
+    }
+  }, [hasJoined, dailyRoomUrl, isJoined, isJoining, join]);
+  const [flyingReactions, setFlyingReactions] = useState<Array<{ id: string; emoji: string; x: number }>>([]);
+  const [showMenu, setShowMenu] = useState(false);
+  const [visibleMessages, setVisibleMessages] = useState<VisibleMessage[]>([]);
+  const [showAllReactions, setShowAllReactions] = useState(false); // NEW: Toggle pour afficher toutes les réactions
+  
+  // Moderator controls
+  const isHost = true; // Temporarily set to true for testing - replace with: userId === host.id
+  const [showModeratorPanel, setShowModeratorPanel] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  
+  // Multi-participant system (NEW)
+  const [ringParticipants, setRingParticipants] = useState<RingParticipant[]>([
+    { id: 'p1', name: 'Jean', isMainParticipant: true, isSpeaking: false, isMuted: false },
+    { id: 'p2', name: 'Marc', isMainParticipant: true, isSpeaking: false, isMuted: false },
+  ]);
+  const [participationRequests, setParticipationRequests] = useState<ParticipationRequest[]>([
+    { id: '1', user_name: 'User123', user_id: 'u1', timestamp: Date.now() },
+    { id: '2', user_name: 'DebatLover', user_id: 'u2', timestamp: Date.now() },
+  ]);
+  const [debaters, setDebaters] = useState<Debater[]>([
+    { id: '1', name: 'Challenger 1', isMuted: false, speakingTime: 0 },
+    { id: '2', name: 'Challenger 2', isMuted: false, speakingTime: 0 },
+  ]);
+  const [currentSpeaker, setCurrentSpeaker] = useState<string | null>(null);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timeLimit, setTimeLimit] = useState(60); // seconds
+  const [timeRemaining, setTimeRemaining] = useState(60);
+  const [inviteInput, setInviteInput] = useState('');
+  const [showDebateTitle, setShowDebateTitle] = useState(true);
+  
+  // User profiles
+  const [showProfile, setShowProfile] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
+  
+  // Mock profiles database
+  const mockProfiles: { [key: string]: UserProfile } = {
+    'User123': {
+      id: 'u1',
+      username: 'User123',
+      displayName: 'User 123',
+      bio: 'Passionné de débats et de discussions constructives 💬',
+      isPrivate: false,
+      joinedDate: '2024-01-15',
+      stats: { debates: 45, wins: 23, followers: 1200, following: 456 }
+    },
+    'DebatLover': {
+      id: 'u2',
+      username: 'DebatLover',
+      displayName: 'Debate Lover',
+      bio: 'Toujours prêt pour un bon débat 🔥',
+      isPrivate: false,
+      joinedDate: '2023-11-20',
+      stats: { debates: 89, wins: 51, followers: 3400, following: 890 }
+    },
+    'Challenger 1': {
+      id: '1',
+      username: 'Challenger1',
+      displayName: 'Challenger 1',
+      bio: 'Je ne recule devant aucun argument 💪',
+      isPrivate: false,
+      joinedDate: '2024-03-10',
+      stats: { debates: 12, wins: 8, followers: 234, following: 120 }
+    },
+  };
+
+  const handleReaction = (emoji: string) => {
+    onReaction(emoji);
+    
+    // Add flying reaction
+    const id = Date.now().toString();
+    const x = Math.random() * 55 + 10; // Random position across screen 10-65% (avoids right action buttons)
+    setFlyingReactions(prev => [...prev, { id, emoji, x }]);
+    
+    // Remove after animation
+    setTimeout(() => {
+      setFlyingReactions(prev => prev.filter(r => r.id !== id));
+    }, 3000);
+  };
+
+  // Timer effect
+  useEffect(() => {
+    console.log('⏱️ Timer state:', { timerRunning, timeRemaining, currentSpeaker });
+    if (timerRunning && timeRemaining > 0) {
+      const timer = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            console.log('⏹️ Timer finished for:', currentSpeaker);
+            setTimerRunning(false);
+            // Auto-mute speaker when time is up
+            if (currentSpeaker) {
+              setDebaters(debaters.map(d => 
+                d.id === currentSpeaker ? { ...d, isMuted: true } : d
+              ));
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [timerRunning, timeRemaining, currentSpeaker, debaters]);
+
+  // Subscribe to new messages for TikTok-style display
+  useEffect(() => {
+    console.log('🔔 Subscribing to beef_messages for roomId:', roomId);
+    
+    const channel = supabase
+      .channel(`beef_${roomId}_tiktok_messages`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'beef_messages',
+          filter: `beef_id=eq.${roomId}`,
+        },
+        (payload: any) => {
+          console.log('📨 New message received:', payload.new);
+          
+          const newMessage = {
+            id: payload.new.id,
+            user_name: payload.new.display_name || payload.new.username,
+            content: payload.new.content,
+            timestamp: Date.now(),
+          };
+          
+          console.log('✅ Message formatted:', newMessage);
+          
+          // Add message to visible list
+          setVisibleMessages((prev) => {
+            const updated = [...prev, newMessage].slice(-8); // Keep max 8 messages
+            console.log('📋 Visible messages updated:', updated);
+            return updated;
+          });
+          
+          // Remove message after 20 seconds
+          setTimeout(() => {
+            setVisibleMessages((prev) => prev.filter((msg) => msg.id !== newMessage.id));
+          }, 20000);
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔗 Subscription status:', status);
+      });
+
+    return () => {
+      console.log('🔌 Unsubscribing from beef_messages');
+      channel.unsubscribe();
+    };
+  }, [roomId]);
+
+  // Debate title animation - show for 5s every 60s (1 minute)
+  useEffect(() => {
+    const showTitle = () => {
+      setShowDebateTitle(true);
+      setTimeout(() => {
+        setShowDebateTitle(false);
+      }, 5000); // Hide after 5 seconds
+    };
+
+    // Show initially
+    showTitle();
+
+    // Then repeat every 60 seconds (1 minute)
+    const interval = setInterval(() => {
+      showTitle();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const startTimer = (debaterId: string) => {
+    console.log('🎤 Starting timer for debater:', debaterId, 'Time limit:', timeLimit);
+    setCurrentSpeaker(debaterId);
+    setTimeRemaining(timeLimit);
+    setTimerRunning(true);
+    // Unmute the speaker
+    setDebaters(debaters.map(d => 
+      d.id === debaterId ? { ...d, isMuted: false } : { ...d, isMuted: true }
+    ));
+  };
+
+  const stopTimer = () => {
+    setTimerRunning(false);
+    setCurrentSpeaker(null);
+  };
+
+  const toggleMute = (debaterId: string) => {
+    setDebaters(debaters.map(d => 
+      d.id === debaterId ? { ...d, isMuted: !d.isMuted } : d
+    ));
+  };
+
+  const acceptRequest = (request: ParticipationRequest) => {
+    // Add to debaters list
+    setDebaters([...debaters, {
+      id: request.user_id,
+      name: request.user_name,
+      isMuted: true,
+      speakingTime: 0,
+    }]);
+    // Remove from requests
+    setParticipationRequests(participationRequests.filter(r => r.id !== request.id));
+  };
+
+  const rejectRequest = (requestId: string) => {
+    setParticipationRequests(participationRequests.filter(r => r.id !== requestId));
+  };
+
+  const removeDebater = (debaterId: string) => {
+    setDebaters(debaters.filter(d => d.id !== debaterId));
+  };
+
+  const inviteDebater = () => {
+    if (inviteInput.trim()) {
+      const username = inviteInput.startsWith('@') ? inviteInput.substring(1) : inviteInput;
+      // Check if already exists
+      if (debaters.some(d => d.name === username)) {
+        alert('Ce débatteur est déjà dans le débat');
+        return;
+      }
+      // Add new debater
+      setDebaters([...debaters, {
+        id: Date.now().toString(),
+        name: username,
+        isMuted: true,
+        speakingTime: 0,
+      }]);
+      setInviteInput('');
+    }
+  };
+
+  const openProfile = (username: string) => {
+    const profile = mockProfiles[username];
+    if (profile) {
+      if (profile.isPrivate) {
+        alert('Ce profil est privé');
+        return;
+      }
+      setSelectedProfile(profile);
+      setShowProfile(true);
+    } else {
+      // Create a default profile if not found
+      setSelectedProfile({
+        id: Date.now().toString(),
+        username: username,
+        displayName: username,
+        bio: 'Nouveau sur Arena VS',
+        isPrivate: false,
+        joinedDate: new Date().toISOString().split('T')[0],
+        stats: { debates: 0, wins: 0, followers: 0, following: 0 }
+      });
+      setShowProfile(true);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (chatInput.trim()) {
+      console.log('📤 Sending message:', chatInput.trim());
+      
+      try {
+        // Send message to beef_messages table
+        const { data, error } = await supabase.from('beef_messages').insert({
+          beef_id: roomId,
+          user_id: userId,
+          username: userName,
+          display_name: userName,
+          content: chatInput.trim(),
+          is_pinned: false,
+        }).select();
+        
+        if (error) {
+          console.error('❌ Error sending message:', error);
+        } else {
+          console.log('✅ Message sent successfully:', data);
+        }
+        
+        setChatInput('');
+      } catch (err) {
+        console.error('❌ Exception sending message:', err);
+      }
+    }
+  };
+
+
+  // Join: mark as "ready to join" — the useEffect above triggers join() when dailyRoomUrl is ready
+  const handleJoin = () => {
+    setHasJoined(true);
+  };
+
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  // Leave: show black screen instantly, stop camera, then navigate
+  const handleLeave = useCallback(async () => {
+    setIsLeaving(true); // Immediately cover the video with black screen
+    await leave();
+    router.replace('/feed');
+  }, [leave, router]);
+
+  // Show pre-join screen before entering
+  if (!hasJoined) {
+    return (
+      <div className="w-full h-full relative">
+        <PreJoinScreen userName={userName} onJoin={handleJoin} />
+        {/* Waiting for Daily.co room to be ready */}
+        {!dailyRoomUrl && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm text-orange-400 text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2">
+            <div className="w-3 h-3 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+            Préparation de la room vidéo...
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Waiting for join to complete (dailyRoomUrl just became available)
+  if (hasJoined && dailyRoomUrl && !isJoined && isJoining) {
+    // We're in the process of joining — show arena but with a connecting overlay
+  }
+
+  return (
+    <div className="relative w-full h-full bg-black overflow-hidden">
+      {/* Instant black overlay when leaving — hides camera before tracks stop */}
+      {isLeaving && (
+        <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+            <span className="text-gray-500 text-sm">Déconnexion...</span>
+          </div>
+        </div>
+      )}
+      {/* Video Background — real participant panels (callObject) OR placeholder avatars */}
+      <div className="absolute inset-0 bottom-48 sm:bottom-56">
+        {dailyRoomUrl ? (
+          <>
+            {/* 3-Panel layout: real video for each participant */}
+            <div className="absolute inset-0 flex">
+
+              {/* LEFT — Participant A (first remote) */}
+              <div className="flex-1 relative bg-gradient-to-br from-blue-900/30 to-indigo-900/20 overflow-hidden">
+                {remoteParticipants[0]?.videoTrack ? (
+                  <ParticipantVideo
+                    videoTrack={remoteParticipants[0].videoTrack}
+                    audioTrack={remoteParticipants[0].audioTrack}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                    <div className="w-24 h-24 rounded-full bg-blue-500/30 border-2 border-blue-400/40 flex items-center justify-center text-5xl font-black text-white">
+                      {remoteParticipants[0] ? remoteParticipants[0].userName[0].toUpperCase() : (debaters[0]?.name || 'A')[0].toUpperCase()}
+                    </div>
+                    {!remoteParticipants[0] && (
+                      <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                        <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                        <span className="text-white/70 text-xs font-medium">En attente du challenger...</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Name tag — top */}
+                <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-blue-400" />
+                  <span className="text-white text-xs font-bold">
+                    {remoteParticipants[0]?.userName || debaters[0]?.name || 'Challenger 1'}
+                  </span>
+                </div>
+                {currentSpeaker === '1' && (
+                  <div className="absolute bottom-8 left-2 flex gap-0.5">
+                    {[...Array(4)].map((_, i) => (
+                      <motion.div key={i} animate={{ height: [3, 10, 3] }}
+                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
+                        className="w-1 bg-green-400 rounded-full" style={{ minHeight: 3 }} />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* CENTER — Mediator bubble (local video) — vertically centered */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2 pointer-events-auto">
+                <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                  className="flex flex-col items-center gap-2">
+                  {/* Circle with LOCAL VIDEO — enlarged */}
+                  <div className="relative">
+                    <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden
+                      bg-gradient-to-br from-orange-500 to-red-600 p-[3px] shadow-2xl shadow-orange-500/60"
+                      style={{ filter: 'drop-shadow(0 0 20px rgba(249,115,22,0.5))' }}>
+                      <div className="w-full h-full rounded-full overflow-hidden bg-gray-900">
+                        {localParticipant?.videoTrack ? (
+                          <ParticipantVideo
+                            videoTrack={localParticipant.videoTrack}
+                            muted={true}
+                            mirror={true}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-white font-black text-4xl">
+                              {userName?.[0]?.toUpperCase() || 'M'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {/* LIVE badge */}
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-red-500 rounded-full px-2.5 py-0.5 shadow-lg">
+                      <span className="text-white text-[10px] font-black tracking-widest">LIVE</span>
+                    </div>
+                  </div>
+                  {/* MÉDIATEUR label */}
+                  <div className="bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 rounded-full shadow-lg shadow-orange-500/40">
+                    <span className="text-white text-xs font-black">⚖️ MÉDIATEUR</span>
+                  </div>
+                  {/* Mic/Cam + Controls */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={toggleMic}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-base transition-all shadow ${micEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white shadow-red-500/50'}`}
+                    >
+                      {micEnabled ? '🎤' : '🔇'}
+                    </button>
+                    <button
+                      onClick={toggleCam}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-base transition-all shadow ${camEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white shadow-red-500/50'}`}
+                    >
+                      {camEnabled ? '📹' : '🚫'}
+                    </button>
+                    <button
+                      onClick={() => setShowModeratorPanel(true)}
+                      className="bg-black/80 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1.5
+                        flex items-center gap-1.5 hover:bg-white/10 transition-all text-white shadow"
+                    >
+                      <span className="text-sm">⚙️</span>
+                      <span className="text-xs font-semibold">Contrôles</span>
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* RIGHT — Participant B (second remote) */}
+              <div className="flex-1 relative bg-gradient-to-br from-red-900/30 to-orange-900/20 overflow-hidden">
+                {remoteParticipants[1]?.videoTrack ? (
+                  <ParticipantVideo
+                    videoTrack={remoteParticipants[1].videoTrack}
+                    audioTrack={remoteParticipants[1].audioTrack}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                    <div className="w-24 h-24 rounded-full bg-red-500/30 border-2 border-red-400/40 flex items-center justify-center text-5xl font-black text-white">
+                      {remoteParticipants[1] ? remoteParticipants[1].userName[0].toUpperCase() : (debaters[1]?.name || 'B')[0].toUpperCase()}
+                    </div>
+                    {!remoteParticipants[1] && (
+                      <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                        <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+                        <span className="text-white/70 text-xs font-medium">En attente du challenger...</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Name tag — top */}
+                <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1.5">
+                  <span className="text-white text-xs font-bold">
+                    {remoteParticipants[1]?.userName || debaters[1]?.name || 'Challenger 2'}
+                  </span>
+                  <div className="w-2 h-2 rounded-full bg-red-400" />
+                </div>
+                {currentSpeaker === '2' && (
+                  <div className="absolute bottom-8 right-2 flex gap-0.5">
+                    {[...Array(4)].map((_, i) => (
+                      <motion.div key={i} animate={{ height: [3, 10, 3] }}
+                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
+                        className="w-1 bg-green-400 rounded-full" style={{ minHeight: 3 }} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Joining indicator */}
+            {isJoining && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-30">
+                <div className="bg-black/90 rounded-2xl px-6 py-4 flex items-center gap-3">
+                  <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-white font-semibold">Connexion en cours...</span>
+                </div>
+              </div>
+            )}
+            {callError && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-900/90 border border-red-500 rounded-xl px-4 py-2 z-30">
+                <span className="text-red-300 text-sm">⚠️ {callError}</span>
+              </div>
+            )}
+          </>
+        ) : (
+        /* Placeholder avatars (fallback) */
+        <div className="w-full h-full flex">
+          {/* Challenger 1 Side */}
+          {debaters[0] ? (
+            <div className="flex-1 relative bg-gradient-to-br from-blue-900/20 to-purple-900/20">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <motion.div 
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                  className="text-center"
+                >
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    animate={currentSpeaker === '1' ? { 
+                      boxShadow: [
+                        '0 0 20px rgba(59, 130, 246, 0.5)',
+                        '0 0 40px rgba(59, 130, 246, 0.8)',
+                        '0 0 20px rgba(59, 130, 246, 0.5)',
+                      ]
+                    } : {}}
+                    transition={{ duration: 1.5, repeat: currentSpeaker === '1' ? Infinity : 0 }}
+                    className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-blue-500/40 to-purple-500/40 backdrop-blur-md flex items-center justify-center text-4xl sm:text-6xl mb-2 sm:mb-3 shadow-xl ${
+                      currentSpeaker === '1' ? 'border-4 border-green-400' : 'border-2 border-blue-400/30'
+                    }`}
+                  >
+                    👤
+                  </motion.div>
+                  <div className="bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-xl px-3 sm:px-5 py-1.5 rounded-full border border-white/10 shadow-lg">
+                    <p className="text-white font-black text-sm sm:text-base drop-shadow-lg">{debaters[0].name}</p>
+                  </div>
+                </motion.div>
+              </div>
+              
+              {/* Timer for Challenger 1 */}
+              <AnimatePresence>
+                {(() => {
+                  const shouldShow = currentSpeaker === '1' && timerRunning;
+                  console.log('🕐 Timer condition for Challenger 1:', { currentSpeaker, timerRunning, shouldShow });
+                  return shouldShow;
+                })() && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0, y: -10 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0, opacity: 0, y: -10 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    className="absolute top-16 right-4 bg-black/95 backdrop-blur-xl px-5 py-3 rounded-2xl shadow-2xl z-20"
+                    style={{
+                      borderWidth: '3px',
+                      borderStyle: 'solid',
+                      borderColor: timeRemaining <= 10 ? '#ef4444' : timeRemaining <= 30 ? '#fb923c' : '#4ade80'
+                    }}
+                  >
+                    <div className={`text-4xl font-black tabular-nums ${timeRemaining <= 10 ? 'text-red-500 animate-pulse' : timeRemaining <= 30 ? 'text-orange-400' : 'text-green-400'}`}>
+                      {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
+                    </div>
+                    <div className="text-[10px] text-white/60 text-center mt-1 font-medium">Temps restant</div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <div className="flex-1 relative bg-gradient-to-br from-gray-900/20 to-gray-800/20 flex items-center justify-center">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 }}
+                className="text-center text-white/50"
+              >
+                <motion.div 
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-3xl sm:text-4xl mb-2 border border-white/20"
+                >
+                  👥
+                </motion.div>
+                <p className="text-xs sm:text-sm font-medium">En attente...</p>
+              </motion.div>
+            </div>
+          )}
+
+          {/* Moderator in Center (Host) - Fixed Position */}
+          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20" style={{ transform: 'translate(-50%, -50%)' }}>
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ 
+                type: 'spring', 
+                stiffness: 200, 
+                damping: 15,
+                delay: 0.3 
+              }}
+              className="relative flex flex-col items-center"
+            >
+              {/* Moderator Bubble */}
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 to-pink-500 p-1 shadow-2xl">
+                <div className="w-full h-full rounded-full bg-black flex items-center justify-center text-3xl sm:text-4xl">
+                  👤
+                </div>
+              </div>
+              
+              {/* Moderator Badge - Clickable for host, shows host name for spectators */}
+              <div className="mt-2 relative">
+                {isHost ? (
+                  <button
+                    onClick={() => setShowModeratorPanel(!showModeratorPanel)}
+                    className="bg-gradient-to-r from-yellow-400 to-orange-500 px-3 py-1 rounded-full shadow-lg whitespace-nowrap cursor-pointer hover:from-yellow-500 hover:to-orange-600 transition-colors"
+                  >
+                    <span className="text-black text-[10px] sm:text-xs font-black">🎛️ CONTRÔLES</span>
+                  </button>
+                ) : (
+                  <div className="bg-gradient-to-r from-yellow-400 to-orange-500 px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
+                    <span className="text-black text-[10px] sm:text-xs font-black">{host.name}</span>
+                  </div>
+                )}
+                
+                {/* Debate Title - Dynamic animation - Absolute position to not affect layout */}
+                <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                  <AnimatePresence>
+                    {showDebateTitle && (
+                      <motion.div
+                        initial={{ scale: 0, opacity: 0, y: -10 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0, opacity: 0, y: -10 }}
+                        transition={{ 
+                          type: 'spring', 
+                          stiffness: 300, 
+                          damping: 20 
+                        }}
+                        className="bg-gradient-to-r from-purple-500/95 via-pink-500/95 to-red-500/95 backdrop-blur-xl px-4 py-1.5 rounded-full shadow-2xl border-2 border-white/30"
+                      >
+                        <h2 className="text-white text-[10px] sm:text-xs font-black text-center drop-shadow-lg">
+                          {debateTitle}
+                        </h2>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Challenger 2 Side (or waiting) */}
+          {debaters[1] ? (
+            <div className="flex-1 relative bg-gradient-to-br from-red-900/20 to-orange-900/20">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <motion.div 
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.1 }}
+                  className="text-center"
+                >
+                  <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    animate={currentSpeaker === '2' ? { 
+                      boxShadow: [
+                        '0 0 20px rgba(239, 68, 68, 0.5)',
+                        '0 0 40px rgba(239, 68, 68, 0.8)',
+                        '0 0 20px rgba(239, 68, 68, 0.5)',
+                      ]
+                    } : {}}
+                    transition={{ duration: 1.5, repeat: currentSpeaker === '2' ? Infinity : 0 }}
+                    className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-red-500/40 to-orange-500/40 backdrop-blur-md flex items-center justify-center text-4xl sm:text-6xl mb-2 sm:mb-3 shadow-xl ${
+                      currentSpeaker === '2' ? 'border-4 border-green-400' : 'border-2 border-red-400/30'
+                    }`}
+                  >
+                    👤
+                  </motion.div>
+                  <div className="bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-xl px-3 sm:px-5 py-1.5 rounded-full border border-white/10 shadow-lg">
+                    <p className="text-white font-black text-sm sm:text-base drop-shadow-lg">{debaters[1].name}</p>
+                  </div>
+                </motion.div>
+              </div>
+              
+              {/* Timer for Challenger 2 */}
+              <AnimatePresence>
+                {(() => {
+                  const shouldShow = currentSpeaker === '2' && timerRunning;
+                  console.log('🕑 Timer condition for Challenger 2:', { currentSpeaker, timerRunning, shouldShow });
+                  return shouldShow;
+                })() && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0, y: -10 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0, opacity: 0, y: -10 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    className="absolute top-16 left-4 bg-black/95 backdrop-blur-xl px-5 py-3 rounded-2xl shadow-2xl z-20"
+                    style={{
+                      borderWidth: '3px',
+                      borderStyle: 'solid',
+                      borderColor: timeRemaining <= 10 ? '#ef4444' : timeRemaining <= 30 ? '#fb923c' : '#4ade80'
+                    }}
+                  >
+                    <div className={`text-4xl font-black tabular-nums ${timeRemaining <= 10 ? 'text-red-500 animate-pulse' : timeRemaining <= 30 ? 'text-orange-400' : 'text-green-400'}`}>
+                      {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
+                    </div>
+                    <div className="text-[10px] text-white/60 text-center mt-1 font-medium">Temps restant</div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <div className="flex-1 relative bg-gradient-to-br from-gray-900/20 to-gray-800/20 flex items-center justify-center">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 }}
+                className="text-center text-white/50"
+              >
+                <motion.div 
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-3xl sm:text-4xl mb-2 border border-white/20"
+                >
+                  👥
+                </motion.div>
+                <p className="text-xs sm:text-sm font-medium">En attente...</p>
+              </motion.div>
+            </div>
+          )}
+        </div>
+        )} {/* end placeholder conditional */}
+      </div>
+
+      {/* Top Overlay - Fixed Button Position */}
+      <div className="fixed top-0 left-0 right-0 z-30 p-2 sm:p-3">
+        <div className="flex items-center justify-between">
+          {/* Left: Minimal Host Info */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 p-[2px]">
+              <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
+                <span className="text-white font-bold text-xs sm:text-sm">{userName ? userName[0].toUpperCase() : 'U'}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-white font-semibold text-xs sm:text-sm drop-shadow-lg">{userName}</span>
+              <button className="bg-pink-500 hover:bg-pink-600 px-2 py-0.5 rounded text-white text-[10px] font-bold">
+                Suivre
+              </button>
+            </div>
+          </div>
+
+          {/* Right: Actions with Fixed Width */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={onShare}
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+            >
+              <Share2 className="w-3.5 h-3.5 text-white" />
+            </button>
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+            >
+              <MoreVertical className="w-3.5 h-3.5 text-white" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side - Action Buttons */}
+      <div className="absolute right-2 sm:right-3 bottom-52 sm:bottom-60 z-30 flex flex-col gap-3">
+        {/* Like Button */}
+        <motion.button
+          whileTap={{ scale: 0.85 }}
+          onClick={() => handleReaction('❤️')}
+          className="flex flex-col items-center gap-0.5 touch-manipulation"
+        >
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+            <Heart className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-pink-500" />
+          </div>
+          <span className="text-white text-[10px] font-semibold">{Math.floor(tension * 10)}K</span>
+        </motion.button>
+
+        {/* Comments Count */}
+        <motion.button
+          whileTap={{ scale: 0.85 }}
+          className="flex flex-col items-center gap-0.5 touch-manipulation"
+        >
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+            <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L2 22l5.71-.97C9 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.38 0-2.68-.3-3.86-.84l-.29-.15-2.99.51.51-2.99-.15-.29C4.3 14.68 4 13.38 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/>
+            </svg>
+          </div>
+          <span className="text-white text-[10px] font-semibold">156</span>
+        </motion.button>
+
+        {/* Gift Button */}
+        <motion.button
+          whileTap={{ scale: 0.85 }}
+          onClick={onGift}
+          className="flex flex-col items-center gap-0.5 touch-manipulation"
+        >
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+            <Gift className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          </div>
+          <span className="text-white text-[10px] font-semibold">Gift</span>
+        </motion.button>
+
+        {/* Share Button */}
+        <motion.button
+          whileTap={{ scale: 0.85 }}
+          onClick={onShare}
+          className="flex flex-col items-center gap-0.5 touch-manipulation"
+        >
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+            <Share2 className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          </div>
+          <span className="text-white text-[10px] font-semibold">Share</span>
+        </motion.button>
+      </div>
+
+      {/* Bottom Space - Reserved for Comments (TikTok Style) */}
+      <div className="absolute bottom-0 left-0 right-0 h-48 sm:h-56 z-10 bg-gradient-to-t from-black via-black/98 to-black/80"></div>
+
+      {/* Live Comments - TikTok Style (appearing and disappearing) */}
+      <div className="absolute bottom-28 sm:bottom-32 left-0 right-16 sm:right-20 z-20 pointer-events-none">
+        <div className="px-3 flex flex-col gap-1.5 justify-end">
+          <AnimatePresence>
+            {visibleMessages.map((message) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, x: -20, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -20, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="inline-block max-w-[80%]"
+              >
+                <div className="inline-flex items-baseline gap-1 bg-black/60 backdrop-blur-md rounded-xl px-2.5 py-1.5">
+                  <button 
+                    onClick={() => openProfile(message.user_name)}
+                    className="text-[11px] font-bold text-pink-400 hover:text-pink-300 cursor-pointer"
+                  >
+                    {message.user_name}
+                  </button>
+                  <span className="text-xs text-white/95">{message.content}</span>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Bottom Bar — Reactions + Input + TensionButton */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-auto">
+        {/* Row 1: Reactions + Tension button */}
+        <div className="px-3 pt-4 pb-1 flex items-center gap-2">
+          {/* Scrollable reactions */}
+          <div className="flex-1 overflow-x-auto hide-scrollbar">
+            <div className="flex gap-2">
+              {(showAllReactions ? POPULAR_REACTIONS : TOP_10_REACTIONS).map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleReaction(emoji)}
+                  className="flex-shrink-0 w-10 h-10 flex items-center justify-center text-xl bg-white/10 backdrop-blur-sm rounded-full touch-manipulation hover:bg-white/20 active:scale-95 transition-all"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* "+" toggle reactions */}
+          <button
+            onClick={() => setShowAllReactions(!showAllReactions)}
+            className={`flex-shrink-0 w-10 h-10 flex items-center justify-center text-lg font-black rounded-full touch-manipulation transition-all ${
+              showAllReactions
+                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/50'
+                : 'bg-white/10 backdrop-blur-sm text-white hover:bg-orange-500/50'
+            }`}
+          >
+            {showAllReactions ? '−' : '+'}
+          </button>
+
+          {/* Tension Button */}
+          <TensionButton tension={tension} onTap={onTap} />
+        </div>
+
+        {/* Row 1.5: Leave button — always visible once in arena */}
+        <div className="px-3 pb-1 flex justify-end">
+          <button
+            onClick={handleLeave}
+            className="bg-red-600/90 hover:bg-red-700 active:bg-red-800 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg transition-all flex items-center gap-1.5"
+          >
+            <span>📴</span>
+            <span>Quitter</span>
+          </button>
+        </div>
+
+        {/* Row 2: Comment input */}
+        <div className="px-3 pb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-xs">{userName ? userName[0].toUpperCase() : 'U'}</span>
+            </div>
+            <div className="flex-1">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder="Ajouter un commentaire..."
+                className="w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 text-white placeholder-white/50 text-sm focus:outline-none focus:bg-white/15"
+              />
+            </div>
+            {chatInput.trim() && (
+              <button
+                onClick={handleSendMessage}
+                className="flex-shrink-0 bg-pink-500 rounded-full w-9 h-9 flex items-center justify-center shadow-lg"
+              >
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Flying Reactions Animation (TikTok Style) - Enhanced */}
+      <AnimatePresence>
+        {flyingReactions.map((reaction) => (
+          <motion.div
+            key={reaction.id}
+            initial={{ y: 0, opacity: 0, scale: 0.5, rotate: -20 }}
+            animate={{ 
+              y: [-20, -520], 
+              opacity: [0, 1, 1, 0],
+              scale: [0.5, 1.4, 1.2, 0.8, 0.5],
+              x: [0, 15, -15, 10, 0],
+              rotate: [-20, 10, -10, 5, 0],
+            }}
+            exit={{ opacity: 0, scale: 0 }}
+            transition={{ 
+              duration: 3.5, 
+              ease: [0.23, 1, 0.32, 1],
+              opacity: { times: [0, 0.1, 0.7, 1] },
+            }}
+            className="absolute bottom-40 text-5xl sm:text-6xl lg:text-7xl z-30 pointer-events-none"
+            style={{ 
+              left: `${reaction.x}%`,
+              filter: 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.5))',
+            }}
+          >
+            {reaction.emoji}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      {/* Moderator Control Panel with Overlay */}
+      <AnimatePresence mode="wait">
+        {isHost && showModeratorPanel && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40"
+          >
+            {/* Overlay - Click to close */}
+            <div
+              onClick={() => setShowModeratorPanel(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            
+            {/* Panel */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-0 right-0 bottom-0 w-72 sm:w-80 bg-black/95 backdrop-blur-xl border-l border-white/20 z-10 overflow-y-auto"
+            >
+              {/* Header - Fixed with close button */}
+              <div className="sticky top-0 bg-gradient-to-r from-yellow-400 to-orange-500 p-3 flex items-center justify-between z-50 shadow-lg">
+                <h2 className="text-black font-black text-base sm:text-lg">🎛️ Contrôles</h2>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowModeratorPanel(false);
+                  }} 
+                  className="text-black hover:bg-black/20 rounded-full p-1.5 transition-all hover:rotate-90"
+                >
+                  <X className="w-5 h-5 font-bold" strokeWidth={3} />
+                </button>
+              </div>
+
+            <div className="p-3 space-y-3">
+              {/* Timer Controls */}
+              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                <h3 className="text-white font-bold text-sm mb-2 flex items-center gap-2">
+                  <span>⏱️</span> Temps de parole
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white/70 text-sm">Durée:</span>
+                    <input
+                      type="number"
+                      value={timeLimit}
+                      onChange={(e) => setTimeLimit(parseInt(e.target.value) || 60)}
+                      className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm w-20"
+                    />
+                    <span className="text-white/70 text-sm">secondes</span>
+                  </div>
+                  {timerRunning && (
+                    <div className="bg-black/40 rounded-lg p-3">
+                      <div className="text-center mb-2">
+                        <span className={`text-3xl font-black ${timeRemaining <= 10 ? 'text-red-500' : 'text-white'}`}>
+                          {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
+                        </span>
+                      </div>
+                      <button
+                        onClick={stopTimer}
+                        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded"
+                      >
+                        ⏹️ Arrêter
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Debaters Control */}
+              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                <h3 className="text-white font-bold text-sm mb-2 flex items-center gap-2">
+                  <span>👥</span> Débatteurs
+                </h3>
+                <div className="space-y-2">
+                  {debaters.map((debater) => (
+                    <div key={debater.id} className="bg-black/40 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => openProfile(debater.name)}
+                          className="text-white font-semibold text-sm hover:text-pink-400 cursor-pointer"
+                        >
+                          {debater.name}
+                        </button>
+                        <button
+                          onClick={() => removeDebater(debater.id)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => startTimer(debater.id)}
+                          disabled={timerRunning}
+                          className={`flex-1 py-1.5 rounded text-xs font-bold ${
+                            currentSpeaker === debater.id
+                              ? 'bg-green-500 text-white'
+                              : 'bg-white/10 text-white hover:bg-white/20'
+                          } disabled:opacity-50`}
+                        >
+                          {currentSpeaker === debater.id ? '🎤 Parle' : '▶️ Donner parole'}
+                        </button>
+                        <button
+                          onClick={() => toggleMute(debater.id)}
+                          className={`px-3 py-1.5 rounded text-xs font-bold ${
+                            debater.isMuted
+                              ? 'bg-red-500/20 text-red-400'
+                              : 'bg-green-500/20 text-green-400'
+                          }`}
+                        >
+                          {debater.isMuted ? '🔇' : '🔊'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Invite Debater by ID */}
+              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                <h3 className="text-white font-bold text-sm mb-2 flex items-center gap-2">
+                  <span>➕</span> Inviter un débatteur
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">@</span>
+                      <input
+                        type="text"
+                        value={inviteInput}
+                        onChange={(e) => setInviteInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && inviteDebater()}
+                        placeholder="username"
+                        className="w-full bg-white/10 border border-white/20 rounded-lg pl-8 pr-3 py-2 text-white placeholder-white/40 text-sm focus:outline-none focus:bg-white/15 focus:border-yellow-500/50"
+                      />
+                    </div>
+                    <button
+                      onClick={inviteDebater}
+                      className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold px-4 py-2 rounded-lg"
+                    >
+                      ➕
+                    </button>
+                  </div>
+                  <p className="text-white/40 text-xs">Ex: @username ou username</p>
+                </div>
+              </div>
+
+              {/* Participation Requests */}
+              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                <h3 className="text-white font-bold text-sm mb-2 flex items-center gap-2">
+                  <span>✋</span> Demandes ({participationRequests.length})
+                </h3>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {participationRequests.length === 0 ? (
+                    <p className="text-white/50 text-sm text-center py-4">Aucune demande</p>
+                  ) : (
+                    participationRequests.map((request) => (
+                      <div key={request.id} className="bg-black/40 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <button
+                            onClick={() => openProfile(request.user_name)}
+                            className="text-white font-semibold text-sm hover:text-pink-400 cursor-pointer"
+                          >
+                            {request.user_name}
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => acceptRequest(request)}
+                            className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-1.5 rounded text-xs"
+                          >
+                            ✓ Accepter
+                          </button>
+                          <button
+                            onClick={() => rejectRequest(request.id)}
+                            className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-1.5 rounded text-xs"
+                          >
+                            ✗ Refuser
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                <h3 className="text-white font-bold text-sm mb-2">⚡ Actions rapides</h3>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setDebaters(debaters.map(d => ({ ...d, isMuted: true })))}
+                    className="w-full bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold py-2 rounded text-sm"
+                  >
+                    🔇 Tout couper
+                  </button>
+                  <button
+                    onClick={() => setDebaters(debaters.map(d => ({ ...d, isMuted: false })))}
+                    className="w-full bg-green-500/20 hover:bg-green-500/30 text-green-400 font-bold py-2 rounded text-sm"
+                  >
+                    🔊 Tout activer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* User Profile Modal */}
+      <AnimatePresence>
+        {showProfile && selectedProfile && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowProfile(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-gradient-to-b from-gray-900 to-black border border-white/20 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl"
+            >
+              {/* Header with gradient */}
+              <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 p-6 relative">
+                <button
+                  onClick={() => setShowProfile(false)}
+                  className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <div className="flex flex-col items-center">
+                  <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-4xl mb-3 border-2 border-white/30">
+                    {selectedProfile.avatar || selectedProfile.displayName[0].toUpperCase()}
+                  </div>
+                  <h2 className="text-white font-black text-xl">{selectedProfile.displayName}</h2>
+                  <p className="text-white/80 text-sm">@{selectedProfile.username}</p>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-4">
+                {/* Bio */}
+                {selectedProfile.bio && (
+                  <div>
+                    <p className="text-white/90 text-sm text-center">{selectedProfile.bio}</p>
+                  </div>
+                )}
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                    <div className="text-2xl font-black text-white">{selectedProfile.stats.debates}</div>
+                    <div className="text-xs text-white/60">Débats</div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                    <div className="text-2xl font-black text-green-400">{selectedProfile.stats.wins}</div>
+                    <div className="text-xs text-white/60">Victoires</div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                    <div className="text-2xl font-black text-pink-400">{selectedProfile.stats.followers}</div>
+                    <div className="text-xs text-white/60">Abonnés</div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                    <div className="text-2xl font-black text-blue-400">{selectedProfile.stats.following}</div>
+                    <div className="text-xs text-white/60">Abonnements</div>
+                  </div>
+                </div>
+
+                {/* Member since */}
+                <div className="text-center text-white/40 text-xs">
+                  Membre depuis {new Date(selectedProfile.joinedDate).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <button className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold py-2.5 rounded-xl">
+                    Suivre
+                  </button>
+                  <button className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-2.5 rounded-xl border border-white/20">
+                    Message
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <style jsx global>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
+    </div>
+  );
+}
