@@ -7,7 +7,21 @@ import { detectUserCountry, calculatePrice, calculateFraudScore, COUNTRIES } fro
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { packId, userId } = body;
+    const { packId } = body;
+
+    // Verify auth — get userId from session, not from body
+    const authHeader = request.headers.get('authorization');
+    let userId = body.userId || 'temp';
+
+    if (authHeader) {
+      const supabaseAuth = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: { user } } = await supabaseAuth.auth.getUser();
+      if (user) userId = user.id;
+    }
 
     console.log('Checkout request:', { packId, userId });
 

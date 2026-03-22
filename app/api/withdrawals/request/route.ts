@@ -11,10 +11,28 @@ const MIN_POINTS = 2000; // 20€ minimum
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { userId, amountPoints, method, iban, accountHolderName, paypalEmail, mobileNumber, mobileOperator } = body;
+    // Verify authenticated user via Supabase auth
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
 
-    if (!userId || !amountPoints || !method) {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { amountPoints, method, iban, accountHolderName, paypalEmail, mobileNumber, mobileOperator } = body;
+    const userId = authUser.id;
+
+    if (!amountPoints || !method) {
       return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 });
     }
 

@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { BeefCard } from '@/components/BeefCard';
+import { useToast } from '@/components/Toast';
 
 interface UserProfile {
   id: string;
@@ -44,6 +45,7 @@ export default function PublicProfilePage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { toast } = useToast();
   const username = params.username as string;
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -167,7 +169,7 @@ export default function PublicProfilePage() {
       }
     } catch (error) {
       console.error('Error toggling follow:', error);
-      alert('Erreur lors de l\'action');
+      toast('Erreur lors de l\'action', 'error');
     } finally {
       setFollowLoading(false);
     }
@@ -183,7 +185,7 @@ export default function PublicProfilePage() {
       });
     } else {
       navigator.clipboard.writeText(url);
-      alert('Lien copié dans le presse-papiers!');
+      toast('Lien copié dans le presse-papiers!', 'success');
     }
   };
 

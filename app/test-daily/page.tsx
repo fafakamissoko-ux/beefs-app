@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { DailyVideo } from '@/components/DailyVideo';
 import { supabase } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { useToast } from '@/components/Toast';
 
 export default function DailyTestPage() {
+  const { toast } = useToast();
   const [roomUrl, setRoomUrl] = useState<string | null>(null);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -156,7 +158,7 @@ export default function DailyTestPage() {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(roomUrl);
-                    alert('URL copiée!');
+                    toast('URL copiée!', 'success');
                   }}
                   className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold"
                 >

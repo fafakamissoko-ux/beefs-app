@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Flame, Calendar, AlertTriangle, FileText, X, ArrowRight, Search, UserPlus, Check, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/Toast';
 
 interface BeefParticipant {
   user_id: string;
@@ -32,6 +33,7 @@ interface CreateBeefFormProps {
 
 export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,12 +66,11 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
 
   // Add tag
   const addTag = (tag: string) => {
-    // Remove $ if present and clean
-    const cleanTag = tag.replace(/^\$/, '').trim().toLowerCase();
+    const cleanTag = tag.replace(/^[#$]/, '').trim().toLowerCase();
     
     if (!cleanTag) return;
     if (beefData.tags.length >= 10) {
-      alert('Maximum 10 tags par beef');
+      toast('Maximum 10 tags par beef', 'info');
       return;
     }
     if (beefData.tags.includes(cleanTag)) return;
@@ -93,7 +94,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   // Handle tag input change — show popular as default + filter on type
   const handleTagInput = (value: string) => {
     setTagInput(value);
-    const searchTerm = value.replace(/^\$/, '').toLowerCase();
+    const searchTerm = value.replace(/^[#$]/, '').toLowerCase();
     const available = POPULAR_TAGS.filter(t => !beefData.tags.includes(t));
     if (searchTerm.length > 0) {
       // Filter matching tags + keep non-matching at end for discovery
@@ -200,7 +201,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
     if (s === 1) {
       if (!beefData.title.trim()) errors.title = 'Le titre est obligatoire.';
       else if (beefData.title.trim().length <= 3) errors.title = 'Le titre doit faire au moins 4 caractères.';
-      if (beefData.tags.length === 0) errors.tags = 'Ajoute au moins 1 tag ($motclé).';
+      if (beefData.tags.length === 0) errors.tags = 'Ajoute au moins 1 tag (#motclé).';
     }
     if (s === 3) {
       if (!beefData.description.trim()) errors.description = 'La description est obligatoire.';
@@ -259,12 +260,12 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 w-full border-2 border-orange-500/50 shadow-2xl"
+          className="bg-surface-2 rounded-2xl p-6 w-full border-2 border-brand-500/50 shadow-2xl"
         >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center text-xl">
+            <div className="w-10 h-10 brand-gradient rounded-full flex items-center justify-center text-xl">
               🎭
             </div>
             <div>
@@ -287,7 +288,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
               key={s}
               className={`h-1 flex-1 rounded-full ${
                 s <= step
-                  ? 'bg-gradient-to-r from-red-500 to-orange-500'
+                  ? 'brand-gradient'
                   : 'bg-gray-700'
               }`}
             />
@@ -310,7 +311,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                 value={beefData.title}
                 onChange={(e) => { updateData('title', e.target.value); setFieldErrors(p => { const n = {...p}; delete n.title; return n; }); }}
                 placeholder="Ex: Idée de startup volée, Conflit d'associés, Argent non remboursé..."
-                className={`w-full bg-black/40 border rounded-lg px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors ${fieldErrors.title ? 'border-red-500' : 'border-gray-700 focus:border-orange-500'}`}
+                className={`w-full bg-white/[0.04] border rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors ${fieldErrors.title ? 'border-red-500' : 'border-white/[0.06] focus:border-brand-500'}`}
                 maxLength={100}
               />
               {fieldErrors.title
@@ -320,7 +321,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
 
             <div>
               <label className="block text-white font-semibold mb-2 text-sm flex items-center gap-2">
-                <span className="text-orange-500 text-lg">$</span>
+                <span className="text-brand-400 text-lg">#</span>
                 Tags (maximum 10)
               </label>
               <p className="text-gray-400 text-xs mb-2">
@@ -330,16 +331,16 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
               {/* Tag Input */}
               <div className="relative">
                 <div className="flex gap-2">
-                  <div className="flex flex-wrap gap-2 bg-black/40 border border-gray-700 rounded-lg p-2 min-h-[44px] flex-1">
+                    <div className="flex flex-wrap gap-2 bg-white/[0.04] border border-white/[0.06] rounded-xl p-2 min-h-[44px] flex-1">
                     {/* Display added tags */}
                     {beefData.tags.map((tag) => (
                       <motion.div
                         key={tag}
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="flex items-center gap-1 bg-gradient-to-r from-orange-500 to-red-500 text-black px-2 py-1 rounded-full text-xs font-bold"
+                        className="flex items-center gap-1 brand-gradient text-black px-2 py-1 rounded-full text-xs font-bold"
                       >
-                        <span>${tag}</span>
+                        <span>#{tag}</span>
                         <button
                           onClick={() => removeTag(tag)}
                           className="hover:bg-black/20 rounded-full p-0.5 transition-colors"
@@ -355,8 +356,8 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                         {/* Ghost text overlay — shows predicted completion */}
                         {suggestedTags[0] && tagInput && (
                           <span className="absolute inset-0 flex items-center text-sm pointer-events-none select-none">
-                            <span className="invisible">{tagInput.replace(/^\$/, '')}</span>
-                            <span className="text-gray-600">{suggestedTags[0].slice(tagInput.replace(/^\$/, '').length)}</span>
+                            <span className="invisible">{tagInput.replace(/^[#$]/, '')}</span>
+                            <span className="text-gray-600">{suggestedTags[0].slice(tagInput.replace(/^[#$]/, '').length)}</span>
                           </span>
                         )}
                         <input
@@ -391,11 +392,11 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                         onMouseDown={() => addTag(tag)}
                         className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all
                           ${i === 0 && tagInput
-                            ? 'bg-orange-500/25 border border-orange-500/50 text-orange-300'
-                            : 'bg-gray-800 border border-gray-700 text-gray-300 hover:border-orange-500/40 hover:text-orange-300'
+                            ? 'bg-brand-500/25 border border-brand-500/50 text-brand-300'
+                            : 'bg-gray-800 border border-gray-700 text-gray-300 hover:border-brand-500/40 hover:text-brand-300'
                           }`}
                       >
-                        <span className="text-orange-400/70">$</span>
+                        <span className="text-brand-400/70">#</span>
                         {tag}
                       </button>
                     ))}
@@ -419,7 +420,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                 value={beefData.scheduled_at}
                 onChange={(e) => updateData('scheduled_at', e.target.value)}
                 min={new Date().toISOString().slice(0, 16)}
-                className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
               />
               <p className="text-gray-400 text-xs mt-1">
                 {beefData.scheduled_at ? '📅 Le beef sera programmé' : '🔴 Le beef démarre après validation'}
@@ -454,11 +455,11 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                     searchUsers(e.target.value);
                   }}
                   placeholder="Rechercher un utilisateur..."
-                  className="w-full bg-black/40 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-4 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                 />
                 {searching && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
                   </div>
                 )}
               </div>
@@ -472,14 +473,14 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                       onClick={() => addParticipant(result, beefData.participants.length < 2)}
                       className="w-full flex items-center gap-2 p-2 hover:bg-white/5 transition-colors text-left"
                     >
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white font-bold text-sm">
+                      <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white font-bold text-sm">
                         {result.display_name?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-white font-semibold text-sm truncate">{result.display_name || result.username}</p>
                         <p className="text-gray-400 text-xs truncate">@{result.username}</p>
                       </div>
-                      <UserPlus className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                      <UserPlus className="w-4 h-4 text-brand-400 flex-shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -498,7 +499,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                       key={participant.user_id}
                       className="flex items-center gap-2 p-2 bg-black/40 border border-gray-700 rounded-lg"
                     >
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white font-bold text-sm">
+                      <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white font-bold text-sm">
                         {participant.display_name[0].toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -509,7 +510,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                         onClick={() => toggleMainParticipant(participant.user_id)}
                         className={`px-2 py-1 rounded-full text-xs font-bold transition-all flex-shrink-0 ${
                           participant.is_main
-                            ? 'bg-orange-500 text-black'
+                            ? 'bg-brand-500 text-black'
                             : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
                         }`}
                       >
@@ -556,7 +557,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                 onChange={(e) => { updateData('description', e.target.value); setFieldErrors(p => { const n = {...p}; delete n.description; return n; }); }}
                 placeholder="Décrivez le conflit : Que s'est-il passé ? Quels sont les enjeux ? Qu'attendez-vous de cette médiation ?"
                 rows={10}
-                className={`w-full bg-black/40 border rounded-lg px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors resize-y ${fieldErrors.description ? 'border-red-500' : 'border-gray-700 focus:border-orange-500'}`}
+                className={`w-full bg-white/[0.04] border rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors resize-y ${fieldErrors.description ? 'border-red-500' : 'border-white/[0.06] focus:border-brand-500'}`}
                 maxLength={1000}
               />
               <div className="flex items-center justify-between mt-2">
@@ -584,7 +585,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                   type="checkbox"
                   checked={beefData.is_premium}
                   onChange={(e) => updateData('is_premium', e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-700 text-orange-500 focus:ring-orange-500"
+                  className="w-4 h-4 rounded border-gray-700 text-brand-500 focus:ring-brand-500"
                 />
                 <div className="flex-1">
                   <span className="text-white font-semibold flex items-center gap-2 text-sm">
@@ -603,7 +604,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                     onChange={(e) => updateData('price', Number(e.target.value))}
                     min="1"
                     max="100"
-                    className="w-full bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500 transition-colors"
                   />
                 </div>
               )}
@@ -635,7 +636,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                       value={beefData.scheduled_at}
                       onChange={(e) => updateData('scheduled_at', e.target.value)}
                       min={new Date().toISOString().slice(0, 16)}
-                      className="w-full bg-black/40 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
                     />
                   </div>
                 )}
@@ -643,8 +644,8 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
             )}
 
             {/* Summary */}
-            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3">
-              <p className="text-orange-400 font-bold mb-2 text-sm">📋 Récapitulatif</p>
+            <div className="bg-brand-500/10 border border-brand-500/30 rounded-xl p-3">
+              <p className="text-brand-400 font-bold mb-2 text-sm">📋 Récapitulatif</p>
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Titre:</span>
@@ -701,7 +702,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
           {step < 3 ? (
             <button
               onClick={handleNext}
-              className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-lg"
+              className="flex-1 brand-gradient hover:opacity-90 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-lg"
             >
               Continuer
               <ArrowRight className="w-4 h-4" />
@@ -710,7 +711,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-lg"
+              className="flex-1 brand-gradient hover:opacity-90 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-lg"
             >
               {loading ? (
                 <>

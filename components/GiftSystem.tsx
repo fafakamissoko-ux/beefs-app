@@ -28,29 +28,33 @@ interface GiftSystemProps {
 }
 
 const giftConfig = {
-  flame: {
+  rose: {
     icon: Flame,
-    label: 'Flamme',
-    color: 'text-arena-red',
-    cost: '10',
+    label: 'Rose',
+    color: 'text-pink-400',
+    cost: 10,
+    giftTypeId: 'rose',
+  },
+  fire: {
+    icon: Flame,
+    label: 'Fire',
+    color: 'text-brand-400',
+    cost: 25,
+    giftTypeId: 'fire',
   },
   crown: {
     icon: Crown,
     label: 'Couronne',
     color: 'text-yellow-400',
-    cost: '50',
-  },
-  lightning: {
-    icon: Zap,
-    label: 'Éclair',
-    color: 'text-arena-blue',
-    cost: '25',
+    cost: 100,
+    giftTypeId: 'crown',
   },
   diamond: {
     icon: Diamond,
     label: 'Diamant',
     color: 'text-purple-400',
-    cost: '100',
+    cost: 50,
+    giftTypeId: 'diamond',
   },
 };
 
@@ -59,32 +63,29 @@ export function GiftSystem({ roomId, userId, targetUserId, targetUserName }: Gif
   const [animatedGifts, setAnimatedGifts] = useState<AnimatedGift[]>([]);
 
   useEffect(() => {
-    // Subscribe to new gifts
     const channel = supabase
-      .channel(`room_${roomId}_gifts`)
+      .channel(`beef_${roomId}_gifts`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'gifts',
-          filter: `room_id=eq.${roomId}`,
+          filter: `beef_id=eq.${roomId}`,
         },
         (payload) => {
-          const gift = payload.new as Gift;
-          
-          // Animate gift if it's for this target
-          if (gift.to_user_id === targetUserId) {
+          const gift = payload.new as any;
+
+          if (gift.recipient_id === targetUserId) {
             const animGift: AnimatedGift = {
               id: gift.id,
-              type: gift.gift_type,
+              type: gift.gift_type_id as any,
               x: Math.random() * 80 + 10,
               y: Math.random() * 30 + 60,
             };
-            
+
             setAnimatedGifts((prev) => [...prev, animGift]);
-            
-            // Remove after animation
+
             setTimeout(() => {
               setAnimatedGifts((prev) => prev.filter((g) => g.id !== animGift.id));
             }, 2000);
@@ -99,11 +100,13 @@ export function GiftSystem({ roomId, userId, targetUserId, targetUserName }: Gif
   }, [roomId, targetUserId]);
 
   const sendGift = async (giftType: keyof typeof giftConfig) => {
+    const config = giftConfig[giftType];
     await supabase.from('gifts').insert({
-      room_id: roomId,
-      from_user_id: userId,
-      to_user_id: targetUserId,
-      gift_type: giftType,
+      beef_id: roomId,
+      sender_id: userId,
+      recipient_id: targetUserId,
+      gift_type_id: config.giftTypeId,
+      points_amount: config.cost,
     });
 
     setShowGiftMenu(false);
@@ -151,7 +154,7 @@ export function GiftSystem({ roomId, userId, targetUserId, targetUserName }: Gif
             </div>
 
             <div className="text-xs text-gray-500 mt-3 text-center">
-              💡 Simulé pour la démo
+              Le coût est déduit de vos points
             </div>
           </motion.div>
         )}

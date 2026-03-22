@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { PremiumBadge, PremiumAvatarFrame } from '@/components/PremiumBadge';
 import { BeefCard } from '@/components/BeefCard';
+import { useToast } from '@/components/Toast';
 
 interface UserProfile {
   id: string;
@@ -55,6 +56,7 @@ interface Beef {
 export default function ProfileContent() {
   const router = useRouter();
   const { user } = useAuth();
+  const { toast } = useToast();
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [stats, setStats] = useState<UserStats>({
@@ -324,7 +326,7 @@ export default function ProfileContent() {
 
       } catch (error) {
         console.error('Error loading profile:', error);
-        alert('Erreur lors du chargement du profil. Vérifie la console.');
+        toast('Erreur lors du chargement du profil. Vérifie la console.', 'error');
       } finally {
         setLoading(false);
       }
@@ -368,9 +370,13 @@ export default function ProfileContent() {
     }
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/withdrawals/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`,
+        },
         body: JSON.stringify(body),
       });
       const data = await res.json();
@@ -413,10 +419,10 @@ export default function ProfileContent() {
       if (updateError) throw updateError;
 
       setProfile((prev) => prev ? { ...prev, avatar_url: data.publicUrl } : null);
-      alert('Avatar mis à jour avec succès!');
+      toast('Avatar mis à jour avec succès!', 'success');
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      alert('Erreur lors de l\'upload de l\'avatar.');
+      toast('Erreur lors de l\'upload de l\'avatar.', 'error');
     } finally {
       setUploading(false);
     }
@@ -424,10 +430,37 @@ export default function ProfileContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white font-semibold">Chargement du profil...</p>
+      <div className="min-h-screen bg-black">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          {/* Cover skeleton */}
+          <div className="skeleton h-40 rounded-2xl mb-6" />
+          {/* Avatar + info skeleton */}
+          <div className="flex items-end gap-4 -mt-16 mb-6 px-4">
+            <div className="skeleton w-24 h-24 rounded-full ring-4 ring-black" />
+            <div className="flex-1 space-y-2 pb-2">
+              <div className="skeleton h-6 w-40" />
+              <div className="skeleton h-4 w-24" />
+            </div>
+          </div>
+          {/* Stats skeleton */}
+          <div className="flex gap-6 mb-6 px-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="skeleton h-8 w-20 rounded-lg" />
+            ))}
+          </div>
+          {/* Tabs skeleton */}
+          <div className="card p-6">
+            <div className="flex gap-4 mb-6">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="skeleton h-10 w-28 rounded-xl" />
+              ))}
+            </div>
+            <div className="space-y-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="skeleton h-24 rounded-xl" />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -447,7 +480,7 @@ export default function ProfileContent() {
   const showPremiumFrame = profile.is_premium && profile.premium_settings?.showPremiumFrame;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
+    <div className="min-h-screen bg-black">
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Back button */}
         <button
@@ -459,9 +492,9 @@ export default function ProfileContent() {
         </button>
 
         {/* Profile Header */}
-        <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-3xl border border-gray-700 overflow-hidden mb-6">
+        <div className="card rounded-3xl overflow-hidden mb-6">
           {/* Cover Image */}
-          <div className="h-48 bg-gradient-to-r from-red-500/20 via-orange-500/20 to-yellow-500/20 relative">
+          <div className="h-48 bg-gradient-to-r from-brand-500/20 via-brand-400/20 to-brand-300/20 relative">
             <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10"></div>
           </div>
 
@@ -481,7 +514,7 @@ export default function ProfileContent() {
                   )}
                 </div>
 
-                <label className="absolute bottom-0 right-0 w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-orange-600 transition-colors">
+                <label className="absolute bottom-0 right-0 w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-brand-600 transition-colors">
                   <Camera className="w-5 h-5 text-white" />
                   <input
                     type="file"
@@ -494,13 +527,28 @@ export default function ProfileContent() {
               </div>
 
               <div className="flex gap-2">
-                <button className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white font-semibold transition-colors flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    const shareData = {
+                      title: `${profile.display_name} sur Beefs`,
+                      text: `Regarde le profil de ${profile.display_name} sur Beefs !`,
+                      url: `${window.location.origin}/profile/${profile.username}`,
+                    };
+                    if (navigator.share) {
+                      try { await navigator.share(shareData); } catch (_) {}
+                    } else {
+                      await navigator.clipboard.writeText(shareData.url);
+                      toast('Lien copié !', 'success');
+                    }
+                  }}
+                  className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-white font-semibold transition-colors flex items-center gap-2"
+                >
                   <Share2 className="w-4 h-4" />
                   Partager
                 </button>
                 <Link
                   href="/settings"
-                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-brand-500 hover:bg-brand-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
                 >
                   <Settings className="w-4 h-4" />
                   Modifier
@@ -535,7 +583,7 @@ export default function ProfileContent() {
                 <span className="text-gray-400 text-sm ml-1">Abonnements</span>
               </div>
               <div className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-orange-500" />
+                <Flame className="w-5 h-5 text-brand-400" />
                 <span className="text-2xl font-black text-white">{profile.points}</span>
                 <span className="text-gray-400 text-sm">Points</span>
               </div>
@@ -544,13 +592,13 @@ export default function ProfileContent() {
         </div>
 
         {/* Tabs */}
-        <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl border border-gray-700 p-6">
+        <div className="card rounded-2xl p-6">
           <div className="flex gap-4 mb-6 border-b border-gray-700 pb-4">
             <button
               onClick={() => setActiveTab('stats')}
               className={`px-4 py-2 font-semibold rounded-lg transition-colors ${
                 activeTab === 'stats'
-                  ? 'bg-orange-500 text-white'
+                  ? 'bg-brand-500 text-white'
                   : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -561,7 +609,7 @@ export default function ProfileContent() {
               onClick={() => setActiveTab('debates')}
               className={`px-4 py-2 font-semibold rounded-lg transition-colors ${
                 activeTab === 'debates'
-                  ? 'bg-orange-500 text-white'
+                  ? 'bg-brand-500 text-white'
                   : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
@@ -636,24 +684,24 @@ export default function ProfileContent() {
                 {/* Unresolved */}
                 <button
                   onClick={() => setSelectedResolutionFilter(selectedResolutionFilter === 'unresolved' ? null : 'unresolved')}
-                  className={`bg-gradient-to-br from-orange-500/10 to-orange-600/5 border rounded-xl p-4 text-left transition-all hover:scale-105 ${
+                  className={`bg-gradient-to-br from-brand-500/10 to-brand-600/5 border rounded-xl p-4 text-left transition-all hover:scale-105 ${
                     selectedResolutionFilter === 'unresolved' 
-                      ? 'border-orange-500 ring-2 ring-orange-500/50' 
-                      : 'border-orange-500/30'
+                      ? 'border-brand-500 ring-2 ring-brand-500/50' 
+                      : 'border-brand-500/30'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
-                      <X className="w-5 h-5 text-orange-400" />
+                    <div className="w-10 h-10 bg-brand-500/20 rounded-full flex items-center justify-center">
+                      <X className="w-5 h-5 text-brand-400" />
                     </div>
                     <div>
                       <p className="text-2xl font-black text-white">{stats.beefs_unresolved}</p>
-                      <p className="text-orange-400 text-xs font-semibold">Non résolus</p>
+                      <p className="text-brand-400 text-xs font-semibold">Non résolus</p>
                     </div>
                   </div>
                   <p className="text-gray-400 text-xs">Médiation sans accord</p>
                   {selectedResolutionFilter === 'unresolved' && (
-                    <p className="text-orange-400 text-xs mt-2 font-semibold">✓ Filtre actif</p>
+                    <p className="text-brand-400 text-xs mt-2 font-semibold">✓ Filtre actif</p>
                   )}
                 </button>
 
@@ -802,7 +850,7 @@ export default function ProfileContent() {
                   <p className="text-gray-400 mb-4">Aucun beef pour le moment</p>
                   <Link
                     href="/live"
-                    className="inline-block px-6 py-3 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold rounded-lg transition-all"
+                    className="inline-block px-6 py-3 brand-gradient hover:opacity-90 text-black font-bold rounded-xl transition-all"
                   >
                     Créer un beef
                   </Link>
@@ -835,10 +883,10 @@ export default function ProfileContent() {
 
               {/* Solde insuffisant */}
               {(profile?.points || 0) < 2000 && (
-                <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 mb-6 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-orange-400 mt-0.5 flex-shrink-0" />
+                <div className="bg-brand-500/10 border border-brand-500/30 rounded-xl p-4 mb-6 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-brand-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-orange-300 font-semibold text-sm">Minimum non atteint</p>
+                    <p className="text-brand-300 font-semibold text-sm">Minimum non atteint</p>
                     <p className="text-gray-400 text-sm">
                       Il vous faut au moins <strong>20€</strong> (2 000 pts) pour retirer. Il vous manque{' '}
                       {((Math.max(0, 2000 - (profile?.points || 0))) / 100).toFixed(0)}€.
@@ -880,7 +928,7 @@ export default function ProfileContent() {
                   <div className="bg-white/5 rounded-xl p-5 mb-2">
                     <label className="text-gray-300 text-sm font-semibold block mb-3">
                       Méthode de retrait
-                      {!withdrawalMethod && <span className="text-orange-400 ml-2 text-xs">← Sélectionnez une méthode</span>}
+                      {!withdrawalMethod && <span className="text-brand-400 ml-2 text-xs">← Sélectionnez une méthode</span>}
                     </label>
                     <div className="grid grid-cols-1 gap-2">
                       {[
@@ -1202,7 +1250,7 @@ export default function ProfileContent() {
                         </div>
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                           r.status === 'paid'       ? 'bg-green-500/20 text-green-400' :
-                          r.status === 'pending'    ? 'bg-orange-500/20 text-orange-400' :
+                          r.status === 'pending'    ? 'bg-brand-500/20 text-brand-400' :
                           r.status === 'processing' ? 'bg-blue-500/20 text-blue-400' :
                                                       'bg-red-500/20 text-red-400'
                         }`}>

@@ -4,29 +4,24 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { AtSign, Lock, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase/client';
 import { BeefLogo } from '@/components/BeefLogo';
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn, user } = useAuth();
-  
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Redirect if already logged in
   useEffect(() => {
-    if (user) {
-      const redirect = searchParams.get('redirect') || '/live';
-      router.push(redirect);
-    }
+    if (user) router.push(searchParams.get('redirect') || '/feed');
   }, [user, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,107 +29,95 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const { error: signInError } = await signIn(formData.email, formData.password);
+    let email = identifier;
 
-    if (signInError) {
-      setError('Email ou mot de passe incorrect');
-      setLoading(false);
-    } else {
-      const redirect = searchParams.get('redirect') || '/live';
-      router.push(redirect);
+    // If not an email, look up by username (case-insensitive)
+    if (!identifier.includes('@')) {
+      const { data } = await supabase
+        .from('users')
+        .select('email')
+        .ilike('username', identifier)
+        .single();
+
+      if (!data?.email) {
+        setError('Utilisateur introuvable');
+        setLoading(false);
+        return;
+      }
+      email = data.email;
     }
+
+    const { error: signInError } = await signIn(email, password);
+    if (signInError) { setError('Identifiant ou mot de passe incorrect'); setLoading(false); }
+    else { router.push(searchParams.get('redirect') || '/feed'); }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center p-4">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="max-w-md w-full"
-      >
-        {/* Logo */}
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-[120px]" style={{ background: 'rgba(232, 58, 20, 0.06)' }} />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full blur-[120px]" style={{ background: 'rgba(0, 229, 255, 0.04)' }} />
+      </div>
+
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="relative max-w-sm w-full">
         <div className="text-center mb-8">
-          <BeefLogo size={64} className="mx-auto mb-4" />
-          <h1 className="text-3xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
-            Beefs
-          </h1>
-          <p className="text-gray-400 mt-2">Connexion à ton compte</p>
+          <BeefLogo size={48} className="mx-auto mb-3" />
+          <h1 className="text-2xl font-extrabold text-gradient tracking-tight">Beefs</h1>
+          <p className="text-gray-500 text-sm mt-1">Connecte-toi pour continuer</p>
         </div>
 
-        {/* Form */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700">
+        <div className="card p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Error Alert */}
             {error && (
-              <div className="bg-red-500/10 border border-red-500 rounded-lg p-3 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                <p className="text-red-500 text-sm">{error}</p>
-              </div>
+              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2.5 px-4 py-3 rounded-xl" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <p className="text-red-400 text-sm">{error}</p>
+              </motion.div>
             )}
 
-            {/* Email */}
             <div>
-              <label className="block text-white font-semibold mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Pseudo ou email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <AtSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="ton@email.com"
-                  className="w-full bg-black/40 border border-gray-700 rounded-lg pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="ton_pseudo ou email"
+                  className="input-field pl-10"
                   required
                 />
               </div>
             </div>
 
-            {/* Password */}
             <div>
-              <label className="block text-white font-semibold mb-2">Mot de passe</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-medium text-gray-300">Mot de passe</label>
+                <Link href="/forgot-password" className="text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors">Oublié ?</Link>
+              </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="••••••••"
-                  className="w-full bg-black/40 border border-gray-700 rounded-lg pl-10 pr-12 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••" className="input-field pl-10 pr-11" required />
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            {/* Forgot Password */}
-            <div className="text-right">
-              <Link href="/forgot-password" className="text-orange-500 hover:text-orange-400 text-sm font-semibold">
-                Mot de passe oublié?
-              </Link>
-            </div>
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {loading ? 'Connexion...' : 'Se connecter'}
+            <button type="submit" disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] brand-gradient hover:shadow-glow">
+              {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                : <><span>Se connecter</span><ArrowRight className="w-4 h-4" /></>}
             </button>
           </form>
 
-          {/* Signup Link */}
           <div className="mt-6 text-center">
-            <p className="text-gray-400">
-              Pas encore de compte?{' '}
-              <Link href="/signup" className="text-orange-500 hover:text-orange-400 font-semibold">
-                S'inscrire
-              </Link>
+            <p className="text-sm text-gray-500">
+              Pas encore inscrit ?{' '}
+              <Link href="/signup" className="text-brand-400 hover:text-brand-300 font-medium transition-colors">Créer un compte</Link>
             </p>
           </div>
         </div>

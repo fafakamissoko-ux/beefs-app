@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Clock, Plus, TrendingUp, Flame, Eye, Crown, Lock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { CreateBeefForm } from '@/components/CreateBeefForm';
+import { useToast } from '@/components/Toast';
 
 // Feed logic like X/Twitter: "Pour vous" = algorithmic, "Abonnements" = chronological
 
@@ -35,6 +36,7 @@ interface Room {
 export default function ArenaLobbyPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [liveRooms, setLiveRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -186,7 +188,7 @@ export default function ArenaLobbyPage() {
 
   const handleCreateBeef = async (beefData: any) => {
     if (!user) {
-      alert('Vous devez être connecté pour créer un beef');
+      toast('Vous devez être connecté pour créer un beef', 'error');
       router.push('/login');
       return;
     }
@@ -271,7 +273,7 @@ export default function ArenaLobbyPage() {
     if (!selectedRoom || !selectedRoom.price) return;
     
     if (userBalance < selectedRoom.price) {
-      alert('Solde insuffisant! Rechargez vos points.');
+      toast('Solde insuffisant! Rechargez vos points.', 'error');
       return;
     }
 

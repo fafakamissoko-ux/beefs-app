@@ -2,152 +2,176 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 5, 5, 8;
-  --background-end-rgb: 10, 10, 15;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-/* TikTok-style animations */
-@keyframes float-up {
-  from {
-    transform: translateY(0) scale(1);
-    opacity: 1;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
-  to {
-    transform: translateY(-100px) scale(1.2);
-    opacity: 0;
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #000000;
+    color: #FAFAFA;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
-}
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(255, 255, 255, 0.4);
-  }
-}
-
-@keyframes slide-in-right {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes fade-in-up {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* Custom scrollbar - TikTok style */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* TikTok-style utilities */
-.glass-effect {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Touch optimizations */
-@media (hover: none) and (pointer: coarse) {
   * {
-    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+
+  ::selection {
+    background: rgba(232, 58, 20, 0.3);
+    color: white;
   }
 }
 
-/* Chaos mode overlay */
-.chaos-mode {
-  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+@layer components {
+  /* Glass effect */
+  .glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* Brand gradient — fire */
+  .brand-gradient {
+    background: linear-gradient(135deg, #FF6B2C 0%, #E83A14 50%, #C42D0E 100%);
+  }
+
+  /* Text gradient */
+  .text-gradient {
+    background: linear-gradient(135deg, #FF6B2C, #E83A14);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply px-5 py-2.5 text-white font-semibold rounded-xl transition-all duration-200 active:scale-[0.97] shadow-sm;
+    background: linear-gradient(135deg, #FF6B2C, #E83A14);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #E83A14, #C42D0E);
+    box-shadow: 0 0 24px rgba(232, 58, 20, 0.35);
+  }
+
+  .btn-secondary {
+    @apply px-5 py-2.5 text-white font-semibold rounded-xl transition-all duration-200 active:scale-[0.97];
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  /* Inputs */
+  .input-field {
+    @apply w-full rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none transition-all duration-200;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .input-field:focus {
+    border-color: rgba(232, 58, 20, 0.5);
+    box-shadow: 0 0 0 3px rgba(232, 58, 20, 0.1);
+  }
+
+  /* Cards */
+  .card {
+    @apply rounded-2xl transition-all duration-200;
+    background: #111114;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .card-interactive {
+    @apply rounded-2xl transition-all duration-200 cursor-pointer;
+    background: #111114;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .card-interactive:hover {
+    background: #18181C;
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+  .card-interactive:active {
+    transform: scale(0.98);
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold;
+  }
+  .badge-live {
+    @apply badge text-red-400;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+  .badge-scheduled {
+    @apply badge text-cyan-400;
+    background: rgba(0, 229, 255, 0.1);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+  }
+  .badge-ended {
+    @apply badge text-gray-400;
+    background: rgba(107, 114, 128, 0.12);
+    border: 1px solid rgba(107, 114, 128, 0.2);
+  }
+
+  /* Skeleton */
+  .skeleton {
+    @apply animate-pulse rounded-lg;
+    background: rgba(255, 255, 255, 0.06);
+  }
 }
 
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* Thin scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* Touch */
+@media (hover: none) and (pointer: coarse) {
+  * { -webkit-tap-highlight-color: transparent; }
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Chaos mode */
+.chaos-mode { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
 .chaos-mode::after {
   content: '';
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 0, 85, 0.2) 0%, rgba(184, 0, 255, 0.2) 100%);
+  inset: 0;
+  background: linear-gradient(135deg, rgba(232, 58, 20, 0.15) 0%, rgba(184, 0, 255, 0.15) 100%);
   pointer-events: none;
   z-index: 9999;
-  animation: pulse 0.5s ease-in-out infinite;
 }
 
-/* Neon glow effects */
-.neon-blue {
-  text-shadow: 0 0 10px #00F0FF, 0 0 20px #00F0FF, 0 0 30px #00F0FF;
+/* Animations */
+@keyframes float-up {
+  from { transform: translateY(0) scale(1); opacity: 1; }
+  to { transform: translateY(-100px) scale(1.2); opacity: 0; }
 }
-
-.neon-red {
-  text-shadow: 0 0 10px #FF0055, 0 0 20px #FF0055, 0 0 30px #FF0055;
-}
-
-.neon-purple {
-  text-shadow: 0 0 10px #B800FF, 0 0 20px #B800FF, 0 0 30px #B800FF;
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }

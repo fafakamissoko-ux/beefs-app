@@ -35,7 +35,7 @@ export function PremiumBadge({ user, size = 'md', animated = false }: PremiumBad
     <span
       className={`
         inline-flex items-center gap-1
-        bg-gradient-to-r from-yellow-400 to-orange-500
+        bg-gradient-to-r from-yellow-400 to-brand-400
         text-black font-bold rounded
         ${sizeClasses[size]}
       `}

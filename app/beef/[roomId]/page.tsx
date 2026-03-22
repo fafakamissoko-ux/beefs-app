@@ -9,6 +9,7 @@ import { InviteParticipantModal } from '@/components/InviteParticipantModal';
 import { supabase } from '@/lib/supabase/client';
 import { useDailyRoom } from '@/hooks/useDailyRoom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/Toast';
 
 interface RingParticipant {
   id: string;
@@ -31,6 +32,7 @@ export default function BeefSessionPage() {
   const params = useParams();
   const roomId = params.roomId as string;
   const { user } = useAuth();
+  const { toast } = useToast();
   
   // Mock data - replace with real data from Supabase
   const currentUserId = user?.id || 'mock-user';
@@ -156,7 +158,7 @@ export default function BeefSessionPage() {
   const handleRemoveParticipant = (participantId: string) => {
     // Can remove ANY participant, including main ones
     if (ringParticipants.length <= 1) {
-      alert('Il faut au moins 1 participant!');
+      toast('Il faut au moins 1 participant!', 'error');
       return;
     }
     setRingParticipants(ringParticipants.filter(p => p.id !== participantId));

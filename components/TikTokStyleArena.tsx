@@ -12,6 +12,7 @@ import { useDailyCall } from '@/hooks/useDailyCall';
 import { supabase } from '@/lib/supabase/client';
 import { MultiParticipantGrid } from './MultiParticipantGrid';
 import { InviteParticipantModal } from './InviteParticipantModal';
+import { useToast } from '@/components/Toast';
 
 // Updated: Multi-participant system (2-6 people on the ring)
 
@@ -114,6 +115,7 @@ export function TikTokStyleArena({
   onShare,
 }: TikTokStyleArenaProps) {
   const router = useRouter();
+  const { toast } = useToast();
   // Always start with pre-join screen, regardless of dailyRoomUrl availability
   const [hasJoined, setHasJoined] = useState(false);
   const [chatInput, setChatInput] = useState('');
@@ -133,24 +135,61 @@ export function TikTokStyleArena({
   const [visibleMessages, setVisibleMessages] = useState<VisibleMessage[]>([]);
   const [showAllReactions, setShowAllReactions] = useState(false); // NEW: Toggle pour afficher toutes les réactions
   
-  // Moderator controls
-  const isHost = true; // Temporarily set to true for testing - replace with: userId === host.id
+  // Moderator controls — check if current user is the beef creator
+  const isHost = userId === host.id;
   const [showModeratorPanel, setShowModeratorPanel] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   
-  // Multi-participant system (NEW)
-  const [ringParticipants, setRingParticipants] = useState<RingParticipant[]>([
-    { id: 'p1', name: 'Jean', isMainParticipant: true, isSpeaking: false, isMuted: false },
-    { id: 'p2', name: 'Marc', isMainParticipant: true, isSpeaking: false, isMuted: false },
-  ]);
-  const [participationRequests, setParticipationRequests] = useState<ParticipationRequest[]>([
-    { id: '1', user_name: 'User123', user_id: 'u1', timestamp: Date.now() },
-    { id: '2', user_name: 'DebatLover', user_id: 'u2', timestamp: Date.now() },
-  ]);
-  const [debaters, setDebaters] = useState<Debater[]>([
-    { id: '1', name: 'Challenger 1', isMuted: false, speakingTime: 0 },
-    { id: '2', name: 'Challenger 2', isMuted: false, speakingTime: 0 },
-  ]);
+  // Participant roles from DB — maps Daily.co userNames to beef roles
+  const [participantRoles, setParticipantRoles] = useState<Record<string, { role: string; name: string }>>({});
+  const [liveViewerCount, setLiveViewerCount] = useState(viewerCount);
+
+  // Load beef participants from Supabase to map roles
+  useEffect(() => {
+    const loadParticipants = async () => {
+      const { data } = await supabase
+        .from('beef_participants')
+        .select('user_id, role, is_main, users!beef_participants_user_id_fkey(username, display_name)')
+        .eq('beef_id', roomId);
+
+      if (data) {
+        const roles: Record<string, { role: string; name: string }> = {};
+        data.forEach((p: any) => {
+          const name = p.users?.display_name || p.users?.username || 'Participant';
+          roles[p.user_id] = { role: p.role, name };
+        });
+        setParticipantRoles(roles);
+      }
+    };
+    loadParticipants();
+  }, [roomId]);
+
+  // Track viewer count — increment on join, decrement on leave
+  useEffect(() => {
+    if (!isJoined) return;
+
+    // Increment viewer count
+    supabase.rpc('increment_viewer_count', { beef_id: roomId }).then(() => {});
+    setLiveViewerCount(prev => prev + 1);
+
+    return () => {
+      supabase.rpc('decrement_viewer_count', { beef_id: roomId }).then(() => {});
+    };
+  }, [isJoined, roomId]);
+
+  // Sort remote participants: main challengers first based on roles
+  const sortedRemoteParticipants = [...remoteParticipants].sort((a, b) => {
+    const roleA = participantRoles[a.sessionId]?.role;
+    const roleB = participantRoles[b.sessionId]?.role;
+    if (roleA === 'participant' && roleB !== 'participant') return -1;
+    if (roleA !== 'participant' && roleB === 'participant') return 1;
+    return 0;
+  });
+
+  // Multi-participant system
+  const [ringParticipants, setRingParticipants] = useState<RingParticipant[]>([]);
+  const [participationRequests, setParticipationRequests] = useState<ParticipationRequest[]>([]);
+  const [debaters, setDebaters] = useState<Debater[]>([]);
   const [currentSpeaker, setCurrentSpeaker] = useState<string | null>(null);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timeLimit, setTimeLimit] = useState(60); // seconds
@@ -347,7 +386,7 @@ export function TikTokStyleArena({
       const username = inviteInput.startsWith('@') ? inviteInput.substring(1) : inviteInput;
       // Check if already exists
       if (debaters.some(d => d.name === username)) {
-        alert('Ce débatteur est déjà dans le débat');
+        toast('Ce débatteur est déjà dans le débat', 'info');
         return;
       }
       // Add new debater
@@ -365,7 +404,7 @@ export function TikTokStyleArena({
     const profile = mockProfiles[username];
     if (profile) {
       if (profile.isPrivate) {
-        alert('Ce profil est privé');
+        toast('Ce profil est privé', 'info');
         return;
       }
       setSelectedProfile(profile);
@@ -435,8 +474,8 @@ export function TikTokStyleArena({
         <PreJoinScreen userName={userName} onJoin={handleJoin} />
         {/* Waiting for Daily.co room to be ready */}
         {!dailyRoomUrl && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm text-orange-400 text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2">
-            <div className="w-3 h-3 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm text-brand-400 text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2">
+            <div className="w-3 h-3 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
             Préparation de la room vidéo...
           </div>
         )}
@@ -469,18 +508,18 @@ export function TikTokStyleArena({
 
               {/* LEFT — Participant A (first remote) */}
               <div className="flex-1 relative bg-gradient-to-br from-blue-900/30 to-indigo-900/20 overflow-hidden">
-                {remoteParticipants[0]?.videoTrack ? (
+                {sortedRemoteParticipants[0]?.videoTrack ? (
                   <ParticipantVideo
-                    videoTrack={remoteParticipants[0].videoTrack}
-                    audioTrack={remoteParticipants[0].audioTrack}
+                    videoTrack={sortedRemoteParticipants[0].videoTrack}
+                    audioTrack={sortedRemoteParticipants[0].audioTrack}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                     <div className="w-24 h-24 rounded-full bg-blue-500/30 border-2 border-blue-400/40 flex items-center justify-center text-5xl font-black text-white">
-                      {remoteParticipants[0] ? remoteParticipants[0].userName[0].toUpperCase() : (debaters[0]?.name || 'A')[0].toUpperCase()}
+                      {sortedRemoteParticipants[0] ? sortedRemoteParticipants[0].userName[0].toUpperCase() : 'A'}
                     </div>
-                    {!remoteParticipants[0] && (
+                    {!sortedRemoteParticipants[0] && (
                       <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full">
                         <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
                         <span className="text-white/70 text-xs font-medium">En attente du challenger...</span>
@@ -492,7 +531,7 @@ export function TikTokStyleArena({
                 <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full bg-blue-400" />
                   <span className="text-white text-xs font-bold">
-                    {remoteParticipants[0]?.userName || debaters[0]?.name || 'Challenger 1'}
+                    {sortedRemoteParticipants[0]?.userName || 'Challenger 1'}
                   </span>
                 </div>
                 {currentSpeaker === '1' && (
@@ -513,8 +552,8 @@ export function TikTokStyleArena({
                   {/* Circle with LOCAL VIDEO — enlarged */}
                   <div className="relative">
                     <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden
-                      bg-gradient-to-br from-orange-500 to-red-600 p-[3px] shadow-2xl shadow-orange-500/60"
-                      style={{ filter: 'drop-shadow(0 0 20px rgba(249,115,22,0.5))' }}>
+                      bg-gradient-to-br from-brand-400 to-brand-600 p-[3px] shadow-2xl shadow-brand-500/60"
+                      style={{ filter: 'drop-shadow(0 0 20px rgba(255,107,44,0.5))' }}>
                       <div className="w-full h-full rounded-full overflow-hidden bg-gray-900">
                         {localParticipant?.videoTrack ? (
                           <ParticipantVideo
@@ -538,7 +577,7 @@ export function TikTokStyleArena({
                     </div>
                   </div>
                   {/* MÉDIATEUR label */}
-                  <div className="bg-gradient-to-r from-orange-500 to-red-500 px-3 py-1 rounded-full shadow-lg shadow-orange-500/40">
+                  <div className="brand-gradient px-3 py-1 rounded-full shadow-lg shadow-brand-500/40">
                     <span className="text-white text-xs font-black">⚖️ MÉDIATEUR</span>
                   </div>
                   {/* Mic/Cam + Controls */}
@@ -568,19 +607,19 @@ export function TikTokStyleArena({
               </div>
 
               {/* RIGHT — Participant B (second remote) */}
-              <div className="flex-1 relative bg-gradient-to-br from-red-900/30 to-orange-900/20 overflow-hidden">
-                {remoteParticipants[1]?.videoTrack ? (
+              <div className="flex-1 relative bg-gradient-to-br from-red-900/30 to-brand-900/20 overflow-hidden">
+                {sortedRemoteParticipants[1]?.videoTrack ? (
                   <ParticipantVideo
-                    videoTrack={remoteParticipants[1].videoTrack}
-                    audioTrack={remoteParticipants[1].audioTrack}
+                    videoTrack={sortedRemoteParticipants[1].videoTrack}
+                    audioTrack={sortedRemoteParticipants[1].audioTrack}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                     <div className="w-24 h-24 rounded-full bg-red-500/30 border-2 border-red-400/40 flex items-center justify-center text-5xl font-black text-white">
-                      {remoteParticipants[1] ? remoteParticipants[1].userName[0].toUpperCase() : (debaters[1]?.name || 'B')[0].toUpperCase()}
+                      {sortedRemoteParticipants[1] ? sortedRemoteParticipants[1].userName[0].toUpperCase() : 'B'}
                     </div>
-                    {!remoteParticipants[1] && (
+                    {!sortedRemoteParticipants[1] && (
                       <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full">
                         <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
                         <span className="text-white/70 text-xs font-medium">En attente du challenger...</span>
@@ -591,7 +630,7 @@ export function TikTokStyleArena({
                 {/* Name tag — top */}
                 <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1.5">
                   <span className="text-white text-xs font-bold">
-                    {remoteParticipants[1]?.userName || debaters[1]?.name || 'Challenger 2'}
+                    {sortedRemoteParticipants[1]?.userName || 'Challenger 2'}
                   </span>
                   <div className="w-2 h-2 rounded-full bg-red-400" />
                 </div>
@@ -611,7 +650,7 @@ export function TikTokStyleArena({
             {isJoining && (
               <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-30">
                 <div className="bg-black/90 rounded-2xl px-6 py-4 flex items-center gap-3">
-                  <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
                   <span className="text-white font-semibold">Connexion en cours...</span>
                 </div>
               </div>
@@ -676,7 +715,7 @@ export function TikTokStyleArena({
                       borderColor: timeRemaining <= 10 ? '#ef4444' : timeRemaining <= 30 ? '#fb923c' : '#4ade80'
                     }}
                   >
-                    <div className={`text-4xl font-black tabular-nums ${timeRemaining <= 10 ? 'text-red-500 animate-pulse' : timeRemaining <= 30 ? 'text-orange-400' : 'text-green-400'}`}>
+                    <div className={`text-4xl font-black tabular-nums ${timeRemaining <= 10 ? 'text-red-500 animate-pulse' : timeRemaining <= 30 ? 'text-brand-400' : 'text-green-400'}`}>
                       {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
                     </div>
                     <div className="text-[10px] text-white/60 text-center mt-1 font-medium">Temps restant</div>
@@ -718,7 +757,7 @@ export function TikTokStyleArena({
               className="relative flex flex-col items-center"
             >
               {/* Moderator Bubble */}
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 to-pink-500 p-1 shadow-2xl">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-yellow-400 via-brand-400 to-pink-500 p-1 shadow-2xl">
                 <div className="w-full h-full rounded-full bg-black flex items-center justify-center text-3xl sm:text-4xl">
                   👤
                 </div>
@@ -729,12 +768,12 @@ export function TikTokStyleArena({
                 {isHost ? (
                   <button
                     onClick={() => setShowModeratorPanel(!showModeratorPanel)}
-                    className="bg-gradient-to-r from-yellow-400 to-orange-500 px-3 py-1 rounded-full shadow-lg whitespace-nowrap cursor-pointer hover:from-yellow-500 hover:to-orange-600 transition-colors"
+                    className="bg-gradient-to-r from-yellow-400 to-brand-400 px-3 py-1 rounded-full shadow-lg whitespace-nowrap cursor-pointer hover:from-yellow-500 hover:to-brand-500 transition-colors"
                   >
                     <span className="text-black text-[10px] sm:text-xs font-black">🎛️ CONTRÔLES</span>
                   </button>
                 ) : (
-                  <div className="bg-gradient-to-r from-yellow-400 to-orange-500 px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
+                  <div className="bg-gradient-to-r from-yellow-400 to-brand-400 px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
                     <span className="text-black text-[10px] sm:text-xs font-black">{host.name}</span>
                   </div>
                 )}
@@ -767,7 +806,7 @@ export function TikTokStyleArena({
 
           {/* Challenger 2 Side (or waiting) */}
           {debaters[1] ? (
-            <div className="flex-1 relative bg-gradient-to-br from-red-900/20 to-orange-900/20">
+            <div className="flex-1 relative bg-gradient-to-br from-red-900/20 to-brand-900/20">
               <div className="absolute inset-0 flex items-center justify-center">
                 <motion.div 
                   initial={{ scale: 0.8, opacity: 0 }}
@@ -785,7 +824,7 @@ export function TikTokStyleArena({
                       ]
                     } : {}}
                     transition={{ duration: 1.5, repeat: currentSpeaker === '2' ? Infinity : 0 }}
-                    className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-red-500/40 to-orange-500/40 backdrop-blur-md flex items-center justify-center text-4xl sm:text-6xl mb-2 sm:mb-3 shadow-xl ${
+                    className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-red-500/40 to-brand-400/40 backdrop-blur-md flex items-center justify-center text-4xl sm:text-6xl mb-2 sm:mb-3 shadow-xl ${
                       currentSpeaker === '2' ? 'border-4 border-green-400' : 'border-2 border-red-400/30'
                     }`}
                   >
@@ -816,7 +855,7 @@ export function TikTokStyleArena({
                       borderColor: timeRemaining <= 10 ? '#ef4444' : timeRemaining <= 30 ? '#fb923c' : '#4ade80'
                     }}
                   >
-                    <div className={`text-4xl font-black tabular-nums ${timeRemaining <= 10 ? 'text-red-500 animate-pulse' : timeRemaining <= 30 ? 'text-orange-400' : 'text-green-400'}`}>
+                    <div className={`text-4xl font-black tabular-nums ${timeRemaining <= 10 ? 'text-red-500 animate-pulse' : timeRemaining <= 30 ? 'text-brand-400' : 'text-green-400'}`}>
                       {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
                     </div>
                     <div className="text-[10px] text-white/60 text-center mt-1 font-medium">Temps restant</div>
@@ -916,7 +955,7 @@ export function TikTokStyleArena({
           onClick={onGift}
           className="flex flex-col items-center gap-0.5 touch-manipulation"
         >
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-yellow-400 to-brand-400 flex items-center justify-center">
             <Gift className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
           </div>
           <span className="text-white text-[10px] font-semibold">Gift</span>
@@ -990,8 +1029,8 @@ export function TikTokStyleArena({
             onClick={() => setShowAllReactions(!showAllReactions)}
             className={`flex-shrink-0 w-10 h-10 flex items-center justify-center text-lg font-black rounded-full touch-manipulation transition-all ${
               showAllReactions
-                ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/50'
-                : 'bg-white/10 backdrop-blur-sm text-white hover:bg-orange-500/50'
+                ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/50'
+                : 'bg-white/10 backdrop-blur-sm text-white hover:bg-brand-500/50'
             }`}
           >
             {showAllReactions ? '−' : '+'}
@@ -1098,7 +1137,7 @@ export function TikTokStyleArena({
               className="absolute top-0 right-0 bottom-0 w-72 sm:w-80 bg-black/95 backdrop-blur-xl border-l border-white/20 z-10 overflow-y-auto"
             >
               {/* Header - Fixed with close button */}
-              <div className="sticky top-0 bg-gradient-to-r from-yellow-400 to-orange-500 p-3 flex items-center justify-between z-50 shadow-lg">
+              <div className="sticky top-0 bg-gradient-to-r from-yellow-400 to-brand-400 p-3 flex items-center justify-between z-50 shadow-lg">
                 <h2 className="text-black font-black text-base sm:text-lg">🎛️ Contrôles</h2>
                 <button 
                   onClick={(e) => {
@@ -1216,7 +1255,7 @@ export function TikTokStyleArena({
                     </div>
                     <button
                       onClick={inviteDebater}
-                      className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold px-4 py-2 rounded-lg"
+                      className="bg-gradient-to-r from-yellow-400 to-brand-400 hover:from-yellow-500 hover:to-brand-500 text-black font-bold px-4 py-2 rounded-lg"
                     >
                       ➕
                     </button>

@@ -12,9 +12,9 @@ export function PointsDisplay({ points, className = '' }: PointsDisplayProps) {
   return (
     <Link
       href="/buy-points"
-      className={`flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/50 rounded-lg hover:from-orange-500/30 hover:to-red-500/30 transition-all ${className}`}
+      className={`flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-brand-500/20 to-brand-400/20 border border-brand-500/50 rounded-lg hover:from-brand-500/30 hover:to-brand-400/30 transition-all ${className}`}
     >
-      <Flame className="w-4 h-4 text-orange-500" />
+      <Flame className="w-4 h-4 text-brand-400" />
       <span className="text-white font-bold text-sm">{points.toLocaleString()}</span>
     </Link>
   );

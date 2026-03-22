@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Send, Pin, Heart } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '@/components/Toast';
 
 interface Message {
   id: string;
@@ -29,6 +30,7 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // Load messages and subscribe to realtime
   useEffect(() => {
@@ -118,7 +120,7 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
 
       if (error) {
         console.error('Error sending message:', error);
-        alert('Erreur lors de l\'envoi du message. Vérifiez que vous n\'envoyez pas trop de messages trop rapidement.');
+        toast('Erreur lors de l\'envoi du message. Vérifiez que vous n\'envoyez pas trop de messages trop rapidement.', 'error');
       } else {
         setInput('');
       }

@@ -146,7 +146,7 @@ export default function SettingsPage() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-white font-semibold">Chargement...</p>
         </div>
       </div>
@@ -154,7 +154,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
+    <div className="min-h-screen bg-black">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header with Back button */}
         <div className="flex items-center gap-4 mb-8">
@@ -197,7 +197,7 @@ export default function SettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl p-6 border border-gray-700"
+            className="card rounded-2xl p-6"
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
@@ -213,7 +213,7 @@ export default function SettingsPage() {
                   type="text"
                   value={profile.username}
                   disabled
-                  className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-gray-500 cursor-not-allowed"
+                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 text-gray-500 cursor-not-allowed"
                 />
                 <p className="text-gray-500 text-xs mt-1">Le nom d'utilisateur ne peut pas être modifié</p>
               </div>
@@ -225,7 +225,7 @@ export default function SettingsPage() {
                   value={profile.display_name}
                   onChange={(e) => setProfile({ ...profile, display_name: e.target.value })}
                   placeholder="Comment voulez-vous être appelé?"
-                  className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                   maxLength={50}
                 />
               </div>
@@ -237,7 +237,7 @@ export default function SettingsPage() {
                   onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                   placeholder="Parlez-nous de vous..."
                   rows={3}
-                  className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors resize-none"
+                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors resize-none"
                   maxLength={200}
                 />
                 <p className="text-gray-400 text-xs mt-1">{profile.bio.length}/200 caractères</p>
@@ -255,7 +255,7 @@ export default function SettingsPage() {
               <button
                 onClick={handleSaveProfile}
                 disabled={saving}
-                className="w-full bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                className="w-full brand-gradient text-black font-bold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:opacity-90 flex items-center justify-center gap-2"
               >
                 <Save className="w-5 h-5" />
                 {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
@@ -268,7 +268,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl p-6 border border-gray-700"
+            className="card rounded-2xl p-6"
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
@@ -286,7 +286,7 @@ export default function SettingsPage() {
                     value={passwords.new}
                     onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
                     placeholder="Minimum 6 caractères"
-                    className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                   />
                   <button
                     type="button"
@@ -306,7 +306,7 @@ export default function SettingsPage() {
                     value={passwords.confirm}
                     onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                     placeholder="Répétez le mot de passe"
-                    className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                   />
                   <button
                     type="button"
@@ -333,7 +333,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-gradient-to-br from-red-900/20 to-gray-900/50 rounded-2xl p-6 border border-red-500/30"
+            className="bg-red-900/10 rounded-2xl p-6 border border-red-500/30"
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">

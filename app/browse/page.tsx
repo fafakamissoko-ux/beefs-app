@@ -223,8 +223,8 @@ export default function BrowsePage() {
                       transition={{ duration: 1, delay: index * 0.1 }}
                       className={`absolute inset-y-0 left-0 ${
                         room.tension > 70
-                          ? 'bg-gradient-to-r from-orange-500 to-red-500'
-                          : 'bg-gradient-to-r from-yellow-500 to-orange-500'
+                          ? 'bg-gradient-to-r from-brand-400 to-red-500'
+                          : 'bg-gradient-to-r from-yellow-500 to-brand-400'
                       }`}
                     />
                   </div>

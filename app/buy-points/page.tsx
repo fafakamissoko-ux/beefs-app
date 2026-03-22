@@ -60,7 +60,7 @@ export default function BuyPointsPage() {
   return (
     <div className="min-h-screen bg-black">
       {/* Background gradient */}
-      <div className="fixed inset-0 bg-gradient-to-br from-orange-500/10 via-black to-red-500/10"></div>
+      <div className="fixed inset-0 bg-gradient-to-br from-brand-500/10 via-black to-brand-400/10"></div>
       
       <div className="relative max-w-md mx-auto px-4 py-8">
         {/* Back Button */}
@@ -77,7 +77,7 @@ export default function BuyPointsPage() {
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-24 h-24 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-orange-500/50"
+            className="w-24 h-24 brand-gradient rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-brand-500/50"
           >
             <Sparkles className="w-12 h-12 text-white" />
           </motion.div>
@@ -147,7 +147,7 @@ export default function BuyPointsPage() {
                 whileTap={{ scale: 0.98 }}
                 className={`relative w-full p-6 rounded-3xl transition-all ${
                   isSelected
-                    ? 'bg-gradient-to-r from-orange-500 to-red-500 shadow-2xl shadow-orange-500/50'
+                    ? 'brand-gradient shadow-2xl shadow-brand-500/50'
                     : 'bg-gray-900 border-2 border-gray-800 hover:border-gray-700'
                 } ${loading || countryLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
@@ -182,7 +182,7 @@ export default function BuyPointsPage() {
 
                   {/* Right: Price + Check */}
                   <div className="text-right">
-                    <div className={`text-2xl font-black ${isSelected ? 'text-white' : 'text-orange-400'}`}>
+                    <div className={`text-2xl font-black ${isSelected ? 'text-white' : 'text-brand-400'}`}>
                       {countryLoading ? (
                         <div className="animate-pulse">...</div>
                       ) : adaptedPrice ? (
@@ -203,7 +203,7 @@ export default function BuyPointsPage() {
                         animate={{ scale: 1 }}
                         className="mt-2 w-8 h-8 bg-white rounded-full flex items-center justify-center mx-auto"
                       >
-                        <Check className="w-5 h-5 text-orange-500" />
+                        <Check className="w-5 h-5 text-brand-500" />
                       </motion.div>
                     )}
                   </div>
@@ -219,7 +219,7 @@ export default function BuyPointsPage() {
           disabled={loading || countryLoading}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-black py-6 rounded-3xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-2xl shadow-orange-500/50 text-xl"
+          className="w-full brand-gradient hover:opacity-90 text-white font-black py-6 rounded-3xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-2xl shadow-brand-500/50 text-xl"
         >
           {loading ? (
             <div className="flex items-center justify-center gap-3">

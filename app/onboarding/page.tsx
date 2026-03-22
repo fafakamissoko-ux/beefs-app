@@ -20,21 +20,21 @@ const slides: Slide[] = [
     icon: <Flame className="w-20 h-20" />,
     title: 'Règle tes beefs en live',
     description: 'Résous tes conflits en direct avec un médiateur professionnel. Fini les non-dits, place à la clarté.',
-    color: 'from-red-500 to-orange-500',
+    color: 'from-brand-400 to-brand-500',
   },
   {
     id: 2,
     icon: <Shield className="w-20 h-20" />,
     title: 'Médiateur certifié',
     description: 'Un médiateur neutre guide la discussion pour garantir un échange respectueux et constructif.',
-    color: 'from-orange-500 to-yellow-500',
+    color: 'from-brand-500 to-yellow-500',
   },
   {
     id: 3,
     icon: <Trophy className="w-20 h-20" />,
     title: 'Gagne des points',
     description: 'Participe, regarde des beefs, envoie des gifts. Accumule des points et deviens Premium!',
-    color: 'from-yellow-500 to-red-500',
+    color: 'from-yellow-500 to-brand-500',
   },
 ];
 
@@ -105,7 +105,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-black via-gray-900 to-black flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-black flex flex-col overflow-hidden">
       {/* Skip button with dropdown */}
       <div className="absolute top-4 right-4 z-50">
         <div className="relative group">
@@ -195,7 +195,7 @@ export default function OnboardingPage() {
               <div
                 className={`w-2 h-2 rounded-full transition-all ${
                   index === currentSlide
-                    ? 'bg-gradient-to-r from-red-500 to-orange-500 w-8'
+                    ? 'brand-gradient w-8'
                     : 'bg-gray-600 hover:bg-gray-500'
                 }`}
               />
@@ -222,7 +222,7 @@ export default function OnboardingPage() {
             onClick={handleNext}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="flex-1 w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold px-8 py-4 rounded-full shadow-xl shadow-orange-500/30 transition-all"
+            className="flex-1 w-full sm:w-auto flex items-center justify-center gap-2 brand-gradient hover:opacity-90 text-black font-bold px-8 py-4 rounded-full shadow-xl shadow-brand-500/30 transition-all"
           >
             <span>
               {currentSlide === slides.length - 1 ? 'Commencer' : 'Suivant'}
@@ -243,7 +243,7 @@ export default function OnboardingPage() {
               Déjà un compte?{' '}
               <button
                 onClick={() => router.push('/login')}
-                className="text-orange-500 hover:text-orange-400 font-semibold"
+                className="text-brand-400 hover:text-brand-300 font-semibold"
               >
                 Se connecter
               </button>

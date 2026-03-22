@@ -71,11 +71,11 @@ export default function SignUpPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center p-4">
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="max-w-md w-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border-2 border-green-500 text-center"
+          className="max-w-md w-full bg-surface-2 rounded-2xl p-8 border-2 border-green-500 text-center"
         >
           <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl">✓</span>
@@ -86,7 +86,7 @@ export default function SignUpPage() {
           </p>
           <Link
             href="/login"
-            className="inline-block bg-gradient-to-r from-red-500 to-orange-500 text-black font-bold px-6 py-3 rounded-lg"
+            className="inline-block brand-gradient text-black font-bold px-6 py-3 rounded-lg"
           >
             Se connecter
           </Link>
@@ -96,7 +96,7 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -105,14 +105,14 @@ export default function SignUpPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <BeefLogo size={64} className="mx-auto mb-4" />
-          <h1 className="text-3xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-black text-gradient">
             Beefs
           </h1>
           <p className="text-gray-400 mt-2">Créer un compte</p>
         </div>
 
         {/* Form */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700">
+        <div className="card rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Error Alert */}
             {error && (
@@ -132,7 +132,7 @@ export default function SignUpPage() {
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   placeholder="ton_pseudo"
-                  className="w-full bg-black/40 border border-gray-700 rounded-lg pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                   required
                 />
               </div>
@@ -148,7 +148,7 @@ export default function SignUpPage() {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="ton@email.com"
-                  className="w-full bg-black/40 border border-gray-700 rounded-lg pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                   required
                 />
               </div>
@@ -164,7 +164,7 @@ export default function SignUpPage() {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="••••••••"
-                  className="w-full bg-black/40 border border-gray-700 rounded-lg pl-10 pr-12 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-12 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                   required
                 />
                 <button
@@ -187,7 +187,7 @@ export default function SignUpPage() {
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   placeholder="••••••••"
-                  className="w-full bg-black/40 border border-gray-700 rounded-lg pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                   required
                 />
               </div>
@@ -197,7 +197,7 @@ export default function SignUpPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full brand-gradient text-black font-bold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:opacity-90"
             >
               {loading ? 'Création en cours...' : "S'inscrire"}
             </button>
@@ -207,7 +207,7 @@ export default function SignUpPage() {
           <div className="mt-6 text-center">
             <p className="text-gray-400">
               Déjà un compte?{' '}
-              <Link href="/login" className="text-orange-500 hover:text-orange-400 font-semibold">
+              <Link href="/login" className="text-brand-400 hover:text-brand-300 font-semibold">
                 Se connecter
               </Link>
             </p>

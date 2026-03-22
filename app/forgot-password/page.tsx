@@ -27,11 +27,11 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center p-4">
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="max-w-md w-full bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border-2 border-green-500 text-center"
+          className="max-w-md w-full bg-surface-2 rounded-2xl p-8 border-2 border-green-500 text-center"
         >
           <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl">✓</span>
@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
           </p>
           <Link
             href="/login"
-            className="inline-block bg-gradient-to-r from-red-500 to-orange-500 text-black font-bold px-6 py-3 rounded-lg"
+            className="inline-block brand-gradient text-black font-bold px-6 py-3 rounded-xl"
           >
             Retour à la connexion
           </Link>
@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -67,16 +67,16 @@ export default function ForgotPasswordPage() {
         </Link>
 
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 brand-gradient rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-3xl">🥊</span>
           </div>
-          <h1 className="text-3xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-black text-gradient">
             Mot de passe oublié?
           </h1>
           <p className="text-gray-400 mt-2">Entre ton email pour réinitialiser</p>
         </div>
 
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700">
+        <div className="card rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-white font-semibold mb-2">Email</label>
@@ -87,7 +87,7 @@ export default function ForgotPasswordPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ton@email.com"
-                  className="w-full bg-black/40 border border-gray-700 rounded-lg pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                   required
                 />
               </div>
@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full brand-gradient hover:opacity-90 text-black font-bold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? 'Envoi...' : 'Réinitialiser le mot de passe'}
             </button>

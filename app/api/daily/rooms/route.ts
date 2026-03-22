@@ -1,7 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+async function verifyAuth(req: NextRequest) {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader) return null;
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await verifyAuth(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
     const { roomName, privacy, maxParticipants } = await request.json();
 
     const DAILY_API_KEY = process.env.DAILY_API_KEY;

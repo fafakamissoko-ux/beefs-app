@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Check, X, Clock, AlertCircle, Users, Flame } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
+import { useToast } from '@/components/Toast';
 
 interface Invitation {
   id: string;
@@ -29,6 +30,7 @@ interface Invitation {
 export default function InvitationsPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
@@ -127,11 +129,15 @@ export default function InvitationsPage() {
       // Remove from local state
       setInvitations(invitations.filter(inv => inv.id !== invitationId));
 
-      // Show success message
-      alert(accept ? '✓ Invitation acceptée!' : 'Invitation refusée');
+      if (accept) {
+        toast('Invitation acceptée — redirection...', 'success');
+        setTimeout(() => router.push(`/arena/${beefId}`), 800);
+      } else {
+        toast('Invitation refusée', 'info');
+      }
     } catch (error) {
       console.error('Error responding to invitation:', error);
-      alert('Erreur lors de la réponse');
+      toast('Erreur lors de la réponse', 'error');
     } finally {
       setRespondingTo(null);
     }
@@ -154,7 +160,7 @@ export default function InvitationsPage() {
     switch (severity) {
       case 'low': return 'bg-green-500/20 text-green-400';
       case 'medium': return 'bg-yellow-500/20 text-yellow-400';
-      case 'high': return 'bg-orange-500/20 text-orange-400';
+      case 'high': return 'bg-brand-500/20 text-brand-400';
       case 'critical': return 'bg-red-500/20 text-red-400';
       default: return 'bg-gray-500/20 text-gray-400';
     }
@@ -162,9 +168,9 @@ export default function InvitationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-white font-semibold">Chargement des invitations...</p>
         </div>
       </div>
@@ -172,12 +178,12 @@ export default function InvitationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black pb-20">
+    <div className="min-h-screen bg-black pb-20">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-black text-white mb-2 flex items-center gap-3">
-            <Mail className="w-10 h-10 text-orange-500" />
+            <Mail className="w-10 h-10 text-brand-400" />
             Invitations
           </h1>
           <p className="text-gray-400">
@@ -192,7 +198,7 @@ export default function InvitationsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl p-12 text-center border border-gray-700"
+            className="card rounded-2xl p-12 text-center"
           >
             <Mail className="w-20 h-20 text-gray-600 mx-auto mb-4" />
             <h3 className="text-2xl font-bold text-white mb-2">Aucune invitation</h3>
@@ -201,7 +207,7 @@ export default function InvitationsPage() {
             </p>
             <button
               onClick={() => router.push('/live')}
-              className="px-6 py-3 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold rounded-lg transition-all"
+              className="px-6 py-3 brand-gradient hover:opacity-90 text-black font-bold rounded-xl transition-all"
             >
               Voir les beefs en cours
             </button>
@@ -216,7 +222,7 @@ export default function InvitationsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -100 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 border-2 border-orange-500/50 shadow-xl"
+                  className="bg-surface-2 rounded-2xl p-6 border-2 border-brand-500/50 shadow-xl"
                 >
                   {/* Header */}
                   <div className="flex items-start justify-between mb-4">
@@ -225,12 +231,14 @@ export default function InvitationsPage() {
                         {invitation.beef.title}
                       </h3>
                       <p className="text-gray-400 text-sm">
-                        Invité par <span className="text-white font-semibold">{invitation.inviter_display_name}</span> (Médiateur: <span className="text-orange-400 font-semibold">{invitation.beef.mediator_display_name}</span>)
+                        Invité par <span className="text-white font-semibold">{invitation.inviter_display_name}</span> (Médiateur: <span className="text-brand-400 font-semibold">{invitation.beef.mediator_display_name}</span>)
                       </p>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${getSeverityColor(invitation.beef.severity)}`}>
-                      {invitation.beef.severity.toUpperCase()}
-                    </div>
+                    {invitation.beef.severity && (
+                      <div className={`px-3 py-1 rounded-full text-xs font-bold ${getSeverityColor(invitation.beef.severity)}`}>
+                        {invitation.beef.severity.toUpperCase()}
+                      </div>
+                    )}
                   </div>
 
                   {/* Subject */}

@@ -1,47 +1,41 @@
 import Link from 'next/link';
-import { Home, Search } from 'lucide-react';
+import { Home, Search, Flame } from 'lucide-react';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-arena-darker flex items-center justify-center p-4">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center">
-        {/* 404 Animation */}
         <div className="mb-8">
-          <h1 className="text-9xl font-black mb-4">
-            <span className="neon-blue">4</span>
-            <span className="neon-red">0</span>
-            <span className="neon-purple">4</span>
-          </h1>
-          <div className="text-2xl font-bold text-gray-400 mb-2">
-            Arena Introuvable
+          <div className="relative inline-block mb-6">
+            <h1 className="text-[120px] font-black leading-none tracking-tighter text-gradient">
+              404
+            </h1>
+            <Flame className="absolute -top-2 -right-4 w-10 h-10 text-brand-400 animate-pulse" />
           </div>
-          <p className="text-gray-500">
-            Cette page a été éliminée du débat
+          <h2 className="text-xl font-bold text-white mb-2">
+            Page introuvable
+          </h2>
+          <p className="text-gray-500 text-sm">
+            Ce beef a été résolu ou n'existe pas encore.
           </p>
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
-            href="/"
-            className="px-6 py-3 bg-arena-blue hover:bg-arena-blue/80 text-arena-dark font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+            href="/feed"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white rounded-xl transition-all active:scale-[0.97] brand-gradient hover:shadow-glow"
           >
-            <Home className="w-5 h-5" />
+            <Home className="w-4 h-4" />
             Accueil
           </Link>
-          
           <Link
-            href="/browse"
-            className="px-6 py-3 bg-arena-gray hover:bg-arena-dark text-white font-bold rounded-lg transition-all border-2 border-arena-blue flex items-center justify-center gap-2"
+            href="/feed"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-gray-300 rounded-xl transition-all"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
           >
-            <Search className="w-5 h-5" />
+            <Search className="w-4 h-4" />
             Explorer
           </Link>
-        </div>
-
-        {/* Fun Quote */}
-        <div className="mt-12 text-sm text-gray-600 italic">
-          "Dans cette arène, seuls les débats les plus intenses survivent."
         </div>
       </div>
     </div>

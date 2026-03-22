@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, X, Clock, Euro, AlertCircle, RefreshCw } from 'lucide-react';
+import { useToast } from '@/components/Toast';
 
 const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || 'beefs-admin-secret-change-me';
 
@@ -29,6 +30,7 @@ interface WithdrawalRequest {
 }
 
 export default function AdminRetraitsPage() {
+  const { toast } = useToast();
   const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'rejected'>('pending');
@@ -76,7 +78,7 @@ export default function AdminRetraitsPage() {
       if (!res.ok) throw new Error(data.error);
       loadRequests();
     } catch (err: any) {
-      alert('Erreur : ' + err.message);
+      toast('Erreur : ' + err.message, 'error');
     } finally {
       setActionLoading(null);
     }

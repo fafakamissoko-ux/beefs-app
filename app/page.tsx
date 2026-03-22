@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { BeefLogo } from '@/components/BeefLogo';
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -60,11 +61,11 @@ export default function SplashScreen() {
   }, [router]);
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-black via-gray-900 to-black flex flex-col items-center justify-center overflow-hidden">
+    <div className="fixed inset-0 bg-black flex flex-col items-center justify-center overflow-hidden">
       {/* Background animated gradient */}
       <div className="absolute inset-0 opacity-30">
         <motion.div
-          className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-500 rounded-full filter blur-3xl"
+          className="absolute top-1/4 left-1/4 w-96 h-96 bg-brand-500 rounded-full filter blur-3xl"
           animate={{
             scale: [1, 1.2, 1],
             opacity: [0.3, 0.5, 0.3],
@@ -76,7 +77,7 @@ export default function SplashScreen() {
           }}
         />
         <motion.div
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-500 rounded-full filter blur-3xl"
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-brand-400 rounded-full filter blur-3xl"
           animate={{
             scale: [1, 1.3, 1],
             opacity: [0.3, 0.5, 0.3],
@@ -103,27 +104,9 @@ export default function SplashScreen() {
             duration: 0.8,
           }}
           className="mb-8"
+
         >
-          <div className="w-32 h-32 bg-gradient-to-br from-red-500 to-orange-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-orange-500/50">
-            <svg
-              width="80"
-              height="80"
-              viewBox="0 0 100 100"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <linearGradient id="splashFlame" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#FFF" />
-                  <stop offset="100%" stopColor="#FFF" opacity="0.8" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M50 10 L35 40 L25 35 L30 60 L15 65 L35 85 L40 70 L50 90 L60 70 L65 85 L85 65 L70 60 L75 35 L65 40 L50 10Z"
-                fill="url(#splashFlame)"
-              />
-            </svg>
-          </div>
+          <BeefLogo size={120} />
         </motion.div>
 
         {/* App name */}
@@ -131,7 +114,7 @@ export default function SplashScreen() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
-          className="text-6xl font-black bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 bg-clip-text text-transparent mb-2"
+          className="text-6xl font-black text-gradient mb-2"
         >
           Beefs
         </motion.h1>
@@ -154,7 +137,7 @@ export default function SplashScreen() {
           className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden mt-12"
         >
           <motion.div
-            className="h-full bg-gradient-to-r from-red-500 to-orange-500"
+            className="h-full brand-gradient"
             style={{ width: `${progress}%` }}
             transition={{ duration: 0.1 }}
           />

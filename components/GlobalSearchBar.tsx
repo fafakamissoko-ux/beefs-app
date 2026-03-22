@@ -56,11 +56,10 @@ export function GlobalSearchBar() {
     setLoading(true);
     try {
       if (activeTab === 'beefs') {
-        // Search beefs by title and tags
         const { data, error } = await supabase
-          .from('rooms')
+          .from('beefs')
           .select('id, title, tags, status, created_at, viewer_count')
-          .or(`title.ilike.%${query}%`)
+          .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
           .limit(5);
 
         if (error) throw error;
@@ -104,7 +103,7 @@ export function GlobalSearchBar() {
 
   const handleResultClick = (result: SearchResult) => {
     if (result.type === 'beef') {
-      router.push(`/beefs/${result.id}`);
+      router.push(`/arena/${result.id}`);
     } else {
       router.push(`/profile/${result.username}`);
     }
@@ -171,7 +170,7 @@ export function GlobalSearchBar() {
                   {activeTab === 'beefs' && (
                     <motion.div
                       layoutId="searchTab"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-orange-500 to-red-500"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 brand-gradient"
                     />
                   )}
                 </button>
@@ -188,7 +187,7 @@ export function GlobalSearchBar() {
                   {activeTab === 'users' && (
                     <motion.div
                       layoutId="searchTab"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-orange-500 to-red-500"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 brand-gradient"
                     />
                   )}
                 </button>
@@ -203,7 +202,7 @@ export function GlobalSearchBar() {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder={activeTab === 'beefs' ? 'Rechercher des beefs...' : 'Rechercher des users...'}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-10 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-10 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                     autoFocus
                   />
                   {query && (
@@ -221,7 +220,7 @@ export function GlobalSearchBar() {
               <div className="max-h-[400px] overflow-y-auto">
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : results.length > 0 ? (
                   <div className="divide-y divide-gray-800">
@@ -240,7 +239,7 @@ export function GlobalSearchBar() {
                             {result.tags && result.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {result.tags.slice(0, 3).map((tag, idx) => (
-                                  <span key={idx} className="text-xs text-orange-400">
+                                  <span key={idx} className="text-xs text-brand-400">
                                     ${tag}
                                   </span>
                                 ))}
@@ -249,7 +248,7 @@ export function GlobalSearchBar() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white font-bold">
+                            <div className="w-10 h-10 rounded-full brand-gradient flex items-center justify-center text-white font-bold">
                               {result.name?.[0]?.toUpperCase() || '?'}
                             </div>
                             <div className="flex-1 min-w-0">

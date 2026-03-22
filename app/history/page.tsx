@@ -352,7 +352,7 @@ export default function HistoryPage() {
                 {/* Actions */}
                 <div className="flex gap-2">
                   <Link
-                    href={`/replay/${debate.id}`}
+                    href={`/arena/${debate.id}`}
                     className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:opacity-80 text-white font-bold py-2 rounded-lg text-center transition-opacity"
                   >
                     Regarder

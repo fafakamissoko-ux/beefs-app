@@ -181,12 +181,18 @@ export default function ArenaPage() {
   };
 
   const ensureDailyRoom = async (beefId: string) => {
-    // Derive a stable room name from the beef ID (max 40 chars, alphanumeric + hyphens)
     const roomName = `beef-${beefId.replace(/-/g, '').slice(0, 32)}`;
 
     try {
-      // Try to get existing room first
-      const getRes = await fetch(`/api/daily/rooms?name=${roomName}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (session?.access_token) {
+        authHeaders['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const getRes = await fetch(`/api/daily/rooms?name=${roomName}`, { headers: authHeaders });
       const getData = await getRes.json();
 
       if (getData.success && getData.room?.url) {
@@ -194,10 +200,9 @@ export default function ArenaPage() {
         return;
       }
 
-      // Room doesn't exist — create it
       const createRes = await fetch('/api/daily/rooms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           roomName,
           privacy: 'public',
@@ -375,15 +380,15 @@ export default function ArenaPage() {
           roomId={roomId}
           userId={userId}
           userName={userName}
-          viewerCount={Math.floor(Math.random() * 1000) + 100}
+          viewerCount={0}
           tension={localTension}
           points={userPoints}
-          debateTitle="Débat: Technologie vs Environnement"
+          debateTitle=""
           dailyRoomUrl={dailyRoomUrl}
           onReaction={handleReaction}
           onTap={tap}
-          onGift={() => console.log('Gift clicked')}
-          onShare={() => console.log('Share clicked')}
+          onGift={() => {}}
+          onShare={() => {}}
         />
       </div>
     );
