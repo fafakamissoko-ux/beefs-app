@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase/client';
 import { MultiParticipantGrid } from './MultiParticipantGrid';
 import { InviteParticipantModal } from './InviteParticipantModal';
 import { useToast } from '@/components/Toast';
+import { sanitizeMessage } from '@/lib/security';
 
 const MAX_BEEF_DURATION = 60 * 60; // 60 minutes in seconds
 
@@ -526,12 +527,15 @@ export function TikTokStyleArena({
       
       try {
         // Send message to beef_messages table
+        const cleanContent = sanitizeMessage(chatInput);
+        if (!cleanContent) return;
+
         const { data, error } = await supabase.from('beef_messages').insert({
           beef_id: roomId,
           user_id: userId,
           username: userName,
           display_name: userName,
-          content: chatInput.trim(),
+          content: cleanContent,
           is_pinned: false,
         }).select();
         

@@ -5,6 +5,7 @@ import { Send, Pin, Heart } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/components/Toast';
+import { sanitizeMessage } from '@/lib/security';
 
 interface Message {
   id: string;
@@ -108,13 +109,16 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
         .eq('id', userId)
         .single();
 
+      const cleanContent = sanitizeMessage(input);
+      if (!cleanContent) { setLoading(false); return; }
+
       const { error } = await supabase.from('beef_messages').insert({
         beef_id: roomId,
         user_id: userId,
         username: userData?.username || userName,
         display_name: userData?.display_name || userName,
         avatar_url: userData?.avatar_url,
-        content: input.trim(),
+        content: cleanContent,
         is_pinned: false,
       });
 

@@ -48,6 +48,26 @@ export default function LoginPage() {
       email = data.email;
     }
 
+    // Check if user is banned
+    const { data: userData } = await supabase
+      .from('users')
+      .select('is_banned, banned_until, ban_reason')
+      .ilike('email', email)
+      .single();
+
+    if (userData?.is_banned) {
+      const isPermanent = !userData.banned_until;
+      const isStillBanned = isPermanent || new Date(userData.banned_until) > new Date();
+      if (isStillBanned) {
+        const banMsg = isPermanent
+          ? 'Votre compte a été suspendu définitivement.'
+          : `Votre compte est suspendu jusqu'au ${new Date(userData.banned_until).toLocaleDateString('fr-FR')}.`;
+        setError(`${banMsg}${userData.ban_reason ? ` Raison : ${userData.ban_reason}` : ''}`);
+        setLoading(false);
+        return;
+      }
+    }
+
     const { error: signInError } = await signIn(email, password);
     if (signInError) { setError('Identifiant ou mot de passe incorrect'); setLoading(false); }
     else { router.push(searchParams.get('redirect') || '/feed'); }
