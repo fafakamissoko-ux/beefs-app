@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Shield, Users, Flame, Coins, Eye, EyeOff, ArrowRight, Settings, RefreshCw } from 'lucide-react';
+import { Shield, Users, Flame, Coins, Eye, EyeOff, ArrowRight, Settings, RefreshCw, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
@@ -221,21 +221,29 @@ export default function AdminDashboardPage() {
               Gestion
             </h2>
 
-            <button
-              onClick={() => router.push('/admin/retraits')}
-              className="card-interactive w-full p-5 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                  <Coins className="w-5 h-5 text-green-400" />
+            {[
+              { href: '/admin/beefs', icon: Flame, color: 'orange', label: 'Gérer les beefs', desc: 'Modérer, mettre en avant, supprimer' },
+              { href: '/admin/users', icon: Users, color: 'blue', label: 'Utilisateurs', desc: 'Comptes, rôles, bannissements' },
+              { href: '/admin/reports', icon: Shield, color: 'red', label: 'Signalements', desc: 'Examiner les reports' },
+              { href: '/admin/retraits', icon: Coins, color: 'green', label: 'Retraits', desc: 'Paiements en attente' },
+            ].map(item => (
+              <button
+                key={item.href}
+                onClick={() => router.push(item.href)}
+                className="card-interactive w-full p-5 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl bg-${item.color}-500/10 flex items-center justify-center`}>
+                    <item.icon className={`w-5 h-5 text-${item.color}-400`} />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-white font-bold">{item.label}</p>
+                    <p className="text-gray-500 text-xs">{item.desc}</p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <p className="text-white font-bold">Demandes de retrait</p>
-                  <p className="text-gray-500 text-xs">Gérer les paiements en attente</p>
-                </div>
-              </div>
-              <ArrowRight className="w-5 h-5 text-gray-600" />
-            </button>
+                <ArrowRight className="w-5 h-5 text-gray-600" />
+              </button>
+            ))}
           </motion.div>
         )}
       </div>

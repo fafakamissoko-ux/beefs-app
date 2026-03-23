@@ -106,6 +106,19 @@ export default function SignUpPage() {
       return;
     }
 
+    // Check if email is banned
+    const { data: bannedEmail } = await supabase
+      .from('banned_emails')
+      .select('id')
+      .eq('email', formData.email.toLowerCase())
+      .single();
+
+    if (bannedEmail) {
+      setError('Cette adresse email ne peut pas être utilisée pour créer un compte.');
+      setLoading(false);
+      return;
+    }
+
     const { error: signUpError } = await signUp(
       formData.email,
       formData.password,
