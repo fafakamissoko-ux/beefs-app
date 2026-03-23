@@ -193,7 +193,7 @@ export default function PublicProfilePage() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-white font-semibold">Chargement...</p>
         </div>
       </div>
@@ -205,7 +205,7 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
+    <div className="min-h-screen bg-black">
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Back button */}
         <button
@@ -219,7 +219,7 @@ export default function PublicProfilePage() {
         {/* Profile Header */}
         <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-3xl border border-gray-700 overflow-hidden mb-6">
           {/* Cover Image */}
-          <div className="h-48 bg-gradient-to-r from-red-500/20 via-orange-500/20 to-yellow-500/20 relative">
+          <div className="h-48 bg-gradient-to-r from-brand-500/20 via-brand-400/20 to-brand-600/20 relative">
             <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10"></div>
           </div>
 
@@ -254,7 +254,7 @@ export default function PublicProfilePage() {
                     className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
                       isFollowing
                         ? 'bg-white/10 hover:bg-white/20 text-white'
-                        : 'bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black'
+                        : 'brand-gradient hover:opacity-90 text-black transition-opacity'
                     }`}
                   >
                     {isFollowing ? (
@@ -274,7 +274,7 @@ export default function PublicProfilePage() {
                 {isOwnProfile && (
                   <Link
                     href="/profile"
-                    className="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-lg text-white font-semibold transition-colors"
+                    className="px-4 py-2 bg-brand-500 hover:bg-brand-600 rounded-lg text-white font-semibold transition-colors"
                   >
                     Modifier le profil
                   </Link>
@@ -313,7 +313,7 @@ export default function PublicProfilePage() {
                 <span className="text-gray-400 text-sm ml-1">Abonnements</span>
               </button>
               <div className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-orange-500" />
+                <Flame className="w-5 h-5 text-brand-400" />
                 <span className="text-2xl font-black text-white">{profile.points}</span>
                 <span className="text-gray-400 text-sm">Points</span>
               </div>
@@ -335,7 +335,7 @@ export default function PublicProfilePage() {
         {/* Beefs List */}
         <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl border border-gray-700 p-6">
           <h2 className="text-2xl font-black text-white mb-6 flex items-center gap-2">
-            <Flame className="w-6 h-6 text-orange-500" />
+            <Flame className="w-6 h-6 text-brand-400" />
             Beefs de {profile.display_name}
           </h2>
 

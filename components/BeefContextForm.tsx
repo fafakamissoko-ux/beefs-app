@@ -57,12 +57,12 @@ export function BeefContextForm({ onSubmit, onCancel }: BeefContextFormProps) {
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 max-w-2xl w-full border-2 border-orange-500/50 shadow-2xl"
+        className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 max-w-2xl w-full border-2 border-brand-500/50 shadow-2xl"
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center">
+            <div className="w-12 h-12 brand-gradient rounded-full flex items-center justify-center">
               🔥
             </div>
             <div>
@@ -85,7 +85,7 @@ export function BeefContextForm({ onSubmit, onCancel }: BeefContextFormProps) {
               key={s}
               className={`h-1 flex-1 rounded-full ${
                 s <= step
-                  ? 'bg-gradient-to-r from-red-500 to-orange-500'
+                  ? 'brand-gradient'
                   : 'bg-gray-700'
               }`}
             />
@@ -109,7 +109,7 @@ export function BeefContextForm({ onSubmit, onCancel }: BeefContextFormProps) {
                 value={context.subject}
                 onChange={(e) => updateContext('subject', e.target.value)}
                 placeholder="Ex: Il a volé mon idée de business"
-                className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                 maxLength={100}
               />
               <p className="text-gray-500 text-xs mt-1">
@@ -131,7 +131,7 @@ export function BeefContextForm({ onSubmit, onCancel }: BeefContextFormProps) {
                   onChange={(e) => updateContext('severity', Number(e.target.value))}
                   className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                   style={{
-                    background: `linear-gradient(to right, #ef4444 0%, #f97316 ${context.severity * 10}%, #374151 ${context.severity * 10}%, #374151 100%)`
+                    background: `linear-gradient(to right, #E83A14 0%, #FF6B2C ${context.severity * 10}%, #374151 ${context.severity * 10}%, #374151 100%)`
                   }}
                 />
                 <span className="text-white font-black text-2xl w-12 text-center">
@@ -164,7 +164,7 @@ export function BeefContextForm({ onSubmit, onCancel }: BeefContextFormProps) {
                 value={context.opponent}
                 onChange={(e) => updateContext('opponent', e.target.value)}
                 placeholder="@username ou nom complet"
-                className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
               />
               <p className="text-gray-500 text-xs mt-1">
                 💡 Si la personne a un compte Beefs, elle recevra une notification
@@ -181,7 +181,7 @@ export function BeefContextForm({ onSubmit, onCancel }: BeefContextFormProps) {
                 value={context.origin}
                 onChange={(e) => updateContext('origin', e.target.value)}
                 placeholder="Ex: Début janvier 2026, après notre réunion"
-                className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors"
+                className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
               />
             </div>
 
@@ -193,7 +193,7 @@ export function BeefContextForm({ onSubmit, onCancel }: BeefContextFormProps) {
                 type="date"
                 value={context.date}
                 onChange={(e) => updateContext('date', e.target.value)}
-                className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 transition-colors"
+                className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-500 transition-colors"
               />
             </div>
           </motion.div>
@@ -216,7 +216,7 @@ export function BeefContextForm({ onSubmit, onCancel }: BeefContextFormProps) {
                 onChange={(e) => updateContext('description', e.target.value)}
                 placeholder="Explique en détails ce qui s'est passé, ta version, pourquoi tu veux régler ce conflit..."
                 rows={6}
-                className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 transition-colors resize-none"
+                className="w-full bg-black/40 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors resize-none"
                 maxLength={1000}
               />
               <p className="text-gray-500 text-xs mt-1">
@@ -225,8 +225,8 @@ export function BeefContextForm({ onSubmit, onCancel }: BeefContextFormProps) {
             </div>
 
             {/* Summary */}
-            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
-              <p className="text-orange-400 font-bold mb-3">📋 Récapitulatif</p>
+            <div className="bg-brand-500/10 border border-brand-500/30 rounded-xl p-4">
+              <p className="text-brand-400 font-bold mb-3">📋 Récapitulatif</p>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Sujet:</span>
@@ -263,7 +263,7 @@ export function BeefContextForm({ onSubmit, onCancel }: BeefContextFormProps) {
             <button
               onClick={() => setStep(step + 1)}
               disabled={!canProceed()}
-              className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              className="flex-1 brand-gradient hover:opacity-90 text-black font-bold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
             >
               Continuer
               <ArrowRight className="w-5 h-5" />
@@ -272,7 +272,7 @@ export function BeefContextForm({ onSubmit, onCancel }: BeefContextFormProps) {
             <button
               onClick={handleSubmit}
               disabled={!canProceed()}
-              className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              className="flex-1 brand-gradient hover:opacity-90 text-black font-bold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
             >
               Créer la session
               <Flame className="w-5 h-5" />

@@ -10,10 +10,12 @@ interface TensionGaugeProps {
 }
 
 export function TensionGauge({ tension, isChaosMode, onTap }: TensionGaugeProps) {
-  const tensionColor = 
-    tension >= 80 ? 'from-red-500 to-orange-500' :
-    tension >= 50 ? 'from-yellow-500 to-orange-500' :
-    'from-blue-500 to-cyan-500';
+  const tensionBarClass =
+    tension >= 80
+      ? 'brand-gradient'
+      : tension >= 50
+        ? 'bg-gradient-to-r from-yellow-500 to-brand-400'
+        : 'bg-gradient-to-r from-blue-500 to-cyan-500';
 
   return (
     <div className="bg-arena-dark/95 backdrop-blur-sm border-t border-arena-gray p-1.5 sm:p-2 md:p-3">
@@ -29,7 +31,7 @@ export function TensionGauge({ tension, isChaosMode, onTap }: TensionGaugeProps)
           {/* Gauge Bar */}
           <div className="flex-1 relative h-5 sm:h-6 bg-arena-darker rounded-full overflow-hidden border border-arena-gray min-w-0">
             <motion.div
-              className={`absolute left-0 top-0 bottom-0 bg-gradient-to-r ${tensionColor}`}
+              className={`absolute left-0 top-0 bottom-0 ${tensionBarClass}`}
               initial={{ width: 0 }}
               animate={{ width: `${tension}%` }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
@@ -59,7 +61,7 @@ export function TensionGauge({ tension, isChaosMode, onTap }: TensionGaugeProps)
             onClick={onTap}
             className={`px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 rounded-lg font-bold text-xs sm:text-sm transition-all transform active:scale-90 whitespace-nowrap touch-manipulation flex-shrink-0 ${
               isChaosMode 
-                ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white animate-pulse' 
+                ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white animate-pulse' 
                 : tension >= 80
                   ? 'bg-red-500 hover:bg-red-600 text-white'
                   : 'bg-blue-500 hover:bg-blue-600 text-white'

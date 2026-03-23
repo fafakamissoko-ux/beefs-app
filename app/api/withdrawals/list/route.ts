@@ -6,11 +6,11 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'beefs-admin-secret-change-me';
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 export async function GET(req: NextRequest) {
   const adminSecret = req.headers.get('x-admin-secret');
-  if (adminSecret !== ADMIN_SECRET) {
+  if (!ADMIN_SECRET || adminSecret !== ADMIN_SECRET) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 

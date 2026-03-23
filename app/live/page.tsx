@@ -288,7 +288,7 @@ export default function LivePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
+    <div className="min-h-screen bg-black">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -299,7 +299,7 @@ export default function LivePage() {
           >
             <div>
               <h1 className="text-4xl font-black text-white mb-2 flex items-center gap-3">
-                <Flame className="w-10 h-10 text-orange-500" />
+                <Flame className="w-10 h-10 text-brand-400" />
                 Live
               </h1>
               <p className="text-gray-400">
@@ -313,7 +313,7 @@ export default function LivePage() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold px-6 py-3 rounded-full shadow-xl"
+              className="flex items-center gap-2 brand-gradient hover:opacity-90 text-black font-bold px-6 py-3 rounded-full shadow-xl transition-opacity"
             >
               <Plus className="w-5 h-5" />
               <span>Régler un beef</span>
@@ -337,7 +337,7 @@ export default function LivePage() {
               {feedType === 'pour-vous' && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-full"
+                  className="absolute bottom-0 left-0 right-0 h-1 brand-gradient rounded-full"
                 />
               )}
             </button>
@@ -356,7 +356,7 @@ export default function LivePage() {
               {feedType === 'abonnements' && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-full"
+                  className="absolute bottom-0 left-0 right-0 h-1 brand-gradient rounded-full"
                 />
               )}
             </button>
@@ -366,7 +366,7 @@ export default function LivePage() {
         {/* Live Rooms Grid */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-pink-500 border-t-transparent"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-brand-500 border-t-transparent"></div>
           </div>
         ) : liveRooms.length === 0 ? (
           <div className="text-center py-20">
@@ -392,7 +392,7 @@ export default function LivePage() {
               )}
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="bg-gradient-to-r from-red-500 to-orange-500 text-black font-bold px-8 py-3 rounded-full"
+                className="brand-gradient hover:opacity-90 text-black font-bold px-8 py-3 rounded-full transition-opacity"
               >
                 Régler un beef
               </button>
@@ -410,7 +410,7 @@ export default function LivePage() {
                 className={`group bg-gradient-to-br rounded-2xl p-6 border cursor-pointer transition-all ${
                   room.is_premium
                     ? 'from-yellow-900/30 to-gray-900 border-yellow-500/50 hover:border-yellow-400 hover:shadow-2xl hover:shadow-yellow-500/20'
-                    : 'from-gray-800 to-gray-900 border-gray-700 hover:border-orange-500 hover:shadow-2xl hover:shadow-orange-500/20'
+                    : 'from-gray-800 to-gray-900 border-gray-700 hover:border-brand-500 hover:shadow-2xl hover:shadow-brand-500/20'
                 }`}
               >
                 {/* Live Badge & Premium Badge */}
@@ -434,7 +434,7 @@ export default function LivePage() {
                 </div>
 
                 {/* Title */}
-                <h3 className="text-xl font-black text-white mb-2 line-clamp-2 group-hover:text-orange-400 transition-colors">
+                <h3 className="text-xl font-black text-white mb-2 line-clamp-2 group-hover:text-brand-400 transition-colors">
                   {room.title}
                 </h3>
 
@@ -450,7 +450,7 @@ export default function LivePage() {
                     <Clock className="w-3 h-3" />
                     <span>Il y a {Math.floor((Date.now() - new Date(room.created_at).getTime()) / 60000)} min</span>
                   </div>
-                  <span className="text-xs px-2 py-1 bg-orange-500/20 text-orange-400 rounded-full font-semibold">
+                  <span className="text-xs px-2 py-1 bg-brand-500/20 text-brand-400 rounded-full font-semibold">
                     {room.category || 'général'}
                   </span>
                 </div>
@@ -510,7 +510,7 @@ export default function LivePage() {
                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-lg">
                   <span className="text-white font-semibold">Prix d'entrée</span>
                   <div className="flex items-center gap-2">
-                    <Flame className="w-5 h-5 text-orange-400" />
+                    <Flame className="w-5 h-5 text-brand-400" />
                     <span className="text-yellow-400 font-black text-xl">{selectedRoom.price} points</span>
                   </div>
                 </div>

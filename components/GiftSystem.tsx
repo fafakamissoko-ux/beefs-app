@@ -9,13 +9,13 @@ interface Gift {
   id: string;
   from_user_id: string;
   to_user_id: string;
-  gift_type: 'flame' | 'crown' | 'lightning' | 'diamond';
+  gift_type: 'rose' | 'fire' | 'crown' | 'diamond';
   created_at: string;
 }
 
 interface AnimatedGift {
   id: string;
-  type: 'flame' | 'crown' | 'lightning' | 'diamond';
+  type: 'rose' | 'fire' | 'crown' | 'diamond';
   x: number;
   y: number;
 }

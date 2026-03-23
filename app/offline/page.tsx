@@ -1,9 +1,11 @@
+export const dynamic = 'force-dynamic';
+
 export default function OfflinePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="text-center max-w-md">
         <div className="mb-8">
-          <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-r from-red-500 to-orange-500 flex items-center justify-center">
+          <div className="w-24 h-24 mx-auto mb-6 rounded-full brand-gradient flex items-center justify-center">
             <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
             </svg>
@@ -19,7 +21,7 @@ export default function OfflinePage() {
 
           <button
             onClick={() => window.location.reload()}
-            className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold px-8 py-3 rounded-lg transition-all"
+            className="brand-gradient hover:opacity-90 text-black font-bold px-8 py-3 rounded-lg transition-all"
           >
             Réessayer
           </button>
@@ -29,15 +31,15 @@ export default function OfflinePage() {
           <h2 className="text-white font-bold mb-3">💡 Que peux-tu faire hors ligne?</h2>
           <ul className="space-y-2 text-gray-400 text-sm">
             <li className="flex items-start gap-2">
-              <span className="text-orange-500">✓</span>
+              <span className="text-brand-400">✓</span>
               <span>Consulter ton profil</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-orange-500">✓</span>
+              <span className="text-brand-400">✓</span>
               <span>Voir tes stats et historique</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-orange-500">✓</span>
+              <span className="text-brand-400">✓</span>
               <span>Préparer des beefs (enregistrés localement)</span>
             </li>
           </ul>

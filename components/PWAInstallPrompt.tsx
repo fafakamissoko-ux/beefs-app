@@ -83,7 +83,7 @@ export function PWAInstallPrompt() {
         exit={{ opacity: 0, y: 50 }}
         className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50"
       >
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-orange-500/30 rounded-xl p-4 shadow-2xl">
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-brand-500/30 rounded-xl p-4 shadow-2xl">
           {/* Close button */}
           <button
             onClick={() => handleDismiss(false)}
@@ -94,7 +94,7 @@ export function PWAInstallPrompt() {
 
           {/* Content */}
           <div className="flex items-start gap-3 mb-3">
-            <div className="p-2 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg">
+            <div className="p-2 brand-gradient rounded-lg">
               <Download className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -110,11 +110,11 @@ export function PWAInstallPrompt() {
           {/* Features */}
           <div className="space-y-1 mb-4 ml-11">
             <div className="flex items-center gap-2 text-xs text-gray-300">
-              <Bell className="w-3 h-3 text-orange-400" />
+              <Bell className="w-3 h-3 text-brand-400" />
               <span>Notifications en temps réel</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-gray-300">
-              <Download className="w-3 h-3 text-orange-400" />
+              <Download className="w-3 h-3 text-brand-400" />
               <span>Fonctionne hors ligne</span>
             </div>
           </div>
@@ -123,7 +123,7 @@ export function PWAInstallPrompt() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleInstall}
-              className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold py-2 px-4 rounded-lg text-xs transition-all"
+              className="flex-1 brand-gradient hover:opacity-90 text-black font-bold py-2 px-4 rounded-lg text-xs transition-all"
             >
               Installer
             </button>

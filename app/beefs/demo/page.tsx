@@ -298,7 +298,7 @@ export default function ArenaLobbyPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
+    <div className="min-h-screen bg-black">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -322,7 +322,7 @@ export default function ArenaLobbyPage() {
               {/* User Balance - Repositioned */}
               <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/50 backdrop-blur-sm rounded-full px-4 py-2 shadow-xl">
                 <div className="flex items-center gap-2">
-                  <Flame className="w-5 h-5 text-orange-400" />
+                  <Flame className="w-5 h-5 text-brand-400" />
                   <span className="text-white font-bold">{userBalance} points</span>
                 </div>
               </div>
@@ -331,7 +331,7 @@ export default function ArenaLobbyPage() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-black font-bold px-6 py-3 rounded-full shadow-xl"
+                className="flex items-center gap-2 brand-gradient hover:opacity-90 text-black font-bold px-6 py-3 rounded-full shadow-xl transition-opacity"
               >
                 <Plus className="w-5 h-5" />
                 <span>Régler un beef</span>
@@ -385,7 +385,7 @@ export default function ArenaLobbyPage() {
         {/* Live Rooms Grid */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-pink-500 border-t-transparent"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-brand-500 border-t-transparent"></div>
           </div>
         ) : liveRooms.length === 0 ? (
           <div className="text-center py-20">
@@ -411,7 +411,7 @@ export default function ArenaLobbyPage() {
               )}
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="bg-gradient-to-r from-red-500 to-orange-500 text-black font-bold px-8 py-3 rounded-full"
+                className="brand-gradient hover:opacity-90 text-black font-bold px-8 py-3 rounded-full transition-opacity"
               >
                 Régler un beef
               </button>
@@ -529,7 +529,7 @@ export default function ArenaLobbyPage() {
                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-lg">
                   <span className="text-white font-semibold">Prix d'entrée</span>
                   <div className="flex items-center gap-2">
-                    <Flame className="w-5 h-5 text-orange-400" />
+                    <Flame className="w-5 h-5 text-brand-400" />
                     <span className="text-yellow-400 font-black text-xl">{selectedRoom.price} points</span>
                   </div>
                 </div>
@@ -537,7 +537,7 @@ export default function ArenaLobbyPage() {
                 <div className="flex items-center justify-between p-4 bg-black/40 rounded-lg">
                   <span className="text-gray-400">Votre solde</span>
                   <div className="flex items-center gap-2">
-                    <Flame className="w-4 h-4 text-orange-400" />
+                    <Flame className="w-4 h-4 text-brand-400" />
                     <span className={`font-bold ${userBalance >= (selectedRoom.price || 0) ? 'text-green-400' : 'text-red-400'}`}>
                       {userBalance} points
                     </span>
@@ -548,7 +548,7 @@ export default function ArenaLobbyPage() {
                   <div className="flex items-center justify-between p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
                     <span className="text-gray-300">Après achat</span>
                     <div className="flex items-center gap-2">
-                      <Flame className="w-4 h-4 text-orange-400" />
+                      <Flame className="w-4 h-4 text-brand-400" />
                       <span className="text-white font-bold">{userBalance - (selectedRoom.price || 0)} points</span>
                     </div>
                   </div>

@@ -202,13 +202,13 @@ export function TikTokStyleArena({
   // Auto-pause when both challengers have no audio
   useEffect(() => {
     if (!timerActive) return;
-    const hasAnyRemoteAudio = sortedRemoteParticipants.some(p => p.audioTrack);
-    if (!hasAnyRemoteAudio && sortedRemoteParticipants.length > 0) {
+    const hasAnyRemoteAudio = remoteParticipants.some(p => p.audioTrack);
+    if (!hasAnyRemoteAudio && remoteParticipants.length > 0) {
       setTimerPaused(true);
     } else if (!micEnabled || !isHost) {
       setTimerPaused(false);
     }
-  }, [sortedRemoteParticipants, timerActive, micEnabled, isHost]);
+  }, [remoteParticipants, timerActive, micEnabled, isHost]);
 
   const startBeefTimer = () => {
     setBeefTimeRemaining(MAX_BEEF_DURATION);
@@ -512,7 +512,7 @@ export function TikTokStyleArena({
         id: Date.now().toString(),
         username: username,
         displayName: username,
-        bio: 'Nouveau sur Arena VS',
+        bio: 'Nouveau sur Beefs',
         isPrivate: false,
         joinedDate: new Date().toISOString().split('T')[0],
         stats: { debates: 0, wins: 0, followers: 0, following: 0 }

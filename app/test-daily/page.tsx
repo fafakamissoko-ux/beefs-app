@@ -64,7 +64,7 @@ export default function DailyTestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black p-4">
+    <div className="min-h-screen bg-black p-4">
       {/* Header */}
       <div className="max-w-6xl mx-auto mb-6">
         <div className="flex items-center justify-between">
@@ -108,7 +108,7 @@ export default function DailyTestPage() {
             <button
               onClick={createRoom}
               disabled={isCreatingRoom}
-              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 disabled:opacity-50 text-white font-bold py-4 px-8 rounded-lg transition-all shadow-lg text-lg"
+              className="brand-gradient hover:opacity-90 disabled:opacity-50 text-white font-bold py-4 px-8 rounded-lg transition-all shadow-lg text-lg"
             >
               {isCreatingRoom ? (
                 <span className="flex items-center gap-2">
