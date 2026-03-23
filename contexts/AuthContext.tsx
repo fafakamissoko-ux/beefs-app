@@ -8,8 +8,10 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  userRole: 'user' | 'admin' | 'moderator' | null;
   signUp: (email: string, password: string, username: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
 }
@@ -20,21 +22,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<'user' | 'admin' | 'moderator' | null>(null);
+
+  const loadUserRole = async (userId: string) => {
+    try {
+      const { data } = await supabase.from('users').select('role').eq('id', userId).single();
+      setUserRole((data?.role as 'user' | 'admin' | 'moderator') ?? 'user');
+    } catch {
+      setUserRole('user');
+    }
+  };
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        loadUserRole(session.user.id);
+      } else {
+        setUserRole(null);
+      }
       setLoading(false);
     });
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        loadUserRole(session.user.id);
+      } else {
+        setUserRole(null);
+      }
       setLoading(false);
     });
 
@@ -87,6 +107,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Requires Google OAuth setup in Supabase Dashboard:
+  // Authentication → Providers → Google → Enable + add Client ID & Secret from Google Cloud Console
+  const signInWithGoogle = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -106,8 +142,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     session,
     loading,
+    userRole,
     signUp,
     signIn,
+    signInWithGoogle,
     signOut,
     resetPassword,
   };

@@ -14,7 +14,7 @@ import { MultiParticipantGrid } from './MultiParticipantGrid';
 import { InviteParticipantModal } from './InviteParticipantModal';
 import { useToast } from '@/components/Toast';
 
-// Updated: Multi-participant system (2-6 people on the ring)
+const MAX_BEEF_DURATION = 60 * 60; // 60 minutes in seconds
 
 interface RingParticipant {
   id: string;
@@ -143,6 +143,102 @@ export function TikTokStyleArena({
   // Participant roles from DB — maps Daily.co userNames to beef roles
   const [participantRoles, setParticipantRoles] = useState<Record<string, { role: string; name: string }>>({});
   const [liveViewerCount, setLiveViewerCount] = useState(viewerCount);
+
+  // Beef duration limit (60 min countdown)
+  const [beefTimeRemaining, setBeefTimeRemaining] = useState(MAX_BEEF_DURATION);
+  const beefWarning5Shown = useRef(false);
+  const beefWarning1Shown = useRef(false);
+
+  // Timer state — controlled by mediator
+  const [timerActive, setTimerActive] = useState(false);
+  const [timerPaused, setTimerPaused] = useState(false);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Timer countdown — only runs when timerActive && !timerPaused
+  useEffect(() => {
+    if (!timerActive || timerPaused) {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      return;
+    }
+
+    timerIntervalRef.current = setInterval(() => {
+      setBeefTimeRemaining((prev) => {
+        const next = prev - 1;
+        if (next <= 5 * 60 && next > 60 && !beefWarning5Shown.current) {
+          beefWarning5Shown.current = true;
+          toast('5 minutes restantes', 'info');
+        }
+        if (next <= 60 && next > 0 && !beefWarning1Shown.current) {
+          beefWarning1Shown.current = true;
+          toast('1 minute restante !', 'error');
+        }
+        if (next <= 0) {
+          setTimerActive(false);
+          toast('Le beef est terminé (60 min max)', 'error');
+          leave();
+          return 0;
+        }
+        return next;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, [timerActive, timerPaused, leave, toast]);
+
+  // Auto-pause timer when mediator's mic is active (they're speaking)
+  useEffect(() => {
+    if (!timerActive) return;
+    if (!micEnabled && isHost) {
+      // Mediator mic is off, timer runs
+    } else if (micEnabled && isHost) {
+      // Mediator is speaking, pause timer
+      setTimerPaused(true);
+    }
+  }, [micEnabled, isHost, timerActive]);
+
+  // Auto-pause when both challengers have no audio
+  useEffect(() => {
+    if (!timerActive) return;
+    const hasAnyRemoteAudio = sortedRemoteParticipants.some(p => p.audioTrack);
+    if (!hasAnyRemoteAudio && sortedRemoteParticipants.length > 0) {
+      setTimerPaused(true);
+    } else if (!micEnabled || !isHost) {
+      setTimerPaused(false);
+    }
+  }, [sortedRemoteParticipants, timerActive, micEnabled, isHost]);
+
+  const startBeefTimer = () => {
+    setBeefTimeRemaining(MAX_BEEF_DURATION);
+    beefWarning5Shown.current = false;
+    beefWarning1Shown.current = false;
+    setTimerActive(true);
+    setTimerPaused(false);
+    toast('Chronomètre démarré !', 'success');
+  };
+
+  const pauseBeefTimer = () => {
+    setTimerPaused(true);
+    toast('Chronomètre en pause', 'info');
+  };
+
+  const resumeBeefTimer = () => {
+    setTimerPaused(false);
+    toast('Chronomètre repris', 'info');
+  };
+
+  const stopBeefTimer = () => {
+    setTimerActive(false);
+    setTimerPaused(false);
+    toast('Chronomètre arrêté', 'info');
+  };
+
+  const formatBeefTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   // Load beef participants from Supabase to map roles
   useEffect(() => {
@@ -904,6 +1000,34 @@ export function TikTokStyleArena({
             </div>
           </div>
 
+          {/* Center: Beef Duration Timer */}
+          {isJoined && timerActive && (
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full backdrop-blur-sm border transition-all ${
+              timerPaused
+                ? 'bg-yellow-500/30 border-yellow-500/50'
+                : beefTimeRemaining <= 5 * 60
+                  ? 'bg-red-500/30 border-red-500/50 animate-pulse'
+                  : 'bg-black/40 border-white/10'
+            }`}>
+              <span className="text-sm">{timerPaused ? '⏸' : '⏱'}</span>
+              <span className={`text-sm font-bold tabular-nums ${
+                timerPaused
+                  ? 'text-yellow-400'
+                  : beefTimeRemaining <= 5 * 60 ? 'text-red-400' : 'text-white'
+              }`}>
+                {formatBeefTime(beefTimeRemaining)}
+              </span>
+              {timerPaused && (
+                <span className="text-yellow-400 text-[10px] font-black animate-pulse">EN PAUSE</span>
+              )}
+            </div>
+          )}
+          {isJoined && !timerActive && isHost && (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10 bg-black/40">
+              <span className="text-white/50 text-xs font-medium">Pas de chrono</span>
+            </div>
+          )}
+
           {/* Right: Actions with Fixed Width */}
           <div className="flex items-center gap-1.5">
             <button
@@ -1151,38 +1275,48 @@ export function TikTokStyleArena({
               </div>
 
             <div className="p-3 space-y-3">
-              {/* Timer Controls */}
-              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                <h3 className="text-white font-bold text-sm mb-2 flex items-center gap-2">
-                  <span>⏱️</span> Temps de parole
+              {/* Timer Controls — Mediator only */}
+              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                <h3 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
+                  ⏱️ Chronomètre du beef
                 </h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-white/70 text-sm">Durée:</span>
-                    <input
-                      type="number"
-                      value={timeLimit}
-                      onChange={(e) => setTimeLimit(parseInt(e.target.value) || 60)}
-                      className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-sm w-20"
-                    />
-                    <span className="text-white/70 text-sm">secondes</span>
-                  </div>
-                  {timerRunning && (
-                    <div className="bg-black/40 rounded-lg p-3">
-                      <div className="text-center mb-2">
-                        <span className={`text-3xl font-black ${timeRemaining <= 10 ? 'text-red-500' : 'text-white'}`}>
-                          {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
-                        </span>
-                      </div>
-                      <button
-                        onClick={stopTimer}
-                        className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded"
-                      >
-                        ⏹️ Arrêter
+                
+                {!timerActive ? (
+                  <button
+                    onClick={startBeefTimer}
+                    className="w-full py-3 rounded-xl text-sm font-bold text-white brand-gradient hover:shadow-glow transition-all"
+                  >
+                    ▶️ Démarrer le chronomètre
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-center py-3 bg-black/40 rounded-xl">
+                      <span className={`text-3xl font-black font-mono ${beefTimeRemaining <= 300 ? 'text-red-400' : 'text-white'}`}>
+                        {formatBeefTime(beefTimeRemaining)}
+                      </span>
+                      {timerPaused && (
+                        <p className="text-yellow-400 text-xs font-bold mt-1 animate-pulse">EN PAUSE</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      {timerPaused ? (
+                        <button onClick={resumeBeefTimer} className="flex-1 py-2 bg-green-500/20 text-green-400 font-bold rounded-xl text-sm hover:bg-green-500/30">
+                          ▶️ Reprendre
+                        </button>
+                      ) : (
+                        <button onClick={pauseBeefTimer} className="flex-1 py-2 bg-yellow-500/20 text-yellow-400 font-bold rounded-xl text-sm hover:bg-yellow-500/30">
+                          ⏸ Pause
+                        </button>
+                      )}
+                      <button onClick={stopBeefTimer} className="flex-1 py-2 bg-red-500/20 text-red-400 font-bold rounded-xl text-sm hover:bg-red-500/30">
+                        ⏹ Arrêter
                       </button>
                     </div>
-                  )}
-                </div>
+                    <p className="text-gray-500 text-xs text-center">
+                      Auto-pause quand vous parlez ou quand les micros sont coupés
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Debaters Control */}

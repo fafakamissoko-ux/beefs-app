@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Check, X, Clock, Euro, AlertCircle, RefreshCw } from 'lucide-react';
+import { Check, X, Clock, Euro, AlertCircle, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import { useAuth } from '@/contexts/AuthContext';
 
-const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || 'beefs-admin-secret-change-me';
+const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
 
 interface WithdrawalRequest {
   id: string;
@@ -30,14 +32,15 @@ interface WithdrawalRequest {
 }
 
 export default function AdminRetraitsPage() {
+  const router = useRouter();
   const { toast } = useToast();
+  const { user, userRole, loading: authLoading } = useAuth();
   const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'rejected'>('pending');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [adminNote, setAdminNote] = useState<Record<string, string>>({});
-  const [password, setPassword] = useState('');
-  const [authenticated, setAuthenticated] = useState(false);
+  const authenticated = userRole === 'admin';
 
   const loadRequests = async () => {
     setLoading(true);
@@ -84,25 +87,23 @@ export default function AdminRetraitsPage() {
     }
   };
 
+  if (authLoading || userRole === null) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (!authenticated) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
-        <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8 w-full max-w-sm">
-          <h1 className="text-2xl font-black text-white mb-2">Admin — Beefs</h1>
-          <p className="text-gray-400 text-sm mb-6">Accès restreint</p>
-          <input
-            type="password"
-            placeholder="Mot de passe admin"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && setAuthenticated(password === ADMIN_SECRET)}
-            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white mb-4 focus:outline-none focus:border-orange-500"
-          />
-          <button
-            onClick={() => setAuthenticated(password === ADMIN_SECRET)}
-            className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-all"
-          >
-            Connexion
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="card p-8 w-full max-w-sm text-center">
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h1 className="text-xl font-bold text-white mb-2">Accès refusé</h1>
+          <p className="text-gray-500 text-sm mb-6">Vous devez être administrateur pour accéder à cette page.</p>
+          <button onClick={() => router.push('/feed')} className="btn-primary">
+            Retour au feed
           </button>
         </div>
       </div>
@@ -113,11 +114,15 @@ export default function AdminRetraitsPage() {
   const totalPendingAmount = requests.filter(r => r.status === 'pending').reduce((s, r) => s + Number(r.amount_euros), 0);
 
   return (
-    <div className="min-h-screen bg-gray-950 p-4 md:p-8">
+    <div className="min-h-screen bg-black p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
+            <button onClick={() => router.push('/admin')} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm mb-2 transition-colors">
+              <ArrowLeft className="w-4 h-4" />
+              Dashboard admin
+            </button>
             <h1 className="text-3xl font-black text-white">Gestion des Retraits</h1>
             <p className="text-gray-400 text-sm mt-1">Beefs Admin</p>
           </div>
