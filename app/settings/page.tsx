@@ -449,7 +449,7 @@ export default function SettingsPage() {
                 <button
                   onClick={() => updatePreferences({ reduceAnimations: !preferences.reduceAnimations })}
                   className={`relative w-12 h-7 rounded-full transition-all ${
-                    preferences.reduceAnimations ? 'bg-orange-500' : 'bg-white/10'
+                    preferences.reduceAnimations ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10'
                   }`}
                 >
                   <span
@@ -472,7 +472,7 @@ export default function SettingsPage() {
                 <button
                   onClick={() => updatePreferences({ highContrast: !preferences.highContrast })}
                   className={`relative w-12 h-7 rounded-full transition-all ${
-                    preferences.highContrast ? 'bg-orange-500' : 'bg-white/10'
+                    preferences.highContrast ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10'
                   }`}
                 >
                   <span

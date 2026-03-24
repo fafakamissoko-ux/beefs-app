@@ -177,60 +177,141 @@
 }
 
 /* ============================================================
-   THEME SYSTEM — Light mode overrides
+   THEME SYSTEM — Light mode (comprehensive)
    ============================================================ */
-.theme-light {
-  --bg-primary: #FFFFFF;
-  --bg-secondary: #F5F5F7;
-  --bg-tertiary: #E8E8ED;
-  --text-primary: #1D1D1F;
-  --text-secondary: #6E6E73;
-  --border-color: rgba(0, 0, 0, 0.08);
-}
 
-.theme-light body {
+/* --- Backgrounds --- */
+.theme-light body,
+.theme-light .bg-black,
+.theme-light .bg-surface-1,
+.theme-light .bg-surface-2,
+.theme-light .min-h-screen {
   background: #FFFFFF !important;
   color: #1D1D1F !important;
 }
 
+.theme-light .bg-surface-3,
+.theme-light .bg-gray-900,
+.theme-light .bg-gray-950 {
+  background: #F5F5F7 !important;
+}
+
+/* --- Cards --- */
 .theme-light .card,
 .theme-light .card-interactive {
   background: #F5F5F7 !important;
-  border-color: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
 }
 .theme-light .card-interactive:hover {
-  background: #E8E8ED !important;
-  border-color: rgba(0, 0, 0, 0.12) !important;
+  background: #EBEBF0 !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
 }
 
-.theme-light .input-field {
-  background: rgba(0, 0, 0, 0.03) !important;
-  border-color: rgba(0, 0, 0, 0.08) !important;
-  color: #1D1D1F !important;
-}
-.theme-light .input-field::placeholder {
-  color: #999 !important;
-}
-
+/* --- Header --- */
 .theme-light header {
-  background: rgba(255, 255, 255, 0.8) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
   border-color: rgba(0, 0, 0, 0.06) !important;
 }
 
+/* --- Inputs --- */
+.theme-light .input-field,
+.theme-light input[type="text"],
+.theme-light input[type="email"],
+.theme-light input[type="password"],
+.theme-light input[type="number"],
+.theme-light input[type="tel"],
+.theme-light textarea,
+.theme-light select {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #1D1D1F !important;
+}
+.theme-light .input-field::placeholder,
+.theme-light input::placeholder,
+.theme-light textarea::placeholder {
+  color: #8E8E93 !important;
+}
+
+/* --- Text colors --- */
 .theme-light .text-white { color: #1D1D1F !important; }
+.theme-light .text-gray-300 { color: #3A3A3C !important; }
 .theme-light .text-gray-400 { color: #6E6E73 !important; }
 .theme-light .text-gray-500 { color: #8E8E93 !important; }
 .theme-light .text-gray-600 { color: #AEAEB2 !important; }
+.theme-light .text-gray-700 { color: #C7C7CC !important; }
 
+/* --- Borders --- */
+.theme-light .border-white\/\[0\.06\],
+.theme-light .border-white\/\[0\.08\],
+.theme-light .border-gray-700,
+.theme-light .border-gray-800 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* --- Backgrounds with opacity --- */
+.theme-light .bg-white\/5,
+.theme-light .bg-white\/\[0\.03\],
+.theme-light .bg-white\/\[0\.04\],
+.theme-light .bg-white\/\[0\.06\] {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+.theme-light .bg-white\/10,
+.theme-light .bg-white\/\[0\.08\] {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+.theme-light .hover\:bg-white\/\[0\.04\]:hover,
+.theme-light .hover\:bg-white\/\[0\.06\]:hover,
+.theme-light .hover\:bg-white\/5:hover,
+.theme-light .hover\:bg-white\/10:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* --- Dropdowns and modals --- */
+.theme-light [style*="background: #18181C"],
+.theme-light [style*="background: #111114"],
+.theme-light [style*="background: #0A0A0C"] {
+  background: #FFFFFF !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* --- Glass effect --- */
+.theme-light .glass {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* --- Skeleton --- */
 .theme-light .skeleton {
   background: rgba(0, 0, 0, 0.06) !important;
 }
 
-/* Font size modes */
+/* --- Scrollbar --- */
+.theme-light ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15) !important;
+}
+
+/* --- Selection --- */
+.theme-light ::selection {
+  background: rgba(232, 58, 20, 0.15) !important;
+}
+
+/* --- Badges keep their colors (no override needed) --- */
+
+/* --- Mobile menu --- */
+.theme-light .md\:hidden.border-t {
+  background: #FFFFFF !important;
+}
+
+/* ============================================================
+   Font size modes
+   ============================================================ */
 .text-sm-mode { font-size: 87.5%; }
 .text-lg-mode { font-size: 112.5%; }
 
-/* Reduce motion */
+/* ============================================================
+   Reduce motion
+   ============================================================ */
 .reduce-motion *,
 .reduce-motion *::before,
 .reduce-motion *::after {
@@ -238,7 +319,9 @@
   transition-duration: 0.1ms !important;
 }
 
-/* High contrast */
+/* ============================================================
+   High contrast
+   ============================================================ */
 .high-contrast .text-gray-400,
 .high-contrast .text-gray-500 {
   color: #D1D1D6 !important;
@@ -246,4 +329,10 @@
 .high-contrast.theme-light .text-gray-400,
 .high-contrast.theme-light .text-gray-500 {
   color: #3A3A3C !important;
+}
+.high-contrast .text-gray-600 {
+  color: #C7C7CC !important;
+}
+.high-contrast.theme-light .text-gray-600 {
+  color: #48484A !important;
 }
