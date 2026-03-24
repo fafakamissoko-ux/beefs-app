@@ -6,6 +6,7 @@ import { OnboardingReminder } from "@/components/OnboardingReminder";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PWAManager } from "@/components/PWAManager";
 import { ToastProvider } from "@/components/Toast";
+import { BetaGate } from "@/components/BetaGate";
 
 export const metadata: Metadata = {
   title: "Beefs - Règle tes conflits en live",
@@ -34,13 +35,15 @@ function RootLayoutClient({
   return (
     <AuthProvider>
       <ToastProvider>
-        <PWAManager />
-        <Header />
-        <main className="pt-14">
-          {children}
-        </main>
-        <OnboardingReminder />
-        <PWAInstallPrompt />
+        <BetaGate>
+          <PWAManager />
+          <Header />
+          <main className="pt-14">
+            {children}
+          </main>
+          <OnboardingReminder />
+          <PWAInstallPrompt />
+        </BetaGate>
       </ToastProvider>
     </AuthProvider>
   );
