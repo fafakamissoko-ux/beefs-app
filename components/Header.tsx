@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Home, Flame, Bell, User, Settings as SettingsIcon, MessageCircle, LogOut, Mail, ChevronDown, Plus } from 'lucide-react';
+import { Menu, X, Home, Flame, Bell, User, Settings as SettingsIcon, MessageCircle, LogOut, Mail, ChevronDown, Plus, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
@@ -17,7 +17,7 @@ export function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [pendingInvitations, setPendingInvitations] = useState(0);
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
+  const { user, userRole, signOut } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -176,6 +176,7 @@ export function Header() {
                               { href: '/buy-points', icon: Flame, label: 'Acheter des points' },
                               { href: '/invitations', icon: Mail, label: 'Invitations' },
                               { href: '/settings', icon: SettingsIcon, label: 'Paramètres' },
+                              ...(userRole === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
                             ].map(item => (
                               <Link
                                 key={item.href}
@@ -294,6 +295,7 @@ export function Header() {
                       {[
                         { href: '/profile', icon: User, label: 'Profil' },
                         { href: '/settings', icon: SettingsIcon, label: 'Paramètres' },
+                        ...(userRole === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
                       ].map(item => (
                         <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}
                           className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] rounded-xl transition-colors">
