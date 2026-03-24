@@ -17,6 +17,8 @@ interface UserProfile {
   display_name: string;
   bio?: string;
   avatar_url?: string;
+  banner_url?: string;
+  accent_color?: string;
   points: number;
   is_premium: boolean;
   premium_settings?: {
@@ -196,6 +198,8 @@ export default function ProfileContent() {
             display_name: data.display_name || data.username,
             bio: data.bio,
             avatar_url: data.avatar_url,
+            banner_url: data.banner_url,
+            accent_color: data.accent_color || '#E83A14',
             points: data.points || 0,
             is_premium: data.is_premium || false,
             premium_settings: data.premium_settings || {
@@ -390,6 +394,38 @@ export default function ProfileContent() {
     }
   };
 
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !user) return;
+    
+    try {
+      const file = e.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `banner_${user.id}_${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ banner_url: data.publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile(prev => prev ? { ...prev, banner_url: data.publicUrl } : null);
+      toast('Bannière mise à jour !', 'success');
+    } catch (error) {
+      console.error('Error uploading banner:', error);
+      toast('Erreur lors de l\'upload de la bannière', 'error');
+    }
+  };
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0] || !user) return;
 
@@ -494,15 +530,31 @@ export default function ProfileContent() {
         {/* Profile Header */}
         <div className="card rounded-3xl overflow-hidden mb-6">
           {/* Cover Image */}
-          <div className="h-48 bg-gradient-to-r from-brand-500/20 via-brand-400/20 to-brand-300/20 relative">
-            <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10"></div>
+          <div className="h-48 relative overflow-hidden group">
+            {profile.banner_url ? (
+              <img src={profile.banner_url} alt="Banner" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${profile.accent_color || '#E83A14'}33, ${profile.accent_color || '#E83A14'}11)` }} />
+            )}
+            <label className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-all cursor-pointer opacity-0 group-hover:opacity-100">
+              <div className="flex items-center gap-2 px-4 py-2 bg-black/60 backdrop-blur-sm rounded-xl text-white text-sm font-medium">
+                <Camera className="w-4 h-4" />
+                <span>Changer la bannière</span>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleBannerUpload}
+              />
+            </label>
           </div>
 
           <div className="px-6 pb-6 -mt-16 relative">
             {/* Avatar */}
             <div className="flex items-end justify-between mb-4">
               <div className="relative">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-4 border-gray-900 overflow-hidden flex items-center justify-center text-4xl font-black text-white">
+                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-4 overflow-hidden flex items-center justify-center text-4xl font-black text-white" style={{ borderColor: profile.accent_color || '#E83A14' }}>
                   {profile.avatar_url ? (
                     <img
                       src={profile.avatar_url}

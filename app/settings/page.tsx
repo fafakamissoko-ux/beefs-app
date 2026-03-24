@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check } from 'lucide-react';
+import { ArrowLeft, User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, Sun, Moon, Monitor, Type, Zap } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase/client';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { preferences, updatePreferences } = useTheme();
   
   const [profile, setProfile] = useState({
     username: '',
@@ -30,6 +32,7 @@ export default function SettingsPage() {
     confirm: false,
   });
   
+  const [accentColor, setAccentColor] = useState('#E83A14');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -49,7 +52,7 @@ export default function SettingsPage() {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('username, display_name, bio')
+        .select('username, display_name, bio, accent_color')
         .eq('id', user.id)
         .single();
 
@@ -60,6 +63,7 @@ export default function SettingsPage() {
           bio: data.bio || '',
           email: user.email || '',
         });
+        if (data.accent_color) setAccentColor(data.accent_color);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -325,6 +329,159 @@ export default function SettingsPage() {
               >
                 {saving ? 'Modification...' : 'Changer le mot de passe'}
               </button>
+            </div>
+          </motion.div>
+
+          {/* Display & Accessibility */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="card rounded-2xl p-6"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+                <Sun className="w-5 h-5 text-orange-400" />
+              </div>
+              <h3 className="text-white font-bold text-xl">Affichage & accessibilité</h3>
+            </div>
+
+            <div className="space-y-6">
+              {/* Theme selector */}
+              <div>
+                <label className="block text-white font-semibold mb-3 text-sm">Thème</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { value: 'dark' as const, label: 'Sombre', icon: Moon },
+                    { value: 'light' as const, label: 'Clair', icon: Sun },
+                    { value: 'auto' as const, label: 'Automatique', icon: Monitor },
+                  ]).map(({ value, label, icon: Icon }) => (
+                    <button
+                      key={value}
+                      onClick={() => updatePreferences({ theme: value })}
+                      className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
+                        preferences.theme === value
+                          ? 'brand-gradient text-white shadow-lg'
+                          : 'bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.08]'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Accent color */}
+              <div>
+                <label className="block text-white font-semibold mb-3 text-sm">Couleur d&apos;accent</label>
+                <div className="flex items-center gap-3 flex-wrap">
+                  {['#E83A14', '#FF6B2C', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={async () => {
+                        setAccentColor(color);
+                        if (user) {
+                          await supabase.from('users').update({ accent_color: color }).eq('id', user.id);
+                        }
+                      }}
+                      className={`w-9 h-9 rounded-full transition-all ${
+                        accentColor === color ? 'ring-2 ring-white ring-offset-2 ring-offset-black scale-110' : 'hover:scale-110'
+                      }`}
+                      style={{ background: color }}
+                    />
+                  ))}
+                  <label className="relative cursor-pointer">
+                    <input
+                      type="color"
+                      value={accentColor}
+                      onChange={async (e) => {
+                        setAccentColor(e.target.value);
+                        if (user) {
+                          await supabase.from('users').update({ accent_color: e.target.value }).eq('id', user.id);
+                        }
+                      }}
+                      className="absolute inset-0 w-9 h-9 opacity-0 cursor-pointer"
+                    />
+                    <div className="w-9 h-9 rounded-full border-2 border-dashed border-gray-500 flex items-center justify-center text-gray-400 hover:border-white hover:text-white transition-all">
+                      <span className="text-xs font-bold">+</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Font size */}
+              <div>
+                <label className="block text-white font-semibold mb-3 text-sm flex items-center gap-2">
+                  <Type className="w-4 h-4" />
+                  Taille du texte
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { value: 'small' as const, label: 'Petit' },
+                    { value: 'normal' as const, label: 'Normal' },
+                    { value: 'large' as const, label: 'Grand' },
+                  ]).map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => updatePreferences({ fontSize: value })}
+                      className={`px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
+                        preferences.fontSize === value
+                          ? 'brand-gradient text-white shadow-lg'
+                          : 'bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.08]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Reduce animations toggle */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Zap className="w-5 h-5 text-yellow-400" />
+                  <div>
+                    <p className="text-white font-semibold text-sm">Réduire les animations</p>
+                    <p className="text-gray-500 text-xs">Limite les mouvements et transitions</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => updatePreferences({ reduceAnimations: !preferences.reduceAnimations })}
+                  className={`relative w-12 h-7 rounded-full transition-all ${
+                    preferences.reduceAnimations ? 'bg-orange-500' : 'bg-white/10'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
+                      preferences.reduceAnimations ? 'translate-x-5' : ''
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* High contrast toggle */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Eye className="w-5 h-5 text-cyan-400" />
+                  <div>
+                    <p className="text-white font-semibold text-sm">Contraste élevé</p>
+                    <p className="text-gray-500 text-xs">Augmente le contraste des textes</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => updatePreferences({ highContrast: !preferences.highContrast })}
+                  className={`relative w-12 h-7 rounded-full transition-all ${
+                    preferences.highContrast ? 'bg-orange-500' : 'bg-white/10'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
+                      preferences.highContrast ? 'translate-x-5' : ''
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           </motion.div>
 

@@ -7,6 +7,7 @@ import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PWAManager } from "@/components/PWAManager";
 import { ToastProvider } from "@/components/Toast";
 import { BetaGate } from "@/components/BetaGate";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 export const metadata: Metadata = {
   title: "Beefs - Règle tes conflits en live",
@@ -34,8 +35,9 @@ function RootLayoutClient({
 }>) {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <BetaGate>
+      <ThemeProvider>
+        <ToastProvider>
+          <BetaGate>
           <PWAManager />
           <Header />
           <main className="pt-14">
@@ -43,8 +45,9 @@ function RootLayoutClient({
           </main>
           <OnboardingReminder />
           <PWAInstallPrompt />
-        </BetaGate>
-      </ToastProvider>
+          </BetaGate>
+        </ToastProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 }
