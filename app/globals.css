@@ -303,6 +303,41 @@
   background: #FFFFFF !important;
 }
 
+/* --- Searchbar modal --- */
+.theme-light .bg-gray-800,
+.theme-light .bg-gray-900 {
+  background: #F5F5F7 !important;
+}
+
+/* --- Profile dropdown and popups --- */
+.theme-light [class*="bg-surface-"],
+.theme-light .bg-black\/80,
+.theme-light .bg-black\/60,
+.theme-light .bg-black\/95 {
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* --- Dropdown items --- */
+.theme-light .hover\:bg-white\/\[0\.04\]:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* --- Tab active states --- */
+.theme-light .bg-white\/\[0\.08\] {
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* --- Dividers in dropdowns --- */
+.theme-light [style*="border"] {
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* --- Status filter pills --- */
+.theme-light [style*="background: rgba(255,255,255"] {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
 /* ============================================================
    Font size modes
    ============================================================ */

@@ -7,7 +7,6 @@ interface TensionMeterOptions {
   throttleMs?: number;
   decayIntervalMs?: number;
   decayPercent?: number;
-  broadcastIntervalMs?: number;
 }
 
 export function useTensionMeter(
@@ -15,174 +14,108 @@ export function useTensionMeter(
   options: TensionMeterOptions = {}
 ) {
   const {
-    throttleMs = 300,
-    decayIntervalMs = 1000,
+    throttleMs = 2000,
+    decayIntervalMs = 5000,
     decayPercent = 2,
-    broadcastIntervalMs = 500,
   } = options;
 
-  // Local state for optimistic UI
   const [localTension, setLocalTension] = useState(0);
-  const [globalTension, setGlobalTension] = useState(0);
   const [isChaosMode, setIsChaosMode] = useState(false);
-
-  // Click buffer for aggregation
   const clickBuffer = useRef(0);
-  const lastSync = useRef(Date.now());
   const chaosTimeout = useRef<NodeJS.Timeout | null>(null);
+  const roomIdRef = useRef(roomId);
+  roomIdRef.current = roomId;
 
-  // Throttled sync to server
-  const syncToServer = useCallback(async () => {
-    if (clickBuffer.current === 0) return;
-
-    const clicks = clickBuffer.current;
-    clickBuffer.current = 0;
-
-    try {
-      // Atomic increment to avoid race conditions
-      const { data, error } = await supabase.rpc('increment_tension', {
-        room_id: roomId,
-        increment_value: clicks,
-      });
-
-      if (error) {
-        console.error('Error syncing tension:', error);
-        // Fallback: direct update if RPC doesn't exist
-        const { error: updateError } = await supabase
-          .from('beefs')
-          .update({ 
-            tension_level: Math.min(100, globalTension + clicks) 
-          })
-          .eq('id', roomId);
-        
-        if (updateError) console.error('Fallback update error:', updateError);
-      }
-    } catch (err) {
-      console.error('Sync error:', err);
-    }
-
-    lastSync.current = Date.now();
-  }, [roomId, globalTension]);
-
-  // Throttled sync interval
+  // Sync buffered clicks to server (throttled)
   useEffect(() => {
-    const interval = setInterval(() => {
-      syncToServer();
+    const interval = setInterval(async () => {
+      if (clickBuffer.current === 0) return;
+      const clicks = clickBuffer.current;
+      clickBuffer.current = 0;
+
+      try {
+        await supabase.rpc('increment_tension', {
+          room_id: roomIdRef.current,
+          increment_value: clicks,
+        });
+      } catch {
+        // Fallback direct update
+        await supabase
+          .from('beefs')
+          .update({ tension_level: Math.min(100, localTension + clicks) })
+          .eq('id', roomIdRef.current);
+      }
     }, throttleMs);
 
     return () => clearInterval(interval);
-  }, [throttleMs, syncToServer]);
+  }, [throttleMs]);
 
-  // Natural decay mechanism
+  // Decay — much slower to avoid re-render spam
   useEffect(() => {
-    const decayInterval = setInterval(async () => {
+    const interval = setInterval(async () => {
       try {
-        // Decay tension on server
-        const { data: room } = await supabase
+        const { data } = await supabase
           .from('beefs')
           .select('tension_level')
-          .eq('id', roomId)
+          .eq('id', roomIdRef.current)
           .single();
 
-        if (room && room.tension_level > 0) {
-          const newTension = Math.max(0, room.tension_level - decayPercent);
-          
+        if (data && data.tension_level > 0) {
           await supabase
             .from('beefs')
-            .update({ tension_level: newTension })
-            .eq('id', roomId);
+            .update({ tension_level: Math.max(0, data.tension_level - decayPercent) })
+            .eq('id', roomIdRef.current);
         }
-      } catch (err) {
-        console.error('Decay error:', err);
-      }
+      } catch {}
     }, decayIntervalMs);
 
-    return () => clearInterval(decayInterval);
-  }, [roomId, decayIntervalMs, decayPercent]);
+    return () => clearInterval(interval);
+  }, [decayIntervalMs, decayPercent]);
 
-  // Subscribe to realtime updates
+  // Realtime subscription
   useEffect(() => {
     const channel = supabase
-      .channel(`room_${roomId}_tension`)
+      .channel(`tension_${roomId}`)
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'beefs',
-          filter: `id=eq.${roomId}`,
-        },
+        { event: 'UPDATE', schema: 'public', table: 'beefs', filter: `id=eq.${roomId}` },
         (payload: any) => {
-          const newTension = payload.new.tension_level;
-          setGlobalTension(newTension);
+          const newTension = payload.new.tension_level ?? 0;
           setLocalTension(newTension);
 
-          // Trigger chaos mode
           if (newTension >= 100 && !isChaosMode) {
             setIsChaosMode(true);
-            
-            // Play chaos sound (optional)
-            if (typeof window !== 'undefined') {
-              // const audio = new Audio('/sounds/chaos.mp3');
-              // audio.play().catch(console.error);
-            }
-
-            // Reset after 5 seconds
-            if (chaosTimeout.current) {
-              clearTimeout(chaosTimeout.current);
-            }
-            
+            if (chaosTimeout.current) clearTimeout(chaosTimeout.current);
             chaosTimeout.current = setTimeout(async () => {
               setIsChaosMode(false);
-              
-              // Reset tension to 50%
-              await supabase
-                .from('beefs')
-                .update({ tension_level: 50 })
-                .eq('id', roomId);
+              await supabase.from('beefs').update({ tension_level: 50 }).eq('id', roomId);
             }, 5000);
           }
         }
       )
       .subscribe();
 
-    // Load initial tension
-    supabase
-      .from('beefs')
-      .select('tension_level')
-      .eq('id', roomId)
-      .single()
+    // Load initial
+    supabase.from('beefs').select('tension_level').eq('id', roomId).single()
       .then(({ data }) => {
-        if (data) {
-          setGlobalTension(data.tension_level);
-          setLocalTension(data.tension_level);
-        }
+        if (data) setLocalTension(data.tension_level ?? 0);
       });
 
     return () => {
       channel.unsubscribe();
-      if (chaosTimeout.current) {
-        clearTimeout(chaosTimeout.current);
-      }
+      if (chaosTimeout.current) clearTimeout(chaosTimeout.current);
     };
-  }, [roomId, isChaosMode]);
+  }, [roomId]);
 
-  // Click handler - optimistic update
-  const addTension = useCallback((amount: number = 1) => {
-    clickBuffer.current += amount;
-    setLocalTension((prev) => Math.min(100, prev + amount));
+  const tap = useCallback(() => {
+    clickBuffer.current += 1;
+    setLocalTension(prev => Math.min(100, prev + 1));
   }, []);
 
-  // Manual tap handler
-  const tap = useCallback(() => {
-    addTension(1);
-  }, [addTension]);
+  const addTension = useCallback((amount: number = 1) => {
+    clickBuffer.current += amount;
+    setLocalTension(prev => Math.min(100, prev + amount));
+  }, []);
 
-  return {
-    localTension,
-    globalTension,
-    isChaosMode,
-    tap,
-    addTension,
-  };
+  return { localTension, globalTension: localTension, isChaosMode, tap, addTension };
 }
