@@ -1183,42 +1183,32 @@ export function TikTokStyleArena({
         </motion.button>
       </div>
 
-      {/* Bottom Space - Reserved for Comments (TikTok Style) */}
-      <div className="absolute bottom-0 left-0 right-0 h-48 sm:h-56 z-10 bg-gradient-to-t from-black via-black/98 to-black/80"></div>
+      {/* ── BOTTOM SECTION — comments + reactions + input ── */}
+      <div className="absolute bottom-0 left-0 right-0 z-40 pointer-events-auto flex flex-col">
+        {/* Gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/95 to-transparent pointer-events-none" />
 
-      {/* Live Comments - TikTok Style (appearing and disappearing) */}
-      <div className="absolute bottom-52 sm:bottom-56 left-0 right-16 sm:right-20 z-30 pointer-events-none">
-        <div className="px-3 flex flex-col gap-1.5 justify-end">
-          <AnimatePresence>
+        {/* Comments area */}
+        <div className="relative px-3 pb-2 max-h-32 overflow-hidden">
+          <div className="flex flex-col gap-1 justify-end">
             {visibleMessages.map((message) => (
               <motion.div
                 key={message.id}
-                initial={{ opacity: 0, x: -20, scale: 0.95 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: -20, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="inline-block max-w-[80%]"
+                initial={{ opacity: 0, x: -15 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="max-w-[85%]"
               >
-                <div className="inline-flex items-baseline gap-1 bg-black/60 backdrop-blur-md rounded-xl px-2.5 py-1.5">
-                  <button 
-                    onClick={() => openProfile(message.user_name)}
-                    className="text-[11px] font-bold text-pink-400 hover:text-pink-300 cursor-pointer"
-                  >
-                    {message.user_name}
-                  </button>
-                  <span className="text-xs text-white">{message.content}</span>
-                </div>
+                <span className="inline-flex items-baseline gap-1.5 bg-black/50 backdrop-blur-sm rounded-lg px-2.5 py-1">
+                  <span className="text-[11px] font-bold text-brand-400">{message.user_name}</span>
+                  <span className="text-[13px] text-white">{message.content}</span>
+                </span>
               </motion.div>
             ))}
-          </AnimatePresence>
+          </div>
         </div>
-      </div>
 
-      {/* Bottom Bar — Reactions + Input + TensionButton */}
-      <div className="absolute bottom-0 left-0 right-0 z-40 pointer-events-auto">
-        {/* Row 1: Reactions + Tension button */}
-        <div className="px-3 pt-4 pb-1 flex items-center gap-2">
-          {/* Scrollable reactions */}
+        {/* Reactions row */}
+        <div className="relative px-3 py-1.5 flex items-center gap-2">
           <div className="flex-1 overflow-x-auto hide-scrollbar">
             <div className="flex gap-2">
               {(showAllReactions ? POPULAR_REACTIONS : TOP_10_REACTIONS).map((emoji) => (
@@ -1232,93 +1222,62 @@ export function TikTokStyleArena({
               ))}
             </div>
           </div>
-
-          {/* "+" toggle reactions */}
           <button
             onClick={() => setShowAllReactions(!showAllReactions)}
             className={`flex-shrink-0 w-10 h-10 flex items-center justify-center text-lg font-black rounded-full touch-manipulation transition-all ${
-              showAllReactions
-                ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/50'
-                : 'bg-white/10 backdrop-blur-sm text-white hover:bg-brand-500/50'
+              showAllReactions ? 'bg-brand-500 text-white' : 'bg-white/10 text-white'
             }`}
           >
             {showAllReactions ? '−' : '+'}
           </button>
-
-          {/* Tension Button */}
           <TensionButton tension={tension} onTap={onTap} />
         </div>
 
-        {/* Row 1.5: Leave button — always visible once in arena */}
-        <div className="px-3 pb-1 flex justify-end">
+        {/* Comment input + Leave */}
+        <div className="relative px-3 pb-3 pt-1 flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-[10px]">{userName?.[0]?.toUpperCase() || 'U'}</span>
+          </div>
+          <input
+            type="text"
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="Commentaire..."
+            className="flex-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1.5 text-white placeholder-white/60 text-sm focus:outline-none"
+          />
+          {chatInput.trim() && (
+            <button onClick={handleSendMessage} className="flex-shrink-0 bg-brand-500 rounded-full w-8 h-8 flex items-center justify-center">
+              <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
+            </button>
+          )}
           <button
             onClick={handleLeave}
-            className="bg-red-600/90 hover:bg-red-700 active:bg-red-800 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg transition-all flex items-center gap-1.5"
+            className="flex-shrink-0 bg-red-600/80 text-white text-[10px] font-bold px-3 py-1.5 rounded-full"
           >
-            <span>📴</span>
-            <span>Quitter</span>
+            Quitter
           </button>
-        </div>
-
-        {/* Row 2: Comment input */}
-        <div className="px-3 pb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-xs">{userName ? userName[0].toUpperCase() : 'U'}</span>
-            </div>
-            <div className="flex-1">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Ajouter un commentaire..."
-                className="w-full bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 text-white placeholder-white/70 text-sm focus:outline-none focus:bg-white/15"
-              />
-            </div>
-            {chatInput.trim() && (
-              <button
-                onClick={handleSendMessage}
-                className="flex-shrink-0 bg-pink-500 rounded-full w-9 h-9 flex items-center justify-center shadow-lg"
-              >
-                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                </svg>
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* Flying Reactions Animation (TikTok Style) - Enhanced */}
-      <AnimatePresence>
-        {flyingReactions.map((reaction) => (
-          <motion.div
-            key={reaction.id}
-            initial={{ y: 0, opacity: 0, scale: 0.5, rotate: -20 }}
-            animate={{ 
-              y: [-20, -520], 
-              opacity: [0, 1, 1, 0],
-              scale: [0.5, 1.4, 1.2, 0.8, 0.5],
-              x: [0, 15, -15, 10, 0],
-              rotate: [-20, 10, -10, 5, 0],
-            }}
-            exit={{ opacity: 0, scale: 0 }}
-            transition={{ 
-              duration: 3.5, 
-              ease: [0.23, 1, 0.32, 1],
-              opacity: { times: [0, 0.1, 0.7, 1] },
-            }}
-            className="absolute bottom-72 text-4xl sm:text-5xl z-[5] pointer-events-none"
-            style={{ 
-              left: `${reaction.x}%`,
-              filter: 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.5))',
-            }}
-          >
-            {reaction.emoji}
-          </motion.div>
-        ))}
-      </AnimatePresence>
+      {/* Flying Reactions — float up from right side like TikTok */}
+      <div className="absolute right-4 bottom-40 z-[5] pointer-events-none">
+        <AnimatePresence>
+          {flyingReactions.map((reaction) => (
+            <motion.div
+              key={reaction.id}
+              initial={{ y: 0, opacity: 0, scale: 0.5 }}
+              animate={{ y: -400, opacity: [0, 1, 1, 0], scale: [0.5, 1.3, 1, 0.6] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 3, ease: 'easeOut', opacity: { times: [0, 0.1, 0.7, 1] } }}
+              className="absolute text-3xl"
+              style={{ right: `${reaction.x % 40}px` }}
+            >
+              {reaction.emoji}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
       {/* Moderator Control Panel with Overlay */}
       <AnimatePresence mode="wait">
