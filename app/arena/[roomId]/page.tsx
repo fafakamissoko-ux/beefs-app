@@ -163,6 +163,12 @@ export default function ArenaPage() {
       .single();
 
     if (beef) {
+      // Block access to ended beefs
+      if (beef.status === 'ended' || beef.status === 'cancelled') {
+        window.location.href = '/feed';
+        return;
+      }
+
       const mediator = beef.users as any;
       setHost({
         id: beef.mediator_id,
@@ -177,6 +183,8 @@ export default function ArenaPage() {
 
       // Create or retrieve Daily.co room for this beef
       await ensureDailyRoom(roomId);
+    } else {
+      window.location.href = '/feed';
     }
   };
 

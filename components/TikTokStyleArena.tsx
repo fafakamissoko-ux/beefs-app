@@ -373,6 +373,27 @@ export function TikTokStyleArena({
     });
   };
 
+  // Subscribe to reactions from other users
+  useEffect(() => {
+    const channel = supabase
+      .channel(`beef_${roomId}_reactions`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'beef_reactions', filter: `beef_id=eq.${roomId}` },
+        (payload: any) => {
+          if (payload.new.user_id === userId) return;
+          const id = payload.new.id;
+          const emoji = payload.new.emoji;
+          const x = Math.random() * 55 + 10;
+          setFlyingReactions(prev => [...prev, { id, emoji, x }]);
+          setTimeout(() => setFlyingReactions(prev => prev.filter(r => r.id !== id)), 3000);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [roomId, userId]);
+
   // Timer effect
   useEffect(() => {
     console.log('⏱️ Timer state:', { timerRunning, timeRemaining, currentSpeaker });
@@ -1190,7 +1211,7 @@ export function TikTokStyleArena({
       <div className="absolute bottom-0 left-0 right-0 h-48 sm:h-56 z-10 bg-gradient-to-t from-black via-black/98 to-black/80"></div>
 
       {/* Live Comments - TikTok Style (appearing and disappearing) */}
-      <div className="absolute bottom-28 sm:bottom-32 left-0 right-16 sm:right-20 z-20 pointer-events-none">
+      <div className="absolute bottom-44 sm:bottom-48 left-0 right-16 sm:right-20 z-30 pointer-events-none">
         <div className="px-3 flex flex-col gap-1.5 justify-end">
           <AnimatePresence>
             {visibleMessages.map((message) => (
@@ -1218,7 +1239,7 @@ export function TikTokStyleArena({
       </div>
 
       {/* Bottom Bar — Reactions + Input + TensionButton */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-auto">
+      <div className="absolute bottom-0 left-0 right-0 z-40 pointer-events-auto">
         {/* Row 1: Reactions + Tension button */}
         <div className="px-3 pt-4 pb-1 flex items-center gap-2">
           {/* Scrollable reactions */}
@@ -1312,7 +1333,7 @@ export function TikTokStyleArena({
               ease: [0.23, 1, 0.32, 1],
               opacity: { times: [0, 0.1, 0.7, 1] },
             }}
-            className="absolute bottom-40 text-5xl sm:text-6xl lg:text-7xl z-10 pointer-events-none"
+            className="absolute bottom-56 text-4xl sm:text-5xl z-[5] pointer-events-none"
             style={{ 
               left: `${reaction.x}%`,
               filter: 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.5))',
