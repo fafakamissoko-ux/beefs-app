@@ -353,46 +353,104 @@ export function TikTokStyleArena({
     },
   };
 
+  // ── HYBRID LIVE SYNC: Broadcast (instant) + Polling (fallback) ──
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const [liveConnected, setLiveConnected] = useState(false);
+  const seenMsgKeys = useRef(new Set<string>());
+
+  const addRemoteMessage = useCallback((msgUserName: string, content: string) => {
+    const key = `${msgUserName}::${content}`;
+    if (seenMsgKeys.current.has(key)) return;
+    seenMsgKeys.current.add(key);
+    const msgId = `m_${Date.now()}_${Math.random()}`;
+    const newMsg: VisibleMessage = { id: msgId, user_name: msgUserName, content, timestamp: Date.now() };
+    setVisibleMessages(prev => [...prev, newMsg].slice(-8));
+    setTimeout(() => {
+      setVisibleMessages(prev => prev.filter(m => m.id !== msgId));
+      seenMsgKeys.current.delete(key);
+    }, 20000);
+  }, []);
+
+  const addRemoteReaction = useCallback((emoji: string) => {
+    const id = `r_${Date.now()}_${Math.random()}`;
+    const x = Math.random() * 55 + 10;
+    setFlyingReactions(prev => [...prev, { id, emoji, x }]);
+    setTimeout(() => setFlyingReactions(prev => prev.filter(r => r.id !== id)), 3000);
+  }, []);
+
+  // 1) Broadcast channel — instant P2P delivery
+  useEffect(() => {
+    const channel = supabase.channel(`live_${roomId}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel
+      .on('broadcast', { event: 'reaction' }, ({ payload }: any) => {
+        addRemoteReaction(payload.emoji);
+      })
+      .on('broadcast', { event: 'message' }, ({ payload }: any) => {
+        addRemoteMessage(payload.user_name, payload.content);
+      })
+      .subscribe((status: string) => {
+        console.log('[Live] Broadcast channel:', status);
+        if (status === 'SUBSCRIBED') {
+          channelRef.current = channel;
+          setLiveConnected(true);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[Live] Broadcast failed — polling fallback active');
+          setLiveConnected(false);
+        }
+      });
+
+    return () => {
+      channelRef.current = null;
+      setLiveConnected(false);
+      supabase.removeChannel(channel);
+    };
+  }, [roomId, addRemoteMessage, addRemoteReaction]);
+
+  // 2) Polling fallback — queries DB for new messages every 3s (guaranteed delivery)
+  useEffect(() => {
+    let lastTs = new Date().toISOString();
+
+    const poll = async () => {
+      try {
+        const { data } = await supabase
+          .from('beef_messages')
+          .select('id, username, display_name, content, user_id, created_at')
+          .eq('beef_id', roomId)
+          .eq('is_deleted', false)
+          .gt('created_at', lastTs)
+          .order('created_at', { ascending: true })
+          .limit(10);
+
+        if (data && data.length > 0) {
+          lastTs = data[data.length - 1].created_at;
+          data.forEach(msg => {
+            if (msg.user_id === userId) return;
+            addRemoteMessage(msg.display_name || msg.username, msg.content);
+          });
+        }
+      } catch {}
+    };
+
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
+  }, [roomId, userId, addRemoteMessage]);
+
   const handleReaction = (emoji: string) => {
     onReaction(emoji);
-    
-    // Add flying reaction locally
+
     const id = Date.now().toString();
     const x = Math.random() * 55 + 10;
     setFlyingReactions(prev => [...prev, { id, emoji, x }]);
-    
-    setTimeout(() => {
-      setFlyingReactions(prev => prev.filter(r => r.id !== id));
-    }, 3000);
+    setTimeout(() => setFlyingReactions(prev => prev.filter(r => r.id !== id)), 3000);
 
-    // Broadcast to other users via Supabase
-    supabase.from('beef_reactions').insert({
-      beef_id: roomId,
-      user_id: userId,
-      emoji: emoji,
-    });
+    if (channelRef.current) {
+      channelRef.current.send({ type: 'broadcast', event: 'reaction', payload: { emoji } });
+    }
+    supabase.from('beef_reactions').insert({ beef_id: roomId, user_id: userId, emoji }).then(() => {});
   };
-
-  // Subscribe to reactions from other users
-  useEffect(() => {
-    const channel = supabase
-      .channel(`reactions_sync_${roomId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'beef_reactions', filter: `beef_id=eq.${roomId}` },
-        (payload: any) => {
-          if (payload.new.user_id === userId) return;
-          const id = payload.new.id;
-          const emoji = payload.new.emoji;
-          const x = Math.random() * 55 + 10;
-          setFlyingReactions(prev => [...prev, { id, emoji, x }]);
-          setTimeout(() => setFlyingReactions(prev => prev.filter(r => r.id !== id)), 3000);
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [roomId, userId]);
 
   // Timer effect
   useEffect(() => {
@@ -418,55 +476,7 @@ export function TikTokStyleArena({
     }
   }, [timerRunning, timeRemaining, currentSpeaker, debaters]);
 
-  // Subscribe to new messages for TikTok-style display
-  useEffect(() => {
-    console.log('🔔 Subscribing to beef_messages for roomId:', roomId);
-    
-    const channel = supabase
-      .channel(`beef_${roomId}_tiktok_messages`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'beef_messages',
-          filter: `beef_id=eq.${roomId}`,
-        },
-        (payload: any) => {
-          // Skip own messages (already added locally)
-          if (payload.new.user_id === userId) return;
-
-          const newMessage = {
-            id: payload.new.id,
-            user_name: payload.new.display_name || payload.new.username,
-            content: payload.new.content,
-            timestamp: Date.now(),
-          };
-          
-          // Add message to visible list
-          setVisibleMessages((prev) => {
-            const updated = [...prev, newMessage].slice(-8); // Keep max 8 messages
-            console.log('📋 Visible messages updated:', updated);
-            return updated;
-          });
-          
-          // Remove message after 20 seconds
-          setTimeout(() => {
-            setVisibleMessages((prev) => prev.filter((msg) => msg.id !== newMessage.id));
-          }, 20000);
-        }
-      )
-      .subscribe((status) => {
-        console.log('🔗 Subscription status:', status);
-      });
-
-    return () => {
-      console.log('🔌 Unsubscribing from beef_messages');
-      channel.unsubscribe();
-    };
-  }, [roomId]);
-
-  // (reactions subscription is above — no duplicate needed)
+  // Messages and reactions are now received via Broadcast channel above
 
   // Debate title animation - show for 5s every 60s (1 minute)
   useEffect(() => {
@@ -574,41 +584,41 @@ export function TikTokStyleArena({
   };
 
   const handleSendMessage = async () => {
-    if (chatInput.trim()) {
-      console.log('📤 Sending message:', chatInput.trim());
-      
-      try {
-        // Send message to beef_messages table
-        const cleanContent = sanitizeMessage(chatInput);
-        if (!cleanContent) return;
+    if (!chatInput.trim()) return;
 
-        const { data, error } = await supabase.from('beef_messages').insert({
-          beef_id: roomId,
-          user_id: userId,
-          username: userName,
-          display_name: userName,
-          content: cleanContent,
-          is_pinned: false,
-        }).select();
-        
-        if (error) {
-          console.error('❌ Error sending message:', error);
-        } else {
-          // Add locally immediately (don't wait for Realtime)
-          const localMsg = {
-            id: Date.now().toString(),
-            user_name: userName,
-            content: cleanContent,
-            timestamp: Date.now(),
-          };
-          setVisibleMessages(prev => [...prev, localMsg].slice(-8));
-        }
-        
-        setChatInput('');
-      } catch (err) {
-        console.error('❌ Exception sending message:', err);
-      }
+    const cleanContent = sanitizeMessage(chatInput);
+    if (!cleanContent) return;
+
+    // Show locally immediately
+    const localMsg: VisibleMessage = {
+      id: Date.now().toString(),
+      user_name: userName,
+      content: cleanContent,
+      timestamp: Date.now(),
+    };
+    seenMsgKeys.current.add(`${userName}::${cleanContent}`);
+    setVisibleMessages(prev => [...prev, localMsg].slice(-8));
+    setChatInput('');
+
+    // Broadcast to other users (instant delivery if connected)
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'message',
+        payload: { user_name: userName, content: cleanContent },
+      });
     }
+
+    // Persist to DB — this is what the polling fallback reads
+    const { error } = await supabase.from('beef_messages').insert({
+      beef_id: roomId,
+      user_id: userId,
+      username: userName,
+      display_name: userName,
+      content: cleanContent,
+      is_pinned: false,
+    });
+    if (error) console.error('[Live] Message insert failed:', error.message);
   };
 
 
@@ -924,8 +934,8 @@ export function TikTokStyleArena({
             </div>
           )}
 
-          {/* Moderator in Center (Host) - Fixed Position */}
-          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20" style={{ transform: 'translate(-50%, -50%)' }}>
+          {/* Moderator in Center (Host) */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
             <motion.div 
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -1067,8 +1077,8 @@ export function TikTokStyleArena({
         )} {/* end placeholder conditional */}
       </div>
 
-      {/* Top Overlay - Fixed Button Position */}
-      <div className="fixed top-0 left-0 right-0 z-30 p-2 sm:p-3">
+      {/* Top Overlay */}
+      <div className="absolute top-0 left-0 right-0 z-30 p-2 sm:p-3">
         <div className="flex items-center justify-between">
           {/* Left: Minimal Host Info */}
           <div className="flex items-center gap-2">
@@ -1113,8 +1123,10 @@ export function TikTokStyleArena({
             </div>
           )}
 
-          {/* Right: Actions with Fixed Width */}
+          {/* Right: Actions + Live indicator */}
           <div className="flex items-center gap-1.5">
+            <div className={`w-2 h-2 rounded-full ${liveConnected ? 'bg-green-400' : 'bg-yellow-400 animate-pulse'}`}
+              title={liveConnected ? 'Live sync actif' : 'Sync via polling'} />
             <button
               onClick={onShare}
               className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
@@ -1287,7 +1299,7 @@ export function TikTokStyleArena({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40"
+            className="absolute inset-0 z-40"
           >
             {/* Overlay - Click to close */}
             <div
@@ -1512,7 +1524,7 @@ export function TikTokStyleArena({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => setShowProfile(false)}
           >
             <motion.div

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { DailyVideo } from '@/components/DailyVideo';
 import { MultiDebaterArena } from '@/components/MultiDebaterArena';
@@ -150,43 +150,45 @@ export default function ArenaPage() {
     }
   }, [speakingTimerActive, activeSpeakerId, currentSpeakerTimeLeft]);
 
+  const roomLoadedRef = useRef(false);
+
   useEffect(() => {
-    // Load room data
-    loadRoomData();
-  }, [roomId]);
+    if (!userId || roomLoadedRef.current) return;
+    roomLoadedRef.current = true;
 
-  const loadRoomData = async () => {
-    const { data: beef } = await supabase
-      .from('beefs')
-      .select('*, users!beefs_mediator_id_fkey(username, display_name, avatar_url)')
-      .eq('id', roomId)
-      .single();
+    const loadRoomData = async () => {
+      const { data: beef } = await supabase
+        .from('beefs')
+        .select('*, users!beefs_mediator_id_fkey(username, display_name, avatar_url)')
+        .eq('id', roomId)
+        .single();
 
-    if (beef) {
-      // Block access to ended beefs
-      if (beef.status === 'ended' || beef.status === 'cancelled') {
+      if (beef) {
+        if (beef.status === 'ended' || beef.status === 'cancelled') {
+          window.location.href = '/feed';
+          return;
+        }
+
+        const mediator = beef.users as any;
+        setHost({
+          id: beef.mediator_id,
+          name: mediator?.display_name || mediator?.username || 'Médiateur',
+          isHost: true,
+          videoEnabled: true,
+          audioEnabled: true,
+          badges: [],
+        });
+
+        setIsHost(beef.mediator_id === userId);
+
+        await ensureDailyRoom(roomId);
+      } else {
         window.location.href = '/feed';
-        return;
       }
+    };
 
-      const mediator = beef.users as any;
-      setHost({
-        id: beef.mediator_id,
-        name: mediator?.display_name || mediator?.username || 'Médiateur',
-        isHost: true,
-        videoEnabled: true,
-        audioEnabled: true,
-        badges: [],
-      });
-
-      setIsHost(beef.mediator_id === userId);
-
-      // Create or retrieve Daily.co room for this beef
-      await ensureDailyRoom(roomId);
-    } else {
-      window.location.href = '/feed';
-    }
-  };
+    loadRoomData();
+  }, [roomId, userId]);
 
   const ensureDailyRoom = async (beefId: string) => {
     const roomName = `beef-${beefId.replace(/-/g, '').slice(0, 32)}`;

@@ -28,10 +28,8 @@ function getClient(): SupabaseClient {
     },
   });
 
-  // Cache the instance to prevent duplicates during HMR
-  if (process.env.NODE_ENV !== 'production') {
-    globalThis._supabaseInstance = client;
-  }
+  // Cache the instance globally to prevent duplicate connections
+  globalThis._supabaseInstance = client;
 
   return client;
 }
