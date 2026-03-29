@@ -67,6 +67,7 @@ interface VisibleMessage {
   user_name: string;
   content: string;
   timestamp: number;
+  initial: string;
 }
 
 interface ParticipationRequest {
@@ -358,17 +359,23 @@ export function TikTokStyleArena({
   const [liveConnected, setLiveConnected] = useState(false);
   const seenMsgKeys = useRef(new Set<string>());
 
-  const addRemoteMessage = useCallback((msgUserName: string, content: string) => {
+  const addRemoteMessage = useCallback((msgUserName: string, content: string, initial?: string) => {
     const key = `${msgUserName}::${content}`;
     if (seenMsgKeys.current.has(key)) return;
     seenMsgKeys.current.add(key);
     const msgId = `m_${Date.now()}_${Math.random()}`;
-    const newMsg: VisibleMessage = { id: msgId, user_name: msgUserName, content, timestamp: Date.now() };
-    setVisibleMessages(prev => [...prev, newMsg].slice(-8));
+    const newMsg: VisibleMessage = {
+      id: msgId,
+      user_name: msgUserName,
+      content,
+      timestamp: Date.now(),
+      initial: initial || msgUserName?.[0]?.toUpperCase() || '?',
+    };
+    setVisibleMessages(prev => [...prev, newMsg].slice(-50));
     setTimeout(() => {
       setVisibleMessages(prev => prev.filter(m => m.id !== msgId));
       seenMsgKeys.current.delete(key);
-    }, 20000);
+    }, 30000);
   }, []);
 
   const addRemoteReaction = useCallback((emoji: string) => {
@@ -389,7 +396,8 @@ export function TikTokStyleArena({
         addRemoteReaction(payload.emoji);
       })
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
-        addRemoteMessage(payload.user_name, payload.content);
+        console.log('[Live] Received broadcast message from:', payload.user_name);
+        addRemoteMessage(payload.user_name, payload.content, payload.initial);
       })
       .subscribe((status: string) => {
         console.log('[Live] Broadcast channel:', status);
@@ -438,16 +446,45 @@ export function TikTokStyleArena({
     return () => clearInterval(interval);
   }, [roomId, userId, addRemoteMessage]);
 
+  // 3) Reaction polling fallback — queries DB for new reactions every 3s
+  useEffect(() => {
+    let lastReactionTs = new Date().toISOString();
+
+    const pollReactions = async () => {
+      try {
+        const { data } = await supabase
+          .from('beef_reactions')
+          .select('id, emoji, user_id, created_at')
+          .eq('beef_id', roomId)
+          .gt('created_at', lastReactionTs)
+          .order('created_at', { ascending: true })
+          .limit(20);
+
+        if (data && data.length > 0) {
+          lastReactionTs = data[data.length - 1].created_at;
+          data.forEach(r => {
+            if (r.user_id === userId) return;
+            addRemoteReaction(r.emoji);
+          });
+        }
+      } catch {}
+    };
+
+    const interval = setInterval(pollReactions, 3000);
+    return () => clearInterval(interval);
+  }, [roomId, userId, addRemoteReaction]);
+
   const handleReaction = (emoji: string) => {
     onReaction(emoji);
 
     const id = Date.now().toString();
     const x = Math.random() * 55 + 10;
     setFlyingReactions(prev => [...prev, { id, emoji, x }]);
-    setTimeout(() => setFlyingReactions(prev => prev.filter(r => r.id !== id)), 3000);
+    setTimeout(() => setFlyingReactions(prev => prev.filter(r => r.id !== id)), 3500);
 
     if (channelRef.current) {
-      channelRef.current.send({ type: 'broadcast', event: 'reaction', payload: { emoji } });
+      channelRef.current.send({ type: 'broadcast', event: 'reaction', payload: { emoji } })
+        .catch(() => console.warn('[Live] Reaction broadcast failed'));
     }
     supabase.from('beef_reactions').insert({ beef_id: roomId, user_id: userId, emoji }).then(() => {});
   };
@@ -589,15 +626,18 @@ export function TikTokStyleArena({
     const cleanContent = sanitizeMessage(chatInput);
     if (!cleanContent) return;
 
+    const senderInitial = userName?.[0]?.toUpperCase() || '?';
+
     // Show locally immediately
     const localMsg: VisibleMessage = {
       id: Date.now().toString(),
       user_name: userName,
       content: cleanContent,
       timestamp: Date.now(),
+      initial: senderInitial,
     };
     seenMsgKeys.current.add(`${userName}::${cleanContent}`);
-    setVisibleMessages(prev => [...prev, localMsg].slice(-8));
+    setVisibleMessages(prev => [...prev, localMsg].slice(-50));
     setChatInput('');
 
     // Broadcast to other users (instant delivery if connected)
@@ -605,9 +645,10 @@ export function TikTokStyleArena({
       channelRef.current.send({
         type: 'broadcast',
         event: 'message',
-        payload: { user_name: userName, content: cleanContent },
-      });
+        payload: { user_name: userName, content: cleanContent, initial: senderInitial },
+      }).catch(() => console.warn('[Live] Message broadcast failed'));
     }
+    console.log('[Live] Sending message as:', userName, '| userId:', userId?.slice(0, 8));
 
     // Persist to DB — this is what the polling fallback reads
     const { error } = await supabase.from('beef_messages').insert({
@@ -618,7 +659,7 @@ export function TikTokStyleArena({
       content: cleanContent,
       is_pinned: false,
     });
-    if (error) console.error('[Live] Message insert failed:', error.message);
+    if (error) console.error('[Live] Message insert failed:', error.message, error);
   };
 
 
@@ -1077,218 +1118,232 @@ export function TikTokStyleArena({
         )} {/* end placeholder conditional */}
       </div>
 
-      {/* Top Overlay */}
+      {/* ── Top Overlay — TikTok-style header ── */}
       <div className="absolute top-0 left-0 right-0 z-30 p-2 sm:p-3">
-        <div className="flex items-center justify-between">
-          {/* Left: Minimal Host Info */}
+        {/* Subtle top gradient for readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-transparent pointer-events-none" />
+
+        <div className="relative flex items-center justify-between">
+          {/* Left: Host pill (avatar + name + follow) */}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 p-[2px]">
-              <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
-                <span className="text-white font-bold text-xs sm:text-sm">{userName ? userName[0].toUpperCase() : 'U'}</span>
+            <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md rounded-full pl-0.5 pr-3 py-0.5">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-brand-500 p-[2px]">
+                <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
+                  <span className="text-white font-bold text-[11px]">{userName ? userName[0].toUpperCase() : 'U'}</span>
+                </div>
               </div>
+              <span className="text-white font-semibold text-xs drop-shadow-lg max-w-[80px] truncate">{userName}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-white font-semibold text-xs sm:text-sm drop-shadow-lg">{userName}</span>
-              <button className="bg-pink-500 hover:bg-pink-600 px-2 py-0.5 rounded text-white text-[10px] font-bold">
-                Suivre
-              </button>
-            </div>
+            <button className="bg-pink-500 hover:bg-pink-600 px-3 py-1 rounded-full text-white text-[10px] font-bold transition-colors">
+              + Suivre
+            </button>
           </div>
 
-          {/* Center: Beef Duration Timer */}
-          {isJoined && timerActive && (
-            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full backdrop-blur-sm border transition-all ${
-              timerPaused
-                ? 'bg-yellow-500/30 border-yellow-500/50'
-                : beefTimeRemaining <= 5 * 60
-                  ? 'bg-red-500/30 border-red-500/50 animate-pulse'
-                  : 'bg-black/40 border-white/10'
-            }`}>
-              <span className="text-sm">{timerPaused ? '⏸' : '⏱'}</span>
-              <span className={`text-sm font-bold tabular-nums ${
-                timerPaused
-                  ? 'text-yellow-400'
-                  : beefTimeRemaining <= 5 * 60 ? 'text-red-400' : 'text-white'
-              }`}>
-                {formatBeefTime(beefTimeRemaining)}
-              </span>
-              {timerPaused && (
-                <span className="text-yellow-400 text-[10px] font-black animate-pulse">EN PAUSE</span>
-              )}
-            </div>
-          )}
-          {isJoined && !timerActive && isHost && (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10 bg-black/40">
-              <span className="text-white/50 text-xs font-medium">Pas de chrono</span>
-            </div>
-          )}
-
-          {/* Right: Actions + Live indicator */}
+          {/* Center: Timer OR Live badge */}
           <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${liveConnected ? 'bg-green-400' : 'bg-yellow-400 animate-pulse'}`}
-              title={liveConnected ? 'Live sync actif' : 'Sync via polling'} />
-            <button
-              onClick={onShare}
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
-            >
-              <Share2 className="w-3.5 h-3.5 text-white" />
-            </button>
+            {isJoined && timerActive ? (
+              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full backdrop-blur-md border transition-all ${
+                timerPaused
+                  ? 'bg-yellow-500/30 border-yellow-500/50'
+                  : beefTimeRemaining <= 5 * 60
+                    ? 'bg-red-500/30 border-red-500/50 animate-pulse'
+                    : 'bg-black/40 border-white/10'
+              }`}>
+                <span className="text-sm">{timerPaused ? '⏸' : '⏱'}</span>
+                <span className={`text-sm font-bold tabular-nums ${
+                  timerPaused
+                    ? 'text-yellow-400'
+                    : beefTimeRemaining <= 5 * 60 ? 'text-red-400' : 'text-white'
+                }`}>
+                  {formatBeefTime(beefTimeRemaining)}
+                </span>
+                {timerPaused && (
+                  <span className="text-yellow-400 text-[10px] font-black animate-pulse ml-0.5">PAUSE</span>
+                )}
+              </div>
+            ) : isJoined && !timerActive && isHost ? (
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full backdrop-blur-md border border-white/10 bg-black/40">
+                <span className="text-white/50 text-xs font-medium">Pas de chrono</span>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Right: LIVE badge + viewer count + close */}
+          <div className="flex items-center gap-1.5">
+            {/* LIVE badge */}
+            <div className="flex items-center bg-red-600 rounded-md px-2 py-0.5">
+              <div className={`w-1.5 h-1.5 rounded-full mr-1 ${liveConnected ? 'bg-white animate-pulse' : 'bg-yellow-300'}`} />
+              <span className="text-white text-[10px] font-black tracking-wider">LIVE</span>
+            </div>
+            {/* Viewer count */}
+            <div className="flex items-center bg-black/40 backdrop-blur-md rounded-full px-2.5 py-1 gap-1">
+              <svg className="w-3.5 h-3.5 text-white/80" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+              </svg>
+              <span className="text-white text-[11px] font-bold">{viewerCount || 0}</span>
+            </div>
+            {/* Menu / Close */}
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+              className="w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
             >
-              <MoreVertical className="w-3.5 h-3.5 text-white" />
+              <MoreVertical className="w-4 h-4 text-white" />
+            </button>
+            <button
+              onClick={handleLeave}
+              className="w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+            >
+              <X className="w-4 h-4 text-white" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Right Side - Action Buttons */}
-      <div className="absolute right-2 sm:right-3 bottom-52 sm:bottom-60 z-30 flex flex-col gap-3">
-        {/* Like Button */}
-        <motion.button
-          whileTap={{ scale: 0.85 }}
-          onClick={() => handleReaction('❤️')}
-          className="flex flex-col items-center gap-0.5 touch-manipulation"
-        >
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
-            <Heart className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-pink-500" />
-          </div>
-          <span className="text-white text-[10px] font-semibold">{Math.floor(tension * 10)}K</span>
-        </motion.button>
-
-        {/* Comments Count */}
-        <motion.button
-          whileTap={{ scale: 0.85 }}
-          className="flex flex-col items-center gap-0.5 touch-manipulation"
-        >
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
-            <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3 .97 4.29L2 22l5.71-.97C9 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-1.38 0-2.68-.3-3.86-.84l-.29-.15-2.99.51.51-2.99-.15-.29C4.3 14.68 4 13.38 4 12c0-4.41 3.59-8 8-8s8 3.59 8 8-3.59 8-8 8z"/>
-            </svg>
-          </div>
-          <span className="text-white text-[10px] font-semibold">156</span>
-        </motion.button>
-
-        {/* Gift Button */}
-        <motion.button
-          whileTap={{ scale: 0.85 }}
-          onClick={onGift}
-          className="flex flex-col items-center gap-0.5 touch-manipulation"
-        >
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-yellow-400 to-brand-400 flex items-center justify-center">
-            <Gift className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-          </div>
-          <span className="text-white text-[10px] font-semibold">Gift</span>
-        </motion.button>
-
-        {/* Share Button */}
-        <motion.button
-          whileTap={{ scale: 0.85 }}
-          onClick={onShare}
-          className="flex flex-col items-center gap-0.5 touch-manipulation"
-        >
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
-            <Share2 className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-          </div>
-          <span className="text-white text-[10px] font-semibold">Share</span>
-        </motion.button>
-      </div>
-
-      {/* ── BOTTOM SECTION — comments + reactions + input ── */}
-      <div className="absolute bottom-0 left-0 right-0 z-40 pointer-events-auto flex flex-col">
-        {/* Gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/95 to-transparent pointer-events-none" />
-
-        {/* Comments area */}
-        <div className="relative px-3 pb-2 max-h-32 overflow-hidden">
-          <div className="flex flex-col gap-1 justify-end">
-            {visibleMessages.map((message) => (
-              <motion.div
-                key={message.id}
-                initial={{ opacity: 0, x: -15 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="max-w-[85%]"
-              >
-                <span className="inline-flex items-baseline gap-1.5 bg-black/50 backdrop-blur-sm rounded-lg px-2.5 py-1">
-                  <span className="text-[11px] font-bold text-brand-400">{message.user_name}</span>
-                  <span className="text-[13px] text-white">{message.content}</span>
-                </span>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* Reactions row */}
-        <div className="relative px-3 py-1.5 flex items-center gap-2">
-          <div className="flex-1 overflow-x-auto hide-scrollbar">
-            <div className="flex gap-2">
-              {(showAllReactions ? POPULAR_REACTIONS : TOP_10_REACTIONS).map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => handleReaction(emoji)}
-                  className="flex-shrink-0 w-10 h-10 flex items-center justify-center text-xl bg-white/10 backdrop-blur-sm rounded-full touch-manipulation hover:bg-white/20 active:scale-95 transition-all"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </div>
-          <button
-            onClick={() => setShowAllReactions(!showAllReactions)}
-            className={`flex-shrink-0 w-10 h-10 flex items-center justify-center text-lg font-black rounded-full touch-manipulation transition-all ${
-              showAllReactions ? 'bg-brand-500 text-white' : 'bg-white/10 text-white'
-            }`}
-          >
-            {showAllReactions ? '−' : '+'}
-          </button>
-          <TensionButton tension={tension} onTap={onTap} />
-        </div>
-
-        {/* Comment input + Leave */}
-        <div className="relative px-3 pb-3 pt-1 flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-[10px]">{userName?.[0]?.toUpperCase() || 'U'}</span>
-          </div>
-          <input
-            type="text"
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="Commentaire..."
-            className="flex-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1.5 text-white placeholder-white/60 text-sm focus:outline-none"
-          />
-          {chatInput.trim() && (
-            <button onClick={handleSendMessage} className="flex-shrink-0 bg-brand-500 rounded-full w-8 h-8 flex items-center justify-center">
-              <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
-            </button>
-          )}
-          <button
-            onClick={handleLeave}
-            className="flex-shrink-0 bg-red-600/80 text-white text-[10px] font-bold px-3 py-1.5 rounded-full"
-          >
-            Quitter
-          </button>
-        </div>
-      </div>
-
-      {/* Flying Reactions — float up from right side like TikTok */}
-      <div className="absolute right-4 bottom-40 z-[5] pointer-events-none">
+      {/* ── Flying Reactions — float up from right side like TikTok hearts ── */}
+      <div className="absolute right-3 bottom-48 z-50 pointer-events-none w-16">
         <AnimatePresence>
           {flyingReactions.map((reaction) => (
             <motion.div
               key={reaction.id}
-              initial={{ y: 0, opacity: 0, scale: 0.5 }}
-              animate={{ y: -400, opacity: [0, 1, 1, 0], scale: [0.5, 1.3, 1, 0.6] }}
+              initial={{ y: 0, opacity: 0, scale: 0.3, x: 0 }}
+              animate={{
+                y: -350,
+                opacity: [0, 1, 1, 0.8, 0],
+                scale: [0.3, 1.2, 1, 0.9, 0.5],
+                x: [0, -8, 12, -5, 8],
+              }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 3, ease: 'easeOut', opacity: { times: [0, 0.1, 0.7, 1] } }}
-              className="absolute text-3xl"
-              style={{ right: `${reaction.x % 40}px` }}
+              transition={{
+                duration: 3.5,
+                ease: 'easeOut',
+                opacity: { times: [0, 0.05, 0.4, 0.75, 1] },
+                x: { duration: 3.5, ease: 'easeInOut' },
+              }}
+              className="absolute bottom-0 text-4xl drop-shadow-lg"
+              style={{ right: `${reaction.x % 30}px` }}
             >
               {reaction.emoji}
             </motion.div>
           ))}
         </AnimatePresence>
+      </div>
+
+      {/* ── BOTTOM SECTION — TikTok-style comments + input ── */}
+      <div className="absolute bottom-0 left-0 right-0 z-40 pointer-events-auto">
+        {/* Gradient background — fades from transparent to semi-black */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none" />
+
+        {/* Comments area — left-aligned, scrollable */}
+        <div className="relative px-3 pb-1.5 pr-16" style={{ maxHeight: '40vh' }}>
+          <div className="flex flex-col gap-1.5 justify-end overflow-y-auto hide-scrollbar" style={{ maxHeight: '35vh' }}>
+            {visibleMessages.map((message) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 10, x: -10 }}
+                animate={{ opacity: 1, y: 0, x: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                className="flex items-start gap-2 max-w-[90%]"
+              >
+                {/* Avatar circle */}
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-brand-500 flex items-center justify-center flex-shrink-0 ring-1 ring-white/20">
+                  <span className="text-white font-bold text-[10px]">{message.initial}</span>
+                </div>
+                {/* Message bubble */}
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl rounded-tl-md px-3 py-1.5 min-w-0">
+                  <span className="text-brand-400 text-[11px] font-bold block leading-tight">{message.user_name}</span>
+                  <span className="text-white text-[13px] leading-snug break-words">{message.content}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* Emoji reaction picker — togglable overlay */}
+        <AnimatePresence>
+          {showAllReactions && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="relative mx-3 mb-2 p-2 bg-black/80 backdrop-blur-md rounded-2xl border border-white/10"
+            >
+              <div className="grid grid-cols-8 gap-1.5">
+                {POPULAR_REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => { handleReaction(emoji); setShowAllReactions(false); }}
+                    className="w-10 h-10 flex items-center justify-center text-xl rounded-xl hover:bg-white/10 active:scale-90 transition-all touch-manipulation"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Bottom bar — input + action buttons (TikTok-style) */}
+        <div className="relative px-2.5 pb-3 pt-1.5 flex items-center gap-1.5">
+          {/* Comment input */}
+          <div className="flex-1 relative min-w-0">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              placeholder="Saisis ton message..."
+              className="w-full bg-white/10 backdrop-blur-sm border border-white/15 rounded-full pl-3.5 pr-9 py-2 text-white placeholder-white/40 text-sm focus:outline-none focus:border-brand-400/50 transition-colors"
+            />
+            {chatInput.trim() && (
+              <button
+                onClick={handleSendMessage}
+                className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-brand-500 rounded-full flex items-center justify-center hover:bg-brand-600 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
+              </button>
+            )}
+          </div>
+
+          {/* Emoji toggle */}
+          <motion.button
+            whileTap={{ scale: 0.85 }}
+            onClick={() => setShowAllReactions(!showAllReactions)}
+            className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 touch-manipulation"
+          >
+            <span className="text-base">😀</span>
+          </motion.button>
+
+          {/* Like / Heart */}
+          <motion.button
+            whileTap={{ scale: 0.85 }}
+            onClick={() => handleReaction('❤️')}
+            className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 touch-manipulation"
+          >
+            <Heart className="w-[18px] h-[18px] text-pink-500 fill-pink-500" />
+          </motion.button>
+
+          {/* Gift */}
+          <motion.button
+            whileTap={{ scale: 0.85 }}
+            onClick={onGift}
+            className="w-9 h-9 rounded-full bg-gradient-to-br from-yellow-400/80 to-brand-500/80 flex items-center justify-center flex-shrink-0 touch-manipulation"
+          >
+            <Gift className="w-[18px] h-[18px] text-white" />
+          </motion.button>
+
+          {/* Tension Meter */}
+          <TensionButton tension={tension} onTap={onTap} />
+
+          {/* Share + viewer count */}
+          <motion.button
+            whileTap={{ scale: 0.85 }}
+            onClick={onShare}
+            className="flex items-center gap-0.5 px-2 h-9 rounded-full bg-white/10 backdrop-blur-sm flex-shrink-0 touch-manipulation"
+          >
+            <Share2 className="w-3.5 h-3.5 text-white" />
+            <span className="text-white text-[10px] font-bold">{viewerCount || 0}</span>
+          </motion.button>
+        </div>
       </div>
 
       {/* Moderator Control Panel with Overlay */}
