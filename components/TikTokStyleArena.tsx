@@ -187,6 +187,9 @@ export function TikTokStyleArena({
   const [timerPaused, setTimerPaused] = useState(false);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Stable ref to endBeef so the timer can call it without circular deps
+  const endBeefRef = useRef<(reason: string) => Promise<void>>();
+
   // Timer countdown — only runs when timerActive && !timerPaused
   useEffect(() => {
     if (!timerActive || timerPaused) {
@@ -207,7 +210,7 @@ export function TikTokStyleArena({
         }
         if (next <= 0) {
           setTimerActive(false);
-          endBeef('Temps écoulé (60 min)');
+          endBeefRef.current?.('Temps écoulé (60 min)');
           return 0;
         }
         return next;
@@ -217,7 +220,7 @@ export function TikTokStyleArena({
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [timerActive, timerPaused, endBeef, toast]);
+  }, [timerActive, timerPaused, toast]);
 
   // ── VOTE SYSTEM — TikTok-style duel gauge ──
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -348,6 +351,9 @@ export function TikTokStyleArena({
       router.replace('/feed');
     }, 12000);
   }, [roomId, beefTimeRemaining, liveViewerCount, votesA, votesB, visibleMessages.length, leave, router]);
+
+  // Keep the ref in sync so the timer can call endBeef
+  useEffect(() => { endBeefRef.current = endBeef; }, [endBeef]);
 
   const formatBeefTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
