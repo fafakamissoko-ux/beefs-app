@@ -2,19 +2,25 @@
 CREATE OR REPLACE FUNCTION notify_new_dm()
 RETURNS TRIGGER AS $$
 DECLARE
-  conv_participants uuid[];
+  p1 uuid;
+  p2 uuid;
+  recipient uuid;
   sender_name text;
-  p uuid;
 BEGIN
-  SELECT participants INTO conv_participants FROM conversations WHERE id = NEW.conversation_id;
+  SELECT participant_1, participant_2 INTO p1, p2 FROM conversations WHERE id = NEW.conversation_id;
   SELECT COALESCE(display_name, username, 'Quelqu''un') INTO sender_name FROM users WHERE id = NEW.sender_id;
 
-  FOREACH p IN ARRAY conv_participants LOOP
-    IF p != NEW.sender_id THEN
-      INSERT INTO notifications (user_id, type, title, body, link, metadata)
-      VALUES (p, 'message', 'Nouveau message', sender_name || ' t''a envoyé un message', '/messages', jsonb_build_object('sender_id', NEW.sender_id, 'conversation_id', NEW.conversation_id));
-    END IF;
-  END LOOP;
+  -- Determine recipient (the other participant)
+  IF NEW.sender_id = p1 THEN
+    recipient := p2;
+  ELSE
+    recipient := p1;
+  END IF;
+
+  IF recipient IS NOT NULL THEN
+    INSERT INTO notifications (user_id, type, title, body, link, metadata)
+    VALUES (recipient, 'message', 'Nouveau message', sender_name || ' t''a envoyé un message', '/messages', jsonb_build_object('sender_id', NEW.sender_id, 'conversation_id', NEW.conversation_id));
+  END IF;
 
   RETURN NEW;
 END;
@@ -56,7 +62,7 @@ BEGIN
   SELECT title INTO beef_title FROM beefs WHERE id = NEW.beef_id;
 
   INSERT INTO notifications (user_id, type, title, body, link, metadata)
-  VALUES (NEW.invitee_id, 'invitation', 'Invitation à un beef', inviter_name || ' t''invite à "' || COALESCE(beef_title, 'un beef') || '"', '/invitations', jsonb_build_object('beef_id', NEW.beef_id, 'inviter_id', NEW.inviter_id));
+  VALUES (NEW.invitee_id, 'invite', 'Invitation à un beef', inviter_name || ' t''invite à "' || COALESCE(beef_title, 'un beef') || '"', '/invitations', jsonb_build_object('beef_id', NEW.beef_id, 'inviter_id', NEW.inviter_id));
 
   RETURN NEW;
 END;
@@ -81,7 +87,7 @@ BEGIN
       SELECT user_id FROM beef_participants WHERE beef_id = NEW.id AND user_id != NEW.mediator_id
     LOOP
       INSERT INTO notifications (user_id, type, title, body, link, metadata)
-      VALUES (p_record.user_id, 'live', 'Beef en direct !', '"' || COALESCE(NEW.title, 'Un beef') || '" est en live !', '/arena/' || NEW.id, jsonb_build_object('beef_id', NEW.id));
+      VALUES (p_record.user_id, 'beef_live', 'Beef en direct !', '"' || COALESCE(NEW.title, 'Un beef') || '" est en live !', '/arena/' || NEW.id, jsonb_build_object('beef_id', NEW.id));
     END LOOP;
 
     -- Also notify followers of the mediator
@@ -89,7 +95,7 @@ BEGIN
       SELECT follower_id FROM followers WHERE following_id = NEW.mediator_id
     LOOP
       INSERT INTO notifications (user_id, type, title, body, link, metadata)
-      VALUES (p_record.follower_id, 'live', 'Beef en direct !', mediator_name || ' est en live : "' || COALESCE(NEW.title, 'Un beef') || '"', '/arena/' || NEW.id, jsonb_build_object('beef_id', NEW.id))
+      VALUES (p_record.follower_id, 'beef_live', 'Beef en direct !', mediator_name || ' est en live : "' || COALESCE(NEW.title, 'Un beef') || '"', '/arena/' || NEW.id, jsonb_build_object('beef_id', NEW.id))
       ON CONFLICT DO NOTHING;
     END LOOP;
   END IF;

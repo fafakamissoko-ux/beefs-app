@@ -98,7 +98,8 @@ export default function NotificationsPage() {
 
       if (error) throw error;
       setNotifications((data ?? []) as AppNotification[]);
-    } catch {
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
       setNotifications([]);
     } finally {
       setLoading(false);

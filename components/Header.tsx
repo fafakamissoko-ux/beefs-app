@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X, Home, Flame, Bell, User, Settings as SettingsIcon, MessageCircle, LogOut, Mail, ChevronDown, Plus, Shield } from 'lucide-react';
@@ -12,10 +12,23 @@ import { GlobalSearchBar } from '@/components/GlobalSearchBar';
 import { BeefNotificationToasts } from '@/components/BeefNotificationToasts';
 import { supabase } from '@/lib/supabase/client';
 
+function showBrowserNotification(title: string, body: string) {
+  if (typeof window === 'undefined' || !('Notification' in window)) return;
+  if (document.hasFocus()) return;
+
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '/icon-192.png', badge: '/icon-192.png', tag: `beefs-${Date.now()}` });
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission();
+  }
+}
+
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [pendingInvitations, setPendingInvitations] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
   const { user, userRole, signOut } = useAuth();
   const { toast } = useToast();
@@ -34,46 +47,86 @@ export function Header() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [userMenuOpen]);
 
-  // Load pending invitations count + realtime subscription
-  useEffect(() => {
+  const loadUnreadCounts = useCallback(async () => {
     if (!user) return;
 
-    const loadCount = async () => {
-      const { count } = await supabase
+    const [invRes, notifRes, dmRes] = await Promise.all([
+      supabase
         .from('beef_invitations')
         .select('id', { count: 'exact', head: true })
         .eq('invitee_id', user.id)
-        .in('status', ['sent', 'seen']);
-      setPendingInvitations(count || 0);
-    };
+        .in('status', ['sent', 'seen']),
+      supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false),
+      supabase
+        .from('direct_messages')
+        .select('id, conversations!inner(participant_1, participant_2)', { count: 'exact', head: true })
+        .eq('is_read', false)
+        .neq('sender_id', user.id)
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`, { referencedTable: 'conversations' }),
+    ]);
 
-    loadCount();
+    setPendingInvitations(invRes.count || 0);
+    setUnreadNotifications(notifRes.count || 0);
+    setUnreadMessages(dmRes.count || 0);
+  }, [user]);
 
-    // Clear count when visiting invitations page
+  useEffect(() => {
+    loadUnreadCounts();
+
     if (pathname === '/invitations') setPendingInvitations(0);
+    if (pathname === '/notifications') setUnreadNotifications(0);
+    if (pathname === '/messages') setUnreadMessages(0);
+  }, [loadUnreadCounts, pathname]);
 
-    // Listen for new invitations in realtime
+  useEffect(() => {
+    if (!user) return;
+
     const channel = supabase
-      .channel('invitation_notifs')
+      .channel(`header_badges_${user.id}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'beef_invitations', filter: `invitee_id=eq.${user.id}` },
-        (payload) => {
+        () => {
           setPendingInvitations(prev => prev + 1);
           toast('Nouvelle invitation reçue !', 'info');
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          if (pathname !== '/notifications') {
+            setUnreadNotifications(prev => prev + 1);
+          }
+          const n = payload.new as { type?: string; body?: string; title?: string };
+          if (n.type === 'message' && pathname !== '/messages') {
+            setUnreadMessages(prev => prev + 1);
+          }
+          showBrowserNotification(n.title || 'Beefs', n.body || '');
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        () => {
+          loadUnreadCounts();
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, pathname]);
+  }, [user, pathname, toast, loadUnreadCounts]);
 
   const navItems = [
     { href: '/feed', label: 'Accueil', icon: Home, badge: 0 },
-    { href: '/notifications', label: 'Notifications', icon: Bell, badge: 0 },
+    { href: '/notifications', label: 'Notifications', icon: Bell, badge: unreadNotifications },
     { href: '/live', label: 'Live', icon: Flame, badge: 0 },
     { href: '/invitations', label: 'Invitations', icon: Mail, badge: pendingInvitations },
-    { href: '/messages', label: 'Messages', icon: MessageCircle, badge: 0 },
+    { href: '/messages', label: 'Messages', icon: MessageCircle, badge: unreadMessages },
   ];
 
   const isActive = (href: string) => {

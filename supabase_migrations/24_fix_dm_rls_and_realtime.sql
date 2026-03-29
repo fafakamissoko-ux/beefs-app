@@ -6,14 +6,14 @@ CREATE POLICY "Users can update messages in their conversations"
     EXISTS (
       SELECT 1 FROM conversations c
       WHERE c.id = direct_messages.conversation_id
-      AND auth.uid() = ANY(c.participants)
+      AND (auth.uid() = c.participant_1 OR auth.uid() = c.participant_2)
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM conversations c
       WHERE c.id = direct_messages.conversation_id
-      AND auth.uid() = ANY(c.participants)
+      AND (auth.uid() = c.participant_1 OR auth.uid() = c.participant_2)
     )
   );
 
