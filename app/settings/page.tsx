@@ -7,6 +7,7 @@ import { ArrowLeft, User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check,
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase/client';
+import { FeatureGuide } from '@/components/FeatureGuide';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -348,8 +349,14 @@ export default function SettingsPage() {
 
             <div className="space-y-6">
               {/* Theme selector */}
-              <div>
+              <div className="relative">
                 <label className="block text-white font-semibold mb-3 text-sm">Thème</label>
+                <FeatureGuide
+                  id="settings-theme"
+                  title="Personnalise ton thème"
+                  description="Choisis entre sombre, clair ou automatique. L'app s'adapte à tes préférences."
+                  position="bottom"
+                />
                 <div className="grid grid-cols-3 gap-2">
                   {([
                     { value: 'dark' as const, label: 'Sombre', icon: Moon },
@@ -483,6 +490,26 @@ export default function SettingsPage() {
                 </button>
               </div>
             </div>
+          </motion.div>
+
+          {/* Reset guides */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="card rounded-2xl p-6"
+          >
+            <h3 className="text-white font-bold text-lg mb-2">Guides d&apos;utilisation</h3>
+            <p className="text-gray-400 text-sm mb-4">Réafficher les guides contextuels pour redécouvrir les fonctionnalités.</p>
+            <button
+              onClick={() => {
+                try { localStorage.removeItem('beefs_seen_features'); } catch {}
+                setMessage({ type: 'success', text: 'Guides réinitialisés ! Ils réapparaitront lors de ta prochaine navigation.' });
+              }}
+              className="px-4 py-2 bg-brand-500/20 hover:bg-brand-500/30 text-brand-400 font-semibold text-sm rounded-lg transition-colors border border-brand-500/30"
+            >
+              Réinitialiser les guides
+            </button>
           </motion.div>
 
           {/* Danger Zone */}

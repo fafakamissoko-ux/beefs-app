@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, Gift, Share2, Heart, X, MoreVertical } from 'lucide-react';
 import { ChatPanel } from './ChatPanel';
 import { PreJoinScreen } from './PreJoinScreen';
-import { TensionButton } from './TensionButton';
 import { ParticipantVideo } from './ParticipantVideo';
+import { FeatureGuide } from './FeatureGuide';
 import { useDailyCall } from '@/hooks/useDailyCall';
 import { supabase } from '@/lib/supabase/client';
 import { MultiParticipantGrid } from './MultiParticipantGrid';
@@ -40,12 +40,12 @@ interface TikTokStyleArenaProps {
   userId: string;
   userName: string;
   viewerCount?: number;
-  tension: number;
+  tension?: number;
   points: number;
   debateTitle?: string;
   dailyRoomUrl?: string | null;
   onReaction: (emoji: string) => void;
-  onTap: () => void;
+  onTap?: () => void;
   onGift: () => void;
   onShare: () => void;
 }
@@ -107,12 +107,10 @@ export function TikTokStyleArena({
   userId,
   userName,
   viewerCount = 0,
-  tension,
   points,
   debateTitle = 'Débat en direct',
   dailyRoomUrl,
   onReaction,
-  onTap,
   onGift,
   onShare,
 }: TikTokStyleArenaProps) {
@@ -188,6 +186,40 @@ export function TikTokStyleArena({
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
   }, [timerActive, timerPaused, leave, toast]);
+
+  // ── VOTE SYSTEM — TikTok-style duel gauge ──
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const [votesA, setVotesA] = useState(0);
+  const [votesB, setVotesB] = useState(0);
+  const [myVote, setMyVote] = useState<'A' | 'B' | null>(null);
+  const [voteAnimation, setVoteAnimation] = useState<'A' | 'B' | null>(null);
+
+  const castVote = useCallback((side: 'A' | 'B') => {
+    if (myVote === side) return; // already voted this side
+    const prevVote = myVote;
+    setMyVote(side);
+
+    // Adjust local counts
+    if (prevVote === 'A') setVotesA(v => Math.max(0, v - 1));
+    if (prevVote === 'B') setVotesB(v => Math.max(0, v - 1));
+    if (side === 'A') setVotesA(v => v + 1);
+    if (side === 'B') setVotesB(v => v + 1);
+
+    // Visual feedback
+    setVoteAnimation(side);
+    setTimeout(() => setVoteAnimation(null), 800);
+
+    // Broadcast to others
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'vote',
+        payload: { side, prev: prevVote, voter: userId },
+      }).catch(() => {});
+    }
+  }, [myVote, userId]);
+
+  const totalVotes = votesA + votesB;
 
   // Auto-pause timer when mediator's mic is active (they're speaking)
   useEffect(() => {
@@ -355,7 +387,6 @@ export function TikTokStyleArena({
   };
 
   // ── HYBRID LIVE SYNC: Broadcast (instant) + Polling (fallback) ──
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const [liveConnected, setLiveConnected] = useState(false);
   const seenMsgKeys = useRef(new Set<string>());
 
@@ -396,6 +427,12 @@ export function TikTokStyleArena({
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
         console.log('[Live] Received broadcast message from:', payload.user_name);
         addRemoteMessage(payload.user_name, payload.content, payload.initial);
+      })
+      .on('broadcast', { event: 'vote' }, ({ payload }: any) => {
+        if (payload.prev === 'A') setVotesA(v => Math.max(0, v - 1));
+        if (payload.prev === 'B') setVotesB(v => Math.max(0, v - 1));
+        if (payload.side === 'A') setVotesA(v => v + 1);
+        if (payload.side === 'B') setVotesB(v => v + 1);
       })
       .subscribe((status: string) => {
         console.log('[Live] Broadcast channel:', status);
@@ -739,6 +776,37 @@ export function TikTokStyleArena({
                     )}
                   </div>
                 )}
+                {/* Vote tap overlay — viewers tap to vote for this challenger */}
+                {!isHost && !leftPanelIsLocal && (
+                  <button
+                    onClick={() => castVote('A')}
+                    className="absolute inset-0 z-[5] touch-manipulation"
+                    aria-label={`Voter pour ${leftPanelName}`}
+                  />
+                )}
+                {/* Vote guide — first time only */}
+                {!isHost && !leftPanelIsLocal && (
+                  <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[8] pointer-events-auto">
+                    <FeatureGuide
+                      id="arena-vote"
+                      title="Voter pour un challenger"
+                      description="Tape sur l'écran d'un challenger pour voter ! Tu peux changer d'avis à tout moment."
+                      position="bottom"
+                    />
+                  </div>
+                )}
+                {/* Vote flash animation */}
+                <AnimatePresence>
+                  {voteAnimation === 'A' && (
+                    <motion.div
+                      initial={{ opacity: 0.6 }}
+                      animate={{ opacity: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.8 }}
+                      className="absolute inset-0 bg-blue-500/20 z-[6] pointer-events-none"
+                    />
+                  )}
+                </AnimatePresence>
                 {/* Name tag — bottom-left edge */}
                 <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
@@ -746,6 +814,20 @@ export function TikTokStyleArena({
                     {leftPanelName}
                   </span>
                 </div>
+                {/* Vote bubble — bottom-right (opposite to pseudo) */}
+                <motion.div
+                  className="absolute bottom-1 right-1 z-10"
+                  animate={voteAnimation === 'A' ? { scale: [1, 1.4, 1] } : {}}
+                  transition={{ duration: 0.4 }}
+                >
+                  <div className={`min-w-[22px] h-[22px] rounded-full flex items-center justify-center px-1 ${
+                    myVote === 'A'
+                      ? 'bg-blue-500 ring-1 ring-white/40'
+                      : 'bg-blue-500/60 backdrop-blur-sm'
+                  }`}>
+                    <span className="text-white text-[9px] font-black">{votesA}</span>
+                  </div>
+                </motion.div>
                 {/* Mic/Cam controls when this panel shows local video */}
                 {leftPanelIsLocal && (
                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
@@ -859,6 +941,40 @@ export function TikTokStyleArena({
                     )}
                   </div>
                 )}
+                {/* Vote tap overlay — viewers tap to vote for this challenger */}
+                {!isHost && (
+                  <button
+                    onClick={() => castVote('B')}
+                    className="absolute inset-0 z-[5] touch-manipulation"
+                    aria-label={`Voter pour ${rightPanelName}`}
+                  />
+                )}
+                {/* Vote flash animation */}
+                <AnimatePresence>
+                  {voteAnimation === 'B' && (
+                    <motion.div
+                      initial={{ opacity: 0.6 }}
+                      animate={{ opacity: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.8 }}
+                      className="absolute inset-0 bg-red-500/20 z-[6] pointer-events-none"
+                    />
+                  )}
+                </AnimatePresence>
+                {/* Vote bubble — bottom-left (opposite to pseudo) */}
+                <motion.div
+                  className="absolute bottom-1 left-1 z-10"
+                  animate={voteAnimation === 'B' ? { scale: [1, 1.4, 1] } : {}}
+                  transition={{ duration: 0.4 }}
+                >
+                  <div className={`min-w-[22px] h-[22px] rounded-full flex items-center justify-center px-1 ${
+                    myVote === 'B'
+                      ? 'bg-red-500 ring-1 ring-white/40'
+                      : 'bg-red-500/60 backdrop-blur-sm'
+                  }`}>
+                    <span className="text-white text-[9px] font-black">{votesB}</span>
+                  </div>
+                </motion.div>
                 {/* Name tag — bottom-right edge */}
                 <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
                   <span className="text-white text-[10px] font-bold drop-shadow-md">
@@ -1296,6 +1412,12 @@ export function TikTokStyleArena({
                 <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
               </button>
             )}
+            <FeatureGuide
+              id="arena-chat"
+              title="Chat en direct"
+              description="Envoie des messages visibles par tous les viewers et participants."
+              position="top"
+            />
           </div>
 
           {/* Emoji toggle */}
@@ -1317,16 +1439,21 @@ export function TikTokStyleArena({
           </motion.button>
 
           {/* Gift */}
-          <motion.button
-            whileTap={{ scale: 0.85 }}
-            onClick={onGift}
-            className="w-9 h-9 rounded-full bg-gradient-to-br from-yellow-400/80 to-brand-500/80 flex items-center justify-center flex-shrink-0 touch-manipulation"
-          >
-            <Gift className="w-[18px] h-[18px] text-white" />
-          </motion.button>
-
-          {/* Tension Meter */}
-          <TensionButton tension={tension} onTap={onTap} />
+          <div className="relative flex-shrink-0">
+            <motion.button
+              whileTap={{ scale: 0.85 }}
+              onClick={onGift}
+              className="w-9 h-9 rounded-full bg-gradient-to-br from-yellow-400/80 to-brand-500/80 flex items-center justify-center touch-manipulation"
+            >
+              <Gift className="w-[18px] h-[18px] text-white" />
+            </motion.button>
+            <FeatureGuide
+              id="arena-gift"
+              title="Envoyer un cadeau"
+              description="Soutiens le médiateur avec des points ! Les cadeaux s'affichent en live."
+              position="top"
+            />
+          </div>
 
           {/* Share + viewer count */}
           <motion.button
