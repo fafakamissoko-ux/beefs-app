@@ -4,9 +4,6 @@ const nextConfig = {
     domains: ['api.dicebear.com', 'flagcdn.com'],
     formats: ['image/avif', 'image/webp'],
   },
-  experimental: {
-    optimizeCss: true,
-  },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },

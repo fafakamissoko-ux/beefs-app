@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -22,7 +22,6 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   metadataBase: new URL("https://beefs-app.vercel.app"),
   alternates: { canonical: "/" },
-  themeColor: "#E83A14",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -55,6 +54,13 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#E83A14",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 function RootLayoutClient({
