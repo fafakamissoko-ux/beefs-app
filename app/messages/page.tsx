@@ -104,11 +104,20 @@ export default function MessagesPage() {
       const { data: users } = await supabase.from('users').select('id, username, display_name, avatar_url').in('id', otherIds);
       const userMap = new Map((users || []).map(u => [u.id, u]));
 
-      const enriched: Conversation[] = convs.map(c => {
+      // Count unread messages per conversation
+      const enriched: Conversation[] = await Promise.all(convs.map(async c => {
         const otherId = c.participant_1 === user.id ? c.participant_2 : c.participant_1;
         const otherUser = userMap.get(otherId) || { id: otherId, username: 'unknown', display_name: 'Utilisateur', avatar_url: null };
-        return { ...c, other_user: otherUser, unread_count: 0 };
-      });
+
+        const { count } = await supabase
+          .from('direct_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', c.id)
+          .neq('sender_id', user.id)
+          .eq('is_read', false);
+
+        return { ...c, other_user: otherUser, unread_count: count || 0 };
+      }));
 
       setConversations(enriched);
     } catch (err) {
@@ -266,7 +275,7 @@ export default function MessagesPage() {
             <h1 className="text-xl font-black text-white">Messages</h1>
             <button
               onClick={() => setShowNewConv(!showNewConv)}
-              className="w-9 h-9 rounded-full bg-brand-500 hover:bg-brand-600 flex items-center justify-center transition-colors"
+              className="w-10 h-10 rounded-full bg-brand-500 hover:bg-brand-600 flex items-center justify-center transition-colors"
             >
               <Plus className="w-4 h-4 text-white" />
             </button>
@@ -374,7 +383,7 @@ export default function MessagesPage() {
               <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
                 <button
                   onClick={() => setSelectedConv(null)}
-                  className="md:hidden w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center"
+                  className="md:hidden w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center"
                 >
                   <ArrowLeft className="w-5 h-5 text-white" />
                 </button>

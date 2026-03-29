@@ -157,12 +157,12 @@ export function BeefCard({
                   {/* Host avatar pill */}
                   <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
                     <div
-                      className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
+                      className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
                       style={{ background: `hsl(${charSum % 360}, 65%, 45%)` }}
                     >
                       {(host_name || '?')[0].toUpperCase()}
                     </div>
-                    <span className="text-[10px] text-white/70 font-medium truncate max-w-[80px]">{host_name}</span>
+                    <span className="text-[11px] text-white/70 font-medium truncate max-w-[80px]">{host_name}</span>
                   </div>
 
                   {/* Participants indicator */}
@@ -249,7 +249,7 @@ export function BeefCard({
               <button
                 key={idx}
                 onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
-                className="px-2 py-0.5 text-[11px] font-medium text-gray-400 hover:text-brand-400 rounded-md transition-colors"
+                className="px-2 py-0.5 min-h-[32px] text-[11px] font-medium text-gray-400 hover:text-brand-400 rounded-md transition-colors"
                 style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.06)' }}
               >
                 #{tag}

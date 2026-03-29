@@ -7,8 +7,12 @@ import { motion } from 'framer-motion';
 import { TrendingUp, Users, Flame, X, Plus, Hash, Radio } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { BeefCard } from '@/components/BeefCard';
-import { CreateBeefForm } from '@/components/CreateBeefForm';
+import dynamic from 'next/dynamic';
 import { FeatureGuide } from '@/components/FeatureGuide';
+
+const CreateBeefForm = dynamic(() => import('@/components/CreateBeefForm').then(m => m.CreateBeefForm), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>,
+});
 
 interface Beef {
   id: string;
@@ -305,7 +309,7 @@ export default function FeedPage() {
               <button
                 key={s.id}
                 onClick={() => setSelectedStatus(s.id)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`px-4 py-1.5 min-h-[36px] rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                   selectedStatus === s.id
                     ? 'text-white brand-gradient shadow-sm'
                     : 'text-gray-500 hover:text-gray-300'
@@ -356,12 +360,12 @@ export default function FeedPage() {
 
           {/* Trending tags */}
           <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-            <span className="text-[10px] text-gray-600 font-semibold uppercase tracking-wider flex-shrink-0">Trending</span>
+            <span className="text-xs text-gray-600 font-semibold uppercase tracking-wider flex-shrink-0">Trending</span>
             {trendingTags.filter(t => !selectedTags.includes(t)).slice(0, 8).map(tag => (
               <button
                 key={tag}
                 onClick={() => handleTagClick(tag)}
-                className="px-2.5 py-1 text-[11px] font-medium text-gray-500 hover:text-brand-400 rounded-md whitespace-nowrap transition-colors flex-shrink-0"
+                className="px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-brand-400 rounded-md whitespace-nowrap transition-colors flex-shrink-0"
                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
               >
                 #{tag}

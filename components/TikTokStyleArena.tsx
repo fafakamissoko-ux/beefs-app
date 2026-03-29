@@ -901,23 +901,86 @@ export function TikTokStyleArena({
     setDebaters(debaters.filter(d => d.id !== debaterId));
   };
 
-  const inviteDebater = () => {
-    if (inviteInput.trim()) {
-      const username = inviteInput.startsWith('@') ? inviteInput.substring(1) : inviteInput;
-      // Check if already exists
-      if (debaters.some(d => d.name === username)) {
-        toast('Ce débatteur est déjà dans le débat', 'info');
-        return;
-      }
-      // Add new debater
-      setDebaters([...debaters, {
-        id: Date.now().toString(),
-        name: username,
+  const inviteDebater = async () => {
+    if (!inviteInput.trim()) return;
+    const username = inviteInput.startsWith('@') ? inviteInput.substring(1) : inviteInput;
+
+    if (debaters.some(d => d.name === username)) {
+      toast('Ce débatteur est déjà dans le débat', 'info');
+      return;
+    }
+
+    // Find user in DB
+    const { data: foundUser } = await supabase
+      .from('users')
+      .select('id, username, display_name')
+      .or(`username.eq.${username},display_name.eq.${username}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (!foundUser) {
+      toast('Utilisateur introuvable', 'error');
+      return;
+    }
+
+    // Insert invitation + participant
+    await supabase.from('beef_participants').upsert({
+      beef_id: roomId,
+      user_id: foundUser.id,
+      role: 'participant',
+      is_main: false,
+      invite_status: 'pending',
+    }, { onConflict: 'beef_id,user_id' });
+
+    await supabase.from('beef_invitations').insert({
+      beef_id: roomId,
+      inviter_id: userId,
+      invitee_id: foundUser.id,
+      status: 'sent',
+    });
+
+    setDebaters([...debaters, {
+      id: foundUser.id,
+      name: foundUser.display_name || foundUser.username || username,
+      isMuted: true,
+      speakingTime: 0,
+    }]);
+    setInviteInput('');
+    toast(`Invitation envoyée à ${foundUser.display_name || foundUser.username}`, 'success');
+  };
+
+  const handleInviteFromModal = async (invitedUserId: string) => {
+    await supabase.from('beef_participants').upsert({
+      beef_id: roomId,
+      user_id: invitedUserId,
+      role: 'participant',
+      is_main: false,
+      invite_status: 'pending',
+    }, { onConflict: 'beef_id,user_id' });
+
+    await supabase.from('beef_invitations').insert({
+      beef_id: roomId,
+      inviter_id: userId,
+      invitee_id: invitedUserId,
+      status: 'sent',
+    });
+
+    // Fetch user info for local debaters list
+    const { data: invitedUser } = await supabase
+      .from('users')
+      .select('id, username, display_name')
+      .eq('id', invitedUserId)
+      .single();
+
+    if (invitedUser) {
+      setDebaters(prev => [...prev, {
+        id: invitedUser.id,
+        name: invitedUser.display_name || invitedUser.username || 'Participant',
         isMuted: true,
         speakingTime: 0,
       }]);
-      setInviteInput('');
     }
+    toast('Invitation envoyée !', 'success');
   };
 
   const openProfile = (username: string) => {
@@ -1708,7 +1771,7 @@ export function TikTokStyleArena({
               </div>
               <span className="text-white font-semibold text-xs drop-shadow-lg max-w-[80px] truncate">{userName}</span>
             </div>
-            <button className="bg-pink-500 hover:bg-pink-600 px-3 py-1 rounded-full text-white text-[10px] font-bold transition-colors">
+            <button className="bg-pink-500 hover:bg-pink-600 px-3 py-1 rounded-full text-white text-xs font-bold transition-colors">
               + Suivre
             </button>
           </div>
@@ -1762,13 +1825,13 @@ export function TikTokStyleArena({
             {/* Menu / Close */}
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
             >
               <MoreVertical className="w-4 h-4 text-white" />
             </button>
             <button
               onClick={handleLeave}
-              className="w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
             >
               <X className="w-4 h-4 text-white" />
             </button>
@@ -1917,12 +1980,12 @@ export function TikTokStyleArena({
               onChange={(e) => setChatInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder="Saisis ton message..."
-              className="w-full bg-white/10 backdrop-blur-sm border border-white/15 rounded-full pl-3.5 pr-9 py-2 text-white placeholder-white/40 text-sm focus:outline-none focus:border-brand-400/50 transition-colors"
+              className="w-full bg-white/10 backdrop-blur-sm border border-white/15 rounded-full pl-3.5 pr-12 py-2 text-white placeholder-white/40 text-sm focus:outline-none focus:border-brand-400/50 transition-colors"
             />
             {chatInput.trim() && (
               <button
                 onClick={handleSendMessage}
-                className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 bg-brand-500 rounded-full flex items-center justify-center hover:bg-brand-600 transition-colors"
+                className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center hover:bg-brand-600 transition-colors"
               >
                 <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
               </button>
@@ -1939,7 +2002,7 @@ export function TikTokStyleArena({
           <motion.button
             whileTap={{ scale: 0.85 }}
             onClick={() => setShowAllReactions(!showAllReactions)}
-            className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 touch-manipulation"
+            className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 touch-manipulation"
           >
             <span className="text-base">😀</span>
           </motion.button>
@@ -1948,7 +2011,7 @@ export function TikTokStyleArena({
           <motion.button
             whileTap={{ scale: 0.85 }}
             onClick={() => handleReaction('❤️')}
-            className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 touch-manipulation"
+            className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 touch-manipulation"
           >
             <Heart className="w-[18px] h-[18px] text-pink-500 fill-pink-500" />
           </motion.button>
@@ -1958,7 +2021,7 @@ export function TikTokStyleArena({
             <motion.button
               whileTap={{ scale: 0.85 }}
               onClick={() => setShowGiftPicker(!showGiftPicker)}
-              className="w-9 h-9 rounded-full bg-gradient-to-br from-yellow-400/80 to-brand-500/80 flex items-center justify-center touch-manipulation"
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400/80 to-brand-500/80 flex items-center justify-center touch-manipulation"
             >
               <Gift className="w-[18px] h-[18px] text-white" />
             </motion.button>
@@ -2048,7 +2111,7 @@ export function TikTokStyleArena({
           <motion.button
             whileTap={{ scale: 0.85 }}
             onClick={onShare}
-            className="flex items-center gap-0.5 px-2 h-9 rounded-full bg-white/10 backdrop-blur-sm flex-shrink-0 touch-manipulation"
+            className="flex items-center gap-0.5 px-2 h-10 rounded-full bg-white/10 backdrop-blur-sm flex-shrink-0 touch-manipulation"
           >
             <Share2 className="w-3.5 h-3.5 text-white" />
             <span className="text-white text-[10px] font-bold">{liveViewerCount || 0}</span>
@@ -2234,7 +2297,7 @@ export function TikTokStyleArena({
                 </div>
               </div>
 
-              {/* Invite Debater by ID */}
+              {/* Invite Debater */}
               <div className="bg-white/5 rounded-lg p-3 border border-white/10">
                 <h3 className="text-white font-bold text-sm mb-2 flex items-center gap-2">
                   <span>➕</span> Inviter un débatteur
@@ -2247,7 +2310,7 @@ export function TikTokStyleArena({
                         type="text"
                         value={inviteInput}
                         onChange={(e) => setInviteInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && inviteDebater()}
+                        onKeyDown={(e) => e.key === 'Enter' && inviteDebater()}
                         placeholder="username"
                         className="w-full bg-white/10 border border-white/20 rounded-lg pl-8 pr-3 py-2 text-white placeholder-white/40 text-sm focus:outline-none focus:bg-white/15 focus:border-yellow-500/50"
                       />
@@ -2259,7 +2322,12 @@ export function TikTokStyleArena({
                       ➕
                     </button>
                   </div>
-                  <p className="text-white/40 text-xs">Ex: @username ou username</p>
+                  <button
+                    onClick={() => setShowInviteModal(true)}
+                    className="w-full py-2 bg-white/5 hover:bg-white/10 text-white/70 text-xs font-semibold rounded-lg transition-colors"
+                  >
+                    🔍 Rechercher un utilisateur
+                  </button>
                 </div>
               </div>
 
@@ -2331,6 +2399,16 @@ export function TikTokStyleArena({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Invite Participant Modal */}
+      {showInviteModal && (
+        <InviteParticipantModal
+          beefId={roomId}
+          currentParticipantIds={debaters.map(d => d.id).concat([userId])}
+          onInvite={handleInviteFromModal}
+          onClose={() => setShowInviteModal(false)}
+        />
+      )}
 
       {/* User Profile Modal */}
       <AnimatePresence>
