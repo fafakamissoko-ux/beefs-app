@@ -22,17 +22,20 @@ export default function BuyPointsPage() {
     setError('');
 
     try {
-      // Get user session for userId
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        router.push('/login?redirect=/buy-points');
+        return;
+      }
       
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           packId: selectedPack,
-          userId: session?.user?.id || null,
         }),
       });
 

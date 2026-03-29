@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Mail, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase/client';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (user?.email_confirmed_at) {
@@ -19,13 +21,23 @@ export default function VerifyEmailPage() {
   }, [user, router]);
 
   const handleResend = async () => {
+    if (!user?.email) return;
     setResending(true);
-    // TODO: Implement resend email logic
-    setTimeout(() => {
-      setResending(false);
+    setError('');
+
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: user.email,
+      });
+      if (resendError) throw resendError;
       setResent(true);
-      setTimeout(() => setResent(false), 3000);
-    }, 1000);
+      setTimeout(() => setResent(false), 5000);
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du renvoi');
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -55,6 +67,12 @@ export default function VerifyEmailPage() {
               </span>
             </p>
           </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
+              {error}
+            </div>
+          )}
 
           <button
             onClick={handleResend}

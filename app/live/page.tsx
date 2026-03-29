@@ -43,10 +43,16 @@ export default function LivePage() {
   const [feedType, setFeedType] = useState<'pour-vous' | 'abonnements'>('pour-vous');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [userPoints, setUserPoints] = useState(0);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
   
-  // Mock following list - Replace with real user's following list from database
-  // This list determines which debates appear in "Abonnements" feed (like X/Twitter)
-  const followingList = ['TechExpert', 'CryptoKing', 'Host Principal']; // Example
+  useEffect(() => {
+    if (!user) return;
+    supabase.from('users').select('points').eq('id', user.id).single()
+      .then(({ data }) => { if (data) setUserPoints(data.points || 0); });
+  }, [user]);
+
+  const followingList = ['TechExpert', 'CryptoKing', 'Host Principal'];
 
   useEffect(() => {
     loadLiveRooms();
@@ -271,11 +277,40 @@ export default function LivePage() {
   };
 
   const purchaseAccess = async () => {
-    if (!selectedRoom || !selectedRoom.price) return;
-    
-    // TODO: Get real user balance from Supabase
-    // For now, just redirect to buy-points
-    router.push('/buy-points');
+    if (!selectedRoom || !selectedRoom.price || !user) return;
+    setPurchaseLoading(true);
+
+    if (userPoints < selectedRoom.price) {
+      toast(`Points insuffisants (${userPoints}/${selectedRoom.price}). Achetez des points.`, 'error');
+      setPurchaseLoading(false);
+      router.push('/buy-points');
+      return;
+    }
+
+    try {
+      const { error: deductErr } = await supabase
+        .from('users')
+        .update({ points: userPoints - selectedRoom.price })
+        .eq('id', user.id);
+      if (deductErr) throw deductErr;
+
+      const { error: creditErr } = await supabase.rpc('update_user_balance', {
+        p_user_id: selectedRoom.id,
+        p_amount: 0,
+        p_type: 'premium_access',
+        p_description: `Accès premium: ${selectedRoom.title}`,
+        p_metadata: { room_id: selectedRoom.id },
+      }).then(() => null).catch(() => null);
+
+      setUserPoints(prev => prev - selectedRoom.price!);
+      setShowPaymentModal(false);
+      toast('Accès débloqué !', 'success');
+      router.push(`/arena/${selectedRoom.id}`);
+    } catch (err: any) {
+      toast('Erreur lors du paiement', 'error');
+    } finally {
+      setPurchaseLoading(false);
+    }
   };
 
   const categories = [
@@ -516,6 +551,12 @@ export default function LivePage() {
                 </div>
               </div>
 
+              {/* User Balance */}
+              <div className={`flex items-center justify-between p-3 rounded-lg mb-3 ${userPoints >= (selectedRoom?.price || 0) ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'}`}>
+                <span className="text-gray-300 text-sm">Ton solde</span>
+                <span className={`font-bold ${userPoints >= (selectedRoom?.price || 0) ? 'text-green-400' : 'text-red-400'}`}>{userPoints} pts</span>
+              </div>
+
               {/* Benefits */}
               <div className="bg-yellow-400/5 border border-yellow-400/20 rounded-lg p-4 mb-6">
                 <p className="text-yellow-400 font-semibold mb-2 text-sm">✨ Avantages Premium</p>
@@ -537,10 +578,22 @@ export default function LivePage() {
                 </button>
                 <button
                   onClick={purchaseAccess}
-                  className="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black font-bold py-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2"
+                  disabled={purchaseLoading}
+                  className="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 disabled:opacity-50 text-black font-bold py-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2"
                 >
-                  <Lock className="w-5 h-5" />
-                  Acheter l'accès
+                  {purchaseLoading ? (
+                    <span>Traitement...</span>
+                  ) : userPoints >= (selectedRoom?.price || 0) ? (
+                    <>
+                      <Lock className="w-5 h-5" />
+                      Payer {selectedRoom?.price} pts
+                    </>
+                  ) : (
+                    <>
+                      <Flame className="w-5 h-5" />
+                      Acheter des points
+                    </>
+                  )}
                 </button>
               </div>
             </motion.div>

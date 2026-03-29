@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Mail, ArrowLeft } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -18,11 +19,17 @@ export default function ForgotPasswordPage() {
     setError('');
     setLoading(true);
 
-    // TODO: Implement password reset
-    setTimeout(() => {
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      });
+      if (resetError) throw resetError;
       setSuccess(true);
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de l\'envoi. Vérifie ton email.');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   if (success) {

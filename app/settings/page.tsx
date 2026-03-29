@@ -131,19 +131,30 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = async () => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer définitivement votre compte? Cette action est irréversible.')) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer définitivement votre compte ? Cette action est irréversible.')) {
+      return;
+    }
+    if (!confirm('Dernière confirmation : toutes vos données (beefs, messages, points) seront perdues. Continuer ?')) {
       return;
     }
 
     try {
-      // Delete user data
-      await supabase.from('users').delete().eq('id', user?.id);
-      
-      // Sign out
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`,
+        },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erreur serveur');
+      }
       await signOut();
       router.push('/');
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Erreur lors de la suppression du compte' });
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Erreur lors de la suppression du compte' });
     }
   };
 

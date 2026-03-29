@@ -6,8 +6,7 @@ import { motion } from 'framer-motion';
 import { Check, X, Clock, Euro, AlertCircle, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
-
-const ADMIN_SECRET = process.env.NEXT_PUBLIC_ADMIN_SECRET || '';
+import { supabase } from '@/lib/supabase/client';
 
 interface WithdrawalRequest {
   id: string;
@@ -42,13 +41,20 @@ export default function AdminRetraitsPage() {
   const [adminNote, setAdminNote] = useState<Record<string, string>>({});
   const authenticated = userRole === 'admin';
 
+  const getAuthHeaders = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session?.access_token || ''}`,
+    };
+  };
+
   const loadRequests = async () => {
     setLoading(true);
     try {
       const params = filter !== 'all' ? `?status=${filter}` : '';
-      const res = await fetch(`/api/withdrawals/list${params}`, {
-        headers: { 'x-admin-secret': ADMIN_SECRET },
-      });
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/withdrawals/list${params}`, { headers });
       const json = await res.json();
       setRequests(json.data || []);
     } catch {
@@ -65,12 +71,10 @@ export default function AdminRetraitsPage() {
   const handleAction = async (requestId: string, action: 'paid' | 'rejected') => {
     setActionLoading(requestId);
     try {
+      const headers = await getAuthHeaders();
       const res = await fetch('/api/withdrawals/process', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-secret': ADMIN_SECRET,
-        },
+        headers,
         body: JSON.stringify({
           requestId,
           action,
