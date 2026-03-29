@@ -727,22 +727,22 @@ export function TikTokStyleArena({
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                    <div className="w-24 h-24 rounded-full bg-blue-500/30 border-2 border-blue-400/40 flex items-center justify-center text-5xl font-black text-white">
+                  <div className="absolute inset-0 flex flex-col items-center gap-3 pt-16 sm:pt-20">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-blue-500/30 border-2 border-blue-400/40 flex items-center justify-center text-4xl sm:text-5xl font-black text-white">
                       {leftPanel ? leftPanelName[0].toUpperCase() : 'A'}
                     </div>
                     {!leftPanel && (
                       <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full">
                         <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                        <span className="text-white/70 text-xs font-medium">En attente du challenger...</span>
+                        <span className="text-white/70 text-[11px] font-medium">En attente...</span>
                       </div>
                     )}
                   </div>
                 )}
-                {/* Name tag — bottom left */}
-                <div className="absolute bottom-14 left-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5 z-10">
-                  <div className="w-2 h-2 rounded-full bg-blue-400" />
-                  <span className="text-white text-[11px] font-bold drop-shadow-md">
+                {/* Name tag — bottom-left edge */}
+                <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                  <span className="text-white text-[10px] font-bold drop-shadow-md">
                     {leftPanelName}
                   </span>
                 </div>
@@ -764,7 +764,7 @@ export function TikTokStyleArena({
                   </div>
                 )}
                 {currentSpeaker === '1' && (
-                  <div className="absolute bottom-[4.5rem] left-2 flex gap-0.5 z-10">
+                  <div className="absolute bottom-7 left-2 flex gap-0.5 z-10">
                     {[...Array(4)].map((_, i) => (
                       <motion.div key={i} animate={{ height: [3, 10, 3] }}
                         transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
@@ -847,27 +847,27 @@ export function TikTokStyleArena({
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                    <div className="w-24 h-24 rounded-full bg-red-500/30 border-2 border-red-400/40 flex items-center justify-center text-5xl font-black text-white">
+                  <div className="absolute inset-0 flex flex-col items-center gap-3 pt-16 sm:pt-20">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-red-500/30 border-2 border-red-400/40 flex items-center justify-center text-4xl sm:text-5xl font-black text-white">
                       {rightPanel ? rightPanelName[0].toUpperCase() : 'B'}
                     </div>
                     {!rightPanel && (
                       <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full">
                         <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                        <span className="text-white/70 text-xs font-medium">En attente du challenger...</span>
+                        <span className="text-white/70 text-[11px] font-medium">En attente...</span>
                       </div>
                     )}
                   </div>
                 )}
-                {/* Name tag — bottom right */}
-                <div className="absolute bottom-14 right-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5 z-10">
-                  <span className="text-white text-[11px] font-bold drop-shadow-md">
+                {/* Name tag — bottom-right edge */}
+                <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
+                  <span className="text-white text-[10px] font-bold drop-shadow-md">
                     {rightPanelName}
                   </span>
-                  <div className="w-2 h-2 rounded-full bg-red-400" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
                 </div>
                 {currentSpeaker === '2' && (
-                  <div className="absolute bottom-[4.5rem] right-2 flex gap-0.5 z-10">
+                  <div className="absolute bottom-7 right-2 flex gap-0.5 z-10">
                     {[...Array(4)].map((_, i) => (
                       <motion.div key={i} animate={{ height: [3, 10, 3] }}
                         transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
@@ -956,22 +956,24 @@ export function TikTokStyleArena({
               </AnimatePresence>
             </div>
           ) : (
-            <div className="flex-1 relative bg-gradient-to-br from-gray-900/20 to-gray-800/20 flex items-center justify-center">
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 }}
-                className="text-center text-white/50"
-              >
+            <div className="flex-1 relative bg-gradient-to-br from-gray-900/20 to-gray-800/20">
+              <div className="absolute inset-0 flex flex-col items-center gap-2 pt-16 sm:pt-20">
                 <motion.div 
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-3xl sm:text-4xl mb-2 border border-white/20"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-center text-white/50"
                 >
-                  👥
+                  <motion.div 
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-2xl sm:text-3xl mb-2 border border-white/20"
+                  >
+                    👥
+                  </motion.div>
+                  <p className="text-[11px] sm:text-xs font-medium">En attente...</p>
                 </motion.div>
-                <p className="text-xs sm:text-sm font-medium">En attente...</p>
-              </motion.div>
+              </div>
             </div>
           )}
 
@@ -1096,22 +1098,24 @@ export function TikTokStyleArena({
               </AnimatePresence>
             </div>
           ) : (
-            <div className="flex-1 relative bg-gradient-to-br from-gray-900/20 to-gray-800/20 flex items-center justify-center">
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 }}
-                className="text-center text-white/50"
-              >
+            <div className="flex-1 relative bg-gradient-to-br from-gray-900/20 to-gray-800/20">
+              <div className="absolute inset-0 flex flex-col items-center gap-2 pt-16 sm:pt-20">
                 <motion.div 
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-3xl sm:text-4xl mb-2 border border-white/20"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-center text-white/50"
                 >
-                  👥
+                  <motion.div 
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-2xl sm:text-3xl mb-2 border border-white/20"
+                  >
+                    👥
+                  </motion.div>
+                  <p className="text-[11px] sm:text-xs font-medium">En attente...</p>
                 </motion.div>
-                <p className="text-xs sm:text-sm font-medium">En attente...</p>
-              </motion.div>
+              </div>
             </div>
           )}
         </div>
@@ -1199,28 +1203,28 @@ export function TikTokStyleArena({
         </div>
       </div>
 
-      {/* ── Flying Reactions — float up over video area like TikTok hearts ── */}
-      <div className="absolute right-[15%] bottom-44 z-50 pointer-events-none w-20">
+      {/* ── Flying Reactions — centered over video area, float up high ── */}
+      <div className="absolute left-1/2 -translate-x-1/2 bottom-56 z-50 pointer-events-none" style={{ width: '60%' }}>
         <AnimatePresence>
           {flyingReactions.map((reaction) => (
             <motion.div
               key={reaction.id}
               initial={{ y: 0, opacity: 0, scale: 0.3 }}
               animate={{
-                y: -300,
+                y: -400,
                 opacity: [0, 1, 1, 0.8, 0],
-                scale: [0.3, 1.3, 1.1, 0.9, 0.5],
-                x: [0, -15, 20, -10, 15],
+                scale: [0.3, 1.4, 1.1, 0.9, 0.4],
+                x: [0, -20, 25, -15, 20],
               }}
               exit={{ opacity: 0 }}
               transition={{
-                duration: 3,
+                duration: 3.5,
                 ease: 'easeOut',
                 opacity: { times: [0, 0.05, 0.4, 0.75, 1] },
-                x: { duration: 3, ease: 'easeInOut' },
+                x: { duration: 3.5, ease: 'easeInOut' },
               }}
               className="absolute bottom-0 text-3xl sm:text-4xl drop-shadow-lg"
-              style={{ left: `${reaction.x % 50}px` }}
+              style={{ left: `${reaction.x}%` }}
             >
               {reaction.emoji}
             </motion.div>
