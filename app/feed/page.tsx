@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Flame, X, Plus, Hash } from 'lucide-react';
+import { TrendingUp, Users, Flame, X, Plus, Hash, Radio } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { BeefCard } from '@/components/BeefCard';
 import { CreateBeefForm } from '@/components/CreateBeefForm';
@@ -13,6 +13,7 @@ import { FeatureGuide } from '@/components/FeatureGuide';
 interface Beef {
   id: string;
   title: string;
+  description?: string;
   host_name: string;
   mediator_id?: string;
   status: 'live' | 'ended' | 'replay' | 'scheduled';
@@ -25,6 +26,7 @@ interface Beef {
   thumbnail?: string;
   duration?: number;
   engagement_score?: number;
+  participants_count?: number;
 }
 
 const STATUS_FILTERS = [
@@ -46,6 +48,7 @@ export default function FeedPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [trendingTags, setTrendingTags] = useState<string[]>([]);
   const [followingIds, setFollowingIds] = useState<string[]>([]);
+  const [activeBeef, setActiveBeef] = useState<{ id: string; title: string; role: string } | null>(null);
 
   useEffect(() => {
     if (!user?.id) {
@@ -69,6 +72,50 @@ export default function FeedPage() {
     return () => {
       cancelled = true;
     };
+  }, [user?.id]);
+
+  // Check if user has an active live beef they should be in
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      // Check as mediator
+      const { data: mediatedBeef } = await supabase
+        .from('beefs')
+        .select('id, title')
+        .eq('mediator_id', user.id)
+        .eq('status', 'live')
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (mediatedBeef) {
+        setActiveBeef({ id: mediatedBeef.id, title: mediatedBeef.title, role: 'Médiateur' });
+        return;
+      }
+
+      // Check as challenger
+      const { data: participations } = await supabase
+        .from('beef_participants')
+        .select('beef_id, beefs!beef_participants_beef_id_fkey(id, title, status)')
+        .eq('user_id', user.id)
+        .eq('invite_status', 'accepted');
+
+      if (cancelled) return;
+      const liveParticipation = (participations || []).find(
+        (p: any) => p.beefs?.status === 'live'
+      );
+      if (liveParticipation) {
+        setActiveBeef({
+          id: (liveParticipation.beefs as any).id,
+          title: (liveParticipation.beefs as any).title,
+          role: 'Challenger',
+        });
+      } else {
+        setActiveBeef(null);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [user?.id]);
 
   useEffect(() => {
@@ -103,7 +150,7 @@ export default function FeedPage() {
   const loadBeefs = async () => {
     try {
       setLoading(true);
-      let query = supabase.from('beefs').select('*, users!beefs_mediator_id_fkey(username, display_name)').limit(50);
+      let query = supabase.from('beefs').select('*, users!beefs_mediator_id_fkey(username, display_name), beef_participants(count)').limit(50);
       if (selectedStatus !== 'all') query = query.eq('status', selectedStatus);
       const { data, error } = await query;
       if (error) throw error;
@@ -113,6 +160,7 @@ export default function FeedPage() {
         host_name: beef.users?.display_name || beef.users?.username || 'Anonyme',
         viewer_count: beef.viewer_count || 0,
         tags: beef.tags || [],
+        participants_count: beef.beef_participants?.[0]?.count || 0,
       }));
 
       if (selectedTags.length > 0) {
@@ -194,6 +242,34 @@ export default function FeedPage() {
   return (
     <div className="min-h-screen bg-black">
       <div className="max-w-6xl mx-auto px-4 py-6">
+        {/* Active beef banner */}
+        {activeBeef && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 rounded-xl overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, rgba(232,58,20,0.15), rgba(255,107,44,0.1))', border: '1px solid rgba(232,58,20,0.3)' }}
+          >
+            <button
+              onClick={() => router.push(`/arena/${activeBeef.id}`)}
+              className="w-full flex items-center gap-3 px-4 py-3 text-left"
+            >
+              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
+                <Radio className="w-5 h-5 text-red-400 animate-pulse" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{activeBeef.title}</p>
+                <p className="text-xs text-gray-400">
+                  Tu es <span className="text-brand-400 font-medium">{activeBeef.role}</span> dans ce beef en cours
+                </p>
+              </div>
+              <div className="flex-shrink-0 px-4 py-1.5 rounded-lg bg-red-500 text-white text-xs font-bold">
+                Rejoindre
+              </div>
+            </button>
+          </motion.div>
+        )}
+
         {/* Feed tabs */}
         <div className="flex items-center gap-0 mb-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           {[

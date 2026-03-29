@@ -7,6 +7,7 @@ import { Countdown } from '@/components/Countdown';
 interface BeefCardProps {
   id: string;
   title: string;
+  description?: string;
   host_name: string;
   status: 'live' | 'ended' | 'replay' | 'scheduled';
   created_at: string;
@@ -17,6 +18,7 @@ interface BeefCardProps {
   price?: number;
   thumbnail?: string;
   duration?: number;
+  participants_count?: number;
   onClick: () => void;
   onTagClick?: (tag: string) => void;
   onNotifyClick?: () => void;
@@ -25,6 +27,7 @@ interface BeefCardProps {
 
 export function BeefCard({
   title,
+  description,
   host_name,
   status,
   created_at,
@@ -35,6 +38,7 @@ export function BeefCard({
   price = 0,
   thumbnail,
   duration,
+  participants_count,
   onClick,
   onTagClick,
   index,
@@ -99,59 +103,90 @@ export function BeefCard({
           <img src={thumbnail} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
           (() => {
-            const tagT = tags.reduce(
-              (acc, tag) => acc + tag.split('').reduce((a, c) => a + c.charCodeAt(0), 0),
-              0
-            );
-            const shift = tagT % 16;
-            const initials = (title.trim().slice(0, 2) || '••').toUpperCase();
+            const charSum = title.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+            const hueBase = charSum % 360;
+
+            const gradients: Record<string, string> = {
+              live: `linear-gradient(145deg, hsl(${hueBase}, 85%, 18%) 0%, hsl(${(hueBase + 30) % 360}, 75%, 12%) 50%, hsl(${(hueBase + 60) % 360}, 70%, 8%) 100%)`,
+              scheduled: `linear-gradient(145deg, hsl(${hueBase}, 60%, 15%) 0%, hsl(${(hueBase + 40) % 360}, 50%, 10%) 50%, hsl(${(hueBase + 80) % 360}, 45%, 7%) 100%)`,
+              replay: `linear-gradient(145deg, hsl(${hueBase}, 50%, 14%) 0%, hsl(${(hueBase + 35) % 360}, 40%, 9%) 100%)`,
+              ended: `linear-gradient(145deg, hsl(${hueBase}, 20%, 12%) 0%, hsl(${(hueBase + 20) % 360}, 15%, 8%) 100%)`,
+            };
+
+            const excerpt = description?.trim().slice(0, 90) || '';
+            const displayExcerpt = excerpt.length >= 90 ? excerpt + '…' : excerpt;
+
             return (
-              <div className="w-full h-full relative flex items-center justify-center overflow-hidden">
-                {status === 'live' ? (
-                  <>
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        background: `linear-gradient(135deg, #ff5c33 0%, #e83a14 ${42 + shift}%, #b91c1c 100%)`,
-                      }}
-                    />
-                    <motion.div
-                      className="absolute inset-0 pointer-events-none"
-                      style={{
-                        background:
-                          'radial-gradient(ellipse 85% 65% at 45% 25%, rgba(255, 210, 120, 0.5), transparent 55%)',
-                      }}
-                      animate={{ opacity: [0.35, 0.9, 0.35], scale: [1, 1.07, 1] }}
-                      transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
-                    />
-                  </>
-                ) : (
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      background:
-                        status === 'scheduled'
-                          ? `linear-gradient(135deg, #0369a1 0%, #06b6d4 ${40 + shift}%, #0891b2 100%)`
-                          : status === 'replay'
-                            ? `linear-gradient(135deg, #7c3aed 0%, #a855f7 ${40 + shift}%, #5b21b6 100%)`
-                            : `linear-gradient(135deg, #57534e 0%, #71717a ${40 + shift}%, #3f3f46 100%)`,
-                    }}
+              <div className="w-full h-full relative flex flex-col justify-end overflow-hidden p-4">
+                {/* Unique gradient per beef */}
+                <div className="absolute inset-0" style={{ background: gradients[status] || gradients.ended }} />
+
+                {/* Decorative shapes */}
+                <div
+                  className="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-[0.07]"
+                  style={{ background: `radial-gradient(circle, hsl(${hueBase}, 80%, 60%), transparent 70%)` }}
+                />
+                <div
+                  className="absolute bottom-8 -left-8 w-24 h-24 rounded-full opacity-[0.05]"
+                  style={{ background: `radial-gradient(circle, hsl(${(hueBase + 120) % 360}, 70%, 55%), transparent 70%)` }}
+                />
+
+                {/* Live pulse ring */}
+                {status === 'live' && (
+                  <motion.div
+                    className="absolute top-4 right-4 w-3 h-3 rounded-full bg-red-500"
+                    animate={{ boxShadow: ['0 0 0 0 rgba(239,68,68,0.5)', '0 0 0 10px rgba(239,68,68,0)', '0 0 0 0 rgba(239,68,68,0)'] }}
+                    transition={{ duration: 2, repeat: Infinity }}
                   />
                 )}
-                <div
-                  className="absolute inset-0 pointer-events-none opacity-[0.22]"
-                  style={{
-                    backgroundImage:
-                      'repeating-linear-gradient(0deg, transparent, transparent 9px, rgba(255,255,255,0.045) 9px, rgba(255,255,255,0.045) 10px), repeating-linear-gradient(90deg, transparent, transparent 11px, rgba(0,0,0,0.07) 11px, rgba(0,0,0,0.07) 12px)',
-                  }}
-                />
-                <span className="relative z-[1] text-4xl font-bold tracking-tight text-white/95 drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] select-none">
-                  {initials}
-                </span>
-                <Flame
-                  className="absolute bottom-11 right-3 w-5 h-5 text-white/28 pointer-events-none z-[1]"
-                  aria-hidden
-                />
+
+                {/* Title prominently displayed */}
+                <h4 className="relative z-[1] text-[15px] font-bold text-white leading-tight line-clamp-2 mb-1 drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]">
+                  {title}
+                </h4>
+
+                {/* Description excerpt */}
+                {displayExcerpt && (
+                  <p className="relative z-[1] text-[11px] text-white/50 leading-relaxed line-clamp-2 mb-2">
+                    {displayExcerpt}
+                  </p>
+                )}
+
+                {/* Bottom info row */}
+                <div className="relative z-[1] flex items-center gap-2">
+                  {/* Host avatar pill */}
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                    <div
+                      className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
+                      style={{ background: `hsl(${charSum % 360}, 65%, 45%)` }}
+                    >
+                      {(host_name || '?')[0].toUpperCase()}
+                    </div>
+                    <span className="text-[10px] text-white/70 font-medium truncate max-w-[80px]">{host_name}</span>
+                  </div>
+
+                  {/* Participants indicator */}
+                  {(participants_count ?? 0) > 0 && (
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                      <Users className="w-3 h-3 text-white/40" />
+                      <span className="text-[10px] text-white/50 font-medium">{participants_count}</span>
+                    </div>
+                  )}
+
+                  {/* CTA hint */}
+                  {status === 'live' && (
+                    <div className="ml-auto flex items-center gap-0.5 text-[10px] text-brand-400 font-semibold">
+                      <span>Regarder</span>
+                      <ArrowUpRight className="w-3 h-3" />
+                    </div>
+                  )}
+                  {status === 'scheduled' && (
+                    <div className="ml-auto flex items-center gap-0.5 text-[10px] text-cyan-400 font-semibold">
+                      <span>Bientôt</span>
+                      <Calendar className="w-3 h-3" />
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })()
@@ -192,16 +227,20 @@ export function BeefCard({
       </div>
 
       {/* Content */}
-      <div className="px-4 py-3.5">
-        {/* Title */}
-        <h3 className="text-sm font-semibold text-white mb-1.5 line-clamp-2 group-hover:text-brand-400 transition-colors duration-200 leading-snug">
-          {title}
-        </h3>
+      <div className="px-4 py-3">
+        {/* Title — only below if there's a real thumbnail (otherwise it's in the card visual) */}
+        {thumbnail && (
+          <h3 className="text-sm font-semibold text-white mb-1.5 line-clamp-2 group-hover:text-brand-400 transition-colors duration-200 leading-snug">
+            {title}
+          </h3>
+        )}
 
-        {/* Host */}
-        <p className="text-xs text-gray-500 mb-2.5">
-          {host_name}
-        </p>
+        {/* Host — only if thumbnail (otherwise host is in the card visual) */}
+        {thumbnail && (
+          <p className="text-xs text-gray-500 mb-2.5">
+            {host_name}
+          </p>
+        )}
 
         {/* Tags */}
         {tags.length > 0 && (

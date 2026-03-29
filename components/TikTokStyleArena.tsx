@@ -123,6 +123,22 @@ export function TikTokStyleArena({
   const [showGiftPicker, setShowGiftPicker] = useState(false);
   const [showViewerList, setShowViewerList] = useState(false);
 
+  // ── END-OF-BEEF STATE ──
+  const [beefEnded, setBeefEnded] = useState(false);
+  const [endSummary, setEndSummary] = useState<{
+    duration: string;
+    viewers: number;
+    votesA: number;
+    votesB: number;
+    messages: number;
+    endReason: string;
+  } | null>(null);
+  const endSummaryTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const mediatorGraceRef = useRef<NodeJS.Timeout | null>(null);
+  const [mediatorGraceActive, setMediatorGraceActive] = useState(false);
+  const [mediatorGraceSeconds, setMediatorGraceSeconds] = useState(0);
+  const beefEndedRef = useRef(false);
+
   const { join, leave, toggleMic, toggleCam, isJoined, isJoining, micEnabled, camEnabled,
     localParticipant, remoteParticipants, error: callError } = useDailyCall(dailyRoomUrl ?? null, userName, isViewer);
 
@@ -134,6 +150,19 @@ export function TikTokStyleArena({
   }, [hasJoined, dailyRoomUrl, isJoined, isJoining, join]);
   const [flyingReactions, setFlyingReactions] = useState<Array<{ id: string; emoji: string; x: number }>>([]);
   const [showMenu, setShowMenu] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+
+  // Detect network loss for reconnection overlay
+  useEffect(() => {
+    const goOffline = () => { setIsOffline(true); toast('Connexion perdue — reconnexion...', 'error'); };
+    const goOnline = () => { setIsOffline(false); toast('Connexion rétablie', 'success'); };
+    window.addEventListener('offline', goOffline);
+    window.addEventListener('online', goOnline);
+    return () => {
+      window.removeEventListener('offline', goOffline);
+      window.removeEventListener('online', goOnline);
+    };
+  }, [toast]);
   const [visibleMessages, setVisibleMessages] = useState<VisibleMessage[]>([]);
   const [contextMenuMsg, setContextMenuMsg] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -178,8 +207,7 @@ export function TikTokStyleArena({
         }
         if (next <= 0) {
           setTimerActive(false);
-          toast('Le beef est terminé (60 min max)', 'error');
-          leave();
+          endBeef('Temps écoulé (60 min)');
           return 0;
         }
         return next;
@@ -189,7 +217,7 @@ export function TikTokStyleArena({
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [timerActive, timerPaused, leave, toast]);
+  }, [timerActive, timerPaused, endBeef, toast]);
 
   // ── VOTE SYSTEM — TikTok-style duel gauge ──
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -277,21 +305,146 @@ export function TikTokStyleArena({
     toast('Chronomètre arrêté', 'info');
   };
 
-  const endBeef = async () => {
+  const endBeef = useCallback(async (reason: string = 'Terminé par le médiateur') => {
+    if (beefEndedRef.current) return;
+    beefEndedRef.current = true;
+
+    // Update DB
     await supabase.from('beefs').update({
       status: 'ended',
       ended_at: new Date().toISOString(),
     }).eq('id', roomId);
-    toast('Le beef est terminé !', 'info');
+
+    // Calculate duration
+    const elapsed = MAX_BEEF_DURATION - beefTimeRemaining;
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+
+    // Build summary
+    setEndSummary({
+      duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
+      viewers: liveViewerCount,
+      votesA,
+      votesB,
+      messages: visibleMessages.length,
+      endReason: reason,
+    });
+    setBeefEnded(true);
+
+    // Broadcast end to all viewers
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'beef_ended',
+        payload: { reason },
+      }).catch(() => {});
+    }
+
+    // Stop camera/mic
     await leave();
-    router.replace('/feed');
-  };
+
+    // Auto-redirect after 12 seconds
+    endSummaryTimerRef.current = setTimeout(() => {
+      router.replace('/feed');
+    }, 12000);
+  }, [roomId, beefTimeRemaining, liveViewerCount, votesA, votesB, visibleMessages.length, leave, router]);
 
   const formatBeefTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
+
+  // ── AUTO-END: Detect mediator or all challengers leaving ──
+  useEffect(() => {
+    if (!isJoined || beefEndedRef.current) return;
+
+    const challengerUserIds = Object.keys(participantRoles);
+    const remoteUserNames = remoteParticipants.map(p => p.userName);
+
+    // Check if mediator is present
+    const mediatorPresent = isHost || remoteParticipants.some(p => p.userName === host.name);
+
+    if (!mediatorPresent && !isHost) {
+      // Mediator left — start 90s grace period (only if not already active)
+      if (!mediatorGraceRef.current && !mediatorGraceActive) {
+        setMediatorGraceActive(true);
+        setMediatorGraceSeconds(90);
+
+        const countdown = setInterval(() => {
+          setMediatorGraceSeconds(prev => {
+            if (prev <= 1) {
+              clearInterval(countdown);
+              mediatorGraceRef.current = null;
+              endBeef('Le médiateur a quitté');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        mediatorGraceRef.current = countdown;
+      }
+    } else if (mediatorPresent && mediatorGraceRef.current) {
+      // Mediator reconnected — cancel grace period
+      clearInterval(mediatorGraceRef.current);
+      mediatorGraceRef.current = null;
+      setMediatorGraceActive(false);
+      setMediatorGraceSeconds(0);
+      toast('Le médiateur est de retour', 'success');
+    }
+
+    // Check if all challengers left (only mediator should trigger this)
+    if (isHost && challengerUserIds.length > 0 && remoteParticipants.length === 0 && isJoined) {
+      // All remotes gone — wait a few seconds to confirm it's not a network blip
+      const timeout = setTimeout(() => {
+        if (remoteParticipants.length === 0 && !beefEndedRef.current) {
+          endBeef('Tous les challengers ont quitté');
+        }
+      }, 5000);
+      return () => clearTimeout(timeout);
+    }
+  }, [remoteParticipants, isJoined, isHost, host.name, participantRoles, endBeef, mediatorGraceActive, toast]);
+
+  // Listen for beef_ended broadcast from mediator (for viewers/challengers)
+  useEffect(() => {
+    if (!channelRef.current) return;
+    const handler = ({ payload }: any) => {
+      if (!beefEndedRef.current) {
+        beefEndedRef.current = true;
+        const elapsed = MAX_BEEF_DURATION - beefTimeRemaining;
+        const mins = Math.floor(elapsed / 60);
+        const secs = elapsed % 60;
+        setEndSummary({
+          duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
+          viewers: liveViewerCount,
+          votesA,
+          votesB,
+          messages: visibleMessages.length,
+          endReason: payload?.reason || 'Beef terminé',
+        });
+        setBeefEnded(true);
+        leave();
+        endSummaryTimerRef.current = setTimeout(() => router.replace('/feed'), 12000);
+      }
+    };
+
+    // Subscribe to beef_ended on the existing channel
+    const ch = channelRef.current;
+    ch.on('broadcast', { event: 'beef_ended' }, handler);
+
+    return () => {
+      // Cleanup
+      if (endSummaryTimerRef.current) clearTimeout(endSummaryTimerRef.current);
+      if (mediatorGraceRef.current) clearInterval(mediatorGraceRef.current);
+    };
+  }, [beefTimeRemaining, liveViewerCount, votesA, votesB, visibleMessages.length, leave, router]);
+
+  // Mediator leaving triggers endBeef
+  const handleLeaveAsMediator = useCallback(async () => {
+    if (isHost) {
+      await endBeef('Le médiateur a mis fin au beef');
+    }
+  }, [isHost, endBeef]);
 
   // Load beef participants from Supabase to map roles
   useEffect(() => {
@@ -758,12 +911,20 @@ export function TikTokStyleArena({
 
   const [isLeaving, setIsLeaving] = useState(false);
 
-  // Leave: show black screen instantly, stop camera, then navigate
+  // Leave: for mediators, triggers endBeef. For others, just leave.
   const handleLeave = useCallback(async () => {
-    setIsLeaving(true); // Immediately cover the video with black screen
-    await leave();
-    router.replace('/feed');
-  }, [leave, router]);
+    if (beefEndedRef.current) {
+      router.replace('/feed');
+      return;
+    }
+    setIsLeaving(true);
+    if (isHost) {
+      await endBeef('Le médiateur a mis fin au beef');
+    } else {
+      await leave();
+      router.replace('/feed');
+    }
+  }, [leave, router, isHost, endBeef]);
 
   // Show pre-join screen before entering
   if (!hasJoined) {
@@ -789,7 +950,7 @@ export function TikTokStyleArena({
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
-      {isLeaving && (
+      {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
@@ -797,6 +958,112 @@ export function TikTokStyleArena({
           </div>
         </div>
       )}
+
+      {/* ── END-OF-BEEF SUMMARY SCREEN ── */}
+      {beefEnded && endSummary && (
+        <div className="absolute inset-0 z-[1000] bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col items-center justify-center p-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', damping: 20 }}
+            className="w-full max-w-sm space-y-6 text-center"
+          >
+            {/* Header */}
+            <div className="space-y-2">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-brand-500 to-orange-500 flex items-center justify-center">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-white">Beef terminé</h2>
+              <p className="text-sm text-gray-400">{endSummary.endReason}</p>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                <div className="text-2xl font-bold text-brand-400">{endSummary.duration}</div>
+                <div className="text-xs text-gray-500 mt-1">Durée</div>
+              </div>
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                <div className="text-2xl font-bold text-blue-400">{endSummary.viewers}</div>
+                <div className="text-xs text-gray-500 mt-1">Spectateurs</div>
+              </div>
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                <div className="text-2xl font-bold text-green-400">{endSummary.messages}</div>
+                <div className="text-xs text-gray-500 mt-1">Messages</div>
+              </div>
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                <div className="text-2xl font-bold text-purple-400">{endSummary.votesA + endSummary.votesB}</div>
+                <div className="text-xs text-gray-500 mt-1">Votes</div>
+              </div>
+            </div>
+
+            {/* Vote Result */}
+            {(endSummary.votesA + endSummary.votesB > 0) && (
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                <div className="text-xs text-gray-400 mb-2">Résultat des votes</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-blue-400 w-10 text-right">
+                    {Math.round((endSummary.votesA / (endSummary.votesA + endSummary.votesB)) * 100)}%
+                  </span>
+                  <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all"
+                      style={{ width: `${(endSummary.votesA / (endSummary.votesA + endSummary.votesB)) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-semibold text-red-400 w-10">
+                    {Math.round((endSummary.votesB / (endSummary.votesA + endSummary.votesB)) * 100)}%
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="space-y-3 pt-2">
+              <motion.button
+                whileTap={{ scale: 0.96 }}
+                onClick={() => {
+                  if (endSummaryTimerRef.current) clearTimeout(endSummaryTimerRef.current);
+                  router.replace('/feed');
+                }}
+                className="w-full py-3 rounded-xl bg-brand-500 text-white font-semibold text-sm hover:bg-brand-600 transition-colors"
+              >
+                Retour au feed
+              </motion.button>
+              <p className="text-xs text-gray-600">Redirection automatique dans quelques secondes...</p>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ── MEDIATOR GRACE PERIOD BANNER ── */}
+      {mediatorGraceActive && !beefEnded && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-16 left-1/2 -translate-x-1/2 z-[100] bg-yellow-500/90 backdrop-blur-sm text-black px-4 py-2 rounded-xl flex items-center gap-3 shadow-lg"
+        >
+          <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+          <div className="text-sm font-semibold">
+            Médiateur déconnecté — {mediatorGraceSeconds}s avant la fin
+          </div>
+        </motion.div>
+      )}
+      {/* ── NETWORK RECONNECTION OVERLAY ── */}
+      {isOffline && !beefEnded && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="absolute inset-0 z-[90] bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center"
+        >
+          <div className="w-12 h-12 border-3 border-brand-400 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-white font-semibold text-lg">Reconnexion en cours...</p>
+          <p className="text-gray-400 text-sm mt-1">Vérifie ta connexion internet</p>
+        </motion.div>
+      )}
+
       {/* Video Background — real participant panels (callObject) OR placeholder avatars */}
       <div className="absolute inset-0 bottom-48 sm:bottom-56">
         {dailyRoomUrl ? (
@@ -1831,7 +2098,7 @@ export function TikTokStyleArena({
                     🔊 Tout activer
                   </button>
                   <button
-                    onClick={endBeef}
+                    onClick={() => endBeef('Terminé par le médiateur')}
                     className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-sm mt-2"
                   >
                     🛑 Terminer le beef

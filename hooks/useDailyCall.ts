@@ -52,6 +52,11 @@ export function useDailyCall(roomUrl: string | null, userName: string, viewerMod
   const [localParticipant, setLocalParticipant] = useState<CallParticipant | null>(null);
   const [remoteParticipants, setRemoteParticipants] = useState<CallParticipant[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const reconnectingRef = useRef(false);
+  const roomUrlRef = useRef(roomUrl);
+  const userNameRef = useRef(userName);
+  roomUrlRef.current = roomUrl;
+  userNameRef.current = userName;
 
   const refreshParticipants = useCallback((co: DailyCall) => {
     const all = Object.values(co.participants());
@@ -189,6 +194,82 @@ export function useDailyCall(roomUrl: string | null, userName: string, viewerMod
     callRef.current.setLocalVideo(next);
     setCamEnabled(next);
   }, [camEnabled, viewerMode]);
+
+  // ── AUTO-RECONNECT on network loss ──
+  useEffect(() => {
+    if (!isJoined) return;
+
+    const handleOffline = () => {
+      console.log('📡 Network lost — will auto-reconnect when online');
+      reconnectingRef.current = true;
+    };
+
+    const handleOnline = async () => {
+      if (!reconnectingRef.current || !callRef.current) return;
+      console.log('📡 Network back — attempting auto-reconnect');
+
+      try {
+        const co = callRef.current;
+        const state = co.meetingState();
+
+        if (state === 'joined-meeting') {
+          reconnectingRef.current = false;
+          return;
+        }
+
+        // Destroy old instance and rejoin
+        try { await co.destroy(); } catch (_) {}
+        callRef.current = null;
+
+        const newCo = DailyIframe.createCallObject({
+          audioSource: !viewerMode,
+          videoSource: !viewerMode,
+        });
+        callRef.current = newCo;
+
+        newCo.on('joined-meeting', () => {
+          setIsJoined(true);
+          setIsJoining(false);
+          reconnectingRef.current = false;
+          refreshParticipants(newCo);
+        });
+        newCo.on('participant-joined', () => refreshParticipants(newCo));
+        newCo.on('participant-updated', () => refreshParticipants(newCo));
+        newCo.on('participant-left', () => refreshParticipants(newCo));
+        newCo.on('track-started', () => refreshParticipants(newCo));
+        newCo.on('track-stopped', () => refreshParticipants(newCo));
+        newCo.on('left-meeting', () => {
+          setIsJoined(false);
+          setLocalParticipant(null);
+          setRemoteParticipants([]);
+        });
+        newCo.on('error', (e: any) => {
+          setError(e?.errorMsg || 'Erreur de reconnexion');
+          reconnectingRef.current = false;
+        });
+
+        if (roomUrlRef.current) {
+          await newCo.join({
+            url: roomUrlRef.current,
+            userName: userNameRef.current,
+            startVideoOff: viewerMode,
+            startAudioOff: viewerMode,
+          });
+        }
+      } catch (err) {
+        console.error('Auto-reconnect failed:', err);
+        reconnectingRef.current = false;
+      }
+    };
+
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [isJoined, viewerMode, refreshParticipants]);
 
   // Cleanup on unmount — same order: media elements first, then Daily.co
   useEffect(() => {
