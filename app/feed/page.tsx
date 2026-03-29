@@ -309,23 +309,25 @@ export default function FeedPage() {
       {showCreateModal && <CreateBeefForm onSubmit={handleCreateBeef} onCancel={() => setShowCreateModal(false)} />}
 
       {/* FAB */}
-      <div className="fixed bottom-6 right-6 z-40 relative">
-        <motion.button
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.92 }}
-          onClick={() => setShowCreateModal(true)}
-          className="w-14 h-14 rounded-2xl shadow-lg flex items-center justify-center text-white brand-gradient hover:shadow-glow transition-shadow"
-        >
-          <Plus className="w-6 h-6" />
-        </motion.button>
-        <FeatureGuide
-          id="feed-create-beef"
-          title="Créer un Beef"
-          description="Lance un débat en live ! Choisis un sujet, invite des challengers et deviens médiateur."
-          position="left"
-        />
+      <div className="fixed bottom-6 right-6 z-40">
+        <div className="relative">
+          <motion.button
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.92 }}
+            onClick={() => setShowCreateModal(true)}
+            className="w-14 h-14 rounded-2xl shadow-lg flex items-center justify-center text-white brand-gradient hover:shadow-glow transition-shadow"
+          >
+            <Plus className="w-6 h-6" />
+          </motion.button>
+          <FeatureGuide
+            id="feed-create-beef"
+            title="Créer un Beef"
+            description="Lance un débat en live ! Choisis un sujet, invite des challengers et deviens médiateur."
+            position="top"
+          />
+        </div>
       </div>
     </div>
   );
