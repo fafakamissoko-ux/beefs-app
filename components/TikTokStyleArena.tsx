@@ -1452,6 +1452,7 @@ export function TikTokStyleArena({
               title="Envoyer un cadeau"
               description="Soutiens le médiateur avec des points ! Les cadeaux s'affichent en live."
               position="top"
+              align="end"
             />
           </div>
 

@@ -326,6 +326,7 @@ export default function FeedPage() {
             title="Créer un Beef"
             description="Lance un débat en live ! Choisis un sujet, invite des challengers et deviens médiateur."
             position="top"
+            align="end"
           />
         </div>
       </div>

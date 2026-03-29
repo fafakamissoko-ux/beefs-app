@@ -8,15 +8,29 @@ interface FeatureGuideProps {
   title: string;
   description: string;
   position?: 'top' | 'bottom' | 'left' | 'right';
+  /** Horizontal align for top/bottom, vertical align for left/right */
+  align?: 'start' | 'center' | 'end';
   variant?: 'dark' | 'light';
 }
 
-const arrowStyles: Record<string, string> = {
-  top: 'bottom-[-6px] left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-b-transparent',
-  bottom: 'top-[-6px] left-1/2 -translate-x-1/2 border-l-transparent border-r-transparent border-t-transparent',
-  left: 'right-[-6px] top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-r-transparent',
-  right: 'left-[-6px] top-1/2 -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent',
-};
+function getArrowPosition(position: string, align: string): string {
+  const base: Record<string, string> = {
+    top: 'bottom-[-6px] border-l-transparent border-r-transparent border-b-transparent',
+    bottom: 'top-[-6px] border-l-transparent border-r-transparent border-t-transparent',
+    left: 'right-[-6px] border-t-transparent border-b-transparent border-r-transparent',
+    right: 'left-[-6px] border-t-transparent border-b-transparent border-l-transparent',
+  };
+
+  const horizontal = position === 'top' || position === 'bottom';
+  let alignClass: string;
+  if (horizontal) {
+    alignClass = align === 'end' ? 'right-4' : align === 'start' ? 'left-4' : 'left-1/2 -translate-x-1/2';
+  } else {
+    alignClass = align === 'end' ? 'bottom-4' : align === 'start' ? 'top-4' : 'top-1/2 -translate-y-1/2';
+  }
+
+  return `${base[position]} ${alignClass}`;
+}
 
 const arrowBorderDir: Record<string, string> = {
   top: 'border-t-[#1a1a2e]',
@@ -25,11 +39,28 @@ const arrowBorderDir: Record<string, string> = {
   right: 'border-r-[#1a1a2e]',
 };
 
+function getTooltipPosition(position: string, align: string): string {
+  const horizontal = position === 'top' || position === 'bottom';
+
+  const verticalPlacement = position === 'bottom' ? 'top-full mt-2' : position === 'top' ? 'bottom-full mb-2' : '';
+  const horizontalPlacement = position === 'right' ? 'left-full ml-2' : position === 'left' ? 'right-full mr-2' : '';
+
+  let alignClass: string;
+  if (horizontal) {
+    alignClass = align === 'end' ? 'right-0' : align === 'start' ? 'left-0' : 'left-1/2 -translate-x-1/2';
+  } else {
+    alignClass = align === 'end' ? 'bottom-0' : align === 'start' ? 'top-0' : 'top-1/2 -translate-y-1/2';
+  }
+
+  return `${verticalPlacement} ${horizontalPlacement} ${alignClass}`.trim();
+}
+
 export function FeatureGuide({
   id,
   title,
   description,
   position = 'bottom',
+  align = 'center',
   variant = 'dark',
 }: FeatureGuideProps) {
   const { visible, dismiss } = useFeatureGuide(id);
@@ -53,16 +84,11 @@ export function FeatureGuide({
           animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          className={`absolute z-[99] ${
-            position === 'bottom' ? 'top-full mt-2 left-1/2 -translate-x-1/2' :
-            position === 'top' ? 'bottom-full mb-2 left-1/2 -translate-x-1/2' :
-            position === 'left' ? 'right-full mr-2 top-1/2 -translate-y-1/2' :
-            'left-full ml-2 top-1/2 -translate-y-1/2'
-          }`}
+          className={`absolute z-[99] ${getTooltipPosition(position, align)}`}
           style={{ width: 220 }}
         >
           <div className={`relative rounded-xl border px-3.5 py-2.5 shadow-xl backdrop-blur-sm ${bgClass}`}>
-            <div className={`absolute w-0 h-0 border-[6px] ${arrowStyles[position]} ${arrowBorderDir[position]}`} />
+            <div className={`absolute w-0 h-0 border-[6px] ${getArrowPosition(position, align)} ${arrowBorderDir[position]}`} />
 
             <button
               onClick={dismiss}
