@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck } from 'lucide-react';
@@ -60,9 +60,15 @@ export default function MessagesPage() {
     if (user) loadConversations();
   }, [user]);
 
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, []);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (selectedConv && messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages, selectedConv, scrollToBottom]);
 
   // Real-time messages
   useEffect(() => {
@@ -79,8 +85,14 @@ export default function MessagesPage() {
         const msg = payload.new as Message;
         if (msg.sender_id !== user?.id) {
           setMessages(prev => [...prev, msg]);
-          // Mark as read
           supabase.from('direct_messages').update({ is_read: true }).eq('id', msg.id).then(() => {});
+          supabase.from('notifications')
+            .update({ is_read: true })
+            .eq('user_id', user?.id || '')
+            .eq('type', 'message')
+            .eq('is_read', false)
+            .filter('metadata->>conversation_id', 'eq', selectedConv.id)
+            .then(() => {});
         }
       })
       .subscribe();
@@ -141,7 +153,7 @@ export default function MessagesPage() {
 
       setMessages(data || []);
 
-      // Mark unread as read
+      // Mark unread DMs as read
       if (data?.length) {
         await supabase
           .from('direct_messages')
@@ -150,6 +162,20 @@ export default function MessagesPage() {
           .neq('sender_id', user?.id || '')
           .eq('is_read', false);
       }
+
+      // Mark related notifications as read
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', user?.id || '')
+        .eq('type', 'message')
+        .eq('is_read', false)
+        .filter('metadata->>conversation_id', 'eq', conv.id);
+
+      // Update local unread count for this conversation
+      setConversations(prev =>
+        prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c)
+      );
     } catch (err) {
       console.error('Error loading messages:', err);
     } finally {
@@ -267,8 +293,8 @@ export default function MessagesPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-black">
-      <div className="max-w-5xl mx-auto flex h-[calc(100vh-4rem)]">
+    <div className="h-[calc(100vh-3.5rem)] bg-black overflow-hidden">
+      <div className="max-w-5xl mx-auto flex h-full">
         {/* Conversation list */}
         <div className={`w-full md:w-96 border-r border-white/10 flex flex-col ${selectedConv ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-white/10 flex items-center justify-between">
