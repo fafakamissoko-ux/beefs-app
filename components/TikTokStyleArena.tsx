@@ -138,6 +138,15 @@ export function TikTokStyleArena({
   const [mediatorGraceActive, setMediatorGraceActive] = useState(false);
   const [mediatorGraceSeconds, setMediatorGraceSeconds] = useState(0);
   const beefEndedRef = useRef(false);
+  const mediatorWasConnectedRef = useRef(false);
+  const [userPoints, setUserPoints] = useState(0);
+
+  // Speaking turn state
+  const [speakingTurnActive, setSpeakingTurnActive] = useState(false);
+  const [speakingTurnTarget, setSpeakingTurnTarget] = useState<string | null>(null);
+  const [speakingTurnRemaining, setSpeakingTurnRemaining] = useState(0);
+  const [speakingTurnDuration, setSpeakingTurnDuration] = useState(60);
+  const speakingTurnIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { join, leave, toggleMic, toggleCam, isJoined, isJoining, micEnabled, camEnabled,
     localParticipant, remoteParticipants, error: callError } = useDailyCall(dailyRoomUrl ?? null, userName, isViewer);
@@ -308,6 +317,9 @@ export function TikTokStyleArena({
     toast('Chronomètre arrêté', 'info');
   };
 
+  // Use refs for stats so endBeef captures the latest values without stale closures
+  const statsRef = useRef({ beefTimeRemaining: MAX_BEEF_DURATION, liveViewerCount: 0, votesA: 0, votesB: 0, messagesCount: 0 });
+
   const endBeef = useCallback(async (reason: string = 'Terminé par le médiateur') => {
     if (beefEndedRef.current) return;
     beefEndedRef.current = true;
@@ -318,28 +330,29 @@ export function TikTokStyleArena({
       ended_at: new Date().toISOString(),
     }).eq('id', roomId);
 
-    // Calculate duration
-    const elapsed = MAX_BEEF_DURATION - beefTimeRemaining;
+    // Calculate duration from ref
+    const s = statsRef.current;
+    const elapsed = MAX_BEEF_DURATION - s.beefTimeRemaining;
     const mins = Math.floor(elapsed / 60);
     const secs = elapsed % 60;
 
-    // Build summary
-    setEndSummary({
+    const summary = {
       duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
-      viewers: liveViewerCount,
-      votesA,
-      votesB,
-      messages: visibleMessages.length,
+      viewers: s.liveViewerCount,
+      votesA: s.votesA,
+      votesB: s.votesB,
+      messages: s.messagesCount,
       endReason: reason,
-    });
+    };
+    setEndSummary(summary);
     setBeefEnded(true);
 
-    // Broadcast end to all viewers
+    // Broadcast end to all viewers (with stats so they see accurate summary)
     if (channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
         event: 'beef_ended',
-        payload: { reason },
+        payload: { reason, summary },
       }).catch(() => {});
     }
 
@@ -350,10 +363,13 @@ export function TikTokStyleArena({
     endSummaryTimerRef.current = setTimeout(() => {
       router.replace('/feed');
     }, 12000);
-  }, [roomId, beefTimeRemaining, liveViewerCount, votesA, votesB, visibleMessages.length, leave, router]);
+  }, [roomId, leave, router]);
 
-  // Keep the ref in sync so the timer can call endBeef
+  // Keep refs in sync
   useEffect(() => { endBeefRef.current = endBeef; }, [endBeef]);
+  useEffect(() => {
+    statsRef.current = { beefTimeRemaining, liveViewerCount, votesA, votesB, messagesCount: visibleMessages.length };
+  }, [beefTimeRemaining, liveViewerCount, votesA, votesB, visibleMessages.length]);
 
   const formatBeefTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -361,18 +377,33 @@ export function TikTokStyleArena({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Track when mediator has actually connected at least once
+  useEffect(() => {
+    if (!isJoined || isHost) return;
+    const mediatorPresent = remoteParticipants.some(p => p.userName === host.name);
+    if (mediatorPresent) {
+      mediatorWasConnectedRef.current = true;
+    }
+  }, [remoteParticipants, isJoined, isHost, host.name]);
+
+  // If current user IS the mediator and joined, mark as connected
+  useEffect(() => {
+    if (isHost && isJoined) {
+      mediatorWasConnectedRef.current = true;
+    }
+  }, [isHost, isJoined]);
+
   // ── AUTO-END: Detect mediator or all challengers leaving ──
   useEffect(() => {
     if (!isJoined || beefEndedRef.current) return;
 
     const challengerUserIds = Object.keys(participantRoles);
-    const remoteUserNames = remoteParticipants.map(p => p.userName);
 
     // Check if mediator is present
     const mediatorPresent = isHost || remoteParticipants.some(p => p.userName === host.name);
 
-    if (!mediatorPresent && !isHost) {
-      // Mediator left — start 90s grace period (only if not already active)
+    if (!mediatorPresent && !isHost && mediatorWasConnectedRef.current) {
+      // Mediator left AFTER having been connected — start 90s grace period
       if (!mediatorGraceRef.current && !mediatorGraceActive) {
         setMediatorGraceActive(true);
         setMediatorGraceSeconds(90);
@@ -382,7 +413,7 @@ export function TikTokStyleArena({
             if (prev <= 1) {
               clearInterval(countdown);
               mediatorGraceRef.current = null;
-              endBeef('Le médiateur a quitté');
+              endBeefRef.current?.('Le médiateur a quitté');
               return 0;
             }
             return prev - 1;
@@ -401,49 +432,55 @@ export function TikTokStyleArena({
 
     // Check if all challengers left (only mediator should trigger this)
     if (isHost && challengerUserIds.length > 0 && remoteParticipants.length === 0 && isJoined) {
-      // All remotes gone — wait a few seconds to confirm it's not a network blip
       const timeout = setTimeout(() => {
         if (remoteParticipants.length === 0 && !beefEndedRef.current) {
-          endBeef('Tous les challengers ont quitté');
+          endBeefRef.current?.('Tous les challengers ont quitté');
         }
       }, 5000);
       return () => clearTimeout(timeout);
     }
-  }, [remoteParticipants, isJoined, isHost, host.name, participantRoles, endBeef, mediatorGraceActive, toast]);
+  }, [remoteParticipants, isJoined, isHost, host.name, participantRoles, mediatorGraceActive, toast]);
 
   // Listen for beef_ended broadcast from mediator (for viewers/challengers)
+  const beefEndedHandlerRef = useRef(false);
   useEffect(() => {
-    if (!channelRef.current) return;
+    if (!channelRef.current || beefEndedHandlerRef.current) return;
+    beefEndedHandlerRef.current = true;
+
     const handler = ({ payload }: any) => {
       if (!beefEndedRef.current) {
         beefEndedRef.current = true;
-        const elapsed = MAX_BEEF_DURATION - beefTimeRemaining;
-        const mins = Math.floor(elapsed / 60);
-        const secs = elapsed % 60;
-        setEndSummary({
-          duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
-          viewers: liveViewerCount,
-          votesA,
-          votesB,
-          messages: visibleMessages.length,
-          endReason: payload?.reason || 'Beef terminé',
-        });
+
+        // Use summary from broadcast if available, otherwise use local stats
+        if (payload?.summary) {
+          setEndSummary(payload.summary);
+        } else {
+          const s = statsRef.current;
+          const elapsed = MAX_BEEF_DURATION - s.beefTimeRemaining;
+          const mins = Math.floor(elapsed / 60);
+          const secs = elapsed % 60;
+          setEndSummary({
+            duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
+            viewers: s.liveViewerCount,
+            votesA: s.votesA,
+            votesB: s.votesB,
+            messages: s.messagesCount,
+            endReason: payload?.reason || 'Beef terminé',
+          });
+        }
         setBeefEnded(true);
         leave();
         endSummaryTimerRef.current = setTimeout(() => router.replace('/feed'), 12000);
       }
     };
 
-    // Subscribe to beef_ended on the existing channel
-    const ch = channelRef.current;
-    ch.on('broadcast', { event: 'beef_ended' }, handler);
+    channelRef.current.on('broadcast', { event: 'beef_ended' }, handler);
 
     return () => {
-      // Cleanup
       if (endSummaryTimerRef.current) clearTimeout(endSummaryTimerRef.current);
       if (mediatorGraceRef.current) clearInterval(mediatorGraceRef.current);
     };
-  }, [beefTimeRemaining, liveViewerCount, votesA, votesB, visibleMessages.length, leave, router]);
+  }, [leave, router]);
 
   // Mediator leaving triggers endBeef
   const handleLeaveAsMediator = useCallback(async () => {
@@ -471,6 +508,15 @@ export function TikTokStyleArena({
     };
     loadParticipants();
   }, [roomId]);
+
+  // Load user points
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      const { data } = await supabase.from('users').select('points').eq('id', userId).single();
+      if (data) setUserPoints(data.points || 0);
+    })();
+  }, [userId]);
 
   // Track viewer count — increment on join, decrement on leave
   useEffect(() => {
@@ -749,20 +795,85 @@ export function TikTokStyleArena({
   }, []);
 
   const startTimer = (debaterId: string) => {
-    console.log('🎤 Starting timer for debater:', debaterId, 'Time limit:', timeLimit);
     setCurrentSpeaker(debaterId);
-    setTimeRemaining(timeLimit);
+    setTimeRemaining(speakingTurnDuration);
     setTimerRunning(true);
-    // Unmute the speaker
+    setSpeakingTurnActive(true);
+    setSpeakingTurnTarget(debaterId);
+    setSpeakingTurnRemaining(speakingTurnDuration);
+
+    // Deduct from beef time
     setDebaters(debaters.map(d => 
       d.id === debaterId ? { ...d, isMuted: false } : { ...d, isMuted: true }
     ));
+
+    // Broadcast speaking turn
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'speaking_turn',
+        payload: { debaterId, duration: speakingTurnDuration, action: 'start' },
+      }).catch(() => {});
+    }
   };
 
   const stopTimer = () => {
     setTimerRunning(false);
     setCurrentSpeaker(null);
+    setSpeakingTurnActive(false);
+    setSpeakingTurnTarget(null);
+    if (speakingTurnIntervalRef.current) {
+      clearInterval(speakingTurnIntervalRef.current);
+      speakingTurnIntervalRef.current = null;
+    }
+
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'speaking_turn',
+        payload: { action: 'stop' },
+      }).catch(() => {});
+    }
   };
+
+  // Speaking turn countdown (separate from beef timer)
+  useEffect(() => {
+    if (!speakingTurnActive || !speakingTurnTarget) return;
+
+    speakingTurnIntervalRef.current = setInterval(() => {
+      setSpeakingTurnRemaining(prev => {
+        if (prev <= 1) {
+          stopTimer();
+          toast('Temps de parole écoulé !', 'info');
+          return 0;
+        }
+        return prev - 1;
+      });
+
+      // Also deduct from beef time
+      setBeefTimeRemaining(prev => Math.max(0, prev - 1));
+    }, 1000);
+
+    return () => {
+      if (speakingTurnIntervalRef.current) clearInterval(speakingTurnIntervalRef.current);
+    };
+  }, [speakingTurnActive, speakingTurnTarget, toast]);
+
+  // Listen for speaking turn broadcasts (for non-hosts)
+  useEffect(() => {
+    if (!channelRef.current || isHost) return;
+    const handler = ({ payload }: any) => {
+      if (payload?.action === 'start') {
+        setSpeakingTurnActive(true);
+        setSpeakingTurnTarget(payload.debaterId);
+        setSpeakingTurnRemaining(payload.duration);
+      } else if (payload?.action === 'stop') {
+        setSpeakingTurnActive(false);
+        setSpeakingTurnTarget(null);
+      }
+    };
+    channelRef.current.on('broadcast', { event: 'speaking_turn' }, handler);
+  }, [isHost]);
 
   const toggleMute = (debaterId: string) => {
     setDebaters(debaters.map(d => 
@@ -1057,6 +1168,35 @@ export function TikTokStyleArena({
           </div>
         </motion.div>
       )}
+      {/* ── SPEAKING TURN INDICATOR ── */}
+      {speakingTurnActive && speakingTurnTarget && !beefEnded && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-52 sm:bottom-60 left-1/2 -translate-x-1/2 z-[80] flex items-center gap-2 px-4 py-2 rounded-full shadow-lg"
+          style={{ background: 'rgba(34,197,94,0.9)', backdropFilter: 'blur(8px)' }}
+        >
+          <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          <span className="text-white text-xs font-bold">
+            🎤 {debaters.find(d => d.id === speakingTurnTarget)?.name || 'Challenger'} — {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+          </span>
+        </motion.div>
+      )}
+
+      {/* ── MEDIATOR WAITING MESSAGE (before mediator joins) ── */}
+      {!isHost && !mediatorWasConnectedRef.current && isJoined && !beefEnded && !remoteParticipants.some(p => p.userName === host.name) && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-16 left-1/2 -translate-x-1/2 z-[100] bg-white/10 backdrop-blur-sm text-white px-5 py-3 rounded-xl flex items-center gap-3 shadow-lg border border-white/10"
+        >
+          <div className="w-5 h-5 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
+          <div className="text-sm font-medium">
+            En attente du médiateur...
+          </div>
+        </motion.div>
+      )}
+
       {/* ── NETWORK RECONNECTION OVERLAY ── */}
       {isOffline && !beefEnded && (
         <motion.div
@@ -1850,6 +1990,35 @@ export function TikTokStyleArena({
                       <button
                         key={gift.label}
                         onClick={async () => {
+                          if (userPoints < gift.cost) {
+                            toast(`Points insuffisants (${userPoints}/${gift.cost})`, 'error');
+                            return;
+                          }
+
+                          // Deduct from sender
+                          const { error: deductErr } = await supabase
+                            .from('users')
+                            .update({ points: userPoints - gift.cost })
+                            .eq('id', userId);
+                          if (deductErr) {
+                            toast('Erreur lors du paiement', 'error');
+                            return;
+                          }
+
+                          // Credit mediator
+                          const { data: mediatorData } = await supabase
+                            .from('users')
+                            .select('points')
+                            .eq('id', host.id)
+                            .single();
+                          if (mediatorData) {
+                            await supabase
+                              .from('users')
+                              .update({ points: (mediatorData.points || 0) + gift.cost })
+                              .eq('id', host.id);
+                          }
+
+                          // Record the gift
                           await supabase.from('gifts').insert({
                             beef_id: roomId,
                             sender_id: userId,
@@ -1857,6 +2026,8 @@ export function TikTokStyleArena({
                             gift_type_id: gift.label.toLowerCase(),
                             points_amount: gift.cost,
                           });
+
+                          setUserPoints(prev => prev - gift.cost);
                           toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
                           setShowGiftPicker(false);
                         }}
@@ -1969,43 +2140,84 @@ export function TikTokStyleArena({
                 )}
               </div>
 
-              {/* Debaters Control */}
-              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                <h3 className="text-white font-bold text-sm mb-2 flex items-center gap-2">
-                  <span>👥</span> Débatteurs
+              {/* Speaking Turns Control */}
+              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                <h3 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
+                  🎤 Temps de parole
                 </h3>
+
+                {/* Duration selector */}
+                <div className="mb-3">
+                  <label className="text-gray-400 text-xs mb-1.5 block">Durée par tour</label>
+                  <div className="flex gap-1.5">
+                    {[30, 60, 90, 120].map(sec => (
+                      <button
+                        key={sec}
+                        onClick={() => setSpeakingTurnDuration(sec)}
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          speakingTurnDuration === sec
+                            ? 'bg-brand-500 text-white'
+                            : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                        }`}
+                      >
+                        {sec}s
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Active speaking turn indicator */}
+                {speakingTurnActive && (
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-3 text-center">
+                    <p className="text-green-400 text-xs font-semibold mb-1">En cours</p>
+                    <span className="text-2xl font-black text-green-400 font-mono">
+                      {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                    </span>
+                    <button
+                      onClick={stopTimer}
+                      className="w-full mt-2 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs font-bold hover:bg-red-500/30"
+                    >
+                      Couper la parole
+                    </button>
+                  </div>
+                )}
+
+                {/* Debaters list */}
                 <div className="space-y-2">
                   {debaters.map((debater) => (
                     <div key={debater.id} className="bg-black/40 rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <button
                           onClick={() => openProfile(debater.name)}
-                          className="text-white font-semibold text-sm hover:text-pink-400 cursor-pointer"
+                          className="text-white font-semibold text-sm hover:text-brand-400 cursor-pointer"
                         >
                           {debater.name}
                         </button>
                         <button
                           onClick={() => removeDebater(debater.id)}
-                          className="text-red-400 hover:text-red-300"
+                          className="text-red-400 hover:text-red-300 text-xs"
                         >
                           ✕
                         </button>
                       </div>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => startTimer(debater.id)}
-                          disabled={timerRunning}
-                          className={`flex-1 py-1.5 rounded text-xs font-bold ${
+                          onClick={() => currentSpeaker === debater.id ? stopTimer() : startTimer(debater.id)}
+                          disabled={timerRunning && currentSpeaker !== debater.id}
+                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
                             currentSpeaker === debater.id
-                              ? 'bg-green-500 text-white'
+                              ? 'bg-green-500 text-white animate-pulse'
                               : 'bg-white/10 text-white hover:bg-white/20'
-                          } disabled:opacity-50`}
+                          } disabled:opacity-30`}
                         >
-                          {currentSpeaker === debater.id ? '🎤 Parle' : '▶️ Donner parole'}
+                          {currentSpeaker === debater.id
+                            ? `🎤 ${Math.floor(speakingTurnRemaining / 60)}:${(speakingTurnRemaining % 60).toString().padStart(2, '0')}`
+                            : `▶️ ${speakingTurnDuration}s`
+                          }
                         </button>
                         <button
                           onClick={() => toggleMute(debater.id)}
-                          className={`px-3 py-1.5 rounded text-xs font-bold ${
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
                             debater.isMuted
                               ? 'bg-red-500/20 text-red-400'
                               : 'bg-green-500/20 text-green-400'
@@ -2016,6 +2228,9 @@ export function TikTokStyleArena({
                       </div>
                     </div>
                   ))}
+                  {debaters.length === 0 && (
+                    <p className="text-gray-500 text-xs text-center py-3">Aucun débatteur pour le moment</p>
+                  )}
                 </div>
               </div>
 

@@ -16,6 +16,7 @@ interface UseBeefNotificationsOptions {
 
 export function useBeefNotifications({ userId, onNotification }: UseBeefNotificationsOptions) {
   const scheduledTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const notifiedBeefs = useRef<Set<string>>(new Set());
 
   // Schedule a "starting soon" notification for a beef
   const scheduleNotification = useCallback((beefId: string, title: string, scheduledAt: string) => {
@@ -57,6 +58,12 @@ export function useBeefNotifications({ userId, onNotification }: UseBeefNotifica
         },
         (payload) => {
           const beef = payload.new as any;
+          const key = `${beef.id}_${beef.status}`;
+
+          // Prevent duplicate notifications for the same beef+status
+          if (notifiedBeefs.current.has(key)) return;
+          notifiedBeefs.current.add(key);
+
           if (beef.status === 'live') {
             onNotification({ beefId: beef.id, title: beef.title, type: 'live_now' });
             showBrowserNotification(`🔴 LIVE maintenant!`, `"${beef.title}" est en direct. Rejoins maintenant!`);

@@ -1,16 +1,25 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { TikTokStyleArena } from '@/components/TikTokStyleArena';
 import { supabase } from '@/lib/supabase/client';
+import { motion } from 'framer-motion';
+import { Clock, ArrowLeft } from 'lucide-react';
 
 export default function ArenaPage() {
   const params = useParams();
+  const router = useRouter();
   const roomId = params.roomId as string;
 
   const [userId, setUserId] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
+  const [beefEndedInfo, setBeefEndedInfo] = useState<{
+    title: string;
+    host_name: string;
+    started_at?: string;
+    ended_at?: string;
+  } | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [userRole, setUserRole] = useState<'mediator' | 'challenger' | 'viewer'>('viewer');
 
@@ -68,7 +77,13 @@ export default function ArenaPage() {
       }
 
       if (beef.status === 'ended' || beef.status === 'cancelled') {
-        window.location.href = '/feed';
+        const med = beef.users as any;
+        setBeefEndedInfo({
+          title: beef.title || 'Beef',
+          host_name: med?.display_name || med?.username || 'Médiateur',
+          started_at: beef.started_at,
+          ended_at: beef.ended_at,
+        });
         return;
       }
 
@@ -148,6 +163,44 @@ export default function ArenaPage() {
       navigator.clipboard.writeText(url);
     }
   };
+
+  // Show ended page instead of redirecting
+  if (beefEndedInfo) {
+    const duration = beefEndedInfo.started_at && beefEndedInfo.ended_at
+      ? Math.floor((new Date(beefEndedInfo.ended_at).getTime() - new Date(beefEndedInfo.started_at).getTime()) / 60000)
+      : 0;
+
+    return (
+      <div className="fixed inset-0 bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-sm text-center space-y-6"
+        >
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gray-800 border border-white/10 flex items-center justify-center">
+            <Clock className="w-8 h-8 text-gray-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-white mb-1">Beef terminé</h2>
+            <p className="text-brand-400 font-semibold">{beefEndedInfo.title}</p>
+            <p className="text-sm text-gray-500 mt-1">Médié par {beefEndedInfo.host_name}</p>
+            {duration > 0 && <p className="text-xs text-gray-600 mt-2">Durée : {duration} min</p>}
+          </div>
+          <p className="text-sm text-gray-400">
+            Ce beef est terminé. Tu peux en créer un nouveau ou regarder les prochains lives.
+          </p>
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            onClick={() => router.replace('/feed')}
+            className="w-full py-3 rounded-xl bg-brand-500 text-white font-semibold text-sm hover:bg-brand-600 transition-colors flex items-center justify-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Retour au feed
+          </motion.button>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (!userId || !userName) {
     return (
