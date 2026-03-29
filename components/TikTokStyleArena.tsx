@@ -363,6 +363,8 @@ export function TikTokStyleArena({
     const key = `${msgUserName}::${content}`;
     if (seenMsgKeys.current.has(key)) return;
     seenMsgKeys.current.add(key);
+    // Remove key after 5s so the same message text can be sent again later
+    setTimeout(() => seenMsgKeys.current.delete(key), 5000);
     const msgId = `m_${Date.now()}_${Math.random()}`;
     const newMsg: VisibleMessage = {
       id: msgId,
@@ -371,11 +373,7 @@ export function TikTokStyleArena({
       timestamp: Date.now(),
       initial: initial || msgUserName?.[0]?.toUpperCase() || '?',
     };
-    setVisibleMessages(prev => [...prev, newMsg].slice(-50));
-    setTimeout(() => {
-      setVisibleMessages(prev => prev.filter(m => m.id !== msgId));
-      seenMsgKeys.current.delete(key);
-    }, 30000);
+    setVisibleMessages(prev => [...prev, newMsg].slice(-80));
   }, []);
 
   const addRemoteReaction = useCallback((emoji: string) => {
@@ -636,8 +634,10 @@ export function TikTokStyleArena({
       timestamp: Date.now(),
       initial: senderInitial,
     };
-    seenMsgKeys.current.add(`${userName}::${cleanContent}`);
-    setVisibleMessages(prev => [...prev, localMsg].slice(-50));
+    const localKey = `${userName}::${cleanContent}`;
+    seenMsgKeys.current.add(localKey);
+    setTimeout(() => seenMsgKeys.current.delete(localKey), 5000);
+    setVisibleMessages(prev => [...prev, localMsg].slice(-80));
     setChatInput('');
 
     // Broadcast to other users (instant delivery if connected)
@@ -739,10 +739,10 @@ export function TikTokStyleArena({
                     )}
                   </div>
                 )}
-                {/* Name tag — top */}
-                <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1.5">
+                {/* Name tag — bottom left */}
+                <div className="absolute bottom-14 left-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5 z-10">
                   <div className="w-2 h-2 rounded-full bg-blue-400" />
-                  <span className="text-white text-xs font-bold">
+                  <span className="text-white text-[11px] font-bold drop-shadow-md">
                     {leftPanelName}
                   </span>
                 </div>
@@ -764,7 +764,7 @@ export function TikTokStyleArena({
                   </div>
                 )}
                 {currentSpeaker === '1' && (
-                  <div className="absolute bottom-8 left-2 flex gap-0.5">
+                  <div className="absolute bottom-[4.5rem] left-2 flex gap-0.5 z-10">
                     {[...Array(4)].map((_, i) => (
                       <motion.div key={i} animate={{ height: [3, 10, 3] }}
                         transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
@@ -859,15 +859,15 @@ export function TikTokStyleArena({
                     )}
                   </div>
                 )}
-                {/* Name tag — top */}
-                <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1.5">
-                  <span className="text-white text-xs font-bold">
+                {/* Name tag — bottom right */}
+                <div className="absolute bottom-14 right-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1.5 z-10">
+                  <span className="text-white text-[11px] font-bold drop-shadow-md">
                     {rightPanelName}
                   </span>
                   <div className="w-2 h-2 rounded-full bg-red-400" />
                 </div>
                 {currentSpeaker === '2' && (
-                  <div className="absolute bottom-8 right-2 flex gap-0.5">
+                  <div className="absolute bottom-[4.5rem] right-2 flex gap-0.5 z-10">
                     {[...Array(4)].map((_, i) => (
                       <motion.div key={i} animate={{ height: [3, 10, 3] }}
                         transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
@@ -1199,28 +1199,28 @@ export function TikTokStyleArena({
         </div>
       </div>
 
-      {/* ── Flying Reactions — float up from right side like TikTok hearts ── */}
-      <div className="absolute right-3 bottom-48 z-50 pointer-events-none w-16">
+      {/* ── Flying Reactions — float up over video area like TikTok hearts ── */}
+      <div className="absolute right-[15%] bottom-44 z-50 pointer-events-none w-20">
         <AnimatePresence>
           {flyingReactions.map((reaction) => (
             <motion.div
               key={reaction.id}
-              initial={{ y: 0, opacity: 0, scale: 0.3, x: 0 }}
+              initial={{ y: 0, opacity: 0, scale: 0.3 }}
               animate={{
-                y: -350,
+                y: -300,
                 opacity: [0, 1, 1, 0.8, 0],
-                scale: [0.3, 1.2, 1, 0.9, 0.5],
-                x: [0, -8, 12, -5, 8],
+                scale: [0.3, 1.3, 1.1, 0.9, 0.5],
+                x: [0, -15, 20, -10, 15],
               }}
               exit={{ opacity: 0 }}
               transition={{
-                duration: 3.5,
+                duration: 3,
                 ease: 'easeOut',
                 opacity: { times: [0, 0.05, 0.4, 0.75, 1] },
-                x: { duration: 3.5, ease: 'easeInOut' },
+                x: { duration: 3, ease: 'easeInOut' },
               }}
-              className="absolute bottom-0 text-4xl drop-shadow-lg"
-              style={{ right: `${reaction.x % 30}px` }}
+              className="absolute bottom-0 text-3xl sm:text-4xl drop-shadow-lg"
+              style={{ left: `${reaction.x % 50}px` }}
             >
               {reaction.emoji}
             </motion.div>
