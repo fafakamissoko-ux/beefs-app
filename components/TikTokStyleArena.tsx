@@ -774,15 +774,15 @@ export function TikTokStyleArena({
                 )}
               </div>
 
-              {/* CENTER — Mediator bubble (local video) — vertically centered */}
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-2 pointer-events-auto">
+              {/* CENTER — Mediator bubble — slightly below center */}
+              <div className="absolute left-1/2 top-[55%] -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 pointer-events-auto">
                 <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                  className="flex flex-col items-center gap-2">
-                  {/* Circle with mediator VIDEO — enlarged */}
+                  className="flex flex-col items-center gap-1.5">
+                  {/* Circle with mediator VIDEO */}
                   <div className="relative">
-                    <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full overflow-hidden
+                    <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden
                       bg-gradient-to-br from-brand-400 to-brand-600 p-[3px] shadow-2xl shadow-brand-500/60"
-                      style={{ filter: 'drop-shadow(0 0 20px rgba(255,107,44,0.5))' }}>
+                      style={{ filter: 'drop-shadow(0 0 16px rgba(255,107,44,0.4))' }}>
                       <div className="w-full h-full rounded-full overflow-hidden bg-gray-900">
                         {mediatorParticipant?.videoTrack ? (
                           <ParticipantVideo
@@ -794,7 +794,7 @@ export function TikTokStyleArena({
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <span className="text-white font-black text-4xl">
+                            <span className="text-white font-black text-3xl sm:text-4xl">
                               {mediatorName?.[0]?.toUpperCase() || 'M'}
                             </span>
                           </div>
@@ -806,32 +806,32 @@ export function TikTokStyleArena({
                       <span className="text-white text-[10px] font-black tracking-widest">LIVE</span>
                     </div>
                   </div>
-                  {/* MÉDIATEUR label */}
+                  {/* Mediator name with balance icon */}
                   <div className="brand-gradient px-3 py-1 rounded-full shadow-lg shadow-brand-500/40">
-                    <span className="text-white text-xs font-black">⚖️ MÉDIATEUR</span>
+                    <span className="text-white text-[11px] font-black">⚖️ {mediatorName}</span>
                   </div>
                   {/* Mic/Cam + Controls — only for host (mediator) */}
                   {isHost && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={toggleMic}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center text-base transition-all shadow ${micEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white shadow-red-500/50'}`}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all shadow ${micEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white shadow-red-500/50'}`}
                       >
                         {micEnabled ? '🎤' : '🔇'}
                       </button>
                       <button
                         onClick={toggleCam}
-                        className={`w-9 h-9 rounded-full flex items-center justify-center text-base transition-all shadow ${camEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white shadow-red-500/50'}`}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all shadow ${camEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white shadow-red-500/50'}`}
                       >
                         {camEnabled ? '📹' : '🚫'}
                       </button>
                       <button
                         onClick={() => setShowModeratorPanel(true)}
-                        className="bg-black/80 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1.5
-                          flex items-center gap-1.5 hover:bg-white/10 transition-all text-white shadow"
+                        className="w-8 h-8 rounded-full bg-black/70 backdrop-blur-sm border border-white/20
+                          flex items-center justify-center hover:bg-white/10 transition-all text-white shadow"
+                        title="Contrôles du médiateur"
                       >
-                        <span className="text-sm">⚙️</span>
-                        <span className="text-xs font-semibold">Contrôles</span>
+                        <span className="text-sm">🔧</span>
                       </button>
                     </div>
                   )}
@@ -977,54 +977,44 @@ export function TikTokStyleArena({
             </div>
           )}
 
-          {/* Moderator in Center (Host) */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+          {/* Moderator in Center (Host) — slightly below center */}
+          <div className="absolute left-1/2 top-[55%] -translate-x-1/2 -translate-y-1/2 z-20">
             <motion.div 
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ 
-                type: 'spring', 
-                stiffness: 200, 
-                damping: 15,
-                delay: 0.3 
-              }}
+              transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.3 }}
               className="relative flex flex-col items-center"
             >
-              {/* Moderator Bubble */}
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-yellow-400 via-brand-400 to-pink-500 p-1 shadow-2xl">
                 <div className="w-full h-full rounded-full bg-black flex items-center justify-center text-3xl sm:text-4xl">
                   👤
                 </div>
               </div>
-              
-              {/* Moderator Badge - Clickable for host, shows host name for spectators */}
-              <div className="mt-2 relative">
-                {isHost ? (
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <div className="brand-gradient px-3 py-1 rounded-full shadow-lg shadow-brand-500/40 whitespace-nowrap">
+                  <span className="text-white text-[11px] font-black">⚖️ {mediatorName}</span>
+                </div>
+                {isHost && (
                   <button
                     onClick={() => setShowModeratorPanel(!showModeratorPanel)}
-                    className="bg-gradient-to-r from-yellow-400 to-brand-400 px-3 py-1 rounded-full shadow-lg whitespace-nowrap cursor-pointer hover:from-yellow-500 hover:to-brand-500 transition-colors"
+                    className="w-8 h-8 rounded-full bg-black/70 backdrop-blur-sm border border-white/20
+                      flex items-center justify-center hover:bg-white/10 transition-all text-white shadow"
+                    title="Contrôles du médiateur"
                   >
-                    <span className="text-black text-[10px] sm:text-xs font-black">🎛️ CONTRÔLES</span>
+                    <span className="text-sm">🔧</span>
                   </button>
-                ) : (
-                  <div className="bg-gradient-to-r from-yellow-400 to-brand-400 px-3 py-1 rounded-full shadow-lg whitespace-nowrap">
-                    <span className="text-black text-[10px] sm:text-xs font-black">{host.name}</span>
-                  </div>
                 )}
-                
-                {/* Debate Title - Dynamic animation - Absolute position to not affect layout */}
-                <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap">
+              </div>
+              {/* Debate Title */}
+              <div className="relative mt-1">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 whitespace-nowrap">
                   <AnimatePresence>
                     {showDebateTitle && (
                       <motion.div
                         initial={{ scale: 0, opacity: 0, y: -10 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0, opacity: 0, y: -10 }}
-                        transition={{ 
-                          type: 'spring', 
-                          stiffness: 300, 
-                          damping: 20 
-                        }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                         className="bg-gradient-to-r from-purple-500/95 via-pink-500/95 to-red-500/95 backdrop-blur-xl px-4 py-1.5 rounded-full shadow-2xl border-2 border-white/30"
                       >
                         <h2 className="text-white text-[10px] sm:text-xs font-black text-center drop-shadow-lg">
