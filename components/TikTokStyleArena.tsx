@@ -2401,14 +2401,12 @@ export function TikTokStyleArena({
       </AnimatePresence>
 
       {/* Invite Participant Modal */}
-      {showInviteModal && (
-        <InviteParticipantModal
-          beefId={roomId}
-          currentParticipantIds={debaters.map(d => d.id).concat([userId])}
-          onInvite={handleInviteFromModal}
-          onClose={() => setShowInviteModal(false)}
-        />
-      )}
+      <InviteParticipantModal
+        isOpen={showInviteModal}
+        currentParticipants={debaters.map(d => d.id).concat([userId])}
+        onInvite={handleInviteFromModal}
+        onClose={() => setShowInviteModal(false)}
+      />
 
       {/* User Profile Modal */}
       <AnimatePresence>
