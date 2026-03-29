@@ -53,6 +53,9 @@ interface Beef {
   is_premium: boolean;
   price?: number;
   viewer_count?: number;
+  mediator_id?: string;
+  /** Nom affiché sur BeefCard (médiateur du beef) */
+  card_host_name?: string;
 }
 
 export default function ProfileContent() {
@@ -73,6 +76,8 @@ export default function ProfileContent() {
     following: 0,
   });
   const [beefs, setBeefs] = useState<Beef[]>([]);
+  const [mediationBeefs, setMediationBeefs] = useState<Beef[]>([]);
+  const [recentBeefs, setRecentBeefs] = useState<Beef[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'stats' | 'debates' | 'gains'>('stats');
   const [showEditModal, setShowEditModal] = useState(false);
@@ -221,38 +226,97 @@ export default function ProfileContent() {
             .select('id', { count: 'exact' })
             .eq('follower_id', data.id);
 
-          const { data: beefsData } = await supabase
+          const { data: mediatedRows } = await supabase
             .from('beefs')
             .select('*')
             .eq('mediator_id', data.id)
-            .order('created_at', { ascending: false })
-            .limit(10);
+            .order('created_at', { ascending: false });
 
-          // Count beefs by resolution status
-          const allBeefs = beefsData && beefsData.length > 0 ? beefsData : beefs;
-          const resolvedBeefs = allBeefs.filter(beef => beef.resolution_status === 'resolved').length || 0;
-          const unresolvedBeefs = allBeefs.filter(beef => beef.resolution_status === 'unresolved').length || 0;
-          const inProgressBeefs = allBeefs.filter(beef => beef.resolution_status === 'in_progress' || beef.status === 'live' || beef.status === 'scheduled').length || 0;
-          const abandonedBeefs = allBeefs.filter(beef => beef.resolution_status === 'abandoned' || beef.status === 'cancelled').length || 0;
+          const { data: participantRows } = await supabase
+            .from('beef_participants')
+            .select('beef_id, beefs(*)')
+            .eq('user_id', data.id);
+
+          const mediatedList = (mediatedRows || []) as Beef[];
+          const fromParticipants: Beef[] = [];
+          for (const row of participantRows || []) {
+            const raw = row.beefs as Beef | Beef[] | null | undefined;
+            if (!raw) continue;
+            const b = Array.isArray(raw) ? raw[0] : raw;
+            if (b) fromParticipants.push(b as Beef);
+          }
+
+          const mergedById = new Map<string, Beef>();
+          mediatedList.forEach((b) => mergedById.set(b.id, b));
+          fromParticipants.forEach((b) => {
+            if (!mergedById.has(b.id)) mergedById.set(b.id, b);
+          });
+
+          const mergedSorted = [...mergedById.values()].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+
+          const displayNameSelf = data.display_name || data.username || 'Utilisateur';
+          const mediatorIds = [...new Set(mergedSorted.map((b) => b.mediator_id).filter(Boolean))] as string[];
+          const mediatorMap: Record<string, string> = {};
+          if (mediatorIds.length > 0) {
+            const { data: mu } = await supabase
+              .from('users')
+              .select('id, display_name, username')
+              .in('id', mediatorIds);
+            (mu || []).forEach((u: { id: string; display_name?: string; username?: string }) => {
+              mediatorMap[u.id] = u.display_name || u.username || 'Médiateur';
+            });
+          }
+
+          const attachHost = (b: Beef): Beef => ({
+            ...b,
+            card_host_name:
+              b.mediator_id === data.id
+                ? displayNameSelf
+                : (b.mediator_id && mediatorMap[b.mediator_id]) || 'Médiateur',
+          });
+
+          const beefsParticipatedCount = new Set((participantRows || []).map((r: { beef_id: string }) => r.beef_id)).size;
+          const beefsHostedCount = mediatedList.length;
+
+          // Résolution stats = uniquement beefs médiés
+          const resolvedBeefs = mediatedList.filter((beef) => beef.resolution_status === 'resolved').length || 0;
+          const unresolvedBeefs = mediatedList.filter((beef) => beef.resolution_status === 'unresolved').length || 0;
+          const inProgressBeefs =
+            mediatedList.filter(
+              (beef) =>
+                beef.resolution_status === 'in_progress' ||
+                beef.status === 'live' ||
+                beef.status === 'scheduled'
+            ).length || 0;
+          const abandonedBeefs =
+            mediatedList.filter((beef) => beef.resolution_status === 'abandoned' || beef.status === 'cancelled').length || 0;
 
           setStats({
-            beefs_participated: allBeefs.length || 0,
-            beefs_hosted: allBeefs.length || 0,
+            beefs_participated: beefsParticipatedCount,
+            beefs_hosted: beefsHostedCount,
             beefs_resolved: resolvedBeefs,
             beefs_unresolved: unresolvedBeefs,
             beefs_in_progress: inProgressBeefs,
             beefs_abandoned: abandonedBeefs,
-            total_views: 0, // TODO: Add views tracking
+            total_views: 0,
             followers: followersData?.length || 0,
             following: followingData?.length || 0,
           });
 
-          if (beefsData) {
-            setBeefs(beefsData);
+          if (mergedSorted.length > 0) {
+            setBeefs(mergedSorted.map(attachHost));
+            setRecentBeefs(mergedSorted.slice(0, 5).map(attachHost));
+            setMediationBeefs(mediatedList.map((b) => attachHost({ ...b, card_host_name: displayNameSelf })));
+          } else {
+            setBeefs([]);
+            setRecentBeefs([]);
+            setMediationBeefs([]);
           }
 
           // Add fake beefs for demo if no beefs exist
-          if (!beefsData || beefsData.length === 0) {
+          if (mergedSorted.length === 0) {
             const fakeBeefs = [
               {
                 id: 'fake-1',
@@ -264,6 +328,8 @@ export default function ProfileContent() {
                 created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
                 is_premium: false,
                 viewer_count: 234,
+                mediator_id: data.id,
+                card_host_name: displayNameSelf,
               },
               {
                 id: 'fake-2',
@@ -275,6 +341,8 @@ export default function ProfileContent() {
                 created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
                 is_premium: false,
                 viewer_count: 156,
+                mediator_id: data.id,
+                card_host_name: displayNameSelf,
               },
               {
                 id: 'fake-3',
@@ -287,6 +355,8 @@ export default function ProfileContent() {
                 is_premium: true,
                 price: 50,
                 viewer_count: 89,
+                mediator_id: data.id,
+                card_host_name: displayNameSelf,
               },
               {
                 id: 'fake-4',
@@ -299,6 +369,8 @@ export default function ProfileContent() {
                 created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
                 is_premium: false,
                 viewer_count: 0,
+                mediator_id: data.id,
+                card_host_name: displayNameSelf,
               },
               {
                 id: 'fake-5',
@@ -310,6 +382,8 @@ export default function ProfileContent() {
                 created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
                 is_premium: false,
                 viewer_count: 12,
+                mediator_id: data.id,
+                card_host_name: displayNameSelf,
               },
               {
                 id: 'fake-6',
@@ -322,9 +396,33 @@ export default function ProfileContent() {
                 is_premium: true,
                 price: 30,
                 viewer_count: 445,
+                mediator_id: data.id,
+                card_host_name: displayNameSelf,
               },
-            ];
-            setBeefs(fakeBeefs as any);
+            ] as Beef[];
+            const demoResolved = fakeBeefs.filter((b) => b.resolution_status === 'resolved').length;
+            const demoUnresolved = fakeBeefs.filter((b) => b.resolution_status === 'unresolved').length;
+            const demoInProgress = fakeBeefs.filter(
+              (b) =>
+                b.resolution_status === 'in_progress' || b.status === 'live' || b.status === 'scheduled'
+            ).length;
+            const demoAbandoned = fakeBeefs.filter(
+              (b) => b.resolution_status === 'abandoned' || b.status === 'cancelled'
+            ).length;
+            setStats({
+              beefs_participated: 8,
+              beefs_hosted: fakeBeefs.length,
+              beefs_resolved: demoResolved,
+              beefs_unresolved: demoUnresolved,
+              beefs_in_progress: demoInProgress,
+              beefs_abandoned: demoAbandoned,
+              total_views: 0,
+              followers: followersData?.length || 0,
+              following: followingData?.length || 0,
+            });
+            setBeefs(fakeBeefs);
+            setMediationBeefs(fakeBeefs);
+            setRecentBeefs(fakeBeefs.slice(0, 5));
           }
         }
 
@@ -620,11 +718,29 @@ export default function ProfileContent() {
               <p className="text-gray-300 mb-4">{profile.bio}</p>
             )}
 
+            {/* Points — mis en avant */}
+            <div className="mb-5 rounded-2xl bg-gradient-to-r from-brand-500/15 via-amber-500/10 to-brand-600/15 border border-brand-500/25 px-5 py-4 flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wide">Points totaux</p>
+                <p className="text-3xl sm:text-4xl font-black text-white tabular-nums tracking-tight">
+                  {profile.points.toLocaleString('fr-FR')}
+                </p>
+                <p className="text-gray-500 text-xs mt-1">100 pts = 1€ · solde gains</p>
+              </div>
+              <div className="w-14 h-14 rounded-2xl bg-brand-500/20 flex items-center justify-center flex-shrink-0">
+                <Trophy className="w-8 h-8 text-brand-400" />
+              </div>
+            </div>
+
             {/* Stats Row */}
             <div className="flex gap-6 mb-4 flex-wrap">
               <div>
                 <span className="text-2xl font-black text-white">{stats.beefs_participated}</span>
-                <span className="text-gray-400 text-sm ml-1">Beefs</span>
+                <span className="text-gray-400 text-sm ml-1">Participations</span>
+              </div>
+              <div>
+                <span className="text-2xl font-black text-white">{stats.beefs_hosted}</span>
+                <span className="text-gray-400 text-sm ml-1">Médiations</span>
               </div>
               <div>
                 <span className="text-2xl font-black text-white">{stats.followers}</span>
@@ -634,12 +750,36 @@ export default function ProfileContent() {
                 <span className="text-2xl font-black text-white">{stats.following}</span>
                 <span className="text-gray-400 text-sm ml-1">Abonnements</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-brand-400" />
-                <span className="text-2xl font-black text-white">{profile.points}</span>
-                <span className="text-gray-400 text-sm">Points</span>
-              </div>
             </div>
+
+            {/* Beefs récents (participant ou médiateur) */}
+            {recentBeefs.length > 0 && (
+              <div className="mt-2 pt-6 border-t border-gray-800">
+                <h2 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
+                  <Flame className="w-5 h-5 text-brand-400" />
+                  Beefs récents
+                </h2>
+                <div className="space-y-3">
+                  {recentBeefs.map((beef, idx) => (
+                    <BeefCard
+                      key={beef.id}
+                      id={beef.id}
+                      index={idx}
+                      title={beef.title}
+                      host_name={beef.card_host_name || profile.display_name || profile.username || 'Utilisateur'}
+                      status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
+                      created_at={beef.created_at}
+                      viewer_count={beef.viewer_count || 0}
+                      tags={beef.tags}
+                      scheduled_at={beef.scheduled_at}
+                      is_premium={beef.is_premium}
+                      price={beef.price}
+                      onClick={() => router.push(`/arena/${beef.id}`)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -804,7 +944,7 @@ export default function ProfileContent() {
                     </button>
                   </div>
                   <div className="grid grid-cols-1 gap-4">
-                    {beefs
+                    {mediationBeefs
                       .filter(beef => beef.resolution_status === selectedResolutionFilter)
                       .map((beef, idx) => (
                         <BeefCard
@@ -812,7 +952,7 @@ export default function ProfileContent() {
                           id={beef.id}
                           index={idx}
                           title={beef.title}
-                          host_name={profile?.display_name || profile?.username || 'Utilisateur'}
+                          host_name={beef.card_host_name || profile?.display_name || profile?.username || 'Utilisateur'}
                           status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
                           created_at={beef.created_at}
                           viewer_count={beef.viewer_count || 0}
@@ -823,7 +963,7 @@ export default function ProfileContent() {
                           onClick={() => router.push(`/arena/${beef.id}`)}
                         />
                       ))}
-                    {beefs.filter(beef => beef.resolution_status === selectedResolutionFilter).length === 0 && (
+                    {mediationBeefs.filter(beef => beef.resolution_status === selectedResolutionFilter).length === 0 && (
                       <div className="text-center py-12 bg-white/5 rounded-xl">
                         <Flame className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                         <p className="text-gray-400">Aucun beef dans cette catégorie</p>
@@ -884,7 +1024,7 @@ export default function ProfileContent() {
                       id={beef.id}
                       index={idx}
                       title={beef.title}
-                      host_name={profile?.display_name || profile?.username || 'Utilisateur'}
+                      host_name={beef.card_host_name || profile?.display_name || profile?.username || 'Utilisateur'}
                       status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
                       created_at={beef.created_at}
                       viewer_count={beef.viewer_count || 0}

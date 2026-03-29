@@ -14,6 +14,7 @@ interface Beef {
   id: string;
   title: string;
   host_name: string;
+  mediator_id?: string;
   status: 'live' | 'ended' | 'replay' | 'scheduled';
   created_at: string;
   scheduled_at?: string;
@@ -44,8 +45,31 @@ export default function FeedPage() {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [trendingTags, setTrendingTags] = useState<string[]>([]);
+  const [followingIds, setFollowingIds] = useState<string[]>([]);
 
-  const followingList = ['TechExpert', 'CryptoKing', 'Host Principal'];
+  useEffect(() => {
+    if (!user?.id) {
+      setFollowingIds([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('followers')
+        .select('following_id')
+        .eq('follower_id', user.id);
+      if (cancelled) return;
+      if (error) {
+        console.error('Error loading following:', error);
+        setFollowingIds([]);
+        return;
+      }
+      setFollowingIds((data || []).map((r: { following_id: string }) => r.following_id));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (beefs.length > 0) {
@@ -74,7 +98,7 @@ export default function FeedPage() {
       const channel = supabase.channel('beefs_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'beefs' }, () => loadBeefs()).subscribe();
       return () => { channel.unsubscribe(); };
     }
-  }, [user, feedType, selectedTags, selectedStatus]);
+  }, [user, feedType, selectedTags, selectedStatus, followingIds]);
 
   const loadBeefs = async () => {
     try {
@@ -96,7 +120,10 @@ export default function FeedPage() {
       }
 
       if (feedType === 'abonnements') {
-        beefsWithData = beefsWithData.filter((beef: any) => followingList.includes(beef.host_name));
+        const followingSet = new Set(followingIds);
+        beefsWithData = beefsWithData.filter(
+          (beef: any) => beef.mediator_id && followingSet.has(beef.mediator_id)
+        );
         beefsWithData.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       } else {
         beefsWithData.sort((a: any, b: any) => {

@@ -8,6 +8,7 @@ import { ChatPanel } from './ChatPanel';
 import { PreJoinScreen } from './PreJoinScreen';
 import { ParticipantVideo } from './ParticipantVideo';
 import { FeatureGuide } from './FeatureGuide';
+import { ViewerListModal } from './ViewerListModal';
 import { useDailyCall } from '@/hooks/useDailyCall';
 import { supabase } from '@/lib/supabase/client';
 import { MultiParticipantGrid } from './MultiParticipantGrid';
@@ -39,14 +40,14 @@ interface TikTokStyleArenaProps {
   roomId: string;
   userId: string;
   userName: string;
+  userRole?: 'mediator' | 'challenger' | 'viewer';
   viewerCount?: number;
   tension?: number;
-  points: number;
+  points?: number;
   debateTitle?: string;
   dailyRoomUrl?: string | null;
   onReaction: (emoji: string) => void;
   onTap?: () => void;
-  onGift: () => void;
   onShare: () => void;
 }
 
@@ -106,23 +107,24 @@ export function TikTokStyleArena({
   roomId,
   userId,
   userName,
+  userRole = 'viewer',
   viewerCount = 0,
-  points,
+  points = 0,
   debateTitle = 'Débat en direct',
   dailyRoomUrl,
   onReaction,
-  onGift,
   onShare,
 }: TikTokStyleArenaProps) {
   const router = useRouter();
   const { toast } = useToast();
-  // Always start with pre-join screen, regardless of dailyRoomUrl availability
+  const isViewer = userRole === 'viewer';
   const [hasJoined, setHasJoined] = useState(false);
   const [chatInput, setChatInput] = useState('');
+  const [showGiftPicker, setShowGiftPicker] = useState(false);
+  const [showViewerList, setShowViewerList] = useState(false);
 
-  // Daily.co callObject — gives individual video tracks
   const { join, leave, toggleMic, toggleCam, isJoined, isJoining, micEnabled, camEnabled,
-    localParticipant, remoteParticipants, error: callError } = useDailyCall(dailyRoomUrl ?? null, userName);
+    localParticipant, remoteParticipants, error: callError } = useDailyCall(dailyRoomUrl ?? null, userName, isViewer);
 
   // Auto-join when user clicked "Rejoindre" AND dailyRoomUrl becomes available
   useEffect(() => {
@@ -133,6 +135,8 @@ export function TikTokStyleArena({
   const [flyingReactions, setFlyingReactions] = useState<Array<{ id: string; emoji: string; x: number }>>([]);
   const [showMenu, setShowMenu] = useState(false);
   const [visibleMessages, setVisibleMessages] = useState<VisibleMessage[]>([]);
+  const [contextMenuMsg, setContextMenuMsg] = useState<string | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showAllReactions, setShowAllReactions] = useState(false); // NEW: Toggle pour afficher toutes les réactions
   
   // Moderator controls — check if current user is the beef creator
@@ -243,13 +247,18 @@ export function TikTokStyleArena({
     }
   }, [remoteParticipants, timerActive, micEnabled, isHost]);
 
-  const startBeefTimer = () => {
+  const startBeefTimer = async () => {
     setBeefTimeRemaining(MAX_BEEF_DURATION);
     beefWarning5Shown.current = false;
     beefWarning1Shown.current = false;
     setTimerActive(true);
     setTimerPaused(false);
     toast('Chronomètre démarré !', 'success');
+    // Transition beef to "live" status
+    await supabase.from('beefs').update({
+      status: 'live',
+      started_at: new Date().toISOString(),
+    }).eq('id', roomId);
   };
 
   const pauseBeefTimer = () => {
@@ -262,10 +271,20 @@ export function TikTokStyleArena({
     toast('Chronomètre repris', 'info');
   };
 
-  const stopBeefTimer = () => {
+  const stopBeefTimer = async () => {
     setTimerActive(false);
     setTimerPaused(false);
     toast('Chronomètre arrêté', 'info');
+  };
+
+  const endBeef = async () => {
+    await supabase.from('beefs').update({
+      status: 'ended',
+      ended_at: new Date().toISOString(),
+    }).eq('id', roomId);
+    toast('Le beef est terminé !', 'info');
+    await leave();
+    router.replace('/feed');
   };
 
   const formatBeefTime = (seconds: number) => {
@@ -390,13 +409,13 @@ export function TikTokStyleArena({
   const [liveConnected, setLiveConnected] = useState(false);
   const seenMsgKeys = useRef(new Set<string>());
 
-  const addRemoteMessage = useCallback((msgUserName: string, content: string, initial?: string) => {
+  const addRemoteMessage = useCallback((msgUserName: string, content: string, initial?: string, dbId?: string) => {
     const key = `${msgUserName}::${content}`;
     if (seenMsgKeys.current.has(key)) return;
     seenMsgKeys.current.add(key);
     // Remove key after 5s so the same message text can be sent again later
     setTimeout(() => seenMsgKeys.current.delete(key), 5000);
-    const msgId = `m_${Date.now()}_${Math.random()}`;
+    const msgId = dbId || `m_${Date.now()}_${Math.random()}`;
     const newMsg: VisibleMessage = {
       id: msgId,
       user_name: msgUserName,
@@ -426,7 +445,7 @@ export function TikTokStyleArena({
       })
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
         console.log('[Live] Received broadcast message from:', payload.user_name);
-        addRemoteMessage(payload.user_name, payload.content, payload.initial);
+        addRemoteMessage(payload.user_name, payload.content, payload.initial, payload.id);
       })
       .on('broadcast', { event: 'vote' }, ({ payload }: any) => {
         if (payload.prev === 'A') setVotesA(v => Math.max(0, v - 1));
@@ -471,7 +490,7 @@ export function TikTokStyleArena({
           lastTs = data[data.length - 1].created_at;
           data.forEach(msg => {
             if (msg.user_id === userId) return;
-            addRemoteMessage(msg.display_name || msg.username, msg.content);
+            addRemoteMessage(msg.display_name || msg.username, msg.content, undefined, msg.id);
           });
         }
       } catch {}
@@ -662,42 +681,74 @@ export function TikTokStyleArena({
     if (!cleanContent) return;
 
     const senderInitial = userName?.[0]?.toUpperCase() || '?';
+    const localKey = `${userName}::${cleanContent}`;
+    seenMsgKeys.current.add(localKey);
+    setTimeout(() => seenMsgKeys.current.delete(localKey), 5000);
+    setChatInput('');
 
-    // Show locally immediately
+    const { data: inserted, error } = await supabase
+      .from('beef_messages')
+      .insert({
+        beef_id: roomId,
+        user_id: userId,
+        username: userName,
+        display_name: userName,
+        content: cleanContent,
+        is_pinned: false,
+      })
+      .select('id')
+      .single();
+
+    if (error || !inserted?.id) {
+      seenMsgKeys.current.delete(localKey);
+      console.error('[Live] Message insert failed:', error?.message, error);
+      toast('Impossible d\'envoyer le message', 'error');
+      setChatInput(cleanContent);
+      return;
+    }
+
     const localMsg: VisibleMessage = {
-      id: Date.now().toString(),
+      id: inserted.id,
       user_name: userName,
       content: cleanContent,
       timestamp: Date.now(),
       initial: senderInitial,
     };
-    const localKey = `${userName}::${cleanContent}`;
-    seenMsgKeys.current.add(localKey);
-    setTimeout(() => seenMsgKeys.current.delete(localKey), 5000);
     setVisibleMessages(prev => [...prev, localMsg].slice(-80));
-    setChatInput('');
 
-    // Broadcast to other users (instant delivery if connected)
     if (channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
         event: 'message',
-        payload: { user_name: userName, content: cleanContent, initial: senderInitial },
+        payload: { user_name: userName, content: cleanContent, initial: senderInitial, id: inserted.id },
       }).catch(() => console.warn('[Live] Message broadcast failed'));
     }
     console.log('[Live] Sending message as:', userName, '| userId:', userId?.slice(0, 8));
-
-    // Persist to DB — this is what the polling fallback reads
-    const { error } = await supabase.from('beef_messages').insert({
-      beef_id: roomId,
-      user_id: userId,
-      username: userName,
-      display_name: userName,
-      content: cleanContent,
-      is_pinned: false,
-    });
-    if (error) console.error('[Live] Message insert failed:', error.message, error);
   };
+
+  const isUuid = (s: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
+
+  const handleDeleteMessage = async (messageId: string) => {
+    setContextMenuMsg(null);
+    if (!isUuid(messageId)) return;
+    const { error } = await supabase.from('beef_messages').update({ is_deleted: true }).eq('id', messageId);
+    if (error) {
+      toast('Suppression impossible', 'error');
+      return;
+    }
+    setVisibleMessages((prev) => prev.filter((m) => m.id !== messageId));
+  };
+
+  useEffect(() => {
+    if (!contextMenuMsg) return;
+    const close = () => setContextMenuMsg(null);
+    const t = setTimeout(() => document.addEventListener('click', close), 0);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('click', close);
+    };
+  }, [contextMenuMsg]);
 
 
   // Join: mark as "ready to join" — the useEffect above triggers join() when dailyRoomUrl is ready
@@ -718,7 +769,7 @@ export function TikTokStyleArena({
   if (!hasJoined) {
     return (
       <div className="w-full h-full relative">
-        <PreJoinScreen userName={userName} onJoin={handleJoin} />
+        <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer} />
         {/* Waiting for Daily.co room to be ready */}
         {!dailyRoomUrl && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm text-brand-400 text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2">
@@ -828,8 +879,8 @@ export function TikTokStyleArena({
                     <span className="text-white text-[9px] font-black">{votesA}</span>
                   </div>
                 </motion.div>
-                {/* Mic/Cam controls when this panel shows local video */}
-                {leftPanelIsLocal && (
+                {/* Mic/Cam controls when this panel shows local video (challengers only) */}
+                {leftPanelIsLocal && !isViewer && (
                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
                     <button
                       onClick={toggleMic}
@@ -1285,13 +1336,16 @@ export function TikTokStyleArena({
               <div className={`w-1.5 h-1.5 rounded-full mr-1 ${liveConnected ? 'bg-white animate-pulse' : 'bg-yellow-300'}`} />
               <span className="text-white text-[10px] font-black tracking-wider">LIVE</span>
             </div>
-            {/* Viewer count */}
-            <div className="flex items-center bg-black/40 backdrop-blur-md rounded-full px-2.5 py-1 gap-1">
+            {/* Viewer count — clickable to show viewer list */}
+            <button
+              onClick={() => setShowViewerList(true)}
+              className="flex items-center bg-black/40 backdrop-blur-md rounded-full px-2.5 py-1 gap-1 hover:bg-black/60 transition-colors"
+            >
               <svg className="w-3.5 h-3.5 text-white/80" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
               </svg>
-              <span className="text-white text-[11px] font-bold">{viewerCount || 0}</span>
-            </div>
+              <span className="text-white text-[11px] font-bold">{liveViewerCount || 0}</span>
+            </button>
             {/* Menu / Close */}
             <button
               onClick={() => setShowMenu(!showMenu)}
@@ -1346,25 +1400,73 @@ export function TikTokStyleArena({
         {/* Comments area — left-aligned, scrollable */}
         <div className="relative px-3 pb-1.5 pr-16" style={{ maxHeight: '40vh' }}>
           <div className="flex flex-col gap-1.5 justify-end overflow-y-auto hide-scrollbar" style={{ maxHeight: '35vh' }}>
-            {visibleMessages.map((message) => (
-              <motion.div
-                key={message.id}
-                initial={{ opacity: 0, y: 10, x: -10 }}
-                animate={{ opacity: 1, y: 0, x: 0 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                className="flex items-start gap-2 max-w-[90%]"
-              >
-                {/* Avatar circle */}
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-brand-500 flex items-center justify-center flex-shrink-0 ring-1 ring-white/20">
-                  <span className="text-white font-bold text-[10px]">{message.initial}</span>
-                </div>
-                {/* Message bubble */}
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl rounded-tl-md px-3 py-1.5 min-w-0">
-                  <span className="text-brand-400 text-[11px] font-bold block leading-tight">{message.user_name}</span>
-                  <span className="text-white text-[13px] leading-snug break-words">{message.content}</span>
-                </div>
-              </motion.div>
-            ))}
+            {visibleMessages.map((message) => {
+              const canDelete =
+                isUuid(message.id) && (message.user_name === userName || isHost);
+              const clearLongPress = () => {
+                if (longPressTimerRef.current) {
+                  clearTimeout(longPressTimerRef.current);
+                  longPressTimerRef.current = null;
+                }
+              };
+              return (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 10, x: -10 }}
+                  animate={{ opacity: 1, y: 0, x: 0 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  className="flex items-start gap-2 max-w-[90%] relative"
+                >
+                  {/* Avatar circle */}
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-brand-500 flex items-center justify-center flex-shrink-0 ring-1 ring-white/20">
+                    <span className="text-white font-bold text-[10px]">{message.initial}</span>
+                  </div>
+                  {/* Message bubble */}
+                  <div
+                    className={`bg-white/10 backdrop-blur-sm rounded-2xl rounded-tl-md px-3 py-1.5 min-w-0 ${canDelete ? 'cursor-context-menu touch-manipulation' : ''}`}
+                    onContextMenu={
+                      canDelete
+                        ? (e) => {
+                            e.preventDefault();
+                            setContextMenuMsg(message.id);
+                          }
+                        : undefined
+                    }
+                    onTouchStart={
+                      canDelete
+                        ? () => {
+                            clearLongPress();
+                            longPressTimerRef.current = setTimeout(() => {
+                              longPressTimerRef.current = null;
+                              setContextMenuMsg(message.id);
+                            }, 550);
+                          }
+                        : undefined
+                    }
+                    onTouchEnd={canDelete ? clearLongPress : undefined}
+                    onTouchMove={canDelete ? clearLongPress : undefined}
+                  >
+                    <span className="text-brand-400 text-[11px] font-bold block leading-tight">{message.user_name}</span>
+                    <span className="text-white text-[13px] leading-snug break-words">{message.content}</span>
+                    {contextMenuMsg === message.id && (
+                      <div
+                        className="absolute left-0 bottom-full mb-1 z-50 min-w-[8rem] rounded-lg border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-white/10"
+                          onClick={() => handleDeleteMessage(message.id)}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
 
@@ -1442,7 +1544,7 @@ export function TikTokStyleArena({
           <div className="relative flex-shrink-0">
             <motion.button
               whileTap={{ scale: 0.85 }}
-              onClick={onGift}
+              onClick={() => setShowGiftPicker(!showGiftPicker)}
               className="w-9 h-9 rounded-full bg-gradient-to-br from-yellow-400/80 to-brand-500/80 flex items-center justify-center touch-manipulation"
             >
               <Gift className="w-[18px] h-[18px] text-white" />
@@ -1454,6 +1556,48 @@ export function TikTokStyleArena({
               position="top"
               align="end"
             />
+            {/* Gift picker dropdown */}
+            <AnimatePresence>
+              {showGiftPicker && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                  className="absolute bottom-full mb-2 right-0 bg-black/95 backdrop-blur-xl border border-white/15 rounded-2xl p-3 shadow-2xl z-50"
+                  style={{ width: 220 }}
+                >
+                  <p className="text-white/70 text-[11px] font-semibold mb-2">Envoyer au médiateur</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      { emoji: '🌹', label: 'Rose', cost: 10 },
+                      { emoji: '🔥', label: 'Fire', cost: 25 },
+                      { emoji: '👑', label: 'Couronne', cost: 100 },
+                      { emoji: '💎', label: 'Diamant', cost: 50 },
+                    ].map((gift) => (
+                      <button
+                        key={gift.label}
+                        onClick={async () => {
+                          await supabase.from('gifts').insert({
+                            beef_id: roomId,
+                            sender_id: userId,
+                            recipient_id: host.id,
+                            gift_type_id: gift.label.toLowerCase(),
+                            points_amount: gift.cost,
+                          });
+                          toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
+                          setShowGiftPicker(false);
+                        }}
+                        className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/5 hover:bg-white/15 transition-colors"
+                      >
+                        <span className="text-2xl">{gift.emoji}</span>
+                        <span className="text-white text-[10px] font-bold">{gift.label}</span>
+                        <span className="text-brand-400 text-[9px] font-semibold">{gift.cost} pts</span>
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Share + viewer count */}
@@ -1463,7 +1607,7 @@ export function TikTokStyleArena({
             className="flex items-center gap-0.5 px-2 h-9 rounded-full bg-white/10 backdrop-blur-sm flex-shrink-0 touch-manipulation"
           >
             <Share2 className="w-3.5 h-3.5 text-white" />
-            <span className="text-white text-[10px] font-bold">{viewerCount || 0}</span>
+            <span className="text-white text-[10px] font-bold">{liveViewerCount || 0}</span>
           </motion.button>
         </div>
       </div>
@@ -1686,6 +1830,12 @@ export function TikTokStyleArena({
                   >
                     🔊 Tout activer
                   </button>
+                  <button
+                    onClick={endBeef}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-sm mt-2"
+                  >
+                    🛑 Terminer le beef
+                  </button>
                 </div>
               </div>
             </div>
@@ -1776,6 +1926,15 @@ export function TikTokStyleArena({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Viewer List Modal */}
+      {showViewerList && (
+        <ViewerListModal
+          viewers={remoteParticipants.map(p => ({ userName: p.userName }))}
+          viewerCount={liveViewerCount}
+          onClose={() => setShowViewerList(false)}
+        />
+      )}
 
       <style jsx global>{`
         .hide-scrollbar::-webkit-scrollbar {

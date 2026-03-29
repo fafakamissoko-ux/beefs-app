@@ -43,12 +43,12 @@ function toCallParticipant(p: DailyParticipant): CallParticipant {
   };
 }
 
-export function useDailyCall(roomUrl: string | null, userName: string): UseDailyCallReturn {
+export function useDailyCall(roomUrl: string | null, userName: string, viewerMode = false): UseDailyCallReturn {
   const callRef = useRef<DailyCall | null>(null);
   const [isJoined, setIsJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
-  const [micEnabled, setMicEnabled] = useState(true);
-  const [camEnabled, setCamEnabled] = useState(true);
+  const [micEnabled, setMicEnabled] = useState(!viewerMode);
+  const [camEnabled, setCamEnabled] = useState(!viewerMode);
   const [localParticipant, setLocalParticipant] = useState<CallParticipant | null>(null);
   const [remoteParticipants, setRemoteParticipants] = useState<CallParticipant[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -77,8 +77,8 @@ export function useDailyCall(roomUrl: string | null, userName: string): UseDaily
       }
 
       const co = DailyIframe.createCallObject({
-        audioSource: true,
-        videoSource: true,
+        audioSource: !viewerMode,
+        videoSource: !viewerMode,
       });
       callRef.current = co;
 
@@ -111,8 +111,13 @@ export function useDailyCall(roomUrl: string | null, userName: string): UseDaily
         setError(`Caméra inaccessible: ${e?.errorMsg || 'vérifiez les permissions'}`);
       });
 
-      console.log('🔌 Daily.co joining room:', roomUrl);
-      await co.join({ url: roomUrl, userName });
+      console.log('🔌 Daily.co joining room:', roomUrl, viewerMode ? '(viewer)' : '');
+      await co.join({
+        url: roomUrl,
+        userName,
+        startVideoOff: viewerMode,
+        startAudioOff: viewerMode,
+      });
     } catch (err: any) {
       setError(err.message || 'Impossible de rejoindre');
       setIsJoining(false);
@@ -172,18 +177,18 @@ export function useDailyCall(roomUrl: string | null, userName: string): UseDaily
   }, []);
 
   const toggleMic = useCallback(() => {
-    if (!callRef.current) return;
+    if (!callRef.current || viewerMode) return;
     const next = !micEnabled;
     callRef.current.setLocalAudio(next);
     setMicEnabled(next);
-  }, [micEnabled]);
+  }, [micEnabled, viewerMode]);
 
   const toggleCam = useCallback(() => {
-    if (!callRef.current) return;
+    if (!callRef.current || viewerMode) return;
     const next = !camEnabled;
     callRef.current.setLocalVideo(next);
     setCamEnabled(next);
-  }, [camEnabled]);
+  }, [camEnabled, viewerMode]);
 
   // Cleanup on unmount — same order: media elements first, then Daily.co
   useEffect(() => {

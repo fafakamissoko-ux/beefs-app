@@ -1,48 +1,63 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell,
-  Swords,
-  UserPlus,
-  Radio,
-  Clock,
-  CheckCheck,
   BellOff,
+  Clock,
+  Flame,
+  Gift,
+  Mail,
+  MessageCircle,
+  UserPlus,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface Notification {
+type NotificationType =
+  | 'follow'
+  | 'invite'
+  | 'beef_live'
+  | 'gift'
+  | 'message'
+  | 'system';
+
+export interface AppNotification {
   id: string;
-  type: 'invitation' | 'beef_live' | 'beef_ended' | 'new_follower';
+  created_at: string;
+  user_id: string;
+  type: NotificationType;
   title: string;
-  message: string;
-  timestamp: string;
-  link?: string;
-  read: boolean;
-  meta?: Record<string, string>;
+  body: string | null;
+  link: string | null;
+  is_read: boolean | null;
+  metadata: Record<string, unknown> | null;
 }
 
-function timeAgo(date: string): string {
+function shortTimeAgo(date: string): string {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
-  if (seconds < 60) return 'à l\'instant';
+  if (seconds < 60) return 'maintenant';
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `il y a ${minutes}min`;
+  if (minutes < 60) return `${minutes}min`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `il y a ${hours}h`;
+  if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
-  if (days < 7) return `il y a ${days}j`;
+  if (days < 7) return `${days}j`;
   return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
-const ICON_MAP: Record<Notification['type'], { icon: typeof Bell; color: string; bg: string }> = {
-  invitation: { icon: Swords, color: 'text-orange-400', bg: 'bg-orange-500/15' },
-  beef_live: { icon: Radio, color: 'text-red-400', bg: 'bg-red-500/15' },
-  beef_ended: { icon: CheckCheck, color: 'text-green-400', bg: 'bg-green-500/15' },
-  new_follower: { icon: UserPlus, color: 'text-cyan-400', bg: 'bg-cyan-500/15' },
+const ICON_MAP: Record<
+  NotificationType,
+  { icon: typeof Bell; color: string; bg: string }
+> = {
+  follow: { icon: UserPlus, color: 'text-cyan-400', bg: 'bg-cyan-500/15' },
+  invite: { icon: Mail, color: 'text-orange-400', bg: 'bg-orange-500/15' },
+  beef_live: { icon: Flame, color: 'text-red-400', bg: 'bg-red-500/15' },
+  gift: { icon: Gift, color: 'text-amber-400', bg: 'bg-amber-500/15' },
+  message: { icon: MessageCircle, color: 'text-sky-400', bg: 'bg-sky-500/15' },
+  system: { icon: Bell, color: 'text-violet-400', bg: 'bg-violet-500/15' },
 };
 
 function SkeletonCard() {
@@ -61,8 +76,9 @@ function SkeletonCard() {
 export default function NotificationsPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [markingAll, setMarkingAll] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -73,97 +89,17 @@ export default function NotificationsPage() {
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-
     try {
-      const results: Notification[] = [];
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-      const [invitationsRes, beefsRes, followersRes] = await Promise.all([
-        supabase
-          .from('beef_invitations')
-          .select('id, created_at, status, personal_message, beef_id, inviter_id, beefs(title), users!beef_invitations_inviter_id_fkey(username)')
-          .eq('invitee_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(20),
-        supabase
-          .from('beef_participants')
-          .select('id, beef_id, beefs(id, title, status, started_at, ended_at)')
-          .eq('user_id', user.id)
-          .eq('invite_status', 'accepted')
-          .order('created_at', { ascending: false })
-          .limit(20),
-        supabase
-          .from('followers')
-          .select('id, created_at, follower_id, users!followers_follower_id_fkey(username, avatar_url)')
-          .eq('following_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(20),
-      ]);
-
-      if (invitationsRes.data) {
-        for (const inv of invitationsRes.data) {
-          const beef = inv.beefs as any;
-          const inviter = inv.users as any;
-          results.push({
-            id: `inv-${inv.id}`,
-            type: 'invitation',
-            title: 'Invitation à un beef',
-            message: `@${inviter?.username ?? '???'} t'a invité au beef "${beef?.title ?? 'Sans titre'}"`,
-            timestamp: inv.created_at,
-            link: `/beef/${inv.beef_id}`,
-            read: inv.status !== 'sent',
-            meta: { status: inv.status },
-          });
-        }
-      }
-
-      if (beefsRes.data) {
-        for (const bp of beefsRes.data) {
-          const beef = bp.beefs as any;
-          if (!beef) continue;
-          if (beef.status === 'live' && beef.started_at) {
-            results.push({
-              id: `live-${bp.id}`,
-              type: 'beef_live',
-              title: 'Beef en direct !',
-              message: `"${beef.title}" est maintenant en live`,
-              timestamp: beef.started_at,
-              link: `/beef/${beef.id}/live`,
-              read: true,
-            });
-          }
-          if (beef.status === 'ended' && beef.ended_at) {
-            results.push({
-              id: `ended-${bp.id}`,
-              type: 'beef_ended',
-              title: 'Beef terminé',
-              message: `"${beef.title}" est terminé`,
-              timestamp: beef.ended_at,
-              link: `/beef/${beef.id}`,
-              read: true,
-            });
-          }
-        }
-      }
-
-      if (followersRes.data) {
-        for (const f of followersRes.data) {
-          const follower = f.users as any;
-          results.push({
-            id: `fol-${f.id}`,
-            type: 'new_follower',
-            title: 'Nouveau follower',
-            message: `@${follower?.username ?? '???'} a commencé à te suivre`,
-            timestamp: f.created_at,
-            link: `/profile/${follower?.username}`,
-            read: true,
-          });
-        }
-      }
-
-      results.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setNotifications(results);
+      if (error) throw error;
+      setNotifications((data ?? []) as AppNotification[]);
     } catch {
-      // silently fail — empty state will show
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -172,6 +108,79 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (user) fetchNotifications();
   }, [user, fetchNotifications]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`notifications:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as AppNotification;
+          setNotifications((prev) => {
+            if (prev.some((n) => n.id === row.id)) return prev;
+            return [row, ...prev];
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as AppNotification;
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === row.id ? row : n))
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  const markAllRead = async () => {
+    if (!user || markingAll) return;
+    setMarkingAll(true);
+    try {
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, is_read: true }))
+      );
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  const handleRowClick = async (n: AppNotification) => {
+    if (!n.is_read) {
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', n.id);
+      setNotifications((prev) =>
+        prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))
+      );
+    }
+    if (n.link) router.push(n.link);
+  };
 
   if (authLoading) {
     return (
@@ -186,25 +195,37 @@ export default function NotificationsPage() {
 
   if (!user) return null;
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
     <div className="min-h-screen bg-black">
       <div className="max-w-2xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-black text-white">Notifications</h1>
-            {unreadCount > 0 && (
-              <span className="brand-gradient text-white text-xs font-bold px-2.5 py-1 rounded-full">
-                {unreadCount}
-              </span>
-            )}
+        <div className="flex flex-col gap-4 mb-8">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <h1 className="text-3xl font-black text-white truncate">
+                Notifications
+              </h1>
+              {unreadCount > 0 && (
+                <span className="brand-gradient text-white text-xs font-bold px-2.5 py-1 rounded-full shrink-0">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+            <Bell className="w-6 h-6 text-gray-500 shrink-0" />
           </div>
-          <Bell className="w-6 h-6 text-gray-500" />
+          {notifications.length > 0 && unreadCount > 0 && (
+            <button
+              type="button"
+              onClick={markAllRead}
+              disabled={markingAll}
+              className="self-start text-sm font-semibold text-brand-400 hover:text-brand-300 disabled:opacity-50 transition-colors"
+            >
+              {markingAll ? 'Mise à jour…' : 'Tout marquer comme lu'}
+            </button>
+          )}
         </div>
 
-        {/* Content */}
         {loading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -220,9 +241,12 @@ export default function NotificationsPage() {
             <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
               <BellOff className="w-8 h-8 text-gray-600" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Aucune notification</h2>
+            <h2 className="text-xl font-bold text-white mb-2">
+              Aucune notification
+            </h2>
             <p className="text-gray-500 text-sm">
-              Tu recevras des notifications quand quelqu&apos;un t&apos;invite à un beef, te suit, ou quand un beef commence.
+              Quand tu recevras des suivis, invitations, messages ou alertes,
+              elles apparaîtront ici.
             </p>
           </motion.div>
         ) : (
@@ -230,27 +254,41 @@ export default function NotificationsPage() {
             <AnimatePresence initial={false}>
               {notifications.map((n, i) => {
                 const { icon: Icon, color, bg } = ICON_MAP[n.type];
+                const unread = !n.is_read;
                 return (
                   <motion.button
                     key={n.id}
+                    type="button"
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.03 }}
-                    onClick={() => n.link && router.push(n.link)}
-                    className={`card rounded-xl p-4 flex items-start gap-4 w-full text-left transition-colors hover:bg-white/[0.04] ${
-                      !n.read ? 'border-l-2 border-l-brand-500' : ''
+                    onClick={() => handleRowClick(n)}
+                    className={`card rounded-xl p-4 flex items-start gap-4 w-full text-left transition-colors hover:bg-white/[0.04] relative ${
+                      unread ? 'border-l-2 border-l-brand-500' : ''
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-full ${bg} flex items-center justify-center shrink-0`}>
+                    {unread && (
+                      <span
+                        className="absolute top-4 right-4 w-2 h-2 rounded-full bg-blue-500 shrink-0"
+                        aria-hidden
+                      />
+                    )}
+                    <div
+                      className={`w-10 h-10 rounded-full ${bg} flex items-center justify-center shrink-0`}
+                    >
                       <Icon className={`w-5 h-5 ${color}`} />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 pr-6">
                       <p className="text-sm font-bold text-white">{n.title}</p>
-                      <p className="text-sm text-gray-400 truncate">{n.message}</p>
+                      {n.body ? (
+                        <p className="text-sm text-gray-400 line-clamp-2">
+                          {n.body}
+                        </p>
+                      ) : null}
                     </div>
                     <span className="text-xs text-gray-600 shrink-0 flex items-center gap-1 pt-0.5">
                       <Clock className="w-3 h-3" />
-                      {timeAgo(n.timestamp)}
+                      {shortTimeAgo(n.created_at)}
                     </span>
                   </motion.button>
                 );

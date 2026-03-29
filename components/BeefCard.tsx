@@ -98,10 +98,63 @@ export function BeefCard({
         {thumbnail ? (
           <img src={thumbnail} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="absolute inset-0 opacity-[0.07]" style={{ background: 'linear-gradient(135deg, #FF6B2C, #E83A14)' }} />
-            <Flame className="w-12 h-12 text-white/[0.08]" />
-          </div>
+          (() => {
+            const tagT = tags.reduce(
+              (acc, tag) => acc + tag.split('').reduce((a, c) => a + c.charCodeAt(0), 0),
+              0
+            );
+            const shift = tagT % 16;
+            const initials = (title.trim().slice(0, 2) || '••').toUpperCase();
+            return (
+              <div className="w-full h-full relative flex items-center justify-center overflow-hidden">
+                {status === 'live' ? (
+                  <>
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background: `linear-gradient(135deg, #ff5c33 0%, #e83a14 ${42 + shift}%, #b91c1c 100%)`,
+                      }}
+                    />
+                    <motion.div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background:
+                          'radial-gradient(ellipse 85% 65% at 45% 25%, rgba(255, 210, 120, 0.5), transparent 55%)',
+                      }}
+                      animate={{ opacity: [0.35, 0.9, 0.35], scale: [1, 1.07, 1] }}
+                      transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                  </>
+                ) : (
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        status === 'scheduled'
+                          ? `linear-gradient(135deg, #0369a1 0%, #06b6d4 ${40 + shift}%, #0891b2 100%)`
+                          : status === 'replay'
+                            ? `linear-gradient(135deg, #7c3aed 0%, #a855f7 ${40 + shift}%, #5b21b6 100%)`
+                            : `linear-gradient(135deg, #57534e 0%, #71717a ${40 + shift}%, #3f3f46 100%)`,
+                    }}
+                  />
+                )}
+                <div
+                  className="absolute inset-0 pointer-events-none opacity-[0.22]"
+                  style={{
+                    backgroundImage:
+                      'repeating-linear-gradient(0deg, transparent, transparent 9px, rgba(255,255,255,0.045) 9px, rgba(255,255,255,0.045) 10px), repeating-linear-gradient(90deg, transparent, transparent 11px, rgba(0,0,0,0.07) 11px, rgba(0,0,0,0.07) 12px)',
+                  }}
+                />
+                <span className="relative z-[1] text-4xl font-bold tracking-tight text-white/95 drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] select-none">
+                  {initials}
+                </span>
+                <Flame
+                  className="absolute bottom-11 right-3 w-5 h-5 text-white/28 pointer-events-none z-[1]"
+                  aria-hidden
+                />
+              </div>
+            );
+          })()
         )}
 
         {/* Gradient overlay */}

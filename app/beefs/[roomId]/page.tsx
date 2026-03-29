@@ -317,7 +317,6 @@ export default function ArenaPage() {
           debateTitle="Débat: Technologie vs Environnement"
           onReaction={handleReaction}
           onTap={tap}
-          onGift={() => console.log('Gift clicked')}
           onShare={() => console.log('Share clicked')}
         />
       </div>

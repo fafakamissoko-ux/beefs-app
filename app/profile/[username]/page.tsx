@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Share2, UserPlus, UserMinus, Flame, Trophy, Users, Calendar, ArrowLeft } from 'lucide-react';
+import { Share2, UserPlus, UserMinus, Flame, Calendar, ArrowLeft, MoreVertical } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { BeefCard } from '@/components/BeefCard';
+import { FollowListModal } from '@/components/FollowListModal';
+import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { useToast } from '@/components/Toast';
 
 interface UserProfile {
@@ -54,6 +56,8 @@ export default function PublicProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showFollowModal, setShowFollowModal] = useState<null | 'followers' | 'following'>(null);
 
   // Check if it's the current user's profile
   const isOwnProfile = user && profile && user.id === profile.id;
@@ -247,6 +251,17 @@ export default function PublicProfilePage() {
                   <span className="hidden sm:inline">Partager</span>
                 </button>
 
+                {!isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={() => setShowReportModal(true)}
+                    className="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white font-semibold transition-colors flex items-center justify-center"
+                    aria-label="Signaler ou bloquer"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                )}
+
                 {!isOwnProfile && user && (
                   <button
                     onClick={handleFollow}
@@ -299,14 +314,16 @@ export default function PublicProfilePage() {
                 <span className="text-gray-400 text-sm ml-1">Beefs</span>
               </div>
               <button
-                onClick={() => {/* TODO: Show followers modal */}}
+                type="button"
+                onClick={() => setShowFollowModal('followers')}
                 className="hover:opacity-80 transition-opacity"
               >
                 <span className="text-2xl font-black text-white">{stats.followers}</span>
                 <span className="text-gray-400 text-sm ml-1">Abonnés</span>
               </button>
               <button
-                onClick={() => {/* TODO: Show following modal */}}
+                type="button"
+                onClick={() => setShowFollowModal('following')}
                 className="hover:opacity-80 transition-opacity"
               >
                 <span className="text-2xl font-black text-white">{stats.following}</span>
@@ -367,6 +384,22 @@ export default function PublicProfilePage() {
           )}
         </div>
       </div>
+
+      {showReportModal && profile && !isOwnProfile && (
+        <ReportBlockModal
+          userId={profile.id}
+          userName={profile.username}
+          onClose={() => setShowReportModal(false)}
+        />
+      )}
+
+      {showFollowModal && (
+        <FollowListModal
+          userId={profile.id}
+          type={showFollowModal}
+          onClose={() => setShowFollowModal(null)}
+        />
+      )}
     </div>
   );
 }

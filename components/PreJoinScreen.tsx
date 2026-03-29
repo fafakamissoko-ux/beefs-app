@@ -6,9 +6,10 @@ import { Mic, MicOff, Video, VideoOff, ChevronDown } from 'lucide-react';
 interface PreJoinScreenProps {
   userName: string;
   onJoin: () => void;
+  viewerMode?: boolean;
 }
 
-export function PreJoinScreen({ userName, onJoin }: PreJoinScreenProps) {
+export function PreJoinScreen({ userName, onJoin, viewerMode = false }: PreJoinScreenProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [camEnabled, setCamEnabled] = useState(true);
@@ -72,13 +73,14 @@ export function PreJoinScreen({ userName, onJoin }: PreJoinScreenProps) {
   const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    startPreview();
+    if (!viewerMode) {
+      startPreview();
+    }
     return () => {
-      // Use ref to always have the latest stream reference on cleanup
       streamRef.current?.getTracks().forEach(t => t.stop());
       cancelAnimationFrame(animFrameRef.current);
     };
-  }, []);
+  }, [viewerMode]);
 
   const toggleCam = () => {
     if (stream) {
@@ -108,6 +110,28 @@ export function PreJoinScreen({ userName, onJoin }: PreJoinScreenProps) {
     cancelAnimationFrame(animFrameRef.current);
     onJoin();
   };
+
+  if (viewerMode) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-950 p-4">
+        <div className="w-full max-w-md space-y-6 text-center">
+          <div className="w-24 h-24 bg-gradient-to-br from-brand-500/30 to-brand-600/20 rounded-full flex items-center justify-center mx-auto">
+            <span className="text-5xl font-black text-white">{userName?.[0]?.toUpperCase() || '?'}</span>
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-white">Rejoindre en tant que spectateur</h2>
+            <p className="text-gray-400 text-sm mt-2">Tu pourras regarder le beef, commenter, voter et envoyer des reactions</p>
+          </div>
+          <button
+            onClick={onJoin}
+            className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-black text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/30 active:scale-95"
+          >
+            👁️ Regarder le Beef
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full flex items-center justify-center bg-gray-950 p-4">

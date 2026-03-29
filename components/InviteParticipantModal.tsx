@@ -1,19 +1,27 @@
-import { useState } from 'react';
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, UserPlus, Check } from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface User {
+interface SearchUser {
   id: string;
-  name: string;
-  avatar?: string;
-  isOnline?: boolean;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
 }
 
 interface InviteParticipantModalProps {
   isOpen: boolean;
   onClose: () => void;
   onInvite: (userId: string) => void;
-  currentParticipants: string[]; // IDs of people already on the ring
+  currentParticipants: string[];
+}
+
+function escapeIlikePattern(q: string): string {
+  return q.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
 
 export function InviteParticipantModal({
@@ -22,32 +30,68 @@ export function InviteParticipantModal({
   onInvite,
   currentParticipants,
 }: InviteParticipantModalProps) {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [invitedUsers, setInvitedUsers] = useState<string[]>([]);
+  const [results, setResults] = useState<SearchUser[]>([]);
+  const [searching, setSearching] = useState(false);
 
-  // Mock users - Replace with real data from database/witnesses
-  const availableUsers: User[] = [
-    { id: 'user1', name: 'Marc', avatar: '👤', isOnline: true },
-    { id: 'user2', name: 'Sophie', avatar: '👩', isOnline: true },
-    { id: 'user3', name: 'Thomas', avatar: '👨', isOnline: false },
-    { id: 'user4', name: 'Julie', avatar: '👩‍💼', isOnline: true },
-    { id: 'user5', name: 'Alex', avatar: '🧑', isOnline: true },
-  ].filter(user => !currentParticipants.includes(user.id));
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    return () => window.clearTimeout(t);
+  }, [searchQuery]);
 
-  const filteredUsers = availableUsers.filter(user =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const runSearch = useCallback(async () => {
+    const q = debouncedQuery.trim();
+    if (!q) {
+      setResults([]);
+      setSearching(false);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const pattern = `%${escapeIlikePattern(q)}%`;
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, username, display_name, avatar_url')
+        .or(
+          `username.ilike.${pattern},display_name.ilike.${pattern}`
+        )
+        .limit(25);
+
+      if (error) throw error;
+
+      const rows = (data ?? []) as SearchUser[];
+      const filtered = rows.filter(
+        (u) =>
+          !currentParticipants.includes(u.id) && u.id !== user?.id
+      );
+      setResults(filtered);
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }, [debouncedQuery, currentParticipants, user?.id]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    runSearch();
+  }, [isOpen, runSearch]);
 
   const handleInvite = (userId: string) => {
     if (!invitedUsers.includes(userId)) {
       setInvitedUsers([...invitedUsers, userId]);
       onInvite(userId);
-      
-      // Auto-close after short delay
+
       setTimeout(() => {
         onClose();
         setInvitedUsers([]);
         setSearchQuery('');
+        setDebouncedQuery('');
+        setResults([]);
       }, 1000);
     }
   };
@@ -70,13 +114,13 @@ export function InviteParticipantModal({
           onClick={(e) => e.stopPropagation()}
           className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 max-w-md w-full border-2 border-orange-500/50 shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
         >
-          {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-black text-white flex items-center gap-2">
               <UserPlus className="w-6 h-6 text-orange-500" />
               Inviter sur le ring
             </h2>
             <button
+              type="button"
               onClick={onClose}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             >
@@ -84,12 +128,11 @@ export function InviteParticipantModal({
             </button>
           </div>
 
-          {/* Info */}
           <p className="text-gray-400 text-sm mb-4">
-            Invite un témoin ou une personne impliquée à monter sur le ring pour s'exprimer.
+            Invite un témoin ou une personne impliquée à monter sur le ring pour
+            s&apos;exprimer.
           </p>
 
-          {/* Search */}
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -101,20 +144,31 @@ export function InviteParticipantModal({
             />
           </div>
 
-          {/* User List */}
-          <div className="flex-1 overflow-y-auto space-y-2 mb-4">
-            {filteredUsers.length === 0 ? (
+          <div className="flex-1 overflow-y-auto space-y-2 mb-4 min-h-[120px]">
+            {!debouncedQuery.trim() ? (
               <div className="text-center py-8">
-                <p className="text-gray-500">Aucun utilisateur disponible</p>
+                <p className="text-gray-500">
+                  Tape un nom ou un @pseudo pour rechercher
+                </p>
+              </div>
+            ) : searching ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Recherche…</p>
+              </div>
+            ) : results.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Aucun utilisateur trouvé</p>
               </div>
             ) : (
-              filteredUsers.map((user) => {
-                const isInvited = invitedUsers.includes(user.id);
-                
+              results.map((u) => {
+                const isInvited = invitedUsers.includes(u.id);
+                const label = u.display_name?.trim() || u.username;
+
                 return (
                   <motion.button
-                    key={user.id}
-                    onClick={() => handleInvite(user.id)}
+                    key={u.id}
+                    type="button"
+                    onClick={() => handleInvite(u.id)}
                     disabled={isInvited}
                     whileHover={!isInvited ? { scale: 1.02 } : {}}
                     whileTap={!isInvited ? { scale: 0.98 } : {}}
@@ -124,34 +178,38 @@ export function InviteParticipantModal({
                         : 'bg-black/40 border-gray-700 hover:border-orange-500'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      {/* Avatar */}
-                      <div className="relative">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-2xl">
-                          {user.avatar}
-                        </div>
-                        {user.isOnline && (
-                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-900" />
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative shrink-0">
+                        {u.avatar_url ? (
+                          <img
+                            src={u.avatar_url}
+                            alt=""
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg font-bold text-white">
+                            {label.slice(0, 1).toUpperCase()}
+                          </div>
                         )}
                       </div>
 
-                      {/* Info */}
-                      <div className="text-left">
-                        <p className="text-white font-bold">{user.name}</p>
-                        <p className="text-gray-400 text-sm">
-                          {user.isOnline ? '🟢 En ligne' : '⚫ Hors ligne'}
+                      <div className="text-left min-w-0">
+                        <p className="text-white font-bold truncate">
+                          {label}
+                        </p>
+                        <p className="text-gray-400 text-sm truncate">
+                          @{u.username}
                         </p>
                       </div>
                     </div>
 
-                    {/* Action */}
                     {isInvited ? (
-                      <div className="flex items-center gap-2 text-green-400 font-bold text-sm">
+                      <div className="flex items-center gap-2 text-green-400 font-bold text-sm shrink-0">
                         <Check className="w-5 h-5" />
                         Invité
                       </div>
                     ) : (
-                      <UserPlus className="w-5 h-5 text-orange-500" />
+                      <UserPlus className="w-5 h-5 text-orange-500 shrink-0" />
                     )}
                   </motion.button>
                 );
@@ -159,10 +217,10 @@ export function InviteParticipantModal({
             )}
           </div>
 
-          {/* Footer Info */}
           <div className="p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
             <p className="text-orange-400 text-xs">
-              💡 <strong>Astuce:</strong> La personne invitée recevra une notification et pourra accepter ou refuser de monter sur le ring.
+              💡 <strong>Astuce:</strong> La personne invitée recevra une
+              notification et pourra accepter ou refuser de monter sur le ring.
             </p>
           </div>
         </motion.div>
