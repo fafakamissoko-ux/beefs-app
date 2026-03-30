@@ -294,13 +294,13 @@ export default function LivePage() {
         .eq('id', user.id);
       if (deductErr) throw deductErr;
 
-      const { error: creditErr } = await supabase.rpc('update_user_balance', {
+      await supabase.rpc('update_user_balance', {
         p_user_id: selectedRoom.id,
         p_amount: 0,
         p_type: 'premium_access',
         p_description: `Accès premium: ${selectedRoom.title}`,
         p_metadata: { room_id: selectedRoom.id },
-      }).then(() => null).catch(() => null);
+      });
 
       setUserPoints(prev => prev - selectedRoom.price!);
       setShowPaymentModal(false);
