@@ -324,10 +324,18 @@ export function TikTokStyleArena({
     if (beefEndedRef.current) return;
     beefEndedRef.current = true;
 
-    // Update DB
+    const resolutionMap: Record<string, string> = {
+      'Terminé par le médiateur': 'resolved',
+      'Temps écoulé': 'resolved',
+      'Tous les challengers ont quitté': 'unresolved',
+      'Médiateur déconnecté': 'abandoned',
+    };
+    const resolution = resolutionMap[reason] || 'resolved';
+
     await supabase.from('beefs').update({
       status: 'ended',
       ended_at: new Date().toISOString(),
+      resolution_status: resolution,
     }).eq('id', roomId);
 
     // Calculate duration from ref

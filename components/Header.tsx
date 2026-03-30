@@ -230,10 +230,9 @@ export function Header() {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: -4, scale: 0.97 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute right-0 mt-2 w-60 rounded-2xl shadow-modal overflow-hidden"
-                          style={{ background: '#18181C', border: '1px solid rgba(255,255,255,0.08)' }}
+                          className="absolute right-0 mt-2 w-60 rounded-2xl shadow-modal overflow-hidden dropdown-menu"
                         >
-                          <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div className="px-4 py-3 dropdown-divider-bottom">
                             <p className="text-sm font-semibold text-white">{user.user_metadata?.username || 'Utilisateur'}</p>
                             <p className="text-xs text-gray-500 truncate">{user.email}</p>
                           </div>
@@ -256,7 +255,7 @@ export function Header() {
                               </Link>
                             ))}
                           </div>
-                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }} className="py-1">
+                          <div className="py-1 dropdown-divider-top">
                             <button
                               onClick={async () => { await signOut(); setUserMenuOpen(false); }}
                               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/[0.08] transition-colors"
@@ -305,8 +304,7 @@ export function Header() {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="md:hidden border-t border-white/[0.06]"
-              style={{ background: '#0A0A0C' }}
+              className="md:hidden border-t border-white/[0.06] dropdown-menu"
             >
               {/* Backdrop */}
               <motion.div
