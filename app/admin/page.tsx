@@ -222,10 +222,10 @@ export default function AdminDashboardPage() {
             </h2>
 
             {[
-              { href: '/admin/beefs', icon: Flame, color: 'orange', label: 'Gérer les beefs', desc: 'Modérer, mettre en avant, supprimer' },
-              { href: '/admin/users', icon: Users, color: 'blue', label: 'Utilisateurs', desc: 'Comptes, rôles, bannissements' },
-              { href: '/admin/reports', icon: Shield, color: 'red', label: 'Signalements', desc: 'Examiner les reports' },
-              { href: '/admin/retraits', icon: Coins, color: 'green', label: 'Retraits', desc: 'Paiements en attente' },
+              { href: '/admin/beefs', icon: Flame, bg: 'bg-orange-500/10', text: 'text-orange-400', label: 'Gérer les beefs', desc: 'Modérer, mettre en avant, supprimer' },
+              { href: '/admin/users', icon: Users, bg: 'bg-blue-500/10', text: 'text-blue-400', label: 'Utilisateurs', desc: 'Comptes, rôles, bannissements' },
+              { href: '/admin/reports', icon: Shield, bg: 'bg-red-500/10', text: 'text-red-400', label: 'Signalements', desc: 'Examiner les reports' },
+              { href: '/admin/retraits', icon: Coins, bg: 'bg-green-500/10', text: 'text-green-400', label: 'Retraits', desc: 'Paiements en attente' },
             ].map(item => (
               <button
                 key={item.href}
@@ -233,8 +233,8 @@ export default function AdminDashboardPage() {
                 className="card-interactive w-full p-5 flex items-center justify-between"
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl bg-${item.color}-500/10 flex items-center justify-center`}>
-                    <item.icon className={`w-5 h-5 text-${item.color}-400`} />
+                  <div className={`w-10 h-10 rounded-xl ${item.bg} flex items-center justify-center`}>
+                    <item.icon className={`w-5 h-5 ${item.text}`} />
                   </div>
                   <div className="text-left">
                     <p className="text-white font-bold">{item.label}</p>

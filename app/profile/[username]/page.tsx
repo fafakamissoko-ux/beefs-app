@@ -77,8 +77,7 @@ export default function PublicProfilePage() {
         .single();
 
       if (profileError || !profileData) {
-        console.error('Profile not found:', profileError);
-        router.push('/feed');
+        setLoading(false);
         return;
       }
 
@@ -205,7 +204,31 @@ export default function PublicProfilePage() {
   }
 
   if (!profile) {
-    return null;
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Flame className="w-10 h-10 text-gray-600" />
+          </div>
+          <h2 className="text-2xl font-black text-white mb-2">Utilisateur introuvable</h2>
+          <p className="text-gray-500 mb-6">@{username} n'existe pas ou a été supprimé.</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => router.back()}
+              className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-colors"
+            >
+              Retour
+            </button>
+            <Link
+              href="/feed"
+              className="px-5 py-2.5 brand-gradient text-white font-semibold rounded-xl"
+            >
+              Accueil
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

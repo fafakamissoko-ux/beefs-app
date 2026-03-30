@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, Sun, Moon, Monitor, Type, Zap } from 'lucide-react';
+import { ArrowLeft, User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, Sun, Moon, Monitor, Type, Zap, MessageSquare, UserPlus, Gift } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase/client';
@@ -22,18 +22,24 @@ export default function SettingsPage() {
   });
   
   const [passwords, setPasswords] = useState({
-    current: '',
     new: '',
     confirm: '',
   });
   
   const [showPasswords, setShowPasswords] = useState({
-    current: false,
     new: false,
     confirm: false,
   });
   
   const [accentColor, setAccentColor] = useState('#E83A14');
+  const [notifPrefs, setNotifPrefs] = useState({
+    messages: true,
+    follows: true,
+    invites: true,
+    beefs_live: true,
+    gifts: true,
+    browser: true,
+  });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -44,6 +50,10 @@ export default function SettingsPage() {
       return;
     }
     loadProfile();
+    try {
+      const saved = localStorage.getItem('beefs_notif_prefs');
+      if (saved) setNotifPrefs(JSON.parse(saved));
+    } catch {}
   }, [user]);
 
   const loadProfile = async () => {
@@ -121,13 +131,19 @@ export default function SettingsPage() {
       if (error) throw error;
 
       setMessage({ type: 'success', text: 'Mot de passe modifié avec succès!' });
-      setPasswords({ current: '', new: '', confirm: '' });
+      setPasswords({ new: '', confirm: '' });
       setTimeout(() => setMessage(null), 3000);
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Erreur lors du changement de mot de passe' });
     } finally {
       setSaving(false);
     }
+  };
+
+  const toggleNotifPref = (key: keyof typeof notifPrefs) => {
+    const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
+    setNotifPrefs(updated);
+    try { localStorage.setItem('beefs_notif_prefs', JSON.stringify(updated)); } catch {}
   };
 
   const handleDeleteAccount = async () => {
@@ -500,6 +516,54 @@ export default function SettingsPage() {
                   />
                 </button>
               </div>
+            </div>
+          </motion.div>
+
+          {/* Notification Preferences */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.17 }}
+            className="card rounded-2xl p-6"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                <Bell className="w-5 h-5 text-green-400" />
+              </div>
+              <h3 className="text-white font-bold text-xl">Notifications</h3>
+            </div>
+
+            <div className="space-y-4">
+              {([
+                { key: 'messages' as const, icon: MessageSquare, color: 'text-blue-400', label: 'Messages privés', desc: 'Nouveaux messages reçus' },
+                { key: 'follows' as const, icon: UserPlus, color: 'text-purple-400', label: 'Abonnements', desc: 'Quand quelqu\'un te suit' },
+                { key: 'invites' as const, icon: Flame, color: 'text-orange-400', label: 'Invitations', desc: 'Invitations à des beefs' },
+                { key: 'beefs_live' as const, icon: Zap, color: 'text-red-400', label: 'Beefs en direct', desc: 'Quand un beef que tu suis passe en live' },
+                { key: 'gifts' as const, icon: Gift, color: 'text-yellow-400', label: 'Cadeaux', desc: 'Quand tu reçois un cadeau' },
+                { key: 'browser' as const, icon: Bell, color: 'text-cyan-400', label: 'Notifications navigateur', desc: 'Popups système même hors de l\'app' },
+              ]).map(({ key, icon: Icon, color, label, desc }) => (
+                <div key={key} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Icon className={`w-5 h-5 ${color}`} />
+                    <div>
+                      <p className="text-white font-semibold text-sm">{label}</p>
+                      <p className="text-gray-500 text-xs">{desc}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleNotifPref(key)}
+                    className={`relative w-12 h-7 rounded-full transition-all ${
+                      notifPrefs[key] ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
+                        notifPrefs[key] ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                </div>
+              ))}
             </div>
           </motion.div>
 

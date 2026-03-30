@@ -12,9 +12,18 @@ import { GlobalSearchBar } from '@/components/GlobalSearchBar';
 import { BeefNotificationToasts } from '@/components/BeefNotificationToasts';
 import { supabase } from '@/lib/supabase/client';
 
+function getNotifPrefs(): Record<string, boolean> {
+  try {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('beefs_notif_prefs') : null;
+    return saved ? JSON.parse(saved) : {};
+  } catch { return {}; }
+}
+
 function showBrowserNotification(title: string, body: string) {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (document.hasFocus()) return;
+  const prefs = getNotifPrefs();
+  if (prefs.browser === false) return;
 
   if (Notification.permission === 'granted') {
     new Notification(title, { body, icon: '/icon-192.png', badge: '/icon-192.png', tag: `beefs-${Date.now()}` });
@@ -99,10 +108,15 @@ export function Header() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
         (payload) => {
+          const n = payload.new as { type?: string; body?: string; title?: string };
+          const prefs = getNotifPrefs();
+          const typeMap: Record<string, string> = { message: 'messages', follow: 'follows', invite: 'invites', beef_live: 'beefs_live', gift: 'gifts' };
+          const prefKey = typeMap[n.type || ''];
+          if (prefKey && prefs[prefKey] === false) return;
+
           if (pathname !== '/notifications') {
             setUnreadNotifications(prev => prev + 1);
           }
-          const n = payload.new as { type?: string; body?: string; title?: string };
           if (n.type === 'message' && pathname !== '/messages') {
             setUnreadMessages(prev => prev + 1);
           }
