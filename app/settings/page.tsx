@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, Sun, Moon, Monitor, Type, Zap, MessageSquare, UserPlus, Gift } from 'lucide-react';
+import { ArrowLeft, User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, Sun, Moon, Monitor, Type, Zap, MessageSquare, UserPlus, Gift, Flame } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase/client';
