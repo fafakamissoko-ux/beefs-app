@@ -9,21 +9,21 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { packId } = body;
 
-    // Verify auth — get userId from session, not from body
     const authHeader = request.headers.get('authorization');
-    let userId = body.userId || 'temp';
-
-    if (authHeader) {
-      const supabaseAuth = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        { global: { headers: { Authorization: authHeader } } }
-      );
-      const { data: { user } } = await supabaseAuth.auth.getUser();
-      if (user) userId = user.id;
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
+    const supabaseAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+    const userId = authUser.id;
 
-    console.log('Checkout request:', { packId, userId });
 
     // Find the selected pack
     const pack = POINT_PACKS.find(p => p.id === packId);
@@ -35,43 +35,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Creating Stripe session for pack:', pack.name);
 
     // Get user email from Supabase
     let customerEmail = null;
     if (userId && userId !== 'temp') {
-      console.log('Fetching email for user:', userId);
-      
       const supabaseAdmin = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
       
-      const { data: user, error } = await supabaseAdmin
+      const { data: user } = await supabaseAdmin
         .from('users')
         .select('email')
         .eq('id', userId)
         .single();
       
-      if (error) {
-        console.error('Error fetching user email:', error);
-      } else {
-        customerEmail = user?.email;
-        console.log('Customer email found:', customerEmail);
-      }
-    } else {
-      console.log('No userId provided, skipping email fetch');
+      if (user) customerEmail = user.email;
     }
-
-    console.log('Creating Stripe session with email:', customerEmail);
 
     // 🌍 STEP 1: Detect user's country
     const country = await detectUserCountry();
-    console.log('🌍 User country detected:', country.code, country.name);
 
     // 💰 STEP 2: Calculate adapted price
     const adaptedPrice = calculatePrice(pack.price, country);
-    console.log('💰 Adapted price:', adaptedPrice.formatted, `(${adaptedPrice.currency})`);
 
     // 🧪 TEST MODE: Check if test-country parameter is present
     const url = new URL(request.url);
@@ -79,7 +65,6 @@ export async function POST(request: NextRequest) {
     const isTestMode = testCountry && COUNTRIES[testCountry.toUpperCase()];
 
     if (isTestMode) {
-      console.log('🧪 TEST MODE ACTIVE - Anti-fraud disabled for testing');
     }
 
     // 🛡️ STEP 3: Anti-fraud check (skip in test mode)
@@ -97,7 +82,6 @@ export async function POST(request: NextRequest) {
         [] // User history (can be enhanced later)
       );
 
-      console.log('🛡️ Fraud score:', fraudScore.score, '- Risk:', fraudScore.risk);
 
       // Block critical fraud attempts
       if (fraudScore.shouldBlock) {
@@ -120,9 +104,11 @@ export async function POST(request: NextRequest) {
 
     // Create Checkout Session with adapted pricing
     // Create Checkout Session with adapted pricing
+    // `link` = Stripe Link (email / one-tap). Apple Pay / Google Pay s’affichent souvent dans Checkout
+    // avec la carte quand le domaine est vérifié dans le Dashboard Stripe (Wallet).
     const session = await stripe.checkout.sessions.create({
       customer_email: customerEmail || undefined,
-      payment_method_types: ['card'],
+      payment_method_types: ['card', 'link'],
       line_items: [
         {
           price_data: {
@@ -153,13 +139,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log('Stripe session created:', session.id);
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error: any) {
-    console.error('Stripe checkout error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Erreur lors de la création de la session de paiement' },
       { status: 500 }
     );
   }

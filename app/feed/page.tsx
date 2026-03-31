@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, Flame, X, Plus, Hash, Radio } from 'lucide-react';
@@ -9,10 +9,23 @@ import { useAuth } from '@/contexts/AuthContext';
 import { BeefCard } from '@/components/BeefCard';
 import dynamic from 'next/dynamic';
 import { FeatureGuide } from '@/components/FeatureGuide';
+import { submitNewBeef } from '@/lib/submitNewBeef';
 
 const CreateBeefForm = dynamic(() => import('@/components/CreateBeefForm').then(m => m.CreateBeefForm), {
   loading: () => <div className="flex items-center justify-center p-8"><div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>,
 });
+
+/** Ouvre la modale création quand on arrive depuis le header (ex. /feed?create=1). */
+function OpenCreateModalFromQuery({ setOpen }: { setOpen: (open: boolean) => void }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  useEffect(() => {
+    if (searchParams.get('create') !== '1') return;
+    setOpen(true);
+    router.replace('/feed', { scroll: false });
+  }, [searchParams, router, setOpen]);
+  return null;
+}
 
 interface Beef {
   id: string;
@@ -205,29 +218,7 @@ export default function FeedPage() {
   const handleCreateBeef = async (beefData: any) => {
     if (!user) { router.push('/login'); return; }
     try {
-      const insertData: any = {
-        title: beefData.title,
-        subject: beefData.title,
-        description: beefData.description || '',
-        mediator_id: user.id,
-        status: 'pending',
-        is_premium: beefData.is_premium || false,
-        price: beefData.is_premium ? (beefData.price || 0) : 0,
-        tags: beefData.tags || [],
-      };
-      if (beefData.scheduled_at) insertData.scheduled_at = beefData.scheduled_at;
-
-      const { data: beef, error } = await supabase.from('beefs').insert(insertData).select().single();
-      if (error) throw new Error(error.message);
-
-      if (beefData.participants?.length > 0) {
-        await supabase.from('beef_participants').insert(beefData.participants.map((p: any) => ({
-          beef_id: beef.id, user_id: p.user_id, role: p.role || 'participant', is_main: p.is_main || false, invite_status: 'pending',
-        })));
-        await supabase.from('beef_invitations').insert(beefData.participants.map((p: any) => ({
-          beef_id: beef.id, inviter_id: user.id, invitee_id: p.user_id, status: 'sent',
-        })));
-      }
+      const beef = await submitNewBeef(supabase, user.id, beefData);
       setShowCreateModal(false);
       router.push(`/arena/${beef.id}`);
     } catch (error: any) {
@@ -245,6 +236,9 @@ export default function FeedPage() {
 
   return (
     <div className="min-h-screen bg-black">
+      <Suspense fallback={null}>
+        <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
+      </Suspense>
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Active beef banner */}
         {activeBeef && (

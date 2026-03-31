@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Shield, Users, Flame, Coins, Eye, EyeOff, ArrowRight, Settings, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Shield, Users, Flame, Coins, Eye, EyeOff, ArrowRight, Settings, RefreshCw, AlertTriangle, Video } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
@@ -32,6 +32,8 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalBeefs: 0, totalPoints: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
   const [switchingMode, setSwitchingMode] = useState(false);
+  const [dailyMigrateLoading, setDailyMigrateLoading] = useState(false);
+  const [dailyMigratePreview, setDailyMigratePreview] = useState<{ count: number; names: string[] } | null>(null);
 
   useEffect(() => {
     // Wait for both auth AND role to be loaded before redirecting
@@ -78,6 +80,58 @@ export default function AdminDashboardPage() {
       toast('Erreur lors du chargement des stats', 'error');
     } finally {
       setLoadingStats(false);
+    }
+  };
+
+  const adminAuthHeaders = async (): Promise<HeadersInit> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const h: Record<string, string> = {};
+    if (session?.access_token) h.Authorization = `Bearer ${session.access_token}`;
+    return h;
+  };
+
+  const previewDailyBeefRooms = async () => {
+    setDailyMigrateLoading(true);
+    setDailyMigratePreview(null);
+    try {
+      const res = await fetch('/api/admin/daily/rooms-migrate-private', {
+        headers: await adminAuthHeaders(),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'Erreur');
+      const names = (j.candidates as { name: string }[] | undefined)?.map(c => c.name) ?? [];
+      setDailyMigratePreview({ count: j.count ?? 0, names });
+      toast(`${j.count ?? 0} salle(s) beef-* encore non private`, j.count ? 'info' : 'success');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Erreur', 'error');
+    } finally {
+      setDailyMigrateLoading(false);
+    }
+  };
+
+  const runDailyBeefRoomsPrivate = async () => {
+    if (!dailyMigratePreview || dailyMigratePreview.count === 0) {
+      toast('Fais d’abord un aperçu (liste des salles).', 'info');
+      return;
+    }
+    if (!window.confirm(`Passer ${dailyMigratePreview.count} salle(s) Daily en private ? Les joins sans token cesseront de fonctionner.`)) {
+      return;
+    }
+    setDailyMigrateLoading(true);
+    try {
+      const res = await fetch('/api/admin/daily/rooms-migrate-private', {
+        method: 'POST',
+        headers: { ...(await adminAuthHeaders()), 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'Erreur');
+      toast(`Mis à jour : ${j.updated ?? 0} — échecs : ${j.failed ?? 0}`, j.failed ? 'error' : 'success');
+      setDailyMigratePreview(null);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Erreur', 'error');
+    } finally {
+      setDailyMigrateLoading(false);
     }
   };
 
@@ -244,6 +298,45 @@ export default function AdminDashboardPage() {
                 <ArrowRight className="w-5 h-5 text-gray-600" />
               </button>
             ))}
+
+            <div className="card p-5 border border-white/10 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                  <Video className="w-5 h-5 text-violet-400" />
+                </div>
+                <div>
+                  <p className="text-white font-bold">Daily — salles beef en private</p>
+                  <p className="text-gray-500 text-xs">
+                    Anciennes rooms <code className="text-gray-400">beef-*</code> encore publiques → private (join avec token uniquement).
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={dailyMigrateLoading}
+                  onClick={previewDailyBeefRooms}
+                  className="px-4 py-2 rounded-xl bg-white/10 text-white text-sm font-semibold hover:bg-white/15 disabled:opacity-50"
+                >
+                  {dailyMigrateLoading ? '…' : 'Aperçu'}
+                </button>
+                <button
+                  type="button"
+                  disabled={dailyMigrateLoading || !dailyMigratePreview?.count}
+                  onClick={runDailyBeefRoomsPrivate}
+                  className="px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-500 disabled:opacity-40"
+                >
+                  Migrer
+                </button>
+              </div>
+              {dailyMigratePreview && (
+                <p className="text-gray-400 text-xs">
+                  {dailyMigratePreview.count === 0
+                    ? 'Aucune salle à migrer.'
+                    : `${dailyMigratePreview.count} salle(s) : ${dailyMigratePreview.names.slice(0, 8).join(', ')}${dailyMigratePreview.names.length > 8 ? '…' : ''}`}
+                </p>
+              )}
+            </div>
           </motion.div>
         )}
       </div>

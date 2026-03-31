@@ -6,14 +6,23 @@ import { Check, X, AlertCircle, Info } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'info';
 
+export type ToastOptions = {
+  /** Bouton secondaire (ex. aller acheter des points). */
+  action?: { label: string; onClick: () => void };
+  /** Durée avant fermeture auto (défaut 4 s, 10 s si `action`). */
+  durationMs?: number;
+};
+
 interface Toast {
   id: string;
   type: ToastType;
   message: string;
+  action?: ToastOptions['action'];
+  durationMs: number;
 }
 
 interface ToastContextType {
-  toast: (message: string, type?: ToastType) => void;
+  toast: (message: string, type?: ToastType, options?: ToastOptions) => void;
 }
 
 const ToastContext = createContext<ToastContextType>({ toast: () => {} });
@@ -25,12 +34,15 @@ export function useToast() {
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const addToast = useCallback((message: string, type: ToastType = 'info') => {
+  const addToast = useCallback((message: string, type: ToastType = 'info', options?: ToastOptions) => {
     const id = Date.now().toString();
-    setToasts(prev => [...prev, { id, type, message }]);
+    const durationMs =
+      options?.durationMs ??
+      (options?.action ? 10_000 : 4000);
+    setToasts(prev => [...prev, { id, type, message, action: options?.action, durationMs }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4000);
+    }, durationMs);
   }, []);
 
   const removeToast = useCallback((id: string) => {
@@ -65,8 +77,22 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               style={{ background: styles[t.type].bg, border: `1px solid ${styles[t.type].border}` }}
             >
               <span style={{ color: styles[t.type].color }}>{icons[t.type]}</span>
-              <p className="text-sm font-medium text-white flex-1">{t.message}</p>
-              <button onClick={() => removeToast(t.id)} className="text-gray-500 hover:text-white transition-colors">
+              <div className="flex-1 min-w-0 flex flex-col gap-2">
+                <p className="text-sm font-medium text-white">{t.message}</p>
+                {t.action && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      t.action?.onClick();
+                      removeToast(t.id);
+                    }}
+                    className="self-start px-3 py-1.5 rounded-lg text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors"
+                  >
+                    {t.action.label}
+                  </button>
+                )}
+              </div>
+              <button type="button" onClick={() => removeToast(t.id)} className="text-gray-500 hover:text-white transition-colors shrink-0">
                 <X className="w-3.5 h-3.5" />
               </button>
             </motion.div>

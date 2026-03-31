@@ -205,7 +205,8 @@ export function Header() {
               {user ? (
                 <>
                   <Link
-                    href="/live"
+                    href="/create"
+                    prefetch
                     className="flex items-center gap-1.5 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.97] shadow-sm hover:shadow-glow brand-gradient"
                   >
                     <Plus className="w-4 h-4" />
@@ -285,7 +286,7 @@ export function Header() {
             <div className="flex md:hidden items-center gap-1.5">
               <GlobalSearchBar />
               {user && (
-                <Link href="/live" className="p-2 text-brand-400">
+                <Link href="/create" prefetch className="p-2 text-brand-400">
                   <Plus className="w-5 h-5" />
                 </Link>
               )}

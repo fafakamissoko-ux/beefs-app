@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Lock, ArrowRight } from 'lucide-react';
 import { BeefLogo } from './BeefLogo';
 
-const BETA_CODE = process.env.NEXT_PUBLIC_BETA_CODE || 'beefs2026';
+const BETA_CODE = process.env.NEXT_PUBLIC_BETA_CODE || '';
 
 export function BetaGate({ children }: { children: React.ReactNode }) {
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
@@ -31,8 +31,7 @@ export function BetaGate({ children }: { children: React.ReactNode }) {
   // Loading state
   if (hasAccess === null) return null;
 
-  // Access granted
-  if (hasAccess) return <>{children}</>;
+  if (hasAccess || !BETA_CODE) return <>{children}</>;
 
   // Gate
   return (

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { TikTokStyleArena } from '@/components/TikTokStyleArena';
 import { supabase } from '@/lib/supabase/client';
+import { beefDailyRoomName } from '@/lib/beef-daily-room';
 import { motion } from 'framer-motion';
 import { Clock, ArrowLeft } from 'lucide-react';
 
@@ -35,6 +36,10 @@ export default function ArenaPage() {
   const [dailyRoomUrl, setDailyRoomUrl] = useState<string | null>(null);
   const [initialViewerCount, setInitialViewerCount] = useState(0);
   const [beefTitle, setBeefTitle] = useState('');
+  const [previewStartedAt, setPreviewStartedAt] = useState<string | null>(null);
+  const [freePreviewMinutes, setFreePreviewMinutes] = useState(10);
+  const [continuationPricePoints, setContinuationPricePoints] = useState(0);
+  const [hasPaidContinuation, setHasPaidContinuation] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -75,6 +80,19 @@ export default function ArenaPage() {
         window.location.href = '/feed';
         return;
       }
+
+      const fp = (beef as any).free_preview_minutes;
+      setFreePreviewMinutes(typeof fp === 'number' ? fp : 10);
+      setContinuationPricePoints((beef as any).price ?? 0);
+      setPreviewStartedAt((beef as any).started_at ?? null);
+
+      const { data: accessRow } = await supabase
+        .from('beef_access')
+        .select('id')
+        .eq('beef_id', roomId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      setHasPaidContinuation(!!accessRow);
 
       if (beef.status === 'ended' || beef.status === 'cancelled') {
         const med = beef.users as any;
@@ -125,8 +143,27 @@ export default function ArenaPage() {
     loadRoomData();
   }, [roomId, userId]);
 
+  useEffect(() => {
+    if (!roomId) return;
+    const ch = supabase
+      .channel(`arena_beef_sync_${roomId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'beefs', filter: `id=eq.${roomId}` },
+        (payload: { new?: { price?: number; started_at?: string } }) => {
+          const n = payload.new;
+          if (typeof n?.price === 'number') setContinuationPricePoints(n.price);
+          if (n?.started_at) setPreviewStartedAt(n.started_at);
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [roomId]);
+
   const ensureDailyRoom = async (beefId: string) => {
-    const roomName = `beef-${beefId.replace(/-/g, '').slice(0, 32)}`;
+    const roomName = beefDailyRoomName(beefId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -144,7 +181,7 @@ export default function ArenaPage() {
       const createRes = await fetch('/api/daily/rooms', {
         method: 'POST',
         headers: authHeaders,
-        body: JSON.stringify({ roomName, privacy: 'public', maxParticipants: 50 }),
+        body: JSON.stringify({ roomName, privacy: 'private', maxParticipants: 50 }),
       });
       const createData = await createRes.json();
       if (createData.success && createData.room?.url) {
@@ -226,6 +263,11 @@ export default function ArenaPage() {
         dailyRoomUrl={dailyRoomUrl}
         onReaction={() => {}}
         onShare={handleShare}
+        previewStartedAt={previewStartedAt}
+        freePreviewMinutes={freePreviewMinutes}
+        continuationPricePoints={continuationPricePoints}
+        hasPaidContinuation={hasPaidContinuation}
+        onContinuationPaid={() => setHasPaidContinuation(true)}
       />
     </div>
   );

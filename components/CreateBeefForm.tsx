@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Flame, Calendar, AlertTriangle, FileText, X, ArrowRight, Search, UserPlus, Check, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
+import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
 
 interface BeefParticipant {
   user_id: string;
@@ -19,8 +20,6 @@ interface BeefData {
   title: string;
   description: string;
   tags: string[];
-  is_premium: boolean;
-  price: number;
   scheduled_at: string; // Empty = start now, filled = scheduled
   is_scheduled: boolean;
   participants: BeefParticipant[];
@@ -46,12 +45,23 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
     title: '',
     description: '',
     tags: [],
-    is_premium: false,
-    price: 0,
     scheduled_at: '',
     is_scheduled: false,
     participants: [],
   });
+
+  const [estimatedSuitePrice, setEstimatedSuitePrice] = useState<number | null>(null);
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const { count } = await supabase
+        .from('beefs')
+        .select('*', { count: 'exact', head: true })
+        .eq('mediator_id', user.id)
+        .eq('resolution_status', 'resolved');
+      setEstimatedSuitePrice(continuationPriceFromResolvedCount(count ?? 0));
+    })();
+  }, [user?.id]);
 
   const updateData = (field: keyof BeefData, value: any) => {
     setBeefData({ ...beefData, [field]: value });
@@ -207,8 +217,6 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
       if (!beefData.description.trim()) errors.description = 'La description est obligatoire.';
       else if (beefData.description.trim().length < 50)
         errors.description = `Description trop courte (${beefData.description.trim().length}/50 caractères minimum).`;
-      if (beefData.is_premium && beefData.price <= 0)
-        errors.price = 'Indique un prix pour le beef premium.';
       if (beefData.is_scheduled && !beefData.scheduled_at)
         errors.scheduled_at = 'Sélectionne une date et heure de programmation.';
     }
@@ -578,36 +586,15 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
               </div>
             </div>
 
-            {/* Premium Option */}
-            <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-xl p-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={beefData.is_premium}
-                  onChange={(e) => updateData('is_premium', e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-700 text-brand-500 focus:ring-brand-500"
-                />
-                <div className="flex-1">
-                  <span className="text-white font-semibold flex items-center gap-2 text-sm">
-                    <span>👑</span>
-                    Beef Premium (accès payant)
-                  </span>
-                  <p className="text-gray-400 text-xs">Les spectateurs paieront pour regarder le beef</p>
-                </div>
-              </label>
-              {beefData.is_premium && (
-                <div className="mt-2">
-                  <label className="block text-white font-semibold mb-1 text-xs">Prix d'entrée (en points)</label>
-                  <input
-                    type="number"
-                    value={beefData.price}
-                    onChange={(e) => updateData('price', Number(e.target.value))}
-                    min="1"
-                    max="100"
-                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500 transition-colors"
-                  />
-                </div>
-              )}
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-3">
+              <p className="text-gray-300 text-sm leading-relaxed">
+                Après les premières minutes gratuites en direct, les spectateurs peuvent débloquer la suite avec des points.
+                Ton palier actuel pour ce beef :{' '}
+                <span className="text-brand-400 font-bold">
+                  {estimatedSuitePrice === null ? '…' : `${estimatedSuitePrice} pts`}
+                </span>
+                {' '}(fixé au lancement du chrono ; il augmente avec tes beefs résolus).
+              </p>
             </div>
 
             {/* Scheduled Option - Only show if not already scheduled */}

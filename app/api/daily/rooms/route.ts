@@ -21,12 +21,13 @@ export async function POST(request: NextRequest) {
     }
 
     const { roomName, privacy, maxParticipants } = await request.json();
+    /** Salles beef : private par défaut pour forcer un meeting token (join authentifié). */
+    const effectivePrivacy = privacy ?? 'private';
 
     const DAILY_API_KEY = process.env.DAILY_API_KEY;
     const DAILY_DOMAIN = process.env.NEXT_PUBLIC_DAILY_DOMAIN || 'beefs.daily.co';
 
     if (!DAILY_API_KEY) {
-      console.error('❌ DAILY_API_KEY not configured');
       return NextResponse.json(
         { error: 'Daily.co API key not configured' },
         { status: 500 }
@@ -48,9 +49,9 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         name: safeName,
-        privacy: privacy || 'public',
+        privacy: effectivePrivacy,
         properties: {
-          max_participants: Math.min(maxParticipants || 10, 10),
+          max_participants: Math.min(maxParticipants || 50, 50),
           enable_screenshare: true,
           start_video_off: false,
           start_audio_off: false,
@@ -62,14 +63,11 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('❌ Daily.co API error:', JSON.stringify(data));
       return NextResponse.json(
         { error: data.error || 'Failed to create room', details: data.info },
         { status: response.status }
       );
     }
-
-    console.log('✅ Daily.co room created:', data.name);
 
     return NextResponse.json({
       success: true,
@@ -81,17 +79,20 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('❌ Error creating Daily.co room:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Erreur lors de la création de la salle' },
       { status: 500 }
     );
   }
 }
 
-// Get room info
 export async function GET(request: NextRequest) {
   try {
+    const user = await verifyAuth(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const roomName = searchParams.get('name');
 
@@ -132,17 +133,20 @@ export async function GET(request: NextRequest) {
       room: data,
     });
   } catch (error: any) {
-    console.error('❌ Error fetching room:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Erreur lors de la récupération de la salle' },
       { status: 500 }
     );
   }
 }
 
-// Delete room
 export async function DELETE(request: NextRequest) {
   try {
+    const user = await verifyAuth(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const roomName = searchParams.get('name');
 
@@ -177,16 +181,13 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    console.log('✅ Daily.co room deleted:', roomName);
-
     return NextResponse.json({
       success: true,
       message: 'Room deleted successfully',
     });
   } catch (error: any) {
-    console.error('❌ Error deleting room:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Erreur lors de la suppression de la salle' },
       { status: 500 }
     );
   }

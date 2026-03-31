@@ -2,10 +2,14 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import DailyIframe, { DailyCall, DailyParticipant } from '@daily-co/daily-js';
+import { supabase } from '@/lib/supabase/client';
+import { buildDailyJoinUserData, extractArenaUserIdFromDailyParticipant } from '@/lib/participant-identity';
 
 export interface CallParticipant {
   sessionId: string;
   userName: string;
+  /** UUID arena (session Supabase), extrait de userData Daily si valide. */
+  arenaUserId: string | null;
   isLocal: boolean;
   videoTrack: MediaStreamTrack | null;
   audioTrack: MediaStreamTrack | null;
@@ -34,6 +38,7 @@ function toCallParticipant(p: DailyParticipant): CallParticipant {
   return {
     sessionId: p.session_id,
     userName: (p.user_name as string) || 'Participant',
+    arenaUserId: extractArenaUserIdFromDailyParticipant(p),
     isLocal: p.local,
     videoTrack: p.tracks?.video?.persistentTrack ?? null,
     audioTrack: p.tracks?.audio?.persistentTrack ?? null,
@@ -43,7 +48,13 @@ function toCallParticipant(p: DailyParticipant): CallParticipant {
   };
 }
 
-export function useDailyCall(roomUrl: string | null, userName: string, viewerMode = false): UseDailyCallReturn {
+export function useDailyCall(
+  roomUrl: string | null,
+  userName: string,
+  viewerMode = false,
+  arenaUserId: string | null = null,
+  beefId: string | null = null,
+): UseDailyCallReturn {
   const callRef = useRef<DailyCall | null>(null);
   const [isJoined, setIsJoined] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
@@ -55,8 +66,41 @@ export function useDailyCall(roomUrl: string | null, userName: string, viewerMod
   const reconnectingRef = useRef(false);
   const roomUrlRef = useRef(roomUrl);
   const userNameRef = useRef(userName);
+  const arenaUserIdRef = useRef(arenaUserId);
+  const beefIdRef = useRef(beefId);
+  const viewerModeRef = useRef(viewerMode);
   roomUrlRef.current = roomUrl;
   userNameRef.current = userName;
+  arenaUserIdRef.current = arenaUserId;
+  beefIdRef.current = beefId;
+  viewerModeRef.current = viewerMode;
+
+  const fetchMeetingToken = useCallback(async (): Promise<string> => {
+    const bid = beefIdRef.current;
+    if (!bid) {
+      throw new Error('Identifiant beef manquant pour le token Daily');
+    }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('Session requise pour rejoindre la visio');
+    }
+    const res = await fetch('/api/daily/meeting-token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ beefId: bid }),
+    });
+    const data: { error?: string; token?: string } = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Impossible d’obtenir le token Daily');
+    }
+    if (!data.token) {
+      throw new Error('Token Daily manquant');
+    }
+    return data.token;
+  }, []);
 
   const refreshParticipants = useCallback((co: DailyCall) => {
     const all = Object.values(co.participants());
@@ -117,9 +161,11 @@ export function useDailyCall(roomUrl: string | null, userName: string, viewerMod
       });
 
       console.log('🔌 Daily.co joining room:', roomUrl, viewerMode ? '(viewer)' : '');
+      const userData = buildDailyJoinUserData(arenaUserId);
       await co.join({
         url: roomUrl,
         userName,
+        ...(userData ? { userData } : {}),
         startVideoOff: viewerMode,
         startAudioOff: viewerMode,
       });
@@ -127,7 +173,7 @@ export function useDailyCall(roomUrl: string | null, userName: string, viewerMod
       setError(err.message || 'Impossible de rejoindre');
       setIsJoining(false);
     }
-  }, [roomUrl, userName, isJoining, isJoined, refreshParticipants]);
+  }, [roomUrl, userName, isJoining, isJoined, refreshParticipants, viewerMode, arenaUserId, fetchMeetingToken]);
 
   const leave = useCallback(async () => {
     if (!callRef.current) return;
@@ -248,12 +294,16 @@ export function useDailyCall(roomUrl: string | null, userName: string, viewerMod
           reconnectingRef.current = false;
         });
 
-        if (roomUrlRef.current) {
+        if (roomUrlRef.current && beefIdRef.current) {
+          const token = await fetchMeetingToken();
+          const userData = buildDailyJoinUserData(arenaUserIdRef.current);
           await newCo.join({
             url: roomUrlRef.current,
+            token,
             userName: userNameRef.current,
-            startVideoOff: viewerMode,
-            startAudioOff: viewerMode,
+            ...(userData ? { userData } : {}),
+            startVideoOff: viewerModeRef.current,
+            startAudioOff: viewerModeRef.current,
           });
         }
       } catch (err) {
@@ -269,7 +319,7 @@ export function useDailyCall(roomUrl: string | null, userName: string, viewerMod
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
     };
-  }, [isJoined, viewerMode, refreshParticipants]);
+  }, [isJoined, refreshParticipants, fetchMeetingToken]);
 
   // Cleanup on unmount — same order: media elements first, then Daily.co
   useEffect(() => {

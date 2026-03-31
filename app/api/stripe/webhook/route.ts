@@ -42,7 +42,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  console.log(`✅ Webhook received: ${event.type}`);
 
   try {
     switch (event.type) {
@@ -66,7 +65,7 @@ export async function POST(request: NextRequest) {
       }
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        break;
     }
 
     return NextResponse.json({ received: true });
@@ -89,7 +88,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
-  console.log(`💰 Crediting ${pointsAmount} points to user ${userId}`);
 
   // Use the update_user_balance function
   const { data, error } = await supabaseAdmin.rpc('update_user_balance', {
@@ -109,7 +107,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     throw error;
   }
 
-  console.log(`✅ Points credited successfully:`, data);
 
   // Award XP for first purchase
   await supabaseAdmin.rpc('add_xp_to_user', {
@@ -163,7 +160,6 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     .update({ is_premium: subscription.status === 'active' })
     .eq('id', user.id);
 
-  console.log(`✅ Subscription updated for user ${user.id}`);
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
@@ -194,5 +190,4 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       .eq('id', sub.user_id);
   }
 
-  console.log(`✅ Subscription cancelled: ${subscription.id}`);
 }

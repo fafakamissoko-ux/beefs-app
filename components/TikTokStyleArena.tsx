@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, Gift, Share2, Heart, X, MoreVertical } from 'lucide-react';
+import { Eye, Gift, Share2, Heart, X, MoreVertical, Lock } from 'lucide-react';
 import { ChatPanel } from './ChatPanel';
 import { PreJoinScreen } from './PreJoinScreen';
 import { ParticipantVideo } from './ParticipantVideo';
@@ -15,6 +15,15 @@ import { MultiParticipantGrid } from './MultiParticipantGrid';
 import { InviteParticipantModal } from './InviteParticipantModal';
 import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
+import { DEFAULT_FREE_PREVIEW_MINUTES, viewerNeedsContinuationPay } from '@/lib/beef-preview';
+import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
+import {
+  buildParticipantAliasSet,
+  isValidArenaUserId,
+  matchRemoteToExpectedBeefParticipant,
+  remoteMatchesMediator,
+  type BeefParticipantRowMeta,
+} from '@/lib/participant-identity';
 
 const MAX_BEEF_DURATION = 60 * 60; // 60 minutes in seconds
 
@@ -49,6 +58,13 @@ interface TikTokStyleArenaProps {
   onReaction: (emoji: string) => void;
   onTap?: () => void;
   onShare: () => void;
+  /** Début officiel du beef (médiateur lance le chrono) — base du gratuit */
+  previewStartedAt?: string | null;
+  freePreviewMinutes?: number;
+  /** Points pour continuer après la prévisualisation (0 = pas de paywall) */
+  continuationPricePoints?: number;
+  hasPaidContinuation?: boolean;
+  onContinuationPaid?: () => void;
 }
 
 // 🔥 TOP 10 RÉACTIONS (affichées par défaut)
@@ -114,6 +130,11 @@ export function TikTokStyleArena({
   dailyRoomUrl,
   onReaction,
   onShare,
+  previewStartedAt = null,
+  freePreviewMinutes = DEFAULT_FREE_PREVIEW_MINUTES,
+  continuationPricePoints = 0,
+  hasPaidContinuation = false,
+  onContinuationPaid,
 }: TikTokStyleArenaProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -139,7 +160,11 @@ export function TikTokStyleArena({
   const [mediatorGraceSeconds, setMediatorGraceSeconds] = useState(0);
   const beefEndedRef = useRef(false);
   const mediatorWasConnectedRef = useRef(false);
+  /** True dès qu’au moins un challenger attendu a été vu dans la room Daily (évite la fin auto tant qu’on attend les connexions). */
+  const challengersEverJoinedRef = useRef(false);
   const [userPoints, setUserPoints] = useState(0);
+  const [followingHost, setFollowingHost] = useState(false);
+  const [profileFollowsTarget, setProfileFollowsTarget] = useState(false);
 
   // Speaking turn state
   const [speakingTurnActive, setSpeakingTurnActive] = useState(false);
@@ -149,7 +174,7 @@ export function TikTokStyleArena({
   const speakingTurnIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { join, leave, toggleMic, toggleCam, isJoined, isJoining, micEnabled, camEnabled,
-    localParticipant, remoteParticipants, error: callError } = useDailyCall(dailyRoomUrl ?? null, userName, isViewer);
+    localParticipant, remoteParticipants, error: callError } = useDailyCall(dailyRoomUrl ?? null, userName, isViewer, userId, roomId);
 
   // Auto-join when user clicked "Rejoindre" AND dailyRoomUrl becomes available
   useEffect(() => {
@@ -183,7 +208,7 @@ export function TikTokStyleArena({
   const [showInviteModal, setShowInviteModal] = useState(false);
   
   // Participant roles from DB — maps Daily.co userNames to beef roles
-  const [participantRoles, setParticipantRoles] = useState<Record<string, { role: string; name: string }>>({});
+  const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});
   const [liveViewerCount, setLiveViewerCount] = useState(viewerCount);
 
   // Beef duration limit (60 min countdown)
@@ -294,10 +319,18 @@ export function TikTokStyleArena({
     setTimerActive(true);
     setTimerPaused(false);
     toast('Chronomètre démarré !', 'success');
-    // Transition beef to "live" status
+    const { count } = await supabase
+      .from('beefs')
+      .select('*', { count: 'exact', head: true })
+      .eq('mediator_id', host.id)
+      .eq('resolution_status', 'resolved')
+      .neq('id', roomId);
+    const price = continuationPriceFromResolvedCount(count ?? 0);
     await supabase.from('beefs').update({
       status: 'live',
       started_at: new Date().toISOString(),
+      price,
+      is_premium: false,
     }).eq('id', roomId);
   };
 
@@ -385,14 +418,20 @@ export function TikTokStyleArena({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  useEffect(() => {
+    challengersEverJoinedRef.current = false;
+  }, [roomId]);
+
   // Track when mediator has actually connected at least once
   useEffect(() => {
     if (!isJoined || isHost) return;
-    const mediatorPresent = remoteParticipants.some(p => p.userName === host.name);
+    const mediatorPresent = remoteParticipants.some(p =>
+      remoteMatchesMediator(p, host.id, host.name),
+    );
     if (mediatorPresent) {
       mediatorWasConnectedRef.current = true;
     }
-  }, [remoteParticipants, isJoined, isHost, host.name]);
+  }, [remoteParticipants, isJoined, isHost, host.id, host.name]);
 
   // If current user IS the mediator and joined, mark as connected
   useEffect(() => {
@@ -401,14 +440,27 @@ export function TikTokStyleArena({
     }
   }, [isHost, isJoined]);
 
+  // Médiateur : mémoriser qu’un challenger invité est réellement entré dans la room (userData UUID + alias profil)
+  useEffect(() => {
+    if (!isHost || !isJoined) return;
+    const expectedChallengerSlots = Object.keys(participantRoles).filter(uid => uid !== host.id);
+    if (expectedChallengerSlots.length === 0) return;
+    const anyChallengerPresent = remoteParticipants.some(p =>
+      matchRemoteToExpectedBeefParticipant(p, host.id, host.name, participantRoles) !== null,
+    );
+    if (anyChallengerPresent) {
+      challengersEverJoinedRef.current = true;
+    }
+  }, [isHost, isJoined, remoteParticipants, participantRoles, host.id, host.name]);
+
   // ── AUTO-END: Detect mediator or all challengers leaving ──
   useEffect(() => {
     if (!isJoined || beefEndedRef.current) return;
 
     const challengerUserIds = Object.keys(participantRoles);
 
-    // Check if mediator is present
-    const mediatorPresent = isHost || remoteParticipants.some(p => p.userName === host.name);
+    const mediatorPresent =
+      isHost || remoteParticipants.some(p => remoteMatchesMediator(p, host.id, host.name));
 
     if (!mediatorPresent && !isHost && mediatorWasConnectedRef.current) {
       // Mediator left AFTER having been connected — start 90s grace period
@@ -438,8 +490,14 @@ export function TikTokStyleArena({
       toast('Le médiateur est de retour', 'success');
     }
 
-    // Check if all challengers left (only mediator should trigger this)
-    if (isHost && challengerUserIds.length > 0 && remoteParticipants.length === 0 && isJoined) {
+    // Tous les challengers ont quitté : uniquement si au moins un s’était connecté avant (sinon on attend encore les arrivées)
+    if (
+      isHost &&
+      challengerUserIds.length > 0 &&
+      challengersEverJoinedRef.current &&
+      remoteParticipants.length === 0 &&
+      isJoined
+    ) {
       const timeout = setTimeout(() => {
         if (remoteParticipants.length === 0 && !beefEndedRef.current) {
           endBeefRef.current?.('Tous les challengers ont quitté');
@@ -447,7 +505,7 @@ export function TikTokStyleArena({
       }, 5000);
       return () => clearTimeout(timeout);
     }
-  }, [remoteParticipants, isJoined, isHost, host.name, participantRoles, mediatorGraceActive, toast]);
+  }, [remoteParticipants, isJoined, isHost, host.id, host.name, participantRoles, mediatorGraceActive, toast]);
 
   // Listen for beef_ended broadcast from mediator (for viewers/challengers)
   const beefEndedHandlerRef = useRef(false);
@@ -506,10 +564,22 @@ export function TikTokStyleArena({
         .eq('beef_id', roomId);
 
       if (data) {
-        const roles: Record<string, { role: string; name: string }> = {};
-        data.forEach((p: any) => {
-          const name = p.users?.display_name || p.users?.username || 'Participant';
-          roles[p.user_id] = { role: p.role, name };
+        const roles: Record<string, BeefParticipantRowMeta> = {};
+        data.forEach((p) => {
+          const row = p as {
+            user_id: string;
+            role: string;
+            users?: { username?: string; display_name?: string } | { username?: string; display_name?: string }[] | null;
+          };
+          const u = Array.isArray(row.users) ? row.users[0] : row.users;
+          const dn = (u?.display_name ?? '').trim();
+          const un = (u?.username ?? '').trim();
+          const name = dn || un || 'Participant';
+          roles[row.user_id] = {
+            role: row.role,
+            name,
+            matchAliases: buildParticipantAliasSet(u?.display_name, u?.username, name),
+          };
         });
         setParticipantRoles(roles);
       }
@@ -526,6 +596,168 @@ export function TikTokStyleArena({
     })();
   }, [userId]);
 
+  useEffect(() => {
+    if (!userId || userId === host.id) {
+      setFollowingHost(false);
+      return;
+    }
+    supabase
+      .from('followers')
+      .select('id')
+      .eq('follower_id', userId)
+      .eq('following_id', host.id)
+      .maybeSingle()
+      .then(({ data }) => setFollowingHost(!!data));
+  }, [userId, host.id]);
+
+  const toggleFollowHost = async () => {
+    if (!userId || userId === host.id) return;
+    try {
+      if (followingHost) {
+        await supabase.from('followers').delete().eq('follower_id', userId).eq('following_id', host.id);
+        setFollowingHost(false);
+        toast('Tu ne suis plus ce médiateur', 'info');
+      } else {
+        await supabase.from('followers').insert({ follower_id: userId, following_id: host.id });
+        setFollowingHost(true);
+        toast('Tu suis ce médiateur', 'success');
+      }
+    } catch {
+      toast('Action impossible pour le moment', 'error');
+    }
+  };
+
+  const [previewStartedAtLive, setPreviewStartedAtLive] = useState<string | null>(previewStartedAt ?? null);
+  const [liveContinuationPrice, setLiveContinuationPrice] = useState(continuationPricePoints);
+  useEffect(() => {
+    setPreviewStartedAtLive(previewStartedAt ?? null);
+    setLiveContinuationPrice(continuationPricePoints);
+  }, [previewStartedAt, continuationPricePoints]);
+
+  type ServerAccessPayload = {
+    role?: string;
+    viewerAccess?: string;
+    continuationPrice?: number;
+    freePreviewMinutes?: number;
+    previewEndsInSeconds?: number;
+  };
+  const [serverAccess, setServerAccess] = useState<ServerAccessPayload | null>(null);
+
+  const fetchViewerAccess = useCallback(async () => {
+    if (!isViewer) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/beef/access?beefId=${encodeURIComponent(roomId)}`, {
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+      setServerAccess(data);
+      if (typeof data.continuationPrice === 'number') {
+        setLiveContinuationPrice(data.continuationPrice);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [isViewer, roomId]);
+
+  useEffect(() => {
+    const ch = supabase
+      .channel(`beef_preview_${roomId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'beefs', filter: `id=eq.${roomId}` },
+        (payload: { new?: { started_at?: string; price?: number } }) => {
+          const n = payload.new;
+          if (n?.started_at) setPreviewStartedAtLive(n.started_at);
+          if (typeof n?.price === 'number') setLiveContinuationPrice(n.price);
+          fetchViewerAccess();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [roomId, fetchViewerAccess]);
+
+  useEffect(() => {
+    if (!isViewer) return;
+    fetchViewerAccess();
+    const id = setInterval(fetchViewerAccess, 8000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') fetchViewerAccess();
+    };
+    const onPageShow = () => fetchViewerAccess();
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [isViewer, fetchViewerAccess]);
+
+  const accessResolved = serverAccess !== null;
+  const serverLocked =
+    isViewer &&
+    serverAccess?.role === 'spectator' &&
+    serverAccess.viewerAccess === 'locked';
+  const clientLocked =
+    isViewer &&
+    viewerNeedsContinuationPay(
+      previewStartedAtLive,
+      freePreviewMinutes,
+      liveContinuationPrice,
+      hasPaidContinuation
+    );
+  const previewPaywall = serverLocked || (!accessResolved && clientLocked);
+
+  const paywallLeaveRef = useRef(false);
+  const [continuationLoading, setContinuationLoading] = useState(false);
+
+  useEffect(() => {
+    if (previewPaywall && isJoined && !paywallLeaveRef.current) {
+      paywallLeaveRef.current = true;
+      leave();
+    }
+    if (!previewPaywall) paywallLeaveRef.current = false;
+  }, [previewPaywall, isJoined, leave]);
+
+  const handlePayContinuation = async () => {
+    setContinuationLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/beef/access', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ beefId: roomId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      if (typeof data.newBalance === 'number') setUserPoints(data.newBalance);
+      await fetchViewerAccess();
+      onContinuationPaid?.();
+      toast('Accès débloqué — bon visionnage !', 'success');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Erreur';
+      if (msg.toLowerCase().includes('insuffisant')) {
+        toast(msg, 'error', {
+          action: {
+            label: 'Recharger des points',
+            onClick: () => router.push('/buy-points'),
+          },
+        });
+      } else {
+        toast(msg, 'error');
+      }
+    } finally {
+      setContinuationLoading(false);
+    }
+  };
+
   // Track viewer count — increment on join, decrement on leave
   useEffect(() => {
     if (!isJoined) return;
@@ -541,8 +773,10 @@ export function TikTokStyleArena({
 
   // Sort remote participants: main challengers first based on roles
   const sortedRemoteParticipants = [...remoteParticipants].sort((a, b) => {
-    const roleA = participantRoles[a.sessionId]?.role;
-    const roleB = participantRoles[b.sessionId]?.role;
+    const metaA = matchRemoteToExpectedBeefParticipant(a, host.id, host.name, participantRoles);
+    const metaB = matchRemoteToExpectedBeefParticipant(b, host.id, host.name, participantRoles);
+    const roleA = metaA?.role;
+    const roleB = metaB?.role;
     if (roleA === 'participant' && roleB !== 'participant') return -1;
     if (roleA !== 'participant' && roleB === 'participant') return 1;
     return 0;
@@ -550,7 +784,7 @@ export function TikTokStyleArena({
 
   // Video layout: determine which participant goes in each slot based on role
   const hostRemoteParticipant = !isHost
-    ? remoteParticipants.find(p => p.userName === host.name) ?? null
+    ? remoteParticipants.find(p => remoteMatchesMediator(p, host.id, host.name)) ?? null
     : null;
 
   const nonHostRemotes = isHost
@@ -587,36 +821,7 @@ export function TikTokStyleArena({
   const [showProfile, setShowProfile] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   
-  // Mock profiles database
-  const mockProfiles: { [key: string]: UserProfile } = {
-    'User123': {
-      id: 'u1',
-      username: 'User123',
-      displayName: 'User 123',
-      bio: 'Passionné de débats et de discussions constructives 💬',
-      isPrivate: false,
-      joinedDate: '2024-01-15',
-      stats: { debates: 45, wins: 23, followers: 1200, following: 456 }
-    },
-    'DebatLover': {
-      id: 'u2',
-      username: 'DebatLover',
-      displayName: 'Debate Lover',
-      bio: 'Toujours prêt pour un bon débat 🔥',
-      isPrivate: false,
-      joinedDate: '2023-11-20',
-      stats: { debates: 89, wins: 51, followers: 3400, following: 890 }
-    },
-    'Challenger 1': {
-      id: '1',
-      username: 'Challenger1',
-      displayName: 'Challenger 1',
-      bio: 'Je ne recule devant aucun argument 💪',
-      isPrivate: false,
-      joinedDate: '2024-03-10',
-      stats: { debates: 12, wins: 8, followers: 234, following: 120 }
-    },
-  };
+  const profileCache = useRef<Record<string, UserProfile>>({});
 
   // ── HYBRID LIVE SYNC: Broadcast (instant) + Polling (fallback) ──
   const [liveConnected, setLiveConnected] = useState(false);
@@ -758,12 +963,10 @@ export function TikTokStyleArena({
 
   // Timer effect
   useEffect(() => {
-    console.log('⏱️ Timer state:', { timerRunning, timeRemaining, currentSpeaker });
     if (timerRunning && timeRemaining > 0) {
       const timer = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
-            console.log('⏹️ Timer finished for:', currentSpeaker);
             setTimerRunning(false);
             // Auto-mute speaker when time is up
             if (currentSpeaker) {
@@ -991,27 +1194,113 @@ export function TikTokStyleArena({
     toast('Invitation envoyée !', 'success');
   };
 
-  const openProfile = (username: string) => {
-    const profile = mockProfiles[username];
-    if (profile) {
-      if (profile.isPrivate) {
-        toast('Ce profil est privé', 'info');
-        return;
+  const openProfile = async (username: string, knownUserId?: string | null) => {
+    const cacheKey =
+      knownUserId && isValidArenaUserId(knownUserId) ? knownUserId : username;
+    if (cacheKey && profileCache.current[cacheKey]) {
+      const p = profileCache.current[cacheKey];
+      setSelectedProfile(p);
+      if (userId && p.id) {
+        const { data: row } = await supabase
+          .from('followers')
+          .select('id')
+          .eq('follower_id', userId)
+          .eq('following_id', p.id)
+          .maybeSingle();
+        setProfileFollowsTarget(!!row);
       }
-      setSelectedProfile(profile);
       setShowProfile(true);
-    } else {
-      // Create a default profile if not found
-      setSelectedProfile({
-        id: Date.now().toString(),
-        username: username,
-        displayName: username,
-        bio: 'Nouveau sur Beefs',
-        isPrivate: false,
-        joinedDate: new Date().toISOString().split('T')[0],
-        stats: { debates: 0, wins: 0, followers: 0, following: 0 }
-      });
-      setShowProfile(true);
+      return;
+    }
+
+    type UserRow = { id: string; username: string; display_name: string | null; bio: string | null; created_at: string };
+    let data: UserRow | null = null;
+
+    if (knownUserId && isValidArenaUserId(knownUserId)) {
+      const { data: d } = await supabase
+        .from('users')
+        .select('id, username, display_name, bio, created_at')
+        .eq('id', knownUserId)
+        .maybeSingle();
+      data = d as UserRow | null;
+    }
+    if (!data && username) {
+      const { data: d } = await supabase
+        .from('users')
+        .select('id, username, display_name, bio, created_at')
+        .eq('username', username)
+        .maybeSingle();
+      data = d as UserRow | null;
+    }
+    if (!data && username) {
+      const { data: d } = await supabase
+        .from('users')
+        .select('id, username, display_name, bio, created_at')
+        .eq('display_name', username)
+        .maybeSingle();
+      data = d as UserRow | null;
+    }
+
+    if (!data) {
+      toast('Profil introuvable', 'error');
+      return;
+    }
+
+    const { count: followerCount } = await supabase
+      .from('followers')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', data.id);
+
+    const { count: debateCount } = await supabase
+      .from('beefs')
+      .select('*', { count: 'exact', head: true })
+      .eq('mediator_id', data.id);
+
+    const { data: myFollow } = userId
+      ? await supabase
+          .from('followers')
+          .select('id')
+          .eq('follower_id', userId)
+          .eq('following_id', data.id)
+          .maybeSingle()
+      : { data: null };
+
+    const profile: UserProfile = {
+      id: data.id,
+      username: data.username,
+      displayName: data.display_name || data.username,
+      bio: data.bio || '',
+      isPrivate: false,
+      joinedDate: data.created_at?.split('T')[0] || '',
+      stats: {
+        debates: debateCount ?? 0,
+        wins: 0,
+        followers: followerCount ?? 0,
+        following: 0,
+      },
+    };
+    profileCache.current[data.id] = profile;
+    if (username) profileCache.current[username] = profile;
+    setSelectedProfile(profile);
+    setProfileFollowsTarget(!!myFollow);
+    setShowProfile(true);
+  };
+
+  const toggleFollowProfileTarget = async () => {
+    if (!userId || !selectedProfile || selectedProfile.id === userId) return;
+    try {
+      if (profileFollowsTarget) {
+        await supabase.from('followers').delete().eq('follower_id', userId).eq('following_id', selectedProfile.id);
+        setProfileFollowsTarget(false);
+        toast('Tu ne suis plus cet utilisateur', 'info');
+      } else {
+        await supabase.from('followers').insert({ follower_id: userId, following_id: selectedProfile.id });
+        setProfileFollowsTarget(true);
+        toast('Tu suis cet utilisateur', 'success');
+      }
+      if (selectedProfile.id === host.id) setFollowingHost(!profileFollowsTarget);
+    } catch {
+      toast('Impossible de modifier l’abonnement', 'error');
     }
   };
 
@@ -1147,6 +1436,84 @@ export function TikTokStyleArena({
         </div>
       )}
 
+      {isViewer && previewPaywall && liveContinuationPrice > 0 && (
+        <div className="absolute inset-0 z-[2500] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6">
+          <div className="max-w-md w-full text-center space-y-5">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-500/20 flex items-center justify-center">
+              <Lock className="w-8 h-8 text-brand-400" />
+            </div>
+            <h2 className="text-xl font-black text-white">Fin de la prévisualisation gratuite</h2>
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Les {freePreviewMinutes} premières minutes sont offertes. Pour la suite du direct, utilise tes points.
+            </p>
+            <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5 text-left space-y-3">
+              <p className="text-center text-white text-sm font-semibold">
+                Accès suite du direct :{' '}
+                <span className="text-brand-400 font-black tabular-nums">{liveContinuationPrice}</span>
+                <span className="text-gray-400 font-medium"> pts</span>
+              </p>
+              <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-brand-500 to-amber-400 transition-all duration-500"
+                  style={{
+                    width: `${Math.min(100, Math.round((userPoints / Math.max(liveContinuationPrice, 1)) * 100))}%`,
+                  }}
+                />
+              </div>
+              <p className="text-center text-xs text-gray-400">
+                Ton solde :{' '}
+                <span className={userPoints >= liveContinuationPrice ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                  {userPoints} pts
+                </span>
+                {userPoints < liveContinuationPrice && (
+                  <span className="text-gray-500">
+                    {' '}
+                    — il manque <span className="text-white font-semibold tabular-nums">{liveContinuationPrice - userPoints}</span> pts
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              {userPoints >= liveContinuationPrice ? (
+                <button
+                  type="button"
+                  onClick={handlePayContinuation}
+                  disabled={continuationLoading}
+                  className="w-full py-3.5 rounded-xl brand-gradient text-black font-bold text-sm disabled:opacity-50"
+                >
+                  {continuationLoading ? 'Traitement…' : `Débloquer · ${liveContinuationPrice} pts`}
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/buy-points')}
+                    className="w-full py-3.5 rounded-xl brand-gradient text-black font-bold text-sm"
+                  >
+                    Recharger des points
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePayContinuation}
+                    disabled={continuationLoading}
+                    className="w-full py-2.5 rounded-xl bg-white/10 text-gray-400 text-xs font-semibold disabled:opacity-50"
+                  >
+                    Réessayer après achat
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => router.replace('/feed')}
+                className="text-gray-500 text-sm pt-2"
+              >
+                Quitter le beef
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── END-OF-BEEF SUMMARY SCREEN ── */}
       {beefEnded && endSummary && (
         <div className="absolute inset-0 z-[1000] bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col items-center justify-center p-6">
@@ -1255,7 +1622,7 @@ export function TikTokStyleArena({
       )}
 
       {/* ── MEDIATOR WAITING MESSAGE (before mediator joins) ── */}
-      {!isHost && !mediatorWasConnectedRef.current && isJoined && !beefEnded && !remoteParticipants.some(p => p.userName === host.name) && (
+      {!isHost && !mediatorWasConnectedRef.current && isJoined && !beefEnded && !remoteParticipants.some(p => remoteMatchesMediator(p, host.id, host.name)) && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1342,13 +1709,20 @@ export function TikTokStyleArena({
                     />
                   )}
                 </AnimatePresence>
-                {/* Name tag — bottom-left edge */}
-                <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
+                {/* Name tag — profil challenger (sans déclencher le vote) */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null);
+                  }}
+                  className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 z-20 pointer-events-auto hover:bg-black/80 transition-colors"
+                >
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                  <span className="text-white text-[10px] font-bold drop-shadow-md">
+                  <span className="text-white text-[10px] font-bold drop-shadow-md underline-offset-2 hover:underline">
                     {leftPanelName}
                   </span>
-                </div>
+                </button>
                 {/* Vote bubble — bottom-right (opposite to pseudo) */}
                 <motion.div
                   className="absolute bottom-1 right-1 z-10"
@@ -1423,10 +1797,13 @@ export function TikTokStyleArena({
                       <span className="text-white text-[10px] font-black tracking-widest">LIVE</span>
                     </div>
                   </div>
-                  {/* Mediator name with balance icon */}
-                  <div className="brand-gradient px-3 py-1 rounded-full shadow-lg shadow-brand-500/40">
+                  <button
+                    type="button"
+                    onClick={() => void openProfile(mediatorName, host.id)}
+                    className="brand-gradient px-3 py-1 rounded-full shadow-lg shadow-brand-500/40 hover:opacity-95 transition-opacity"
+                  >
                     <span className="text-white text-[11px] font-black">⚖️ {mediatorName}</span>
-                  </div>
+                  </button>
                   {/* Mic/Cam + Controls — only for host (mediator) */}
                   {isHost && (
                     <div className="flex items-center gap-1.5">
@@ -1510,13 +1887,19 @@ export function TikTokStyleArena({
                     <span className="text-white text-[9px] font-black">{votesB}</span>
                   </div>
                 </motion.div>
-                {/* Name tag — bottom-right edge */}
-                <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
-                  <span className="text-white text-[10px] font-bold drop-shadow-md">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
+                  }}
+                  className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 z-20 pointer-events-auto hover:bg-black/80 transition-colors"
+                >
+                  <span className="text-white text-[10px] font-bold drop-shadow-md underline-offset-2 hover:underline">
                     {rightPanelName}
                   </span>
                   <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                </div>
+                </button>
                 {currentSpeaker === '2' && (
                   <div className="absolute bottom-7 right-2 flex gap-0.5 z-10">
                     {[...Array(4)].map((_, i) => (
@@ -1573,19 +1956,19 @@ export function TikTokStyleArena({
                   >
                     👤
                   </motion.div>
-                  <div className="bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-xl px-3 sm:px-5 py-1.5 rounded-full border border-white/10 shadow-lg">
-                    <p className="text-white font-black text-sm sm:text-base drop-shadow-lg">{debaters[0].name}</p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void openProfile(debaters[0].name, debaters[0].id)}
+                    className="bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-xl px-3 sm:px-5 py-1.5 rounded-full border border-white/10 shadow-lg hover:border-brand-400/40 transition-colors"
+                  >
+                    <p className="text-white font-black text-sm sm:text-base drop-shadow-lg underline-offset-2 hover:underline">{debaters[0].name}</p>
+                  </button>
                 </motion.div>
               </div>
               
               {/* Timer for Challenger 1 */}
               <AnimatePresence>
-                {(() => {
-                  const shouldShow = currentSpeaker === '1' && timerRunning;
-                  console.log('🕐 Timer condition for Challenger 1:', { currentSpeaker, timerRunning, shouldShow });
-                  return shouldShow;
-                })() && (
+                {currentSpeaker === '1' && timerRunning && (
                   <motion.div
                     initial={{ scale: 0, opacity: 0, y: -10 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -1642,9 +2025,13 @@ export function TikTokStyleArena({
                 </div>
               </div>
               <div className="mt-1.5 flex items-center gap-1.5">
-                <div className="brand-gradient px-3 py-1 rounded-full shadow-lg shadow-brand-500/40 whitespace-nowrap">
+                <button
+                  type="button"
+                  onClick={() => void openProfile(mediatorName, host.id)}
+                  className="brand-gradient px-3 py-1 rounded-full shadow-lg shadow-brand-500/40 whitespace-nowrap hover:opacity-95 transition-opacity"
+                >
                   <span className="text-white text-[11px] font-black">⚖️ {mediatorName}</span>
-                </div>
+                </button>
                 {isHost && (
                   <button
                     onClick={() => setShowModeratorPanel(!showModeratorPanel)}
@@ -1705,19 +2092,19 @@ export function TikTokStyleArena({
                   >
                     👤
                   </motion.div>
-                  <div className="bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-xl px-3 sm:px-5 py-1.5 rounded-full border border-white/10 shadow-lg">
-                    <p className="text-white font-black text-sm sm:text-base drop-shadow-lg">{debaters[1].name}</p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void openProfile(debaters[1].name, debaters[1].id)}
+                    className="bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-xl px-3 sm:px-5 py-1.5 rounded-full border border-white/10 shadow-lg hover:border-brand-400/40 transition-colors"
+                  >
+                    <p className="text-white font-black text-sm sm:text-base drop-shadow-lg underline-offset-2 hover:underline">{debaters[1].name}</p>
+                  </button>
                 </motion.div>
               </div>
               
               {/* Timer for Challenger 2 */}
               <AnimatePresence>
-                {(() => {
-                  const shouldShow = currentSpeaker === '2' && timerRunning;
-                  console.log('🕑 Timer condition for Challenger 2:', { currentSpeaker, timerRunning, shouldShow });
-                  return shouldShow;
-                })() && (
+                {currentSpeaker === '2' && timerRunning && (
                   <motion.div
                     initial={{ scale: 0, opacity: 0, y: -10 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -1769,19 +2156,34 @@ export function TikTokStyleArena({
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-transparent pointer-events-none" />
 
         <div className="relative flex items-center justify-between">
-          {/* Left: Host pill (avatar + name + follow) */}
+          {/* Left: médiateur du beef (pas « toi » si tu es challenger — évite Suivre sur soi-même) */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md rounded-full pl-0.5 pr-3 py-0.5">
+            <button
+              type="button"
+              onClick={() => void openProfile(host.name, host.id)}
+              className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md rounded-full pl-0.5 pr-3 py-0.5 hover:bg-black/55 transition-colors pointer-events-auto"
+            >
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-brand-500 p-[2px]">
                 <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
-                  <span className="text-white font-bold text-[11px]">{userName ? userName[0].toUpperCase() : 'U'}</span>
+                  <span className="text-white font-bold text-[11px]">{host.name ? host.name[0].toUpperCase() : 'M'}</span>
                 </div>
               </div>
-              <span className="text-white font-semibold text-xs drop-shadow-lg max-w-[80px] truncate">{userName}</span>
-            </div>
-            <button className="bg-pink-500 hover:bg-pink-600 px-3 py-1 rounded-full text-white text-xs font-bold transition-colors">
-              + Suivre
+              <span className="text-white font-semibold text-xs drop-shadow-lg max-w-[80px] truncate">{host.name}</span>
+              {userId === host.id && (
+                <span className="text-[9px] font-black text-brand-400 uppercase tracking-wide">Médiateur</span>
+              )}
             </button>
+            {userId && userId !== host.id && (
+              <button
+                type="button"
+                onClick={() => void toggleFollowHost()}
+                className={`px-3 py-1 rounded-full text-white text-xs font-bold transition-colors ${
+                  followingHost ? 'bg-white/20 hover:bg-white/30' : 'bg-pink-500 hover:bg-pink-600'
+                }`}
+              >
+                {followingHost ? 'Abonné ✓' : '+ Suivre'}
+              </button>
+            )}
           </div>
 
           {/* Center: Timer OR Live badge */}
@@ -2053,53 +2455,53 @@ export function TikTokStyleArena({
                   <p className="text-white/70 text-[11px] font-semibold mb-2">Envoyer au médiateur</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {[
-                      { emoji: '🌹', label: 'Rose', cost: 10 },
-                      { emoji: '🔥', label: 'Fire', cost: 25 },
-                      { emoji: '👑', label: 'Couronne', cost: 100 },
-                      { emoji: '💎', label: 'Diamant', cost: 50 },
+                      { emoji: '🌹', label: 'Rose', id: 'rose', cost: 10 },
+                      { emoji: '🔥', label: 'Fire', id: 'fire', cost: 25 },
+                      { emoji: '👑', label: 'Couronne', id: 'crown', cost: 100 },
+                      { emoji: '💎', label: 'Diamant', id: 'diamond', cost: 50 },
                     ].map((gift) => (
                       <button
                         key={gift.label}
                         onClick={async () => {
                           if (userPoints < gift.cost) {
-                            toast(`Points insuffisants (${userPoints}/${gift.cost})`, 'error');
+                            toast(`Points insuffisants — il te manque ${gift.cost - userPoints} pts (solde ${userPoints})`, 'error', {
+                              action: {
+                                label: 'Recharger',
+                                onClick: () => router.push('/buy-points'),
+                              },
+                            });
                             return;
                           }
 
-                          // Deduct from sender
-                          const { error: deductErr } = await supabase
-                            .from('users')
-                            .update({ points: userPoints - gift.cost })
-                            .eq('id', userId);
-                          if (deductErr) {
-                            toast('Erreur lors du paiement', 'error');
-                            return;
+                          try {
+                            const { data: { session } } = await supabase.auth.getSession();
+                            const res = await fetch('/api/gifts/send', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${session?.access_token || ''}`,
+                              },
+                              body: JSON.stringify({
+                                beef_id: roomId,
+                                recipient_id: host.id,
+                                gift_type_id: gift.id,
+                                points_amount: gift.cost,
+                              }),
+                            });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error);
+                            setUserPoints(data.newBalance);
+                            toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
+                          } catch (err: any) {
+                            const m = err?.message || 'Erreur lors de l\'envoi';
+                            if (typeof m === 'string' && m.toLowerCase().includes('insuffisant')) {
+                              toast(m, 'error', {
+                                action: { label: 'Recharger', onClick: () => router.push('/buy-points') },
+                              });
+                            } else {
+                              toast(m, 'error');
+                            }
                           }
-
-                          // Credit mediator
-                          const { data: mediatorData } = await supabase
-                            .from('users')
-                            .select('points')
-                            .eq('id', host.id)
-                            .single();
-                          if (mediatorData) {
-                            await supabase
-                              .from('users')
-                              .update({ points: (mediatorData.points || 0) + gift.cost })
-                              .eq('id', host.id);
-                          }
-
-                          // Record the gift
-                          await supabase.from('gifts').insert({
-                            beef_id: roomId,
-                            sender_id: userId,
-                            recipient_id: host.id,
-                            gift_type_id: gift.label.toLowerCase(),
-                            points_amount: gift.cost,
-                          });
-
-                          setUserPoints(prev => prev - gift.cost);
-                          toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
                           setShowGiftPicker(false);
                         }}
                         className="flex flex-col items-center gap-1 p-2 rounded-xl bg-white/5 hover:bg-white/15 transition-colors"
@@ -2259,8 +2661,9 @@ export function TikTokStyleArena({
                     <div key={debater.id} className="bg-black/40 rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <button
-                          onClick={() => openProfile(debater.name)}
-                          className="text-white font-semibold text-sm hover:text-brand-400 cursor-pointer"
+                          type="button"
+                          onClick={() => void openProfile(debater.name, debater.id)}
+                          className="text-white font-semibold text-sm hover:text-brand-400 cursor-pointer text-left"
                         >
                           {debater.name}
                         </button>
@@ -2484,12 +2887,28 @@ export function TikTokStyleArena({
                   Membre depuis {new Date(selectedProfile.joinedDate).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
                 </div>
 
-                {/* Actions */}
                 <div className="flex gap-2">
-                  <button className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-bold py-2.5 rounded-xl">
-                    Suivre
-                  </button>
-                  <button className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-2.5 rounded-xl border border-white/20">
+                  {userId && selectedProfile.id !== userId && (
+                    <button
+                      type="button"
+                      onClick={() => void toggleFollowProfileTarget()}
+                      className={`flex-1 font-bold py-2.5 rounded-xl transition-colors ${
+                        profileFollowsTarget
+                          ? 'bg-white/15 text-white border border-white/25 hover:bg-white/25'
+                          : 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white'
+                      }`}
+                    >
+                      {profileFollowsTarget ? 'Abonné ✓' : 'Suivre'}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProfile(false);
+                      router.push('/messages');
+                    }}
+                    className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-2.5 rounded-xl border border-white/20"
+                  >
                     Message
                   </button>
                 </div>

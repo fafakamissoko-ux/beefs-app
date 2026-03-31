@@ -86,6 +86,9 @@ export default function BuyPointsPage() {
           </motion.div>
           <h1 className="text-4xl font-black text-white mb-3">Acheter des Points</h1>
           <p className="text-gray-400 text-lg">Choisis ton pack</p>
+          <p className="text-gray-500 text-xs mt-4 px-2 leading-relaxed max-w-sm mx-auto">
+            Paiement sécurisé par Stripe : carte, Link ; Apple Pay / Google Pay peuvent s’afficher sur la page de paiement selon l’appareil et la config du compte Stripe.
+          </p>
           
           {/* Country Detection Badge */}
           {!countryLoading && (

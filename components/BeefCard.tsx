@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Eye, Clock, Users, Crown, Flame, Play, CheckCircle, Calendar, ArrowUpRight } from 'lucide-react';
+import { Eye, Clock, Users, Flame, Play, CheckCircle, Calendar, ArrowUpRight } from 'lucide-react';
 import { Countdown } from '@/components/Countdown';
 
 interface BeefCardProps {
@@ -34,7 +34,6 @@ export function BeefCard({
   scheduled_at,
   viewer_count = 0,
   tags = [],
-  is_premium = false,
   price = 0,
   thumbnail,
   duration,
@@ -198,12 +197,12 @@ export function BeefCard({
         {/* Status — top left */}
         <div className="absolute top-3 left-3">{getStatusBadge()}</div>
 
-        {/* Premium — top right */}
-        {is_premium && (
+        {/* Suite payante (après prévisualisation) — top right */}
+        {(price ?? 0) > 0 && (
           <div className="absolute top-3 right-3">
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold" style={{ background: 'linear-gradient(135deg, #FFD600, #FF6B2C)', color: '#000' }}>
-              <Crown className="w-3 h-3" />
-              <span>{price} PTS</span>
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 border border-white/15 text-brand-200">
+              <Eye className="w-3 h-3 text-brand-400" />
+              <span>Suite · {price} pts</span>
             </div>
           </div>
         )}
