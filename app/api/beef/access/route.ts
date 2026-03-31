@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { updateUserBalance } from '@/lib/updateUserBalance';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -219,22 +220,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Points insuffisants' }, { status: 400 });
     }
 
-    await supabaseAdmin
-      .from('users')
-      .update({ points: (buyer.points ?? 0) - price })
-      .eq('id', user.id);
-
-    const { data: mediator } = await supabaseAdmin
-      .from('users')
-      .select('points')
-      .eq('id', beef.mediator_id)
-      .single();
-
-    if (mediator) {
-      await supabaseAdmin
-        .from('users')
-        .update({ points: (mediator.points ?? 0) + price })
-        .eq('id', beef.mediator_id);
+    let newBalance: number;
+    let debited = false;
+    try {
+      await updateUserBalance(supabaseAdmin, {
+        userId: user.id,
+        amount: -price,
+        type: 'beef_access',
+        description: `Accès payant au direct (beef)`,
+        metadata: { beef_id: beefId },
+      });
+      debited = true;
+      await updateUserBalance(supabaseAdmin, {
+        userId: beef.mediator_id,
+        amount: price,
+        type: 'beef_access_revenue',
+        description: `Revenu spectateur — accès au direct`,
+        metadata: { beef_id: beefId, payer_id: user.id },
+      });
+      const { data: after } = await supabaseAdmin.from('users').select('points').eq('id', user.id).single();
+      newBalance = after?.points ?? (buyer.points ?? 0) - price;
+    } catch (e: unknown) {
+      if (debited) {
+        try {
+          await updateUserBalance(supabaseAdmin, {
+            userId: user.id,
+            amount: price,
+            type: 'refund',
+            description: 'Annulation — erreur crédit médiateur (accès beef)',
+            metadata: { beef_id: beefId },
+          });
+        } catch {}
+      }
+      const msg = e instanceof Error ? e.message : 'Erreur solde';
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
 
     await supabaseAdmin.from('beef_access').insert({
@@ -246,7 +265,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      newBalance: (buyer.points ?? 0) - price,
+      newBalance,
     });
   } catch {
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });

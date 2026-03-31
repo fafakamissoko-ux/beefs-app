@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { isAdminRequest } from '@/lib/is-admin-request';
+import { updateUserBalance } from '@/lib/updateUserBalance';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,13 +54,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Erreur lors de la mise à jour' }, { status: 500 });
     }
 
-    // If rejected, refund points
     if (action === 'rejected') {
-      const currentPoints = (request.users as any)?.points || 0;
-      await supabaseAdmin
-        .from('users')
-        .update({ points: currentPoints + request.amount_points })
-        .eq('id', request.user_id);
+      try {
+        await updateUserBalance(supabaseAdmin, {
+          userId: request.user_id,
+          amount: request.amount_points,
+          type: 'refund',
+          description: 'Retrait refusé — recrédit des points',
+          metadata: { withdrawal_request_id: requestId },
+        });
+      } catch (e) {
+        console.error('Refund withdrawal failed:', e);
+        return NextResponse.json({ error: 'Erreur lors du recrédit des points' }, { status: 500 });
+      }
     }
 
     // Notify the creator by email

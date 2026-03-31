@@ -9,6 +9,7 @@ import { ToastProvider } from "@/components/Toast";
 import { BetaGate } from "@/components/BetaGate";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
+import { ClientMonitoring } from "@/components/ClientMonitoring";
 
 export const metadata: Metadata = {
   title: {
@@ -73,6 +74,7 @@ function RootLayoutClient({
     <AuthProvider>
       <ThemeProvider>
         <ToastProvider>
+          <ClientMonitoring />
           <BetaGate>
           <PWAManager />
           <ScrollRestoration />

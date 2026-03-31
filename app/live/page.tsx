@@ -228,17 +228,30 @@ export default function LivePage() {
     }
 
     try {
-      const { error: deductErr } = await supabase
-        .from('users')
-        .update({ points: userPoints - selectedRoom.price })
-        .eq('id', user.id);
-      if (deductErr) throw deductErr;
-
-      setUserPoints(prev => prev - selectedRoom.price!);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/beef/access', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ beefId: selectedRoom.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast(data.error || 'Erreur lors du paiement', 'error');
+        return;
+      }
+      if (typeof data.newBalance === 'number') {
+        setUserPoints(data.newBalance);
+      } else {
+        const { data: u } = await supabase.from('users').select('points').eq('id', user.id).single();
+        if (u) setUserPoints(u.points || 0);
+      }
       setShowPaymentModal(false);
       toast('Accès débloqué !', 'success');
       router.push(`/arena/${selectedRoom.id}`);
-    } catch (err: any) {
+    } catch {
       toast('Erreur lors du paiement', 'error');
     } finally {
       setPurchaseLoading(false);

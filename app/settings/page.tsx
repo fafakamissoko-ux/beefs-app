@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, Sun, Moon, Monitor, Type, Zap, MessageSquare, UserPlus, Gift, Flame } from 'lucide-react';
+import { ArrowLeft, User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, Sun, Moon, Monitor, Type, Zap, MessageSquare, UserPlus, Gift, Flame, History } from 'lucide-react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase/client';
@@ -44,6 +45,16 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  type PointTx = {
+    id: string;
+    amount: number;
+    balance_after: number;
+    type: string;
+    description: string | null;
+    created_at: string;
+  };
+  const [pointTx, setPointTx] = useState<PointTx[]>([]);
+
   useEffect(() => {
     if (!user) {
       router.push('/login?redirect=/settings');
@@ -55,6 +66,22 @@ export default function SettingsPage() {
       if (saved) setNotifPrefs(JSON.parse(saved));
     } catch {}
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setPointTx([]);
+      return;
+    }
+    void supabase
+      .from('transactions')
+      .select('id, amount, balance_after, type, description, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50)
+      .then(({ data, error }) => {
+        if (!error && data) setPointTx(data as PointTx[]);
+      });
+  }, [user?.id]);
 
   const loadProfile = async () => {
     if (!user) return;
@@ -358,6 +385,63 @@ export default function SettingsPage() {
                 {saving ? 'Modification...' : 'Changer le mot de passe'}
               </button>
             </div>
+          </motion.div>
+
+          {/* Historique des points */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12 }}
+            className="card rounded-2xl p-6"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-brand-500/20 rounded-full flex items-center justify-center">
+                <History className="w-5 h-5 text-brand-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-white font-bold text-xl">Historique des points</h3>
+                <p className="text-gray-500 text-xs mt-0.5">Achats, accès aux directs, cadeaux, retraits (50 derniers)</p>
+              </div>
+              <Link
+                href="/buy-points"
+                className="text-xs font-semibold text-brand-400 hover:text-brand-300 whitespace-nowrap"
+              >
+                Acheter des points
+              </Link>
+            </div>
+            {pointTx.length === 0 ? (
+              <p className="text-gray-500 text-sm py-4 text-center">Aucun mouvement enregistré pour l’instant.</p>
+            ) : (
+              <ul className="space-y-2 max-h-80 overflow-y-auto hide-scrollbar pr-1">
+                {pointTx.map((tx) => (
+                  <li
+                    key={tx.id}
+                    className="flex items-start justify-between gap-3 py-2 border-b border-white/[0.06] last:border-0 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-white font-medium truncate">{tx.description || tx.type}</p>
+                      <p className="text-gray-500 text-[11px]">
+                        {new Date(tx.created_at).toLocaleString('fr-FR', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                        {' · '}
+                        <span className="text-gray-600">{tx.type}</span>
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className={tx.amount >= 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                        {tx.amount >= 0 ? '+' : ''}
+                        {tx.amount} pts
+                      </span>
+                      <p className="text-gray-600 text-[10px]">solde {tx.balance_after}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </motion.div>
 
           {/* Display & Accessibility */}

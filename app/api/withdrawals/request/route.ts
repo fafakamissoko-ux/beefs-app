@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { updateUserBalance } from '@/lib/updateUserBalance';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -69,13 +70,17 @@ export async function POST(req: NextRequest) {
 
     const amountEuros = amountPoints / 100;
 
-    // Deduct points immediately (held until processed)
-    const { error: deductError } = await supabaseAdmin
-      .from('users')
-      .update({ points: user.points - amountPoints })
-      .eq('id', userId);
-
-    if (deductError) {
+    let deducted = false;
+    try {
+      await updateUserBalance(supabaseAdmin, {
+        userId,
+        amount: -amountPoints,
+        type: 'withdrawal_hold',
+        description: 'Blocage de points — demande de retrait en attente',
+        metadata: { amount_euros: amountEuros },
+      });
+      deducted = true;
+    } catch {
       return NextResponse.json({ error: 'Erreur lors de la mise à jour du solde' }, { status: 500 });
     }
 
@@ -98,8 +103,17 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (insertError) {
-      // Rollback points
-      await supabaseAdmin.from('users').update({ points: user.points }).eq('id', userId);
+      if (deducted) {
+        try {
+          await updateUserBalance(supabaseAdmin, {
+            userId,
+            amount: amountPoints,
+            type: 'refund',
+            description: 'Annulation — échec création demande de retrait',
+            metadata: {},
+          });
+        } catch {}
+      }
       return NextResponse.json({ error: 'Erreur lors de la création de la demande' }, { status: 500 });
     }
 

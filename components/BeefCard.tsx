@@ -197,8 +197,8 @@ export function BeefCard({
         {/* Status — top left */}
         <div className="absolute top-3 left-3">{getStatusBadge()}</div>
 
-        {/* Suite payante (après prévisualisation) — top right */}
-        {(price ?? 0) > 0 && (
+        {/* Suite payante : pertinent seulement tant que le direct / la séance peut coûter des points */}
+        {(price ?? 0) > 0 && (status === 'live' || status === 'scheduled') && (
           <div className="absolute top-3 right-3">
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 border border-white/15 text-brand-200">
               <Eye className="w-3 h-3 text-brand-400" />
