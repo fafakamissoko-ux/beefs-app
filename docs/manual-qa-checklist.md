@@ -32,8 +32,9 @@
 
 ## Feed & cartes
 
-- [ ] Beef **TERMINÉ** : pas de badge **Suite · X pts** en haut à droite
-- [ ] Beef **LIVE** avec prix : badge **Suite · X pts** visible
+- [ ] Beef **TERMINÉ** : badge **Replay** en haut à droite (pas « Suite »)
+- [ ] Beef **À VENIR** avec prix : badge **Entrée · X pts**
+- [ ] Beef **LIVE** avec prix : **pas** de « Suite » tant que tu n’as pas ouvert l’arène en spectateur sur cet appareil ; après ouverture → **Suite · X pts**
 
 ## Retraits (si activé)
 

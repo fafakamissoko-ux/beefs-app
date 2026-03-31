@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, Clock, Users, Flame, Play, CheckCircle, Calendar, ArrowUpRight } from 'lucide-react';
+import { hasBeefWatchStarted } from '@/lib/beef-view-local';
 import { Countdown } from '@/components/Countdown';
 
 interface BeefCardProps {
@@ -26,6 +28,7 @@ interface BeefCardProps {
 }
 
 export function BeefCard({
+  id,
   title,
   description,
   host_name,
@@ -42,6 +45,12 @@ export function BeefCard({
   onTagClick,
   index,
 }: BeefCardProps) {
+  const [hasOpenedArena, setHasOpenedArena] = useState(false);
+
+  useEffect(() => {
+    setHasOpenedArena(hasBeefWatchStarted(id));
+  }, [id, status, price]);
+
   const getStatusBadge = () => {
     switch (status) {
       case 'live':
@@ -197,8 +206,28 @@ export function BeefCard({
         {/* Status — top left */}
         <div className="absolute top-3 left-3">{getStatusBadge()}</div>
 
-        {/* Suite payante : pertinent seulement tant que le direct / la séance peut coûter des points */}
-        {(price ?? 0) > 0 && (status === 'live' || status === 'scheduled') && (
+        {/* Replay : beef terminé (ou replay VOD) */}
+        {(status === 'ended' || status === 'replay') && (
+          <div className="absolute top-3 right-3">
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-500/15 border border-purple-500/30 text-purple-300">
+              <Play className="w-3 h-3 text-purple-400 fill-purple-400" />
+              <span>Replay</span>
+            </div>
+          </div>
+        )}
+
+        {/* À venir payant : prix d’entrée / suite annoncé (pas encore de visionnage) */}
+        {status === 'scheduled' && (price ?? 0) > 0 && (
+          <div className="absolute top-3 right-3">
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-500/10 border border-cyan-500/25 text-cyan-200">
+              <Flame className="w-3 h-3 text-cyan-400" />
+              <span>Entrée · {price} pts</span>
+            </div>
+          </div>
+        )}
+
+        {/* Suite : direct en cours + payant + spectateur a déjà ouvert l’arène sur cet appareil */}
+        {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
           <div className="absolute top-3 right-3">
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 border border-white/15 text-brand-200">
               <Eye className="w-3 h-3 text-brand-400" />

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { TikTokStyleArena } from '@/components/TikTokStyleArena';
 import { supabase } from '@/lib/supabase/client';
 import { beefDailyRoomName } from '@/lib/beef-daily-room';
+import { markBeefWatchStarted } from '@/lib/beef-view-local';
 import { motion } from 'framer-motion';
 import { Clock, ArrowLeft } from 'lucide-react';
 
@@ -120,7 +121,9 @@ export default function ArenaPage() {
       setIsHost(beef.mediator_id === userId);
 
       // Determine user role
+      let resolvedRole: 'mediator' | 'challenger' | 'viewer' = 'viewer';
       if (beef.mediator_id === userId) {
+        resolvedRole = 'mediator';
         setUserRole('mediator');
       } else {
         const { data: participation } = await supabase
@@ -131,10 +134,17 @@ export default function ArenaPage() {
           .maybeSingle();
 
         if (participation && participation.invite_status === 'accepted') {
+          resolvedRole = 'challenger';
           setUserRole('challenger');
         } else {
+          resolvedRole = 'viewer';
           setUserRole('viewer');
         }
+      }
+
+      const pricePts = (beef as { price?: number }).price ?? 0;
+      if (beef.status === 'live' && pricePts > 0 && resolvedRole === 'viewer') {
+        markBeefWatchStarted(roomId);
       }
 
       await ensureDailyRoom(roomId);
