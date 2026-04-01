@@ -311,10 +311,11 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
             className="space-y-4"
           >
             <div>
-              <label className="block text-white font-semibold mb-2 text-sm">
+              <label htmlFor="create-beef-title" className="block text-white font-semibold mb-2 text-sm">
                 Titre du beef
               </label>
               <input
+                id="create-beef-title"
                 type="text"
                 value={beefData.title}
                 onChange={(e) => { updateData('title', e.target.value); setFieldErrors(p => { const n = {...p}; delete n.title; return n; }); }}
@@ -553,14 +554,15 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
             className="space-y-4"
           >
             <div>
-              <label className="block text-white font-semibold mb-2 flex items-center gap-2 text-sm">
-                <FileText className="w-4 h-4 text-purple-400" />
+              <label htmlFor="create-beef-description" className="block text-white font-semibold mb-2 flex items-center gap-2 text-sm">
+                <FileText className="w-4 h-4 text-purple-400" aria-hidden />
                 Contexte du conflit
               </label>
               <p className="text-gray-400 text-xs mb-2">
                 Expliquez la situation pour que le médiateur puisse aider efficacement.
               </p>
               <textarea
+                id="create-beef-description"
                 value={beefData.description}
                 onChange={(e) => { updateData('description', e.target.value); setFieldErrors(p => { const n = {...p}; delete n.description; return n; }); }}
                 placeholder="Décrivez le conflit : Que s'est-il passé ? Quels sont les enjeux ? Qu'attendez-vous de cette médiation ?"

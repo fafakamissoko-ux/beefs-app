@@ -1437,12 +1437,17 @@ export function TikTokStyleArena({
       )}
 
       {isViewer && previewPaywall && liveContinuationPrice > 0 && (
-        <div className="absolute inset-0 z-[2500] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6">
+        <div
+          className="absolute inset-0 z-[2500] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="paywall-preview-title"
+        >
           <div className="max-w-md w-full text-center space-y-5">
             <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-500/20 flex items-center justify-center">
-              <Lock className="w-8 h-8 text-brand-400" />
+              <Lock className="w-8 h-8 text-brand-400" aria-hidden />
             </div>
-            <h2 className="text-xl font-black text-white">Fin de la prévisualisation gratuite</h2>
+            <h2 id="paywall-preview-title" className="text-xl font-black text-white">Fin de la prévisualisation gratuite</h2>
             <p className="text-gray-400 text-sm leading-relaxed">
               Les {freePreviewMinutes} premières minutes sont offertes. Pour la suite du direct, utilise tes points.
             </p>
@@ -1516,7 +1521,12 @@ export function TikTokStyleArena({
 
       {/* ── END-OF-BEEF SUMMARY SCREEN ── */}
       {beefEnded && endSummary && (
-        <div className="absolute inset-0 z-[1000] bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col items-center justify-center p-6">
+        <div
+          className="absolute inset-0 z-[1000] bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col items-center justify-center p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="beef-end-summary-title"
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -1525,12 +1535,12 @@ export function TikTokStyleArena({
           >
             {/* Header */}
             <div className="space-y-2">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-brand-500 to-orange-500 flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-brand-500 to-orange-500 flex items-center justify-center" aria-hidden>
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-white">Beef terminé</h2>
+              <h2 id="beef-end-summary-title" className="text-2xl font-bold text-white">Beef terminé</h2>
               <p className="text-sm text-gray-400">{endSummary.endReason}</p>
             </div>
 
@@ -1681,6 +1691,7 @@ export function TikTokStyleArena({
                 {/* Vote tap overlay — viewers tap to vote for this challenger */}
                 {!isHost && !leftPanelIsLocal && (
                   <button
+                    type="button"
                     onClick={() => castVote('A')}
                     className="absolute inset-0 z-[5] touch-manipulation"
                     aria-label={`Voter pour ${leftPanelName}`}
@@ -1741,13 +1752,17 @@ export function TikTokStyleArena({
                 {leftPanelIsLocal && !isViewer && (
                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
                     <button
+                      type="button"
                       onClick={toggleMic}
+                      aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
                       className={`w-9 h-9 rounded-full flex items-center justify-center text-base transition-all shadow ${micEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white shadow-red-500/50'}`}
                     >
                       {micEnabled ? '🎤' : '🔇'}
                     </button>
                     <button
+                      type="button"
                       onClick={toggleCam}
+                      aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
                       className={`w-9 h-9 rounded-full flex items-center justify-center text-base transition-all shadow ${camEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white shadow-red-500/50'}`}
                     >
                       {camEnabled ? '📹' : '🚫'}
@@ -1808,24 +1823,30 @@ export function TikTokStyleArena({
                   {isHost && (
                     <div className="flex items-center gap-1.5">
                       <button
+                        type="button"
                         onClick={toggleMic}
+                        aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all shadow ${micEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white shadow-red-500/50'}`}
                       >
                         {micEnabled ? '🎤' : '🔇'}
                       </button>
                       <button
+                        type="button"
                         onClick={toggleCam}
+                        aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all shadow ${camEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white shadow-red-500/50'}`}
                       >
                         {camEnabled ? '📹' : '🚫'}
                       </button>
                       <button
+                        type="button"
                         onClick={() => setShowModeratorPanel(true)}
                         className="w-8 h-8 rounded-full bg-black/70 backdrop-blur-sm border border-white/20
                           flex items-center justify-center hover:bg-white/10 transition-all text-white shadow"
                         title="Contrôles du médiateur"
+                        aria-label="Ouvrir les contrôles du médiateur"
                       >
-                        <span className="text-sm">🔧</span>
+                        <span className="text-sm" aria-hidden>🔧</span>
                       </button>
                     </div>
                   )}
@@ -1856,6 +1877,7 @@ export function TikTokStyleArena({
                 {/* Vote tap overlay — viewers tap to vote for this challenger */}
                 {!isHost && (
                   <button
+                    type="button"
                     onClick={() => castVote('B')}
                     className="absolute inset-0 z-[5] touch-manipulation"
                     aria-label={`Voter pour ${rightPanelName}`}
@@ -2369,10 +2391,12 @@ export function TikTokStyleArena({
                 {POPULAR_REACTIONS.map((emoji) => (
                   <button
                     key={emoji}
+                    type="button"
                     onClick={() => { handleReaction(emoji); setShowAllReactions(false); }}
+                    aria-label={`Réagir avec ${emoji}`}
                     className="w-10 h-10 flex items-center justify-center text-xl rounded-xl hover:bg-white/10 active:scale-90 transition-all touch-manipulation"
                   >
-                    {emoji}
+                    <span aria-hidden>{emoji}</span>
                   </button>
                 ))}
               </div>
@@ -2388,16 +2412,25 @@ export function TikTokStyleArena({
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
               placeholder="Saisis ton message..."
+              aria-label="Message dans le chat du direct"
+              autoComplete="off"
               className="w-full bg-white/10 backdrop-blur-sm border border-white/15 rounded-full pl-3.5 pr-12 py-2 text-white placeholder-white/40 text-sm focus:outline-none focus:border-brand-400/50 transition-colors"
             />
             {chatInput.trim() && (
               <button
+                type="button"
                 onClick={handleSendMessage}
+                aria-label="Envoyer le message"
                 className="absolute right-1 top-1/2 -translate-y-1/2 w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center hover:bg-brand-600 transition-colors"
               >
-                <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
+                <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" /></svg>
               </button>
             )}
             <FeatureGuide
@@ -2410,30 +2443,38 @@ export function TikTokStyleArena({
 
           {/* Emoji toggle */}
           <motion.button
+            type="button"
             whileTap={{ scale: 0.85 }}
             onClick={() => setShowAllReactions(!showAllReactions)}
+            aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
+            aria-expanded={showAllReactions}
             className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 touch-manipulation"
           >
-            <span className="text-base">😀</span>
+            <span className="text-base" aria-hidden>😀</span>
           </motion.button>
 
           {/* Like / Heart */}
           <motion.button
+            type="button"
             whileTap={{ scale: 0.85 }}
             onClick={() => handleReaction('❤️')}
+            aria-label="Envoyer une réaction cœur"
             className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 touch-manipulation"
           >
-            <Heart className="w-[18px] h-[18px] text-pink-500 fill-pink-500" />
+            <Heart className="w-[18px] h-[18px] text-pink-500 fill-pink-500" aria-hidden />
           </motion.button>
 
           {/* Gift */}
           <div className="relative flex-shrink-0">
             <motion.button
+              type="button"
               whileTap={{ scale: 0.85 }}
               onClick={() => setShowGiftPicker(!showGiftPicker)}
+              aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
+              aria-expanded={showGiftPicker}
               className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400/80 to-brand-500/80 flex items-center justify-center touch-manipulation"
             >
-              <Gift className="w-[18px] h-[18px] text-white" />
+              <Gift className="w-[18px] h-[18px] text-white" aria-hidden />
             </motion.button>
             <FeatureGuide
               id="arena-gift"
