@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { AppBackButton } from '@/components/AppBackButton';
 
 type NotificationType =
   | 'follow'
@@ -201,6 +202,7 @@ export default function NotificationsPage() {
   return (
     <div className="min-h-screen bg-black">
       <div className="max-w-2xl mx-auto px-4 py-8">
+        <AppBackButton className="mb-4" />
         <div className="flex flex-col gap-4 mb-8">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">

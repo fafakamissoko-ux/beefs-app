@@ -9,6 +9,7 @@ import { markBeefWatchStarted } from '@/lib/beef-view-local';
 import { motion } from 'framer-motion';
 import { Clock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { navigateSmartBack } from '@/lib/navigation-return';
 
 export default function ArenaPage() {
   const params = useParams();
@@ -245,7 +246,8 @@ export default function ArenaPage() {
           </Link>
           <motion.button
             whileTap={{ scale: 0.96 }}
-            onClick={() => router.replace('/feed')}
+            type="button"
+            onClick={() => navigateSmartBack(router, '/feed')}
             className="w-full py-3 rounded-xl bg-brand-500 text-white font-semibold text-sm hover:bg-brand-600 transition-colors flex items-center justify-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />

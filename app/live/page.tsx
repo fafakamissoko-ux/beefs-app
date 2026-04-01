@@ -8,6 +8,7 @@ import { Users, Clock, Plus, TrendingUp, Flame, Eye, Lock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { CreateBeefForm } from '@/components/CreateBeefForm';
 import { useToast } from '@/components/Toast';
+import { AppBackButton } from '@/components/AppBackButton';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
 
 // Feed logic like X/Twitter: "Pour vous" = algorithmic, "Abonnements" = chronological
@@ -270,6 +271,7 @@ export default function LivePage() {
   return (
     <div className="min-h-screen bg-black">
       <div className="max-w-7xl mx-auto px-4 py-8">
+        <AppBackButton className="mb-4" />
         {/* Header */}
         <div className="mb-8">
           <motion.div

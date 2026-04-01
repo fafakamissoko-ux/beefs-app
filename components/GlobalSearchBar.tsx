@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, X, User, Flame, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { hrefWithFrom } from '@/lib/navigation-return';
 
 interface SearchResult {
   type: 'beef' | 'user';
@@ -19,6 +20,7 @@ interface SearchResult {
 
 export function GlobalSearchBar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'beefs' | 'users'>('beefs');
@@ -103,9 +105,9 @@ export function GlobalSearchBar() {
 
   const handleResultClick = (result: SearchResult) => {
     if (result.type === 'beef') {
-      router.push(`/arena/${result.id}`);
+      router.push(hrefWithFrom(`/arena/${result.id}`, pathname));
     } else {
-      router.push(`/profile/${result.username}`);
+      router.push(hrefWithFrom(`/profile/${result.username}`, pathname));
     }
     setIsOpen(false);
     setQuery('');

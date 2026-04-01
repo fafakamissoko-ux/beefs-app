@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Mail, ArrowLeft } from 'lucide-react';
+import { Mail } from 'lucide-react';
+import { AppBackButton } from '@/components/AppBackButton';
 import { supabase } from '@/lib/supabase/client';
 
 export default function ForgotPasswordPage() {
@@ -65,13 +66,9 @@ export default function ForgotPasswordPage() {
         animate={{ scale: 1, opacity: 1 }}
         className="max-w-md w-full"
       >
-        <Link
-          href="/login"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Retour</span>
-        </Link>
+        <div className="mb-6">
+          <AppBackButton fallback="/login" />
+        </div>
 
         <div className="text-center mb-8">
           <div className="w-16 h-16 brand-gradient rounded-full flex items-center justify-center mx-auto mb-4">

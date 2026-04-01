@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { ArrowLeft, CheckCircle, Eye, Users, Hash, User } from 'lucide-react';
+import { CheckCircle, Eye, Users, Hash, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
+import { AppBackButton } from '@/components/AppBackButton';
+import { hrefWithFrom } from '@/lib/navigation-return';
 
 const TERMINAL_STATUSES = new Set(['ended', 'replay', 'cancelled']);
 
@@ -29,6 +31,7 @@ type BeefRow = {
 export default function BeefSummaryPage() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const id = params.id as string;
   const [beef, setBeef] = useState<BeefRow | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,14 +106,7 @@ export default function BeefSummaryPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-black px-4 py-10">
       <div className="max-w-lg mx-auto space-y-8">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Retour
-        </button>
+        <AppBackButton className="text-sm" />
 
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -153,7 +149,7 @@ export default function BeefSummaryPage() {
           </div>
           {mediatorUsername ? (
             <Link
-              href={`/profile/${mediatorUsername}`}
+              href={hrefWithFrom(`/profile/${mediatorUsername}`, pathname)}
               className="flex items-center justify-between group"
             >
               <span className="text-white font-semibold group-hover:text-brand-400 transition-colors">{hostName}</span>

@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Check, Sparkles, Zap, ArrowLeft, Globe } from 'lucide-react';
+import { Check, Sparkles, Zap, Globe } from 'lucide-react';
 import Link from 'next/link';
+import { AppBackButton } from '@/components/AppBackButton';
 import { getStripe, POINT_PACKS } from '@/lib/stripe/client';
 import { supabase } from '@/lib/supabase/client';
 import { useCountryDetection } from '@/hooks/useCountryDetection';
@@ -66,14 +67,7 @@ export default function BuyPointsPage() {
       <div className="fixed inset-0 bg-gradient-to-br from-brand-500/10 via-black to-brand-400/10"></div>
       
       <div className="relative max-w-md mx-auto px-4 py-8">
-        {/* Back Button */}
-        <Link
-          href="/live"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="font-semibold">Retour</span>
-        </Link>
+        <AppBackButton className="mb-8" />
 
         {/* Header - Épuré */}
         <div className="text-center mb-12">

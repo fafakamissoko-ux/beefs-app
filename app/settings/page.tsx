@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, Sun, Moon, Monitor, Type, Zap, MessageSquare, UserPlus, Gift, Flame, History } from 'lucide-react';
+import { User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, Sun, Moon, Monitor, Type, Zap, MessageSquare, UserPlus, Gift, Flame, History } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase/client';
 import { FeatureGuide } from '@/components/FeatureGuide';
+import { AppBackButton } from '@/components/AppBackButton';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -217,13 +218,7 @@ export default function SettingsPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header with Back button */}
         <div className="flex items-center gap-4 mb-8">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-semibold">Retour</span>
-          </button>
+          <AppBackButton />
           <div className="flex-1">
             <h1 className="text-4xl font-black text-white">Paramètres</h1>
             <p className="text-gray-400">Gérez votre compte et vos préférences</p>

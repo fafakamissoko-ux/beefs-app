@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Edit, Share2, Settings, TrendingUp, Users, MessageCircle, Trophy, Crown, Flame, Upload, X, Check, ArrowLeft, Clock, Wallet, Euro, ChevronDown, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { PremiumBadge, PremiumAvatarFrame } from '@/components/PremiumBadge';
 import { BeefCard } from '@/components/BeefCard';
+import { AppBackButton } from '@/components/AppBackButton';
+import { hrefWithFrom } from '@/lib/navigation-return';
 import { useToast } from '@/components/Toast';
 
 interface UserProfile {
@@ -60,6 +62,7 @@ interface Beef {
 
 export default function ProfileContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const { toast } = useToast();
   
@@ -500,14 +503,7 @@ export default function ProfileContent() {
   return (
     <div className="min-h-screen bg-black">
       <div className="max-w-5xl mx-auto px-4 py-8">
-        {/* Back button */}
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-gray-400 hover:text-white mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="font-semibold">Retour</span>
-        </button>
+        <AppBackButton className="mb-4" />
 
         {/* Profile Header */}
         <div className="card rounded-3xl overflow-hidden mb-6">
@@ -581,7 +577,7 @@ export default function ProfileContent() {
                   Partager
                 </button>
                 <Link
-                  href="/settings"
+                  href={hrefWithFrom('/settings', pathname)}
                   className="px-4 py-2 bg-brand-500 hover:bg-brand-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
                 >
                   <Settings className="w-4 h-4" />
@@ -925,7 +921,7 @@ export default function ProfileContent() {
                   <Flame className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                   <p className="text-gray-400 mb-4">Aucun beef pour le moment</p>
                   <Link
-                    href="/create"
+                    href={hrefWithFrom('/create', pathname)}
                     className="inline-block px-6 py-3 brand-gradient hover:opacity-90 text-black font-bold rounded-xl transition-all"
                   >
                     Créer un beef

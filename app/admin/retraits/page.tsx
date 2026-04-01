@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Check, X, Clock, Euro, AlertCircle, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Check, X, Clock, Euro, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
+import { AppBackButton } from '@/components/AppBackButton';
 
 interface WithdrawalRequest {
   id: string;
@@ -106,9 +107,7 @@ export default function AdminRetraitsPage() {
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h1 className="text-xl font-bold text-white mb-2">Accès refusé</h1>
           <p className="text-gray-500 text-sm mb-6">Vous devez être administrateur pour accéder à cette page.</p>
-          <button onClick={() => router.push('/feed')} className="btn-primary">
-            Retour au feed
-          </button>
+          <AppBackButton fallback="/feed" />
         </div>
       </div>
     );
@@ -123,10 +122,7 @@ export default function AdminRetraitsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <button onClick={() => router.push('/admin')} className="flex items-center gap-2 text-gray-400 hover:text-white text-sm mb-2 transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-              Dashboard admin
-            </button>
+            <AppBackButton fallback="/admin" className="text-gray-400 hover:text-white text-sm mb-2" />
             <h1 className="text-3xl font-black text-white">Gestion des Retraits</h1>
             <p className="text-gray-400 text-sm mt-1">Beefs Admin</p>
           </div>

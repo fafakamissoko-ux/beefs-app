@@ -10,6 +10,7 @@ import { BetaGate } from "@/components/BetaGate";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { ClientMonitoring } from "@/components/ClientMonitoring";
+import { NavigationReturnTracker } from "@/components/NavigationReturnTracker";
 
 export const metadata: Metadata = {
   title: {
@@ -78,6 +79,7 @@ function RootLayoutClient({
           <BetaGate>
           <PWAManager />
           <ScrollRestoration />
+          <NavigationReturnTracker />
           <Header />
           <main className="pt-14">
             {children}

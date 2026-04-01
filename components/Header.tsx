@@ -11,6 +11,7 @@ import { BeefLogo } from '@/components/BeefLogo';
 import { GlobalSearchBar } from '@/components/GlobalSearchBar';
 import { BeefNotificationToasts } from '@/components/BeefNotificationToasts';
 import { supabase } from '@/lib/supabase/client';
+import { hrefWithFrom } from '@/lib/navigation-return';
 
 function getNotifPrefs(): Record<string, boolean> {
   try {
@@ -171,7 +172,7 @@ export function Header() {
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={hrefWithFrom(item.href, pathname)}
                     className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                       active
                         ? 'text-white bg-white/[0.08]'
@@ -247,7 +248,7 @@ export function Header() {
                             ].map(item => (
                               <Link
                                 key={item.href}
-                                href={item.href}
+                                href={hrefWithFrom(item.href, pathname)}
                                 onClick={() => setUserMenuOpen(false)}
                                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors"
                               >
@@ -286,7 +287,7 @@ export function Header() {
             <div className="flex md:hidden items-center gap-1.5">
               <GlobalSearchBar />
               {user && (
-                <Link href="/create" prefetch className="p-2 text-brand-400">
+                <Link href={hrefWithFrom('/create', pathname)} prefetch className="p-2 text-brand-400">
                   <Plus className="w-5 h-5" />
                 </Link>
               )}
@@ -322,7 +323,7 @@ export function Header() {
                   return (
                     <Link
                       key={item.href}
-                      href={item.href}
+                      href={hrefWithFrom(item.href, pathname)}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                         active ? 'bg-brand-500/10 text-brand-400' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
@@ -363,7 +364,7 @@ export function Header() {
                         { href: '/settings', icon: SettingsIcon, label: 'Paramètres' },
                         ...(userRole === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
                       ].map(item => (
-                        <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}
+                        <Link key={item.href} href={hrefWithFrom(item.href, pathname)} onClick={() => setMobileMenuOpen(false)}
                           className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] rounded-xl transition-colors">
                           <item.icon className="w-5 h-5 text-gray-500" />
                           <span>{item.label}</span>

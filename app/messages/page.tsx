@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
+import { AppBackButton } from '@/components/AppBackButton';
+import { hrefWithFrom } from '@/lib/navigation-return';
 
 interface Conversation {
   id: string;
@@ -35,6 +37,7 @@ interface Message {
 
 export default function MessagesPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, loading } = useAuth();
   const { toast } = useToast();
 
@@ -297,8 +300,11 @@ export default function MessagesPage() {
       <div className="max-w-5xl mx-auto flex h-full">
         {/* Conversation list */}
         <div className={`w-full md:w-96 border-r border-white/10 flex flex-col ${selectedConv ? 'hidden md:flex' : 'flex'}`}>
-          <div className="p-4 border-b border-white/10 flex items-center justify-between">
-            <h1 className="text-xl font-black text-white">Messages</h1>
+          <div className="p-4 border-b border-white/10 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <AppBackButton className="shrink-0" />
+              <h1 className="text-xl font-black text-white truncate">Messages</h1>
+            </div>
             <button
               onClick={() => setShowNewConv(!showNewConv)}
               className="w-10 h-10 rounded-full bg-brand-500 hover:bg-brand-600 flex items-center justify-center transition-colors"
@@ -415,7 +421,7 @@ export default function MessagesPage() {
                 </button>
                 <div
                   className="flex items-center gap-3 flex-1 cursor-pointer"
-                  onClick={() => router.push(`/profile/${selectedConv.other_user.username}`)}
+                  onClick={() => router.push(hrefWithFrom(`/profile/${selectedConv.other_user.username}`, pathname))}
                 >
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0">
                     {selectedConv.other_user.avatar_url ? (

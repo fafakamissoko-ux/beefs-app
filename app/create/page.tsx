@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { submitNewBeef } from '@/lib/submitNewBeef';
+import { navigateSmartBack } from '@/lib/navigation-return';
 
 const CreateBeefForm = dynamic(
   () => import('@/components/CreateBeefForm').then((m) => m.CreateBeefForm),
@@ -52,7 +53,7 @@ export default function CreateBeefPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      <CreateBeefForm onSubmit={handleSubmit} onCancel={() => router.push('/feed')} />
+      <CreateBeefForm onSubmit={handleSubmit} onCancel={() => navigateSmartBack(router, '/feed')} />
     </div>
   );
 }

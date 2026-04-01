@@ -7,6 +7,7 @@ import { Shield, Users, Flame, Coins, Eye, EyeOff, ArrowRight, Settings, Refresh
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
+import { AppBackButton } from '@/components/AppBackButton';
 
 type ViewMode = 'admin' | 'user' | 'mediator' | 'challenger';
 
@@ -166,6 +167,7 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div className="brand-gradient px-4 pt-14 pb-8">
         <div className="max-w-2xl mx-auto">
+          <AppBackButton className="mb-3 text-white/90 hover:text-white [&_svg]:text-white/70" fallback="/feed" />
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-7 h-7 text-white" />
             <h1 className="text-2xl font-black text-white">Panneau Admin</h1>

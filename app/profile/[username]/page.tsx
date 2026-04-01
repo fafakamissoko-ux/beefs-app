@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Share2, UserPlus, UserMinus, Flame, Calendar, ArrowLeft, MoreVertical } from 'lucide-react';
+import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { BeefCard } from '@/components/BeefCard';
 import { FollowListModal } from '@/components/FollowListModal';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
+import { AppBackButton } from '@/components/AppBackButton';
+import { hrefWithFrom } from '@/lib/navigation-return';
 import { useToast } from '@/components/Toast';
 
 interface UserProfile {
@@ -46,6 +48,7 @@ interface Beef {
 export default function PublicProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const { toast } = useToast();
   const username = params.username as string;
@@ -212,13 +215,8 @@ export default function PublicProfilePage() {
           </div>
           <h2 className="text-2xl font-black text-white mb-2">Utilisateur introuvable</h2>
           <p className="text-gray-500 mb-6">@{username} n'existe pas ou a été supprimé.</p>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => router.back()}
-              className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-colors"
-            >
-              Retour
-            </button>
+          <div className="flex gap-3 justify-center flex-wrap">
+            <AppBackButton className="px-5 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl [&_span]:text-white [&_span]:hover:text-white" fallback="/feed" />
             <Link
               href="/feed"
               className="px-5 py-2.5 brand-gradient text-white font-semibold rounded-xl"
@@ -234,14 +232,7 @@ export default function PublicProfilePage() {
   return (
     <div className="min-h-screen bg-black">
       <div className="max-w-5xl mx-auto px-4 py-8">
-        {/* Back button */}
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-gray-400 hover:text-white mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="font-semibold">Retour</span>
-        </button>
+        <AppBackButton className="mb-4" />
 
         {/* Profile Header */}
         <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-3xl border border-gray-700 overflow-hidden mb-6">
@@ -311,7 +302,7 @@ export default function PublicProfilePage() {
 
                 {isOwnProfile && (
                   <Link
-                    href="/profile"
+                    href={hrefWithFrom('/profile', pathname)}
                     className="px-4 py-2 bg-brand-500 hover:bg-brand-600 rounded-lg text-white font-semibold transition-colors"
                   >
                     Modifier le profil

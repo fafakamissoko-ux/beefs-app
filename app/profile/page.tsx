@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProfilePage() {

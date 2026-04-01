@@ -7,6 +7,7 @@ import { Mail, Check, X, Clock, AlertCircle, Users, Flame } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
+import { AppBackButton } from '@/components/AppBackButton';
 
 interface Invitation {
   id: string;
@@ -180,6 +181,7 @@ export default function InvitationsPage() {
   return (
     <div className="min-h-screen bg-black pb-20">
       <div className="max-w-4xl mx-auto px-4 py-8">
+        <AppBackButton className="mb-4" />
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-black text-white mb-2 flex items-center gap-3">

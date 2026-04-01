@@ -10,6 +10,7 @@ import {
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
+import { AppBackButton } from '@/components/AppBackButton';
 
 interface UserRow {
   id: string;
@@ -222,13 +223,7 @@ export default function AdminUsersPage() {
       {/* Header */}
       <div className="brand-gradient px-4 pt-14 pb-8">
         <div className="max-w-4xl mx-auto">
-          <button
-            onClick={() => router.push('/admin')}
-            className="flex items-center gap-2 text-white/70 hover:text-white text-sm mb-3 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Dashboard admin
-          </button>
+          <AppBackButton fallback="/admin" className="text-white/80 hover:text-white text-sm mb-3" />
           <div className="flex items-center gap-3">
             <Users className="w-7 h-7 text-white" />
             <h1 className="text-2xl font-black text-white">Gestion des utilisateurs</h1>

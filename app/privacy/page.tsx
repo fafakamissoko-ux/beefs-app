@@ -1,7 +1,5 @@
-'use client';
-
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { AppBackButton } from '@/components/AppBackButton';
 
 export default function PrivacyPage() {
   return (
@@ -18,13 +16,9 @@ export default function PrivacyPage() {
       </div>
 
       <div className="relative max-w-3xl mx-auto px-4 py-8 pb-20">
-        <Link
-          href="/feed"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-8"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="font-semibold">Retour au fil</span>
-        </Link>
+        <div className="mb-8">
+          <AppBackButton fallback="/feed" label="Retour au fil" />
+        </div>
 
         <header className="mb-10">
           <h1 className="text-3xl md:text-4xl font-black text-gradient tracking-tight">

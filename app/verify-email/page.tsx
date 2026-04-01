@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Mail, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
+import { AppBackButton } from '@/components/AppBackButton';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -47,6 +48,7 @@ export default function VerifyEmailPage() {
         animate={{ scale: 1, opacity: 1 }}
         className="max-w-md w-full"
       >
+        <AppBackButton className="mb-4" fallback="/login" />
         <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700 text-center">
           <div className="w-16 h-16 bg-brand-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <Mail className="w-8 h-8 text-brand-400" />
