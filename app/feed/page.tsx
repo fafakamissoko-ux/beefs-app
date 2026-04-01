@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
@@ -33,7 +33,7 @@ interface Beef {
   description?: string;
   host_name: string;
   mediator_id?: string;
-  status: 'live' | 'ended' | 'replay' | 'scheduled';
+  status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled';
   created_at: string;
   scheduled_at?: string;
   viewer_count?: number;
@@ -66,6 +66,45 @@ export default function FeedPage() {
   const [trendingTags, setTrendingTags] = useState<string[]>([]);
   const [followingIds, setFollowingIds] = useState<string[]>([]);
   const [activeBeef, setActiveBeef] = useState<{ id: string; title: string; role: string } | null>(null);
+  const [fetchLimit, setFetchLimit] = useState(20);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [filtersHydrated, setFiltersHydrated] = useState(false);
+  const loadMoreIntentRef = useRef(false);
+
+  const FEED_FILTERS_KEY = 'beefs_feed_filters_v1';
+
+  useEffect(() => {
+    if (!user || filtersHydrated) return;
+    try {
+      const raw = localStorage.getItem(FEED_FILTERS_KEY);
+      if (raw) {
+        const o = JSON.parse(raw) as { feedType?: string; selectedStatus?: string; selectedTags?: string[] };
+        if (o.feedType === 'pour-vous' || o.feedType === 'abonnements') setFeedType(o.feedType);
+        if (typeof o.selectedStatus === 'string') setSelectedStatus(o.selectedStatus);
+        if (Array.isArray(o.selectedTags)) setSelectedTags(o.selectedTags);
+      }
+    } catch {
+      /* ignore */
+    }
+    setFiltersHydrated(true);
+  }, [user, filtersHydrated]);
+
+  useEffect(() => {
+    if (!filtersHydrated) return;
+    try {
+      localStorage.setItem(
+        FEED_FILTERS_KEY,
+        JSON.stringify({ feedType, selectedStatus, selectedTags })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [feedType, selectedStatus, selectedTags, filtersHydrated]);
+
+  useEffect(() => {
+    setFetchLimit(20);
+  }, [selectedStatus, selectedTags, feedType, followingIds]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -162,16 +201,21 @@ export default function FeedPage() {
       const channel = supabase.channel('beefs_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'beefs' }, () => loadBeefs()).subscribe();
       return () => { channel.unsubscribe(); };
     }
-  }, [user, feedType, selectedTags, selectedStatus, followingIds]);
+  }, [user, feedType, selectedTags, selectedStatus, followingIds, fetchLimit]);
 
   const loadBeefs = async () => {
     try {
       setLoading(true);
-      let query = supabase.from('beefs').select('*, users!beefs_mediator_id_fkey(username, display_name), beef_participants(count)').limit(50);
+      let query = supabase
+        .from('beefs')
+        .select('*, users!beefs_mediator_id_fkey(username, display_name), beef_participants(count)')
+        .order('created_at', { ascending: false })
+        .limit(fetchLimit);
       if (selectedStatus !== 'all') query = query.eq('status', selectedStatus);
       const { data, error } = await query;
       if (error) throw error;
 
+      const rawCount = (data || []).length;
       let beefsWithData = (data || []).map((beef: any) => ({
         ...beef,
         host_name: beef.users?.display_name || beef.users?.username || 'Anonyme',
@@ -199,15 +243,28 @@ export default function FeedPage() {
       }
 
       setBeefs(beefsWithData);
+      setHasMore(rawCount >= fetchLimit);
     } catch (error) {
       console.error('Error loading beefs:', error);
       setBeefs([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
+  const loadMore = () => {
+    if (loadingMore || !hasMore) return;
+    loadMoreIntentRef.current = true;
+    setFetchLimit((n) => n + 20);
+  };
+
   const handleBeefClick = (beef: Beef) => {
+    if (beef.status === 'ended' || beef.status === 'replay' || beef.status === 'cancelled') {
+      router.push(`/beef/${beef.id}/summary`);
+      return;
+    }
     router.push(`/arena/${beef.id}`);
   };
 
@@ -398,11 +455,25 @@ export default function FeedPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {beefs.map((beef, index) => (
-              <BeefCard key={beef.id} {...beef} onClick={() => handleBeefClick(beef)} onTagClick={handleTagClick} index={index} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {beefs.map((beef, index) => (
+                <BeefCard key={beef.id} {...beef} onClick={() => handleBeefClick(beef)} onTagClick={handleTagClick} index={index} />
+              ))}
+            </div>
+            {hasMore && (
+              <div className="flex justify-center mt-8">
+                <button
+                  type="button"
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
+                  className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm font-semibold disabled:opacity-50 transition-colors"
+                >
+                  {loadingMore ? 'Chargement…' : 'Charger plus'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

@@ -88,7 +88,7 @@ export function BeefNotificationToasts({ userId }: BeefNotificationToastsProps) 
                   </div>
                   <p className="text-white font-bold text-sm truncate">{toast.title}</p>
                   <Link
-                    href={`/arena/${toast.beefId}`}
+                    href={toast.type === 'ended' ? `/beef/${toast.beefId}/summary` : `/arena/${toast.beefId}`}
                     className="inline-block mt-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 py-1 rounded-full transition-colors"
                     onClick={() => dismiss(toast.id)}
                   >

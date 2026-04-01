@@ -70,6 +70,7 @@ export function useBeefNotifications({ userId, onNotification }: UseBeefNotifica
           }
           if (beef.status === 'ended') {
             onNotification({ beefId: beef.id, title: beef.title, type: 'ended' });
+            showBrowserNotification(`🏁 Beef terminé`, `"${beef.title}" — ouvre l’app pour voir le résumé.`);
           }
         }
       )

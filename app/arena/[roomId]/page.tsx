@@ -8,6 +8,7 @@ import { beefDailyRoomName } from '@/lib/beef-daily-room';
 import { markBeefWatchStarted } from '@/lib/beef-view-local';
 import { motion } from 'framer-motion';
 import { Clock, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ArenaPage() {
   const params = useParams();
@@ -95,7 +96,7 @@ export default function ArenaPage() {
         .maybeSingle();
       setHasPaidContinuation(!!accessRow);
 
-      if (beef.status === 'ended' || beef.status === 'cancelled') {
+      if (beef.status === 'ended' || beef.status === 'cancelled' || beef.status === 'replay') {
         const med = beef.users as any;
         setBeefEndedInfo({
           title: beef.title || 'Beef',
@@ -236,6 +237,12 @@ export default function ArenaPage() {
           <p className="text-sm text-gray-400">
             Ce beef est terminé. Tu peux en créer un nouveau ou regarder les prochains lives.
           </p>
+          <Link
+            href={`/beef/${roomId}/summary`}
+            className="block w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-sm transition-colors text-center"
+          >
+            Voir le résumé détaillé
+          </Link>
           <motion.button
             whileTap={{ scale: 0.96 }}
             onClick={() => router.replace('/feed')}

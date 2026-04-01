@@ -11,7 +11,7 @@ interface BeefCardProps {
   title: string;
   description?: string;
   host_name: string;
-  status: 'live' | 'ended' | 'replay' | 'scheduled';
+  status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled';
   created_at: string;
   scheduled_at?: string;
   viewer_count?: number;
@@ -79,6 +79,13 @@ export function BeefCard({
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold" style={{ background: 'rgba(107, 114, 128, 0.12)', border: '1px solid rgba(107, 114, 128, 0.25)' }}>
             <CheckCircle className="w-3 h-3 text-gray-400" />
             <span className="text-gray-400">TERMINÉ</span>
+          </div>
+        );
+      case 'cancelled':
+        return (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold" style={{ background: 'rgba(107, 114, 128, 0.12)', border: '1px solid rgba(107, 114, 128, 0.25)' }}>
+            <CheckCircle className="w-3 h-3 text-amber-500/80" />
+            <span className="text-amber-500/90">ANNULÉ</span>
           </div>
         );
     }

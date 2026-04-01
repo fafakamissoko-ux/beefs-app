@@ -2,9 +2,14 @@
 
 ## Phase 3 — Après le live (produit)
 
-- **Replay / résumé** : carte ou page dédiée quand `status === 'ended'` (CTA clair, pas de badge « Suite » trompeur).
-- **Notifications** : fiabiliser in-app + email pour beef suivi en live, invitations, retraits.
-- **Découverte** : pagination feed, filtres sauvegardés.
+**Livré (v1)** :
+
+- **Replay / résumé** : page `/beef/[id]/summary` pour `ended` / `replay` / `cancelled` ; feed et toasts « beef terminé » y pointent ; lien depuis l’écran arène terminé ; notification navigateur quand un beef passe en `ended`.
+- **Découverte** : bouton « Charger plus » sur le feed (fenêtre glissante `limit`) ; filtres (onglet Pour vous / Abonnements, statut, tags) persistés dans `localStorage` (`beefs_feed_filters_v1`).
+
+**Reste / évolutions** :
+
+- **Notifications** : email, invitations, retraits (hors scope de cette itération).
 
 ## Phase 4 — Durcissement
 
