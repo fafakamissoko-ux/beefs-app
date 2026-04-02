@@ -10,8 +10,6 @@ import { BetaGate } from "@/components/BetaGate";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { ClientMonitoring } from "@/components/ClientMonitoring";
-import { NavigationReturnTracker } from "@/components/NavigationReturnTracker";
-
 const siteUrl =
   process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://beefs-app.vercel.app");
@@ -83,7 +81,6 @@ function RootLayoutClient({
           <BetaGate>
           <PWAManager />
           <ScrollRestoration />
-          <NavigationReturnTracker />
           <Header />
           <main className="pt-14">
             {children}

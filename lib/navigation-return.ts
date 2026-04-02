@@ -1,6 +1,3 @@
-/** Clé sessionStorage : page d’où l’utilisateur vient (mis à jour par NavigationReturnTracker). */
-export const RETURN_STORAGE_KEY = 'beefs_return_to';
-
 /**
  * Valide un chemin de retour interne (pas d’open redirect).
  */
@@ -21,32 +18,19 @@ export function hrefWithFrom(href: string, pathname: string): string {
 type RouterLike = { push: (href: string) => void; back: () => void };
 
 /**
- * Retour in-app (même logique qu’AppBackButton) — utile pour onCancel, handlers, etc.
+ * Retour in-app : **un pas** dans l’historique du navigateur à chaque appel (comme le bouton
+ * « Précédent » du navigateur). Pas de saut via `?from=` ni sessionStorage (évite boucles et
+ * pages ignorées). Si l’historique ne permet plus de revenir en arrière, redirection vers
+ * `fallback` (souvent `/feed` ou `/admin`).
  */
 export function navigateSmartBack(router: RouterLike, fallback = '/feed'): void {
   if (typeof window === 'undefined') return;
-
-  const params = new URLSearchParams(window.location.search);
-  const fromQuery = sanitizeReturnPath(params.get('from'));
-  if (fromQuery) {
-    router.push(fromQuery);
-    return;
-  }
-
-  try {
-    const stored = sanitizeReturnPath(sessionStorage.getItem(RETURN_STORAGE_KEY));
-    if (stored) {
-      router.push(stored);
-      return;
-    }
-  } catch {
-    /* ignore */
-  }
 
   if (window.history.length > 1) {
     router.back();
     return;
   }
 
-  router.push(fallback);
+  const safe = sanitizeReturnPath(fallback) || '/feed';
+  router.push(safe);
 }

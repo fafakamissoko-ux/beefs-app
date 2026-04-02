@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  RefreshCw, Search, Flame, Trash2, Star, StarOff,
-  StopCircle, ChevronUp, ChevronDown, X, AlertCircle, Eye,
+  RefreshCw, Search, Flame, Trash2, Star,
+  StopCircle, ChevronUp, ChevronDown, Eye,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +26,18 @@ interface Beef {
 }
 
 type StatusFilter = 'all' | 'live' | 'pending' | 'ended' | 'cancelled';
+
+function asBoolFeatured(raw: unknown): boolean {
+  return raw === true || raw === 'true' || raw === 't' || raw === 1 || raw === '1';
+}
+
+function sortBeefsByFeed(list: Beef[]): Beef[] {
+  return [...list].sort(
+    (a, b) =>
+      b.feed_position - a.feed_position ||
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+}
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
   pending: { label: 'En attente', bg: 'bg-yellow-500/15', text: 'text-yellow-400' },
@@ -77,13 +89,15 @@ export default function AdminBeefsPage() {
       if (error) throw error;
 
       setBeefs(
-        (data || []).map((b: any) => ({
-          ...b,
-          tags: b.tags || [],
-          is_featured: b.is_featured ?? false,
-          feed_position: b.feed_position ?? 0,
-          users: Array.isArray(b.users) ? b.users[0] ?? null : b.users,
-        }))
+        sortBeefsByFeed(
+          (data || []).map((b: any) => ({
+            ...b,
+            tags: b.tags || [],
+            is_featured: asBoolFeatured(b.is_featured),
+            feed_position: Math.max(0, Number(b.feed_position) || 0),
+            users: Array.isArray(b.users) ? b.users[0] ?? null : b.users,
+          })),
+        ),
       );
     } catch {
       toast('Erreur lors du chargement des beefs', 'error');
@@ -148,26 +162,50 @@ export default function AdminBeefsPage() {
   };
 
   const handleMovePosition = async (beef: Beef, direction: 'up' | 'down') => {
-    const delta = direction === 'up' ? 1 : -1;
-    const newPos = beef.feed_position + delta;
+    const sorted = sortBeefsByFeed(beefs);
+    const i = sorted.findIndex(b => b.id === beef.id);
+    if (i === -1) return;
+    const j = direction === 'up' ? i - 1 : i + 1;
+    if (j < 0 || j >= sorted.length) {
+      toast(direction === 'up' ? 'Déjà en tête du classement' : 'Déjà en bas du classement', 'info');
+      return;
+    }
+
+    const a = sorted[i];
+    const b = sorted[j];
+    let posA = Math.max(0, b.feed_position);
+    let posB = Math.max(0, a.feed_position);
+    if (posA === posB) {
+      posA = posB + 1;
+    }
+
     setActionLoading(beef.id);
     try {
-      const { error } = await supabase
-        .from('beefs')
-        .update({ feed_position: newPos })
-        .eq('id', beef.id);
-      if (error) throw error;
+      const [r1, r2] = await Promise.all([
+        supabase.from('beefs').update({ feed_position: posA }).eq('id', a.id),
+        supabase.from('beefs').update({ feed_position: posB }).eq('id', b.id),
+      ]);
+      if (r1.error) throw r1.error;
+      if (r2.error) throw r2.error;
+
       setBeefs(prev =>
-        prev
-          .map(b => b.id === beef.id ? { ...b, feed_position: newPos } : b)
-          .sort((a, b) => b.feed_position - a.feed_position || new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        sortBeefsByFeed(
+          prev.map(row => {
+            if (row.id === a.id) return { ...row, feed_position: posA };
+            if (row.id === b.id) return { ...row, feed_position: posB };
+            return row;
+          }),
+        ),
       );
+      toast('Ordre mis à jour', 'success');
     } catch {
       toast('Erreur lors du déplacement', 'error');
     } finally {
       setActionLoading(null);
     }
   };
+
+  const sortedBeefs = useMemo(() => sortBeefsByFeed(beefs), [beefs]);
 
   if (authLoading || userRole === null || !user || userRole !== 'admin') {
     return (
@@ -238,7 +276,7 @@ export default function AdminBeefsPage() {
         {/* Beefs List */}
         {loading ? (
           <div className="text-center py-16 text-gray-500">Chargement…</div>
-        ) : beefs.length === 0 ? (
+        ) : sortedBeefs.length === 0 ? (
           <div className="card p-10 text-center">
             <Flame className="w-10 h-10 text-gray-600 mx-auto mb-3" />
             <p className="text-gray-400 font-semibold">Aucun beef trouvé</p>
@@ -264,7 +302,11 @@ export default function AdminBeefsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {beefs.map((beef, i) => (
+                    {sortedBeefs.map((beef, i) => {
+                      const rank = i;
+                      const atTop = rank === 0;
+                      const atBottom = rank === sortedBeefs.length - 1;
+                      return (
                       <tr
                         key={beef.id}
                         className={`border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors ${
@@ -273,7 +315,9 @@ export default function AdminBeefsPage() {
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            {beef.is_featured && <Star className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" />}
+                            {beef.is_featured && (
+                              <Star className="w-3.5 h-3.5 text-orange-400 fill-orange-400 flex-shrink-0" aria-hidden />
+                            )}
                             <span className="text-white font-medium truncate max-w-[200px]">{beef.title}</span>
                           </div>
                           {beef.feed_position !== 0 && (
@@ -303,32 +347,38 @@ export default function AdminBeefsPage() {
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1">
                             <button
+                              type="button"
                               onClick={() => handleMovePosition(beef, 'up')}
-                              disabled={actionLoading === beef.id}
+                              disabled={actionLoading === beef.id || atTop}
                               className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-all disabled:opacity-30"
                               title="Monter"
                             >
                               <ChevronUp className="w-3.5 h-3.5" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleMovePosition(beef, 'down')}
-                              disabled={actionLoading === beef.id}
+                              disabled={actionLoading === beef.id || atBottom}
                               className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-all disabled:opacity-30"
                               title="Descendre"
                             >
                               <ChevronDown className="w-3.5 h-3.5" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleToggleFeatured(beef)}
                               disabled={actionLoading === beef.id}
                               className={`p-1.5 rounded-lg transition-all disabled:opacity-30 ${
                                 beef.is_featured
-                                  ? 'bg-orange-500/15 text-orange-400 hover:bg-orange-500/25'
+                                  ? 'bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 ring-1 ring-orange-500/40'
                                   : 'hover:bg-white/10 text-gray-500 hover:text-orange-400'
                               }`}
                               title={beef.is_featured ? 'Retirer de la une' : 'Mettre en avant'}
+                              aria-pressed={beef.is_featured}
                             >
-                              {beef.is_featured ? <Star className="w-3.5 h-3.5" /> : <StarOff className="w-3.5 h-3.5" />}
+                              <Star
+                                className={`w-3.5 h-3.5 ${beef.is_featured ? 'fill-orange-400 text-orange-400' : ''}`}
+                              />
                             </button>
                             {beef.status !== 'ended' && beef.status !== 'cancelled' && (
                               <button
@@ -351,7 +401,8 @@ export default function AdminBeefsPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
               </motion.div>
@@ -359,7 +410,10 @@ export default function AdminBeefsPage() {
 
             {/* Mobile Cards */}
             <div className="md:hidden space-y-3">
-              {beefs.map((beef, i) => (
+              {sortedBeefs.map((beef, i) => {
+                const atTop = i === 0;
+                const atBottom = i === sortedBeefs.length - 1;
+                return (
                 <motion.div
                   key={beef.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -370,7 +424,9 @@ export default function AdminBeefsPage() {
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        {beef.is_featured && <Star className="w-3.5 h-3.5 text-orange-400 flex-shrink-0" />}
+                        {beef.is_featured && (
+                          <Star className="w-3.5 h-3.5 text-orange-400 fill-orange-400 flex-shrink-0" aria-hidden />
+                        )}
                         <h3 className="text-white font-bold text-sm truncate">{beef.title}</h3>
                       </div>
                       <div className="flex items-center gap-2">
@@ -404,29 +460,36 @@ export default function AdminBeefsPage() {
 
                   <div className="flex items-center gap-2 border-t border-white/[0.06] pt-3">
                     <button
+                      type="button"
                       onClick={() => handleMovePosition(beef, 'up')}
-                      disabled={actionLoading === beef.id}
+                      disabled={actionLoading === beef.id || atTop}
                       className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30"
+                      title="Monter"
                     >
                       <ChevronUp className="w-4 h-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleMovePosition(beef, 'down')}
-                      disabled={actionLoading === beef.id}
+                      disabled={actionLoading === beef.id || atBottom}
                       className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-30"
+                      title="Descendre"
                     >
                       <ChevronDown className="w-4 h-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleToggleFeatured(beef)}
                       disabled={actionLoading === beef.id}
                       className={`p-2 rounded-lg transition-all disabled:opacity-30 ${
                         beef.is_featured
-                          ? 'bg-orange-500/15 text-orange-400'
+                          ? 'bg-orange-500/20 text-orange-300 ring-1 ring-orange-500/40'
                           : 'bg-white/5 text-gray-400 hover:text-orange-400'
                       }`}
+                      aria-pressed={beef.is_featured}
+                      title={beef.is_featured ? 'Retirer de la une' : 'Mettre en avant'}
                     >
-                      {beef.is_featured ? <Star className="w-4 h-4" /> : <StarOff className="w-4 h-4" />}
+                      <Star className={`w-4 h-4 ${beef.is_featured ? 'fill-orange-400 text-orange-400' : ''}`} />
                     </button>
                     <div className="flex-1" />
                     {beef.status !== 'ended' && beef.status !== 'cancelled' && (
@@ -447,13 +510,14 @@ export default function AdminBeefsPage() {
                     </button>
                   </div>
                 </motion.div>
-              ))}
+              );
+              })}
             </div>
           </>
         )}
 
         <p className="text-center text-gray-600 text-xs pt-2">
-          {beefs.length} beef{beefs.length !== 1 ? 's' : ''} affichés
+          {sortedBeefs.length} beef{sortedBeefs.length !== 1 ? 's' : ''} affichés
         </p>
       </div>
 

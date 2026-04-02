@@ -12,7 +12,7 @@ type AppBackButtonProps = {
 };
 
 /**
- * Retour in-app : priorité `?from=` → session (NavigationReturnTracker) → historique → fallback.
+ * Retour : un pas en arrière dans l’historique du navigateur ; si pas d’historique, `fallback`.
  */
 export function AppBackButton({
   fallback = '/feed',
