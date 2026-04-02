@@ -67,15 +67,23 @@ export default function AdminUsersPage() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, username, display_name, email, points, role, is_banned, created_at, avatar_url')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setUsers(data ?? []);
-    } catch {
-      toast('Erreur lors du chargement des utilisateurs', 'error');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast('Session expirée, reconnecte-toi.', 'error');
+        return;
+      }
+      const res = await fetch('/api/admin/users', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(typeof json.error === 'string' ? json.error : 'Chargement impossible');
+      }
+      setUsers(json.users ?? []);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Erreur lors du chargement des utilisateurs';
+      console.error('[admin/users]', e);
+      toast(msg, 'error');
     } finally {
       setLoading(false);
     }

@@ -12,6 +12,10 @@ import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { ClientMonitoring } from "@/components/ClientMonitoring";
 import { NavigationReturnTracker } from "@/components/NavigationReturnTracker";
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://beefs-app.vercel.app");
+
 export const metadata: Metadata = {
   title: {
     default: "Beefs - Débats en live",
@@ -23,7 +27,7 @@ export const metadata: Metadata = {
   creator: "Beefs",
   publisher: "Beefs",
   manifest: "/manifest.json",
-  metadataBase: new URL("https://beefs-app.vercel.app"),
+  metadataBase: new URL(siteUrl),
   alternates: { canonical: "/" },
   appleWebApp: {
     capable: true,
@@ -36,7 +40,7 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Beefs",
     locale: "fr_FR",
-    url: "https://beefs-app.vercel.app",
+    url: siteUrl,
     images: [
       {
         url: "/og-image.png",
