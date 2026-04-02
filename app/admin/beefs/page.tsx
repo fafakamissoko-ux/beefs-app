@@ -313,16 +313,18 @@ export default function AdminBeefsPage() {
                           beef.is_featured ? 'bg-orange-500/[0.04]' : ''
                         }`}
                       >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {beef.is_featured && (
-                              <Star className="w-3.5 h-3.5 text-orange-400 fill-orange-400 flex-shrink-0" aria-hidden />
-                            )}
-                            <span className="text-white font-medium truncate max-w-[200px]">{beef.title}</span>
+                        <td className="px-4 py-3 align-top">
+                          <div className="flex flex-col gap-0.5 min-h-[2.5rem] justify-center">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {beef.is_featured && (
+                                <Star className="w-3.5 h-3.5 text-orange-400 fill-orange-400 flex-shrink-0" aria-hidden />
+                              )}
+                              <span className="text-white font-medium truncate max-w-[200px]">{beef.title}</span>
+                            </div>
+                            <span className="text-gray-600 text-[11px] tabular-nums">
+                              Rang {i + 1} / {sortedBeefs.length}
+                            </span>
                           </div>
-                          {beef.feed_position !== 0 && (
-                            <span className="text-gray-600 text-xs">pos: {beef.feed_position}</span>
-                          )}
                         </td>
                         <td className="px-4 py-3">{statusBadge(beef.status)}</td>
                         <td className="px-4 py-3 text-gray-300 truncate max-w-[120px]">
@@ -441,11 +443,13 @@ export default function AdminBeefsPage() {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
+                  <div className="flex items-center gap-3 text-xs text-gray-500 mb-3 flex-wrap">
+                    <span className="text-gray-600 tabular-nums">
+                      Rang {i + 1}/{sortedBeefs.length}
+                    </span>
                     <span className="flex items-center gap-1">
                       <Eye className="w-3 h-3" /> {beef.viewer_count}
                     </span>
-                    {beef.feed_position !== 0 && <span>pos: {beef.feed_position}</span>}
                     {beef.tags.length > 0 && (
                       <div className="flex gap-1 overflow-hidden">
                         {beef.tags.slice(0, 2).map(tag => (

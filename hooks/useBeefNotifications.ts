@@ -57,19 +57,28 @@ export function useBeefNotifications({ userId, onNotification }: UseBeefNotifica
           table: 'beefs',
         },
         (payload) => {
-          const beef = payload.new as any;
-          const key = `${beef.id}_${beef.status}`;
+          const beef = payload.new as Record<string, unknown>;
+          const old = (payload as { old?: Record<string, unknown> }).old;
+          const newStatus = beef.status as string | undefined;
+          const oldStatus = old?.status as string | undefined;
 
-          // Prevent duplicate notifications for the same beef+status
-          if (notifiedBeefs.current.has(key)) return;
-          notifiedBeefs.current.add(key);
+          // Sans ancienne ligne (replica identity), on ne peut pas distinguer un vrai changement
+          // de statut d’un simple update (ex. feed_position) → ignorer pour éviter les faux positifs.
+          if (!old) return;
 
-          if (beef.status === 'live') {
-            onNotification({ beefId: beef.id, title: beef.title, type: 'live_now' });
+          // Même statut qu’avant : autre champ modifié (position, titre, etc.) → pas de toast live/ended
+          if (oldStatus === newStatus) return;
+
+          const dedupeKey = `${beef.id}_${oldStatus}_to_${newStatus}`;
+          if (notifiedBeefs.current.has(dedupeKey)) return;
+          notifiedBeefs.current.add(dedupeKey);
+
+          if (newStatus === 'live' && oldStatus !== 'live') {
+            onNotification({ beefId: beef.id as string, title: beef.title as string, type: 'live_now' });
             showBrowserNotification(`🔴 LIVE maintenant!`, `"${beef.title}" est en direct. Rejoins maintenant!`);
           }
-          if (beef.status === 'ended') {
-            onNotification({ beefId: beef.id, title: beef.title, type: 'ended' });
+          if (newStatus === 'ended' && oldStatus !== 'ended') {
+            onNotification({ beefId: beef.id as string, title: beef.title as string, type: 'ended' });
             showBrowserNotification(`🏁 Beef terminé`, `"${beef.title}" — ouvre l’app pour voir le résumé.`);
           }
         }
