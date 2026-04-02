@@ -203,12 +203,24 @@ export default function FeedPage() {
     }
   }, [user, feedType, selectedTags, selectedStatus, followingIds, fetchLimit]);
 
+  /** Aligné sur l’admin : mis en avant → feed_position (desc) → date. */
+  const compareFeedOrder = (a: Record<string, unknown>, b: Record<string, unknown>) => {
+    const fa = !!a.is_featured;
+    const fb = !!b.is_featured;
+    if (fa !== fb) return fa ? -1 : 1;
+    const pa = Number(a.feed_position) || 0;
+    const pb = Number(b.feed_position) || 0;
+    if (pa !== pb) return pb - pa;
+    return new Date(String(b.created_at)).getTime() - new Date(String(a.created_at)).getTime();
+  };
+
   const loadBeefs = async () => {
     try {
       setLoading(true);
       let query = supabase
         .from('beefs')
         .select('*, users!beefs_mediator_id_fkey(username, display_name), beef_participants(count)')
+        .order('feed_position', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(fetchLimit);
       if (selectedStatus !== 'all') query = query.eq('status', selectedStatus);
@@ -233,13 +245,9 @@ export default function FeedPage() {
         beefsWithData = beefsWithData.filter(
           (beef: any) => beef.mediator_id && followingSet.has(beef.mediator_id)
         );
-        beefsWithData.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        beefsWithData.sort(compareFeedOrder);
       } else {
-        beefsWithData.sort((a: any, b: any) => {
-          if (a.status === 'live' && b.status !== 'live') return -1;
-          if (a.status !== 'live' && b.status === 'live') return 1;
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        });
+        beefsWithData.sort(compareFeedOrder);
       }
 
       setBeefs(beefsWithData);
