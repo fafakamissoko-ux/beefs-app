@@ -54,6 +54,17 @@ export default function LivePage() {
       .then(({ data }) => { if (data) setUserPoints(data.points || 0); });
   }, [user]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('purchase') !== 'success') return;
+    toast(
+      'Merci ! Ton achat est confirmé. Les points seront crédités sous peu.',
+      'success'
+    );
+    router.replace('/live', { scroll: false });
+  }, [router, toast]);
+
   const [followingIds, setFollowingIds] = useState<string[]>([]);
 
   useEffect(() => {

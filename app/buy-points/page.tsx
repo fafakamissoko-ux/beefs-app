@@ -6,17 +6,27 @@ import { motion } from 'framer-motion';
 import { Check, Sparkles, Zap, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { AppBackButton } from '@/components/AppBackButton';
-import { getStripe, POINT_PACKS } from '@/lib/stripe/client';
+import { useToast } from '@/components/Toast';
+import { POINT_PACKS } from '@/lib/stripe/client';
 import { supabase } from '@/lib/supabase/client';
 import { useCountryDetection } from '@/hooks/useCountryDetection';
 import { calculatePrice } from '@/lib/geo';
 
 export default function BuyPointsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [selectedPack, setSelectedPack] = useState<string>(POINT_PACKS[1].id);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { country, loading: countryLoading, testMode } = useCountryDetection();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('purchase') !== 'cancelled') return;
+    toast('Paiement annulé. Tu peux réessayer quand tu veux.', 'info');
+    router.replace('/buy-points', { scroll: false });
+  }, [router, toast]);
 
   const handlePurchase = async () => {
     setLoading(true);

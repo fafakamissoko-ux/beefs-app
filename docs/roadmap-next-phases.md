@@ -27,13 +27,24 @@ Les évolutions produit et perf (index, accessibilité, paiement, PWA, etc.) son
 
 ## Phase 5 — Paiement & mobile
 
-- **Stripe** : domaine vérifié, Apple Pay / wallets, parcours annulation.
-- **PWA / Safari iOS** : tests caméra / micro / Daily.
+**Livré (v1)** :
+
+- **Stripe Checkout** : `locale: 'fr'` ; commentaires sur Link / wallets (domaine vérifié côté Dashboard) ; `success_url` → `/live?purchase=success` et `cancel_url` → `/buy-points?purchase=cancelled` avec toasts côté client + nettoyage de l’URL.
+- **PWA** : `theme_color` manifest aligné sur le layout ; **Web Share Target** : route `POST /share` (redirection vers `/` avec `shared=`) pour ne pas laisser le manifest pointer vers le vide.
+
+**Reste** : vérification domaine / Apple Pay dans Stripe Dashboard ; tests réels Safari iOS (caméra, micro, Daily).
 
 ## Phase 6 — Sécurité (clôture, après le reste)
 
-- **Audit RLS** Supabase : `transactions`, `users`, `gifts`, `beef_access`, messages, et tables touchées par les livrables récents.
-- **Double contrôle** : relecture policies + API routes + usages client ; checklist de non-régression sécurité sur l’ensemble de l’app.
+**Livré (v1)** — migration `31_phase6_rls_hardening.sql` :
+
+- **`users`** : fonction `is_app_admin()` (SECURITY DEFINER) ; trigger `enforce_users_safe_self_update` (réinjecte les colonnes serveur depuis `OLD` pour le self-service — évite `OLD` dans les politiques RLS, peu portable) ; politiques UPDATE simples + admin `FOR ALL` pour le panel ; insertion initiale limitée.
+- **`beef_access`** : suppression de la politique d’INSERT `WITH CHECK (true)` — écriture réservée au **service role** (API `beef/access`).
+- **`notifications`** : INSERT limité à `auth.uid() = user_id` (les triggers SECURITY DEFINER continuent à ignorer le RLS).
+
+**À valider en prod** : appliquer la migration sur le projet Supabase ; tester inscription, édition profil, achat points / accès beef, admin utilisateurs ; confirmer que les notifications système (DM, follow, etc.) arrivent toujours.
+
+**Double contrôle** : relecture policies + API routes + usages client ; audit RLS sur tables restantes (`transactions` déjà en lecture seule côté user, etc.).
 
 ## Option monitoring avancé
 

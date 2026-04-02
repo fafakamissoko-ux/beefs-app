@@ -102,11 +102,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create Checkout Session with adapted pricing
-    // Create Checkout Session with adapted pricing
-    // `link` = Stripe Link (email / one-tap). Apple Pay / Google Pay s’affichent souvent dans Checkout
-    // avec la carte quand le domaine est vérifié dans le Dashboard Stripe (Wallet).
+    // `link` = Stripe Link. Apple Pay / Google Pay s’affichent souvent avec la carte quand le domaine
+    // est vérifié dans le Dashboard Stripe (Wallet).
     const session = await stripe.checkout.sessions.create({
+      locale: 'fr',
       customer_email: customerEmail || undefined,
       payment_method_types: ['card', 'link'],
       line_items: [
