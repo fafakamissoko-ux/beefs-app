@@ -1,5 +1,22 @@
 # Phases suivantes (après 1 & 2 livrées)
 
+## Priorisation — court terme → suite
+
+**Court terme (à faire en premier, hors code ou config plateforme)** :
+
+1. **Supabase (prod)** : confirmer que les migrations **31** (RLS), **32** (colonnes `users` admin), **33** (`REPLICA IDENTITY FULL` sur `beefs`) sont bien appliquées sur le projet pointé par Vercel.
+2. **Stripe (Dashboard)** : domaine / URL de production déclarés ; webhooks alignés avec l’URL Vercel ; activer **Apple Pay / Google Pay** si souhaité (souvent après vérification du domaine).
+3. **Vercel** : `NEXT_PUBLIC_APP_URL`, `SUPABASE_SERVICE_ROLE_KEY`, clés Stripe — cohérents avec la prod ; redeploy après changement d’env.
+4. **Tests manuels** : parcours critique (inscription, feed, arène, achat points, admin) ; **Safari iOS** (caméra, micro, Daily) quand tu peux.
+
+**Ensuite (moyen terme)** : notifications email / relances, accessibilité formulaires restants, audit RLS « double contrôle », domaine custom type `beefs.com` quand tu es prêt.
+
+**Monitoring** : le client utilise déjà `NEXT_PUBLIC_SENTRY_DSN` + `ClientMonitoring` ; erreurs **serveur** + source maps = ajout futur `@sentry/nextjs` + `instrumentation.ts` (optionnel).
+
+*Si d’autres sujets apparaissent (perf, dette technique, bug métier), les traiter au fil de l’eau ou les ajouter ici.*
+
+---
+
 ## Phase 3 — Après le live (produit)
 
 **Livré (v1)** :
