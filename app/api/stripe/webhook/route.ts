@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/server';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
+import { isValidUserId, validatePointPackFromMetadata } from '@/lib/stripe/validate-checkout-metadata';
+
+/** Raw body requis par Stripe ; pas de cache. */
+export const dynamic = 'force-dynamic';
 
 // Create Supabase admin client (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -47,7 +51,7 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        await handleCheckoutCompleted(session);
+        await handleCheckoutCompleted(session, event.id);
         break;
       }
 
@@ -78,19 +82,55 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const userId = session.metadata?.user_id;
-  const packId = session.metadata?.pack_id;
-  const pointsAmount = parseInt(session.metadata?.points_amount || '0');
-
-  if (!userId || !pointsAmount) {
-    console.error('Missing metadata in session:', session.id);
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session, stripeEventId: string) {
+  if (session.mode !== 'payment') {
+    console.info('[stripe webhook] Ignorer session mode=', session.mode, session.id);
     return;
   }
 
+  const paid =
+    session.payment_status === 'paid' || session.payment_status === 'no_payment_required';
+  if (!paid) {
+    console.warn(
+      '[stripe webhook] Pas de crédit — payment_status=',
+      session.payment_status,
+      'session=',
+      session.id,
+    );
+    return;
+  }
 
-  // Use the update_user_balance function
-  const { data, error } = await supabaseAdmin.rpc('update_user_balance', {
+  const userId = session.metadata?.user_id?.trim();
+  const packIdRaw = session.metadata?.pack_id;
+  const pointsRaw = session.metadata?.points_amount;
+
+  if (!isValidUserId(userId)) {
+    console.error('[stripe webhook] user_id metadata invalide (UUID attendu):', session.id);
+    return;
+  }
+
+  const packCheck = validatePointPackFromMetadata(packIdRaw, pointsRaw);
+  if (!packCheck.ok) {
+    console.error('[stripe webhook] Metadata pack invalide:', packCheck.reason, session.id);
+    return;
+  }
+
+  const { points: pointsAmount, packId } = packCheck;
+
+  const { data: already } = await supabaseAdmin
+    .from('transactions')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('type', 'purchase')
+    .contains('metadata', { stripe_session_id: session.id })
+    .maybeSingle();
+
+  if (already) {
+    console.info('[stripe webhook] checkout.session.completed déjà traité:', session.id);
+    return;
+  }
+
+  const { error } = await supabaseAdmin.rpc('update_user_balance', {
     p_user_id: userId,
     p_amount: pointsAmount,
     p_type: 'purchase',
@@ -98,22 +138,32 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     p_metadata: {
       pack_id: packId,
       stripe_session_id: session.id,
+      stripe_event_id: stripeEventId,
       stripe_payment_intent: session.payment_intent,
     },
   });
 
   if (error) {
-    console.error('Error updating balance:', error);
+    console.error('[stripe webhook] update_user_balance:', error);
     throw error;
   }
 
-
-  // Award XP for first purchase
-  await supabaseAdmin.rpc('add_xp_to_user', {
-    p_user_id: userId,
-    p_xp_amount: 100,
-    p_source: 'first_purchase',
+  console.info('[stripe webhook] Points crédités', {
+    userId,
+    points: pointsAmount,
+    sessionId: session.id,
+    eventId: stripeEventId,
   });
+
+  try {
+    await supabaseAdmin.rpc('add_xp_to_user', {
+      p_user_id: userId,
+      p_xp_amount: 100,
+      p_source: 'purchase_bonus',
+    });
+  } catch (xpErr) {
+    console.error('[stripe webhook] add_xp_to_user (non bloquant):', xpErr);
+  }
 }
 
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {

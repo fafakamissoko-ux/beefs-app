@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import { Brain, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -28,10 +29,18 @@ export function AIFactCheck({ roomId, onFactCheckComplete }: AIFactCheckProps) {
     setIsChecking(true);
 
     try {
-      // Call AI API (OpenAI/Claude)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.error('Fact-check: session manquante');
+        return;
+      }
+
       const response = await fetch('/api/fact-check', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           roomId,
           transcript,

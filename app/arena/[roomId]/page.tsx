@@ -183,7 +183,10 @@ export default function ArenaPage() {
         authHeaders['Authorization'] = `Bearer ${session.access_token}`;
       }
 
-      const getRes = await fetch(`/api/daily/rooms?name=${roomName}`, { headers: authHeaders });
+      const getRes = await fetch(
+        `/api/daily/rooms?name=${encodeURIComponent(roomName)}&beefId=${encodeURIComponent(beefId)}`,
+        { headers: authHeaders },
+      );
       const getData = await getRes.json();
       if (getData.success && getData.room?.url) {
         setDailyRoomUrl(getData.room.url);
@@ -193,7 +196,12 @@ export default function ArenaPage() {
       const createRes = await fetch('/api/daily/rooms', {
         method: 'POST',
         headers: authHeaders,
-        body: JSON.stringify({ roomName, privacy: 'private', maxParticipants: 50 }),
+        body: JSON.stringify({
+          beefId,
+          roomName,
+          privacy: 'private',
+          maxParticipants: 50,
+        }),
       });
       const createData = await createRes.json();
       if (createData.success && createData.room?.url) {

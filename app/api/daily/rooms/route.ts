@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { beefDailyRoomName } from '@/lib/beef-daily-room';
+import { userMayActOnBeef } from '@/lib/api/beef-access-context';
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } },
+);
 
 async function verifyAuth(req: NextRequest) {
   const authHeader = req.headers.get('authorization');
@@ -20,12 +28,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { roomName, privacy, maxParticipants } = await request.json();
+    const body = await request.json();
+    const beefId = typeof body?.beefId === 'string' ? body.beefId.trim() : '';
+    const { privacy, maxParticipants } = body;
     /** Salles beef : private par défaut pour forcer un meeting token (join authentifié). */
     const effectivePrivacy = privacy ?? 'private';
 
+    if (!beefId) {
+      return NextResponse.json({ error: 'beefId requis' }, { status: 400 });
+    }
+
+    const expectedName = beefDailyRoomName(beefId);
+    const access = await userMayActOnBeef(supabaseAdmin, beefId, user.id);
+    if (!access.ok) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
     const DAILY_API_KEY = process.env.DAILY_API_KEY;
-    const DAILY_DOMAIN = process.env.NEXT_PUBLIC_DAILY_DOMAIN || 'beefs.daily.co';
 
     if (!DAILY_API_KEY) {
       return NextResponse.json(
@@ -34,11 +53,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sanitize room name: lowercase, alphanumeric + hyphens only, max 40 chars
-    const safeName = (roomName || `beef-${Date.now()}`)
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, '-')
-      .slice(0, 40);
+    const safeName = expectedName;
 
     // Create room via Daily.co API (free plan compatible properties only)
     const response = await fetch('https://api.daily.co/v1/rooms', {
@@ -95,12 +110,22 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const roomName = searchParams.get('name');
+    const beefId = searchParams.get('beefId')?.trim() || '';
 
-    if (!roomName) {
+    if (!roomName || !beefId) {
       return NextResponse.json(
-        { error: 'Room name required' },
+        { error: 'name et beefId requis' },
         { status: 400 }
       );
+    }
+
+    if (beefDailyRoomName(beefId).toLowerCase() !== roomName.toLowerCase()) {
+      return NextResponse.json({ error: 'Nom de salle invalide pour ce beef' }, { status: 400 });
+    }
+
+    const access = await userMayActOnBeef(supabaseAdmin, beefId, user.id);
+    if (!access.ok) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
     const DAILY_API_KEY = process.env.DAILY_API_KEY;
@@ -112,7 +137,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
+    const response = await fetch(`https://api.daily.co/v1/rooms/${encodeURIComponent(roomName)}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${DAILY_API_KEY}`,
@@ -149,12 +174,22 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const roomName = searchParams.get('name');
+    const beefId = searchParams.get('beefId')?.trim() || '';
 
-    if (!roomName) {
+    if (!roomName || !beefId) {
       return NextResponse.json(
-        { error: 'Room name required' },
+        { error: 'name et beefId requis' },
         { status: 400 }
       );
+    }
+
+    if (beefDailyRoomName(beefId).toLowerCase() !== roomName.toLowerCase()) {
+      return NextResponse.json({ error: 'Nom de salle invalide pour ce beef' }, { status: 400 });
+    }
+
+    const access = await userMayActOnBeef(supabaseAdmin, beefId, user.id);
+    if (!access.ok) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
     const DAILY_API_KEY = process.env.DAILY_API_KEY;
@@ -166,7 +201,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
+    const response = await fetch(`https://api.daily.co/v1/rooms/${encodeURIComponent(roomName)}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${DAILY_API_KEY}`,

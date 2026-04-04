@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Home, Flame, Bell, User, Settings as SettingsIcon, MessageCircle, LogOut, Mail, ChevronDown, Plus, Shield } from 'lucide-react';
+import { Menu, X, Home, Flame, Bell, User, Settings as SettingsIcon, MessageCircle, LogOut, Mail, ChevronDown, Plus, Shield, Coins } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
@@ -140,12 +140,14 @@ export function Header() {
     { href: '/feed', label: 'Accueil', icon: Home, badge: 0 },
     { href: '/notifications', label: 'Notifications', icon: Bell, badge: unreadNotifications },
     { href: '/live', label: 'Live', icon: Flame, badge: 0 },
+    { href: '/buy-points', label: 'Points', icon: Coins, badge: 0 },
     { href: '/invitations', label: 'Invitations', icon: Mail, badge: pendingInvitations },
     { href: '/messages', label: 'Messages', icon: MessageCircle, badge: unreadMessages },
   ];
 
   const isActive = (href: string) => {
     if (href === '/feed') return pathname === '/feed' || pathname === '/';
+    if (href === '/buy-points') return pathname === '/buy-points';
     return pathname.startsWith(href);
   };
 
@@ -182,7 +184,7 @@ export function Header() {
                     }`}
                   >
                     <div className="relative">
-                      <Icon className={`w-[18px] h-[18px] ${active && item.href === '/live' ? 'text-brand-400' : ''}`} />
+                      <Icon className={`w-[18px] h-[18px] ${active && (item.href === '/live' || item.href === '/buy-points') ? 'text-brand-400' : ''}`} />
                       {item.badge > 0 && (
                         <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 flex items-center justify-center px-1 text-[10px] font-bold text-white rounded-full bg-red-500">
                           {item.badge > 9 ? '9+' : item.badge}
