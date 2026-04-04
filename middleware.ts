@@ -49,15 +49,18 @@ export function middleware(request: NextRequest) {
       );
     }
 
-    // Stricter limits for sensitive endpoints
-    if (pathname.includes('/withdrawals') || pathname.includes('/stripe')) {
+    // Webhook Stripe : pas de limite stricte (plusieurs événements / minute).
+    const needsStrictLimit =
+      pathname.includes('/withdrawals') || pathname === '/api/stripe/checkout';
+
+    if (needsStrictLimit) {
       const strictKey = `strict:${key}`;
       const strictEntry = rateLimits.get(strictKey);
       const now = Date.now();
 
       if (!strictEntry || now > strictEntry.resetAt) {
         rateLimits.set(strictKey, { count: 1, resetAt: now + 60_000 });
-      } else if (strictEntry.count >= 5) {
+      } else if (strictEntry.count >= 20) {
         return NextResponse.json(
           { error: 'Limite atteinte pour cette action. Attendez 1 minute.' },
           { status: 429 }

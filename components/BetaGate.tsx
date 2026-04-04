@@ -12,15 +12,32 @@ export function BetaGate({ children }: { children: React.ReactNode }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState(false);
 
+  function persistBetaAccess() {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('beefs-beta-access', 'true');
+    const maxAge = 60 * 60 * 24 * 400;
+    const host = window.location.hostname;
+    const domain =
+      host === 'beefs.live' || host.endsWith('.beefs.live') ? '; domain=.beefs.live' : '';
+    document.cookie = `beefs-beta-access=true; path=/; max-age=${maxAge}; Secure; SameSite=Lax${domain}`;
+  }
+
   useEffect(() => {
-    const stored = localStorage.getItem('beefs-beta-access');
-    setHasAccess(stored === 'true');
+    const stored = localStorage.getItem('beefs-beta-access') === 'true';
+    const cookieOk =
+      typeof document !== 'undefined' && document.cookie.includes('beefs-beta-access=true');
+    if (stored || cookieOk) {
+      if (!stored) localStorage.setItem('beefs-beta-access', 'true');
+      setHasAccess(true);
+    } else {
+      setHasAccess(false);
+    }
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (code.trim().toLowerCase() === BETA_CODE.toLowerCase()) {
-      localStorage.setItem('beefs-beta-access', 'true');
+      persistBetaAccess();
       setHasAccess(true);
     } else {
       setError(true);

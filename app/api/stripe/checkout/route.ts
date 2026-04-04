@@ -3,6 +3,7 @@ import { stripe } from '@/lib/stripe/server';
 import { POINT_PACKS } from '@/lib/stripe/client';
 import { createClient } from '@supabase/supabase-js';
 import { detectUserCountry, calculatePrice, calculateFraudScore, COUNTRIES } from '@/lib/geo';
+import { publicAppOrigin } from '@/lib/app-url';
 
 export async function POST(request: NextRequest) {
   try {
@@ -102,6 +103,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const appOrigin = publicAppOrigin(request);
+
     // `link` = Stripe Link. Apple Pay / Google Pay s’affichent souvent avec la carte quand le domaine
     // est vérifié dans le Dashboard Stripe (Wallet).
     const session = await stripe.checkout.sessions.create({
@@ -115,7 +118,7 @@ export async function POST(request: NextRequest) {
             product_data: {
               name: `${pack.emoji} ${pack.name} - ${pack.points.toLocaleString()} points`,
               description: `Pack de ${pack.points.toLocaleString()} points pour Beefs`,
-              images: [`${request.nextUrl.origin}/icon-512.png`],
+              images: [`${appOrigin}/icon-512.png`],
             },
             unit_amount: Math.round(adaptedPrice.amount * 100), // Convert to cents
           },
@@ -123,8 +126,8 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'payment',
-      success_url: `${request.nextUrl.origin}/live?purchase=success`,
-      cancel_url: `${request.nextUrl.origin}/buy-points?purchase=cancelled`,
+      success_url: `${appOrigin}/live?purchase=success`,
+      cancel_url: `${appOrigin}/buy-points?purchase=cancelled`,
       metadata: {
         user_id: userId || 'temp',
         pack_id: packId,

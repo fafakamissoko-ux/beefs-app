@@ -93,6 +93,20 @@ export default function BuyPointsPage() {
           <p className="text-gray-500 text-xs mt-4 px-2 leading-relaxed max-w-sm mx-auto">
             Paiement sécurisé par Stripe : carte, Link ; Apple Pay / Google Pay peuvent s’afficher sur la page de paiement selon l’appareil et la config du compte Stripe.
           </p>
+
+          {typeof process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY === 'string' &&
+            process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.startsWith('pk_live') && (
+              <p className="text-amber-200/90 text-xs mt-3 px-3 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 max-w-sm mx-auto text-center leading-snug">
+                <strong className="text-amber-100">Production Stripe :</strong> utilise une carte bancaire réelle.
+                La carte de test 4242… ne fonctionne qu’avec des clés <strong>test</strong> (pk_test / sk_test).
+              </p>
+            )}
+          {typeof process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY === 'string' &&
+            process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.startsWith('pk_test') && (
+              <p className="text-emerald-200/90 text-xs mt-3 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 max-w-sm mx-auto text-center">
+                Mode test Stripe : carte 4242 4242 4242 4242, date future, CVC au choix.
+              </p>
+            )}
           
           {/* Country Detection Badge */}
           {!countryLoading && (
