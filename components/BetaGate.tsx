@@ -7,6 +7,12 @@ import { BeefLogo } from './BeefLogo';
 
 const BETA_CODE = process.env.NEXT_PUBLIC_BETA_CODE || '';
 
+/** Vercel Preview : host *.vercel.app — localStorage / cookies ≠ prod, retour Stripe se retrouve derrière le mur sans code saisi sur ce domaine. */
+function isVercelAppPreviewHost(): boolean {
+  if (typeof window === 'undefined') return false;
+  return /\.vercel\.app$/i.test(window.location.hostname);
+}
+
 export function BetaGate({ children }: { children: React.ReactNode }) {
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [code, setCode] = useState('');
@@ -47,6 +53,15 @@ export function BetaGate({ children }: { children: React.ReactNode }) {
 
   // Loading state
   if (hasAccess === null) return null;
+
+  if (process.env.NEXT_PUBLIC_DISABLE_BETA_GATE === 'true') {
+    return <>{children}</>;
+  }
+
+  // Préviews Vercel : ne pas exiger le code (isolé de www.beefs.live)
+  if (BETA_CODE && isVercelAppPreviewHost()) {
+    return <>{children}</>;
+  }
 
   if (hasAccess || !BETA_CODE) return <>{children}</>;
 
