@@ -85,10 +85,9 @@ export default function BuyPointsPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Background gradient */}
-      <div className="fixed inset-0 bg-gradient-to-br from-brand-500/10 via-black to-brand-400/10"></div>
-      
-      <div className="relative max-w-md mx-auto px-4 py-8">
+      <div className="page-ambient-gradient" aria-hidden />
+
+      <div className="relative z-[1] max-w-md mx-auto px-4 py-8">
         <AppBackButton className="mb-8" />
 
         {/* Header - Épuré */}

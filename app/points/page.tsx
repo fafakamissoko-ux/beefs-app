@@ -76,22 +76,26 @@ export default function PointsDashboardPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      <div className="fixed inset-0 bg-gradient-to-br from-brand-500/10 via-black to-brand-400/5 pointer-events-none" />
-      <div className="relative max-w-lg mx-auto px-4 py-8">
+      <div className="page-ambient-gradient" aria-hidden />
+      <div className="relative z-[1] max-w-lg mx-auto px-4 py-8">
         <AppBackButton className="mb-6" />
 
+        <main aria-labelledby="points-page-title">
+        <h1 id="points-page-title" className="sr-only">
+          Mes points
+        </h1>
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 mb-8"
         >
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-2xl brand-gradient flex items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl brand-gradient flex items-center justify-center" aria-hidden>
               <Coins className="w-6 h-6 text-white" />
             </div>
             <div>
               <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Solde actuel</p>
-              <p className="text-3xl font-black text-white tabular-nums">
+              <p className="text-3xl font-black text-white tabular-nums" aria-live="polite">
                 {loading ? '…' : (balance ?? 0).toLocaleString('fr-FR')}
                 <span className="text-lg font-bold text-gray-400 ml-1">pts</span>
               </p>
@@ -101,14 +105,14 @@ export default function PointsDashboardPage() {
             href="/buy-points"
             className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white brand-gradient hover:opacity-95 transition-opacity"
           >
-            <ShoppingBag className="w-4 h-4" />
+            <ShoppingBag className="w-4 h-4" aria-hidden />
             Acheter des points
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4" aria-hidden />
           </Link>
         </motion.div>
 
         <div className="flex items-center gap-2 mb-4">
-          <History className="w-5 h-5 text-brand-400" />
+          <History className="w-5 h-5 text-brand-400" aria-hidden />
           <h2 className="text-lg font-bold text-white">Historique</h2>
         </div>
         <p className="text-gray-500 text-sm mb-4">
@@ -155,6 +159,7 @@ export default function PointsDashboardPage() {
             ))}
           </ul>
         )}
+        </main>
       </div>
     </div>
   );

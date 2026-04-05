@@ -63,7 +63,7 @@ export function OnboardingReminder() {
         exit={{ opacity: 0, y: 50 }}
         className="fixed bottom-4 right-4 z-[100] max-w-sm max-h-[min(80vh,420px)] overflow-y-auto"
       >
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-orange-500/30 rounded-xl p-4 shadow-2xl relative">
+        <div className="card border border-orange-500/30 rounded-xl p-4 shadow-2xl relative">
           {/* Close = ne plus afficher (comme le lien) */}
           <button
             type="button"

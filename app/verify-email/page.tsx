@@ -49,53 +49,68 @@ export default function VerifyEmailPage() {
         className="max-w-md w-full"
       >
         <AppBackButton className="mb-4" fallback="/login" />
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 border border-gray-700 text-center">
-          <div className="w-16 h-16 bg-brand-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Mail className="w-8 h-8 text-brand-400" />
-          </div>
-          
-          <h1 className="text-2xl font-black text-white mb-2">Vérifie ton email</h1>
-          <p className="text-gray-400 mb-6">
-            Nous avons envoyé un lien de vérification à{' '}
-            <span className="text-white font-semibold">{user?.email}</span>
-          </p>
+        <main aria-labelledby="verify-email-heading">
+          <div className="card rounded-2xl p-8 border text-center">
+            <div
+              className="w-16 h-16 bg-brand-500/20 rounded-full flex items-center justify-center mx-auto mb-4"
+              aria-hidden
+            >
+              <Mail className="w-8 h-8 text-brand-400" />
+            </div>
 
-          <div className="bg-black/40 rounded-lg p-4 mb-6">
-            <p className="text-gray-300 text-sm">
-              Clique sur le lien dans l'email pour activer ton compte.
-              <br />
-              <span className="text-gray-500 text-xs">
-                (Pense à vérifier tes spams)
-              </span>
+            <h1 id="verify-email-heading" className="text-2xl font-black text-white mb-2">
+              Vérifie ton e-mail
+            </h1>
+            <p className="text-gray-400 mb-6">
+              Nous avons envoyé un lien de vérification à{' '}
+              <span className="text-white font-semibold">{user?.email}</span>
+            </p>
+
+            <div className="bg-white/[0.04] rounded-lg p-4 mb-6 border border-white/[0.06]">
+              <p className="text-gray-300 text-sm">
+                Clique sur le lien dans l’e-mail pour activer ton compte.
+                <br />
+                <span className="text-gray-500 text-xs">(Pense à vérifier tes spams)</span>
+              </p>
+            </div>
+
+            {error && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm text-left"
+              >
+                {error}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending || resent}
+              aria-busy={resending}
+              aria-describedby="verify-resend-hint"
+              className="flex items-center justify-center gap-2 w-full font-bold py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-white/[0.1] bg-white/[0.08] hover:bg-white/[0.12] text-white"
+            >
+              {resending ? (
+                <>
+                  <RefreshCw className="w-5 h-5 animate-spin" aria-hidden />
+                  <span>Envoi en cours…</span>
+                </>
+              ) : resent ? (
+                <span role="status">E-mail renvoyé</span>
+              ) : (
+                <>
+                  <RefreshCw className="w-5 h-5" aria-hidden />
+                  <span>Renvoyer l’e-mail</span>
+                </>
+              )}
+            </button>
+            <p id="verify-resend-hint" className="sr-only">
+              Renvoie un nouveau lien de vérification à ton adresse e-mail.
             </p>
           </div>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          <button
-            onClick={handleResend}
-            disabled={resending || resent}
-            className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 text-white font-bold py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {resending ? (
-              <>
-                <RefreshCw className="w-5 h-5 animate-spin" />
-                <span>Envoi en cours...</span>
-              </>
-            ) : resent ? (
-              <span>✓ Email renvoyé!</span>
-            ) : (
-              <>
-                <RefreshCw className="w-5 h-5" />
-                <span>Renvoyer l'email</span>
-              </>
-            )}
-          </button>
-        </div>
+        </main>
       </motion.div>
     </div>
   );

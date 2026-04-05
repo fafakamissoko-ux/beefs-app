@@ -263,7 +263,12 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   const mainParticipants = beefData.participants.filter(p => p.is_main);
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 pt-20">
+    <div
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 pt-20"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-beef-dialog-title"
+    >
       <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
@@ -273,19 +278,25 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 brand-gradient rounded-full flex items-center justify-center text-xl">
+            <div className="w-10 h-10 brand-gradient rounded-full flex items-center justify-center text-xl" aria-hidden>
               🎭
             </div>
             <div>
-              <h2 className="text-xl font-black text-white">Organiser un beef</h2>
-              <p className="text-gray-400 text-xs">Étape {step}/3 - Médiateur</p>
+              <h2 id="create-beef-dialog-title" className="text-xl font-black text-white">
+                Organiser un beef
+              </h2>
+              <p className="text-gray-400 text-xs" id="create-beef-step-status">
+                Étape {step}/3 - Médiateur
+              </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onCancel}
             className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            aria-label="Fermer la fenêtre Organiser un beef"
           >
-            <X className="w-5 h-5 text-gray-400" />
+            <X className="w-5 h-5 text-gray-400" aria-hidden />
           </button>
         </div>
 

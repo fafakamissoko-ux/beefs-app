@@ -88,23 +88,27 @@ export function PWAInstallPrompt() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 50 }}
         className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[90] max-h-[min(85vh,480px)] overflow-y-auto"
+        role="region"
+        aria-labelledby="pwa-install-title"
       >
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-brand-500/30 rounded-xl p-4 shadow-2xl">
+        <div className="relative card border border-brand-500/30 rounded-xl p-4 shadow-2xl">
           {/* Close button */}
           <button
+            type="button"
             onClick={() => handleDismiss(false)}
             className="absolute top-2 right-2 text-gray-400 hover:text-white transition-colors"
+            aria-label="Fermer la suggestion d’installation"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden />
           </button>
 
           {/* Content */}
           <div className="flex items-start gap-3 mb-3">
-            <div className="p-2 brand-gradient rounded-lg">
+            <div className="p-2 brand-gradient rounded-lg" aria-hidden>
               <Download className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-white font-bold text-sm mb-1">
+              <h3 id="pwa-install-title" className="text-white font-bold text-sm mb-1">
                 Installe Beefs sur ton téléphone
               </h3>
               <p className="text-gray-400 text-xs">
@@ -128,12 +132,14 @@ export function PWAInstallPrompt() {
           {/* Actions */}
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={handleInstall}
               className="flex-1 brand-gradient hover:opacity-90 text-black font-bold py-2 px-4 rounded-lg text-xs transition-all"
             >
               Installer
             </button>
             <button
+              type="button"
               onClick={() => handleDismiss(true)}
               className="text-gray-400 hover:text-white text-xs font-semibold transition-colors px-3"
             >

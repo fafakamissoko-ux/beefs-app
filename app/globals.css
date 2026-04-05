@@ -190,6 +190,42 @@
   color: #1D1D1F !important;
 }
 
+/* Fond décoratif plein écran (évite via-black illisible en mode clair) */
+.page-ambient-gradient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    to bottom right,
+    rgba(232, 58, 20, 0.1),
+    #000000,
+    rgba(0, 229, 255, 0.05)
+  );
+}
+.theme-light .page-ambient-gradient {
+  background: linear-gradient(
+    to bottom right,
+    rgba(232, 58, 20, 0.07),
+    #ffffff,
+    rgba(0, 229, 255, 0.05)
+  ) !important;
+}
+
+/* Couleurs « arène » (GiftSystem, etc.) — lisibles en mode clair */
+.theme-light .bg-arena-dark {
+  background: #f5f5f7 !important;
+}
+.theme-light .bg-arena-darker {
+  background: #ebebed !important;
+}
+.theme-light .border-arena-gray {
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+.theme-light .hover\:bg-arena-gray:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+
 .theme-light .bg-surface-3,
 .theme-light .bg-gray-900,
 .theme-light .bg-gray-950 {

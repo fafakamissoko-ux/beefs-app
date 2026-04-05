@@ -137,23 +137,31 @@ export function GiftSystem({ roomId, targetUserId, targetUserName }: GiftSystemP
     <div className="relative">
       {/* Gift Button */}
       <button
+        type="button"
         onClick={() => setShowGiftMenu(!showGiftMenu)}
         className="bg-arena-purple hover:bg-arena-purple/80 text-white px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2"
+        aria-expanded={showGiftMenu}
+        aria-controls="gift-send-panel"
+        aria-haspopup="dialog"
       >
-        <Diamond className="w-4 h-4" />
-        Offrir Gift
+        <Diamond className="w-4 h-4" aria-hidden />
+        Offrir un cadeau
       </button>
 
       {/* Gift Menu */}
       <AnimatePresence>
         {showGiftMenu && (
           <motion.div
+            id="gift-send-panel"
+            role="dialog"
+            aria-modal="false"
+            aria-labelledby="gift-panel-title"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             className="absolute bottom-full mb-2 right-0 bg-arena-dark border-2 border-arena-gray rounded-xl p-4 shadow-xl z-50 min-w-[280px]"
           >
-            <div className="text-sm font-bold mb-3">
+            <div id="gift-panel-title" className="text-sm font-bold mb-3">
               Envoyer à {targetUserName}
             </div>
             {sendError && (
@@ -166,11 +174,13 @@ export function GiftSystem({ roomId, targetUserId, targetUserName }: GiftSystemP
                 const Icon = config.icon;
                 return (
                   <button
+                    type="button"
                     key={key}
                     onClick={() => sendGift(key as keyof typeof giftConfig)}
                     className="bg-arena-darker hover:bg-arena-gray p-3 rounded-lg transition-all border border-arena-gray hover:border-arena-blue"
+                    aria-label={`${config.label}, ${config.cost} points`}
                   >
-                    <Icon className={`w-8 h-8 ${config.color} mx-auto mb-1`} />
+                    <Icon className={`w-8 h-8 ${config.color} mx-auto mb-1`} aria-hidden />
                     <div className="text-xs font-bold">{config.label}</div>
                     <div className="text-xs text-gray-500">{config.cost} pts</div>
                   </button>
