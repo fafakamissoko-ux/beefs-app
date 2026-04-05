@@ -57,6 +57,13 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      /** Paiements différés (SEPA, etc.) : completed peut arriver avant « paid » ; ce signal confirme le paiement. */
+      case 'checkout.session.async_payment_succeeded': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await handleCheckoutCompleted(session, event.id);
+        break;
+      }
+
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
