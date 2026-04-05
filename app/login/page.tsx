@@ -75,16 +75,26 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden>
         <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-[120px]" style={{ background: 'rgba(232, 58, 20, 0.06)' }} />
         <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full blur-[120px]" style={{ background: 'rgba(0, 229, 255, 0.04)' }} />
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="relative max-w-sm w-full">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="relative max-w-sm w-full"
+      >
+        <main aria-labelledby="login-heading">
         <div className="text-center mb-8">
-          <BeefLogo size={48} className="mx-auto mb-3" />
-          <h1 className="text-2xl font-extrabold text-gradient tracking-tight">Beefs</h1>
-          <p className="text-gray-500 text-sm mt-1">Connecte-toi pour continuer</p>
+          <BeefLogo size={48} className="mx-auto mb-3" aria-hidden />
+          <h1 id="login-heading" className="text-2xl font-extrabold text-gradient tracking-tight">
+            Beefs
+          </h1>
+          <p id="login-subtitle" className="text-gray-500 text-sm mt-1">
+            Connecte-toi pour continuer
+          </p>
         </div>
 
         <div className="card p-6">
@@ -118,7 +128,7 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-white/10" />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" aria-describedby="login-subtitle">
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
@@ -149,8 +159,12 @@ export default function LoginPage() {
                   placeholder="ton_pseudo ou email"
                   className="input-field pl-10"
                   required
+                  aria-describedby="login-identifier-hint"
                 />
               </div>
+              <p id="login-identifier-hint" className="sr-only">
+                Tu peux te connecter avec ton pseudo Beefs ou ton adresse e-mail.
+              </p>
             </div>
 
             <div>
@@ -158,7 +172,11 @@ export default function LoginPage() {
                 <label htmlFor="login-password" className="block text-sm font-medium text-gray-300">
                   Mot de passe
                 </label>
-                <Link href="/forgot-password" className="text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors"
+                  aria-label="Mot de passe oublié"
+                >
                   Oublié ?
                 </Link>
               </div>
@@ -186,10 +204,23 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <button type="submit" disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] brand-gradient hover:shadow-glow">
-              {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                : <><span>Se connecter</span><ArrowRight className="w-4 h-4" /></>}
+            <button
+              type="submit"
+              disabled={loading}
+              aria-busy={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] brand-gradient hover:shadow-glow"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden />
+                  <span>Connexion…</span>
+                </span>
+              ) : (
+                <>
+                  <span>Se connecter</span>
+                  <ArrowRight className="w-4 h-4" aria-hidden />
+                </>
+              )}
             </button>
           </form>
 
@@ -200,6 +231,7 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
+        </main>
       </motion.div>
     </div>
   );

@@ -38,13 +38,20 @@ export default function ForgotPasswordPage() {
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           className="max-w-md w-full bg-surface-2 rounded-2xl p-8 border-2 border-green-500 text-center"
+          role="status"
+          aria-live="polite"
         >
-          <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">✓</span>
+          <div
+            className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4"
+            aria-hidden
+          >
+            <span className="text-3xl" aria-hidden>
+              ✓
+            </span>
           </div>
-          <h2 className="text-2xl font-black text-white mb-2">Email envoyé!</h2>
+          <h2 className="text-2xl font-black text-white mb-2">E-mail envoyé</h2>
           <p className="text-gray-400 mb-6">
-            Vérifie ta boîte email pour réinitialiser ton mot de passe.
+            Vérifie ta boîte e-mail pour réinitialiser ton mot de passe.
           </p>
           <Link
             href="/login"
@@ -68,18 +75,26 @@ export default function ForgotPasswordPage() {
           <AppBackButton fallback="/login" />
         </div>
 
+        <main aria-labelledby="forgot-heading">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 brand-gradient rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">🥊</span>
+          <div
+            className="w-16 h-16 brand-gradient rounded-full flex items-center justify-center mx-auto mb-4"
+            aria-hidden
+          >
+            <span className="text-3xl" aria-hidden>
+              🥊
+            </span>
           </div>
-          <h1 className="text-3xl font-black text-gradient">
-            Mot de passe oublié?
+          <h1 id="forgot-heading" className="text-3xl font-black text-gradient">
+            Mot de passe oublié ?
           </h1>
-          <p className="text-gray-400 mt-2">Entre ton email pour réinitialiser</p>
+          <p id="forgot-description" className="text-gray-400 mt-2">
+            Entre ton adresse e-mail pour réinitialiser ton mot de passe.
+          </p>
         </div>
 
         <div className="card rounded-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" aria-describedby="forgot-description">
             {error && (
               <div
                 role="alert"
@@ -106,6 +121,7 @@ export default function ForgotPasswordPage() {
                   placeholder="ton@email.com"
                   className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                   required
+                  aria-describedby="forgot-description"
                 />
               </div>
             </div>
@@ -120,6 +136,7 @@ export default function ForgotPasswordPage() {
             </button>
           </form>
         </div>
+        </main>
       </motion.div>
     </div>
   );
