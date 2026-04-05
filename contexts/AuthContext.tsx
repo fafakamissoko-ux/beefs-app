@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { validateSignupEmail } from '@/lib/email-signup-policy';
 import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -12,6 +13,9 @@ interface AuthContextType {
   signUp: (email: string, password: string, username: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithGoogle: () => Promise<{ error: any }>;
+  /** SMS — nécessite Phone activé dans Supabase + fournisseur (Twilio, etc.). */
+  sendPhoneOtp: (phoneE164: string) => Promise<{ error: any }>;
+  verifyPhoneOtp: (phoneE164: string, token: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
 }
@@ -63,6 +67,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
+      const emailPolicy = validateSignupEmail(email);
+      if (!emailPolicy.ok) {
+        return { error: { message: emailPolicy.message, name: 'EmailNotAllowed' } };
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -123,6 +132,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const sendPhoneOtp = async (phoneE164: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: phoneE164,
+        options: {
+          shouldCreateUser: true,
+        },
+      });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const verifyPhoneOtp = async (phoneE164: string, token: string) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        phone: phoneE164,
+        token: token.trim(),
+        type: 'sms',
+      });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
@@ -146,6 +182,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signIn,
     signInWithGoogle,
+    sendPhoneOtp,
+    verifyPhoneOtp,
     signOut,
     resetPassword,
   };

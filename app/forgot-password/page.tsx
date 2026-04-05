@@ -1,15 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Mail } from 'lucide-react';
+import { AlertCircle, Mail } from 'lucide-react';
 import { AppBackButton } from '@/components/AppBackButton';
 import { supabase } from '@/lib/supabase/client';
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -82,12 +80,27 @@ export default function ForgotPasswordPage() {
 
         <div className="card rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="bg-red-500/10 border border-red-500/50 rounded-lg p-3 flex items-center gap-2"
+              >
+                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" aria-hidden />
+                <p className="text-red-400 text-sm">{error}</p>
+              </div>
+            )}
             <div>
-              <label className="block text-white font-semibold mb-2">Email</label>
+              <label htmlFor="forgot-email" className="block text-white font-semibold mb-2">
+                Email
+              </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden />
                 <input
+                  id="forgot-email"
                   type="email"
+                  name="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ton@email.com"
@@ -100,6 +113,7 @@ export default function ForgotPasswordPage() {
             <button
               type="submit"
               disabled={loading}
+              aria-busy={loading}
               className="w-full brand-gradient hover:opacity-90 text-black font-bold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? 'Envoi...' : 'Réinitialiser le mot de passe'}

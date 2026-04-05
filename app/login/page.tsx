@@ -97,6 +97,8 @@ export default function LoginPage() {
               if (error) { setError(error.message || 'Erreur Google'); setGoogleLoading(false); }
             }}
             disabled={googleLoading}
+            aria-busy={googleLoading}
+            aria-label="Continuer avec Google"
             className="w-full flex items-center justify-center gap-3 py-3 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-xl border border-white/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
           >
             {googleLoading ? (
@@ -118,19 +120,30 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2.5 px-4 py-3 rounded-xl" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                role="alert"
+                aria-live="polite"
+                className="flex items-center gap-2.5 px-4 py-3 rounded-xl"
+                style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+              >
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" aria-hidden />
                 <p className="text-red-400 text-sm">{error}</p>
               </motion.div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1.5">Pseudo ou email</label>
+              <label htmlFor="login-identifier" className="block text-sm font-medium text-gray-300 mb-1.5">
+                Pseudo ou email
+              </label>
               <div className="relative">
-                <AtSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <AtSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" aria-hidden />
                 <input
+                  id="login-identifier"
                   type="text"
+                  name="identifier"
+                  autoComplete="username"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="ton_pseudo ou email"
@@ -142,16 +155,33 @@ export default function LoginPage() {
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-gray-300">Mot de passe</label>
-                <Link href="/forgot-password" className="text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors">Oublié ?</Link>
+                <label htmlFor="login-password" className="block text-sm font-medium text-gray-300">
+                  Mot de passe
+                </label>
+                <Link href="/forgot-password" className="text-xs font-medium text-brand-400 hover:text-brand-300 transition-colors">
+                  Oublié ?
+                </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••" className="input-field pl-10 pr-11" required />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors">
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" aria-hidden />
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="input-field pl-10 pr-11"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" aria-hidden /> : <Eye className="w-4 h-4" aria-hidden />}
                 </button>
               </div>
             </div>

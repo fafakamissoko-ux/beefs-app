@@ -84,7 +84,7 @@ export function FeatureGuide({
           animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          className={`absolute z-[99] ${getTooltipPosition(position, align)}`}
+          className={`absolute z-[120] ${getTooltipPosition(position, align)}`}
           style={{ width: 220 }}
         >
           <div className={`relative rounded-xl border px-3.5 py-2.5 shadow-xl backdrop-blur-sm ${bgClass}`}>

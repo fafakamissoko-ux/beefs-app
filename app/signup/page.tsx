@@ -8,6 +8,13 @@ import { Mail, Lock, User, Eye, EyeOff, AlertCircle, Check, X, Loader2 } from 'l
 import { useAuth } from '@/contexts/AuthContext';
 import { BeefLogo } from '@/components/BeefLogo';
 import { supabase } from '@/lib/supabase/client';
+import {
+  getPasswordPolicyProgress,
+  PASSWORD_POLICY_LABELS,
+  PASSWORD_POLICY_SHORT_HINT,
+  validatePasswordPolicy,
+} from '@/lib/password-policy';
+import { validateSignupEmail } from '@/lib/email-signup-policy';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -68,19 +75,7 @@ export default function SignUpPage() {
     };
   }, []);
 
-  const getPasswordStrength = (password: string) => {
-    let score = 0;
-    if (password.length >= 6) score++;
-    if (password.length >= 8) score++;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
-    if (/[0-9]/.test(password) || /[^a-zA-Z0-9]/.test(password)) score++;
-    return score;
-  };
-
-  const strengthLabels = ['', 'Faible', 'Moyen', 'Bon', 'Fort'] as const;
-  const strengthColors = ['', 'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'] as const;
-  const strengthTextColors = ['', 'text-red-500', 'text-orange-500', 'text-yellow-500', 'text-green-500'] as const;
-  const passwordStrength = getPasswordStrength(formData.password);
+  const passwordProgress = getPasswordPolicyProgress(formData.password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,14 +89,22 @@ export default function SignUpPage() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
+    const policy = validatePasswordPolicy(formData.password);
+    if (!policy.ok) {
+      setError(policy.message);
       setLoading(false);
       return;
     }
 
     if (formData.username.length < 3) {
       setError('Le pseudo doit contenir au moins 3 caractères');
+      setLoading(false);
+      return;
+    }
+
+    const emailPolicy = validateSignupEmail(formData.email);
+    if (!emailPolicy.ok) {
+      setError(emailPolicy.message);
       setLoading(false);
       return;
     }
@@ -187,6 +190,8 @@ export default function SignUpPage() {
               if (gError) { setError(gError.message || 'Erreur Google'); setGoogleLoading(false); }
             }}
             disabled={googleLoading}
+            aria-busy={googleLoading}
+            aria-label="Continuer avec Google"
             className="w-full flex items-center justify-center gap-3 py-3 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-xl border border-white/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
           >
             {googleLoading ? (
@@ -209,19 +214,28 @@ export default function SignUpPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Error Alert */}
             {error && (
-              <div className="bg-red-500/10 border border-red-500 rounded-lg p-3 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <div
+                role="alert"
+                aria-live="polite"
+                className="bg-red-500/10 border border-red-500 rounded-lg p-3 flex items-center gap-2"
+              >
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" aria-hidden />
                 <p className="text-red-500 text-sm">{error}</p>
               </div>
             )}
 
             {/* Username */}
             <div>
-              <label className="block text-white font-semibold mb-2">Pseudo</label>
+              <label htmlFor="signup-username" className="block text-white font-semibold mb-2">
+                Pseudo
+              </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden />
                 <input
+                  id="signup-username"
                   type="text"
+                  name="username"
+                  autoComplete="username"
                   value={formData.username}
                   onChange={(e) => handleUsernameChange(e.target.value)}
                   placeholder="ton_pseudo"
@@ -246,11 +260,16 @@ export default function SignUpPage() {
 
             {/* Email */}
             <div>
-              <label className="block text-white font-semibold mb-2">Email</label>
+              <label htmlFor="signup-email" className="block text-white font-semibold mb-2">
+                Email
+              </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden />
                 <input
+                  id="signup-email"
                   type="email"
+                  name="email"
+                  autoComplete="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="ton@email.com"
@@ -262,14 +281,23 @@ export default function SignUpPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-white font-semibold mb-2">Mot de passe</label>
+              <label htmlFor="signup-password" className="block text-white font-semibold mb-2">
+                Mot de passe
+              </label>
+              <p id="signup-password-hint" className="text-gray-500 text-xs mb-2">
+                {PASSWORD_POLICY_SHORT_HINT}
+              </p>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden />
                 <input
+                  id="signup-password"
                   type={showPassword ? 'text' : 'password'}
+                  name="new-password"
+                  autoComplete="new-password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="••••••••"
+                  aria-describedby="signup-password-hint signup-password-criteria"
                   className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-12 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                   required
                 />
@@ -277,42 +305,55 @@ export default function SignUpPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-5 h-5" aria-hidden /> : <Eye className="w-5 h-5" aria-hidden />}
                 </button>
               </div>
-              {formData.password.length > 0 && (
-                <div className="mt-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1 flex-1">
-                      {[1, 2, 3, 4].map((level) => (
-                        <div
-                          key={level}
-                          className={`h-1.5 flex-1 rounded-full transition-colors ${
-                            level <= passwordStrength
-                              ? strengthColors[passwordStrength]
-                              : 'bg-white/10'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    {passwordStrength > 0 && (
-                      <span className={`text-xs font-medium ${strengthTextColors[passwordStrength]}`}>
-                        {strengthLabels[passwordStrength]}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
+              <ul
+                id="signup-password-criteria"
+                className="mt-3 space-y-1.5 text-xs"
+                aria-label="Critères du mot de passe"
+              >
+                {(
+                  [
+                    ['lengthOk', PASSWORD_POLICY_LABELS.length] as const,
+                    ['lower', PASSWORD_POLICY_LABELS.lower] as const,
+                    ['upper', PASSWORD_POLICY_LABELS.upper] as const,
+                    ['digit', PASSWORD_POLICY_LABELS.digit] as const,
+                    ['special', PASSWORD_POLICY_LABELS.special] as const,
+                  ] as const
+                ).map(([key, label]) => {
+                  const ok = passwordProgress[key];
+                  return (
+                    <li
+                      key={key}
+                      className={`flex items-center gap-2 ${ok ? 'text-emerald-400' : 'text-gray-500'}`}
+                    >
+                      {ok ? (
+                        <Check className="w-3.5 h-3.5 flex-shrink-0" aria-hidden />
+                      ) : (
+                        <X className="w-3.5 h-3.5 flex-shrink-0 opacity-50" aria-hidden />
+                      )}
+                      <span>{label}</span>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-white font-semibold mb-2">Confirmer le mot de passe</label>
+              <label htmlFor="signup-confirm-password" className="block text-white font-semibold mb-2">
+                Confirmer le mot de passe
+              </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden />
                 <input
+                  id="signup-confirm-password"
                   type={showPassword ? 'text' : 'password'}
+                  name="confirm-password"
+                  autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   placeholder="••••••••"

@@ -24,13 +24,15 @@ export function useFeatureGuide(featureId: string) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // Small delay so the UI renders first, then the tooltip appears smoothly
+    // Décalage par id pour éviter que plusieurs guides se chevauchent au même instant
+    const stagger =
+      featureId.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 4500;
     const timer = setTimeout(() => {
       const seen = getSeenFeatures();
       if (!seen.has(featureId)) {
         setVisible(true);
       }
-    }, 800);
+    }, 600 + stagger);
     return () => clearTimeout(timer);
   }, [featureId]);
 

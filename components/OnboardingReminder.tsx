@@ -6,51 +6,40 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Flame } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
+const DISMISS_KEY = 'onboarding_reminder_dismissed_v1';
+
 export function OnboardingReminder() {
   const router = useRouter();
   const { user } = useAuth();
   const [showReminder, setShowReminder] = useState(false);
 
   useEffect(() => {
-    // Only check for logged-in users
     if (!user) return;
+    try {
+      if (localStorage.getItem('hasSeenOnboarding') === 'true') {
+        localStorage.setItem(DISMISS_KEY, 'true');
+      }
+    } catch {}
 
-    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-    const onboardingReminder = localStorage.getItem('onboardingReminder');
+    const dismissed = localStorage.getItem(DISMISS_KEY) === 'true';
+    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding') === 'true';
+    if (dismissed || hasSeenOnboarding) return;
 
-    // Don't show if user has permanently dismissed
-    if (hasSeenOnboarding === 'true' && !onboardingReminder) {
+    const reminderRaw = localStorage.getItem('onboardingReminder');
+    if (reminderRaw && new Date() < new Date(reminderRaw)) {
       return;
     }
 
-    // Show if user has never seen onboarding
-    if (!hasSeenOnboarding) {
-      // Wait 10 seconds before showing reminder
-      const timer = setTimeout(() => {
-        setShowReminder(true);
-      }, 10000);
-      return () => clearTimeout(timer);
-    }
-
-    // Show if reminder date has passed
-    if (onboardingReminder) {
-      const reminderDate = new Date(onboardingReminder);
-      const now = new Date();
-      if (now > reminderDate) {
-        const timer = setTimeout(() => {
-          setShowReminder(true);
-        }, 10000);
-        return () => clearTimeout(timer);
-      }
-    }
+    const timer = setTimeout(() => setShowReminder(true), 8000);
+    return () => clearTimeout(timer);
   }, [user]);
 
   const handleDismiss = (permanent: boolean = false) => {
     if (permanent) {
+      localStorage.setItem(DISMISS_KEY, 'true');
       localStorage.setItem('hasSeenOnboarding', 'true');
       localStorage.removeItem('onboardingReminder');
     } else {
-      // Remind in 7 days
       const reminderDate = new Date();
       reminderDate.setDate(reminderDate.getDate() + 7);
       localStorage.setItem('onboardingReminder', reminderDate.toISOString());
@@ -68,16 +57,19 @@ export function OnboardingReminder() {
   return (
     <AnimatePresence>
       <motion.div
+        data-onboarding-reminder
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 50 }}
-        className="fixed bottom-4 right-4 z-50 max-w-sm"
+        className="fixed bottom-4 right-4 z-[100] max-w-sm max-h-[min(80vh,420px)] overflow-y-auto"
       >
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-orange-500/30 rounded-xl p-4 shadow-2xl">
-          {/* Close button */}
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-orange-500/30 rounded-xl p-4 shadow-2xl relative">
+          {/* Close = ne plus afficher (comme le lien) */}
           <button
-            onClick={() => handleDismiss(false)}
+            type="button"
+            onClick={() => handleDismiss(true)}
             className="absolute top-2 right-2 text-gray-400 hover:text-white transition-colors"
+            aria-label="Ne plus afficher"
           >
             <X className="w-4 h-4" />
           </button>

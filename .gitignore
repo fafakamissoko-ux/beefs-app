@@ -41,3 +41,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Liste jetable (~2 Mo), régénérée par postinstall depuis disposable-email-domains
+/supabase/functions/before-user-created/disposable-domains.json

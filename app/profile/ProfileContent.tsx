@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Edit, Share2, Settings, TrendingUp, Users, MessageCircle, Trophy, Crown, Flame, Upload, X, Check, ArrowLeft, Clock, Wallet, Euro, ChevronDown, AlertCircle } from 'lucide-react';
+import { Camera, Edit, Share2, Settings, TrendingUp, Users, MessageCircle, Trophy, Crown, Flame, Upload, X, Check, ArrowLeft, Clock, Wallet, Euro, ChevronDown, AlertCircle, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -556,8 +556,19 @@ export default function ProfileContent() {
                 </label>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 justify-end">
+                <Link
+                  href={`/profile/${encodeURIComponent(profile.username)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-white/10 rounded-xl text-white font-semibold transition-colors flex items-center gap-2 text-sm"
+                  title="Ouvre ton profil public dans un nouvel onglet"
+                >
+                  <Eye className="w-4 h-4" />
+                  Aperçu public
+                </Link>
                 <button
+                  type="button"
                   onClick={async () => {
                     const shareData = {
                       title: `${profile.display_name} sur Beefs`,

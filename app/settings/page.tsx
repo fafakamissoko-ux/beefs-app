@@ -10,6 +10,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase/client';
 import { FeatureGuide } from '@/components/FeatureGuide';
 import { AppBackButton } from '@/components/AppBackButton';
+import { PASSWORD_POLICY_SHORT_HINT, validatePasswordPolicy } from '@/lib/password-policy';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -24,11 +25,17 @@ export default function SettingsPage() {
   });
   
   const [passwords, setPasswords] = useState({
+    current: '',
     new: '',
     confirm: '',
   });
-  
+
+  /** Étape 2 : code à 6–8 chiffres envoyé par e-mail (ou SMS si e-mail non confirmé) via Supabase. */
+  const [passwordStep, setPasswordStep] = useState<'form' | 'otp'>('form');
+  const [passwordOtp, setPasswordOtp] = useState('');
+
   const [showPasswords, setShowPasswords] = useState({
+    current: false,
     new: false,
     confirm: false,
   });
@@ -137,9 +144,35 @@ export default function SettingsPage() {
     }
   };
 
+  const resetPasswordChangeForm = () => {
+    setPasswords({ current: '', new: '', confirm: '' });
+    setPasswordOtp('');
+    setPasswordStep('form');
+  };
+
+  const handleResendPasswordOtp = async () => {
+    setSaving(true);
+    setMessage(null);
+    try {
+      const { error } = await supabase.auth.reauthenticate();
+      if (error) throw error;
+      setMessage({
+        type: 'success',
+        text: 'Un nouveau code a été envoyé.',
+      });
+      setTimeout(() => setMessage(null), 4000);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Impossible d’envoyer le code.';
+      setMessage({ type: 'error', text: msg });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleChangePassword = async () => {
-    if (!passwords.new || passwords.new.length < 6) {
-      setMessage({ type: 'error', text: 'Le mot de passe doit contenir au moins 6 caractères' });
+    const policy = validatePasswordPolicy(passwords.new);
+    if (!policy.ok) {
+      setMessage({ type: 'error', text: policy.message });
       return;
     }
 
@@ -148,21 +181,64 @@ export default function SettingsPage() {
       return;
     }
 
+    if (!passwords.current.trim()) {
+      setMessage({ type: 'error', text: 'Saisis ton mot de passe actuel.' });
+      return;
+    }
+
     setSaving(true);
     setMessage(null);
 
     try {
+      if (passwordStep === 'otp') {
+        const code = passwordOtp.trim();
+        if (!code) {
+          setMessage({ type: 'error', text: 'Saisis le code reçu par e-mail ou SMS.' });
+          setSaving(false);
+          return;
+        }
+        const { error } = await supabase.auth.updateUser({
+          password: passwords.new,
+          current_password: passwords.current,
+          nonce: code,
+        });
+        if (error) throw error;
+        setMessage({ type: 'success', text: 'Mot de passe modifié avec succès !' });
+        resetPasswordChangeForm();
+        setTimeout(() => setMessage(null), 3000);
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({
-        password: passwords.new
+        password: passwords.new,
+        current_password: passwords.current,
       });
 
-      if (error) throw error;
+      if (error) {
+        const code = (error as { code?: string }).code;
+        if (code === 'reauthentication_needed' || code === 'reauth_nonce_missing') {
+          const { error: reErr } = await supabase.auth.reauthenticate();
+          if (reErr) throw reErr;
+          setPasswordStep('otp');
+          setMessage({
+            type: 'success',
+            text:
+              'Un code de confirmation a été envoyé (e-mail, ou SMS si l’e-mail n’est pas vérifié). Saisis-le ci-dessous pour valider le changement.',
+          });
+          return;
+        }
+        throw error;
+      }
 
-      setMessage({ type: 'success', text: 'Mot de passe modifié avec succès!' });
-      setPasswords({ new: '', confirm: '' });
+      setMessage({ type: 'success', text: 'Mot de passe modifié avec succès !' });
+      resetPasswordChangeForm();
       setTimeout(() => setMessage(null), 3000);
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Erreur lors du changement de mot de passe' });
+    } catch (error: unknown) {
+      const msg =
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message?: string }).message)
+          : 'Erreur lors du changement de mot de passe';
+      setMessage({ type: 'error', text: msg });
     } finally {
       setSaving(false);
     }
@@ -232,6 +308,8 @@ export default function SettingsPage() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
+              role={message.type === 'error' ? 'alert' : 'status'}
+              aria-live="polite"
               className={`mb-6 p-4 rounded-xl border ${
                 message.type === 'success'
                   ? 'bg-green-500/10 border-green-500/30 text-green-400'
@@ -239,7 +317,11 @@ export default function SettingsPage() {
               }`}
             >
               <div className="flex items-center gap-2">
-                {message.type === 'success' ? <Check className="w-5 h-5" /> : <X className="w-5 h-5" />}
+                {message.type === 'success' ? (
+                  <Check className="w-5 h-5" aria-hidden />
+                ) : (
+                  <X className="w-5 h-5" aria-hidden />
+                )}
                 <span className="font-semibold">{message.text}</span>
               </div>
             </motion.div>
@@ -262,51 +344,71 @@ export default function SettingsPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-white font-semibold mb-2 text-sm">Nom d'utilisateur</label>
+                <label htmlFor="settings-username" className="block text-white font-semibold mb-2 text-sm">
+                  Nom d&apos;utilisateur
+                </label>
                 <input
+                  id="settings-username"
                   type="text"
                   value={profile.username}
                   disabled
+                  readOnly
+                  aria-describedby="settings-username-hint"
                   className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 text-gray-500 cursor-not-allowed"
                 />
-                <p className="text-gray-500 text-xs mt-1">Le nom d'utilisateur ne peut pas être modifié</p>
+                <p id="settings-username-hint" className="text-gray-500 text-xs mt-1">
+                  Le nom d&apos;utilisateur ne peut pas être modifié
+                </p>
               </div>
 
               <div>
-                <label className="block text-white font-semibold mb-2 text-sm">Nom affiché</label>
+                <label htmlFor="settings-display-name" className="block text-white font-semibold mb-2 text-sm">
+                  Nom affiché
+                </label>
                 <input
+                  id="settings-display-name"
                   type="text"
                   value={profile.display_name}
                   onChange={(e) => setProfile({ ...profile, display_name: e.target.value })}
                   placeholder="Comment voulez-vous être appelé?"
+                  autoComplete="nickname"
                   className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                   maxLength={50}
                 />
               </div>
 
               <div>
-                <label className="block text-white font-semibold mb-2 text-sm">Bio</label>
+                <label htmlFor="settings-bio" className="block text-white font-semibold mb-2 text-sm">
+                  Bio
+                </label>
                 <textarea
+                  id="settings-bio"
                   value={profile.bio}
                   onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                   placeholder="Parlez-nous de vous..."
                   rows={3}
+                  aria-describedby="settings-bio-count"
                   className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors resize-none"
                   maxLength={200}
                 />
-                <p className="text-gray-400 text-xs mt-1">{profile.bio.length}/200 caractères</p>
+                <p id="settings-bio-count" className="text-gray-400 text-xs mt-1">
+                  {profile.bio.length}/200 caractères
+                </p>
               </div>
 
               <div>
-                <label className="block text-white font-semibold mb-2 text-sm">Email</label>
-                <div className="flex items-center gap-2">
-                  <Mail className="w-5 h-5 text-gray-400" />
+                <p id="settings-email-label" className="block text-white font-semibold mb-2 text-sm">
+                  Email
+                </p>
+                <div className="flex items-center gap-2" role="group" aria-labelledby="settings-email-label">
+                  <Mail className="w-5 h-5 text-gray-400" aria-hidden />
                   <span className="text-gray-400">{profile.email}</span>
                 </div>
-                <p className="text-gray-500 text-xs mt-1">L'email est géré par votre fournisseur d'authentification</p>
+                <p className="text-gray-500 text-xs mt-1">L&apos;email est géré par votre fournisseur d&apos;authentification</p>
               </div>
 
               <button
+                type="button"
                 onClick={handleSaveProfile}
                 disabled={saving}
                 className="w-full brand-gradient text-black font-bold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:opacity-90 flex items-center justify-center gap-2"
@@ -332,53 +434,162 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4">
+              <p className="text-gray-500 text-xs">
+                Saisis d’abord ton mot de passe actuel. Si ton projet Supabase impose une confirmation (session &gt; 24 h ou option
+                sécurisée), un <strong className="text-gray-400">code</strong> t’est envoyé par <strong className="text-gray-400">e-mail</strong> (ou par{' '}
+                <strong className="text-gray-400">SMS</strong> si l’e-mail n’est pas confirmé).
+              </p>
+              <p className="text-gray-500 text-xs mb-1" id="settings-password-policy-hint">
+                {PASSWORD_POLICY_SHORT_HINT}
+              </p>
+
               <div>
-                <label className="block text-white font-semibold mb-2 text-sm">Nouveau mot de passe</label>
+                <label htmlFor="settings-current-password" className="block text-white font-semibold mb-2 text-sm">
+                  Mot de passe actuel
+                </label>
                 <div className="relative">
                   <input
+                    id="settings-current-password"
+                    type={showPasswords.current ? 'text' : 'password'}
+                    value={passwords.current}
+                    onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    disabled={passwordStep === 'otp'}
+                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white disabled:opacity-40"
+                    disabled={passwordStep === 'otp'}
+                    aria-label={
+                      showPasswords.current ? 'Masquer le mot de passe actuel' : 'Afficher le mot de passe actuel'
+                    }
+                  >
+                    {showPasswords.current ? <EyeOff className="w-5 h-5" aria-hidden /> : <Eye className="w-5 h-5" aria-hidden />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="settings-new-password" className="block text-white font-semibold mb-2 text-sm">
+                  Nouveau mot de passe
+                </label>
+                <div className="relative">
+                  <input
+                    id="settings-new-password"
                     type={showPasswords.new ? 'text' : 'password'}
                     value={passwords.new}
                     onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-                    placeholder="Minimum 6 caractères"
-                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    aria-describedby="settings-password-policy-hint"
+                    disabled={passwordStep === 'otp'}
+                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white disabled:opacity-40"
+                    disabled={passwordStep === 'otp'}
+                    aria-label={showPasswords.new ? 'Masquer le nouveau mot de passe' : 'Afficher le nouveau mot de passe'}
                   >
-                    {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showPasswords.new ? <EyeOff className="w-5 h-5" aria-hidden /> : <Eye className="w-5 h-5" aria-hidden />}
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-white font-semibold mb-2 text-sm">Confirmer le mot de passe</label>
+                <label htmlFor="settings-confirm-password" className="block text-white font-semibold mb-2 text-sm">
+                  Confirmer le mot de passe
+                </label>
                 <div className="relative">
                   <input
+                    id="settings-confirm-password"
                     type={showPasswords.confirm ? 'text' : 'password'}
                     value={passwords.confirm}
                     onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                     placeholder="Répétez le mot de passe"
-                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
+                    autoComplete="new-password"
+                    disabled={passwordStep === 'otp'}
+                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white disabled:opacity-40"
+                    disabled={passwordStep === 'otp'}
+                    aria-label={
+                      showPasswords.confirm ? 'Masquer la confirmation du mot de passe' : 'Afficher la confirmation du mot de passe'
+                    }
                   >
-                    {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showPasswords.confirm ? <EyeOff className="w-5 h-5" aria-hidden /> : <Eye className="w-5 h-5" aria-hidden />}
                   </button>
                 </div>
               </div>
 
-              <button
-                onClick={handleChangePassword}
-                disabled={saving || !passwords.new || !passwords.confirm}
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {saving ? 'Modification...' : 'Changer le mot de passe'}
-              </button>
+              {passwordStep === 'otp' && (
+                <div>
+                  <label htmlFor="settings-password-otp" className="block text-white font-semibold mb-2 text-sm">
+                    Code de confirmation
+                  </label>
+                  <input
+                    id="settings-password-otp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    value={passwordOtp}
+                    onChange={(e) => setPasswordOtp(e.target.value.replace(/\s/g, ''))}
+                    placeholder="Code reçu par e-mail ou SMS"
+                    aria-describedby="settings-otp-hint"
+                    className="w-full bg-white/[0.04] border border-brand-500/40 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors tracking-widest text-center text-lg"
+                  />
+                  <p id="settings-otp-hint" className="text-gray-500 text-xs mt-2">
+                    Colle le code à une seule utilisation envoyé par Supabase (vérifie les spams).
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleResendPasswordOtp}
+                    disabled={saving}
+                    className="mt-2 text-sm font-semibold text-brand-400 hover:text-brand-300 disabled:opacity-50"
+                  >
+                    Renvoyer le code
+                  </button>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={handleChangePassword}
+                  disabled={
+                    saving ||
+                    (passwordStep === 'form'
+                      ? !passwords.current || !passwords.new || !passwords.confirm
+                      : !passwordOtp.trim())
+                  }
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {saving
+                    ? 'Modification...'
+                    : passwordStep === 'otp'
+                      ? 'Valider avec le code'
+                      : 'Changer le mot de passe'}
+                </button>
+                {passwordStep === 'otp' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPasswordStep('form');
+                      setPasswordOtp('');
+                    }}
+                    className="w-full py-3 rounded-lg border border-white/15 text-gray-300 hover:bg-white/5 text-sm font-semibold"
+                  >
+                    Retour
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
 
@@ -463,7 +674,7 @@ export default function SettingsPage() {
                   description="Choisis entre sombre, clair ou automatique. L'app s'adapte à tes préférences."
                   position="bottom"
                 />
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2" role="group" aria-label="Thème d&apos;affichage">
                   {([
                     { value: 'dark' as const, label: 'Sombre', icon: Moon },
                     { value: 'light' as const, label: 'Clair', icon: Sun },
@@ -471,14 +682,16 @@ export default function SettingsPage() {
                   ]).map(({ value, label, icon: Icon }) => (
                     <button
                       key={value}
+                      type="button"
                       onClick={() => updatePreferences({ theme: value })}
+                      aria-pressed={preferences.theme === value}
                       className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
                         preferences.theme === value
                           ? 'brand-gradient text-white shadow-lg'
                           : 'bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.08]'
                       }`}
                     >
-                      <Icon className="w-4 h-4" />
+                      <Icon className="w-4 h-4" aria-hidden />
                       {label}
                     </button>
                   ))}
@@ -487,17 +700,22 @@ export default function SettingsPage() {
 
               {/* Accent color */}
               <div>
-                <label className="block text-white font-semibold mb-3 text-sm">Couleur d&apos;accent</label>
-                <div className="flex items-center gap-3 flex-wrap">
+                <p id="accent-color-label" className="block text-white font-semibold mb-3 text-sm">
+                  Couleur d&apos;accent
+                </p>
+                <div className="flex items-center gap-3 flex-wrap" role="group" aria-labelledby="accent-color-label">
                   {['#E83A14', '#FF6B2C', '#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'].map((color) => (
                     <button
                       key={color}
+                      type="button"
                       onClick={async () => {
                         setAccentColor(color);
                         if (user) {
                           await supabase.from('users').update({ accent_color: color }).eq('id', user.id);
                         }
                       }}
+                      aria-label={`Couleur d&apos;accent ${color}`}
+                      aria-pressed={accentColor === color}
                       className={`w-9 h-9 rounded-full transition-all ${
                         accentColor === color ? 'ring-2 ring-white ring-offset-2 ring-offset-black scale-110' : 'hover:scale-110'
                       }`}
@@ -505,6 +723,7 @@ export default function SettingsPage() {
                     />
                   ))}
                   <label className="relative cursor-pointer">
+                    <span className="sr-only">Choisir une couleur personnalisée</span>
                     <input
                       type="color"
                       value={accentColor}
@@ -514,6 +733,7 @@ export default function SettingsPage() {
                           await supabase.from('users').update({ accent_color: e.target.value }).eq('id', user.id);
                         }
                       }}
+                      aria-label="Couleur d&apos;accent personnalisée"
                       className="absolute inset-0 w-9 h-9 opacity-0 cursor-pointer"
                     />
                     <div className="w-9 h-9 rounded-full border-2 border-dashed border-gray-500 flex items-center justify-center text-gray-400 hover:border-white hover:text-white transition-all">
@@ -529,7 +749,7 @@ export default function SettingsPage() {
                   <Type className="w-4 h-4" />
                   Taille du texte
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2" role="group" aria-label="Taille du texte">
                   {([
                     { value: 'small' as const, label: 'Petit' },
                     { value: 'normal' as const, label: 'Normal' },
@@ -537,7 +757,9 @@ export default function SettingsPage() {
                   ]).map(({ value, label }) => (
                     <button
                       key={value}
+                      type="button"
                       onClick={() => updatePreferences({ fontSize: value })}
+                      aria-pressed={preferences.fontSize === value}
                       className={`px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
                         preferences.fontSize === value
                           ? 'brand-gradient text-white shadow-lg'
@@ -553,13 +775,19 @@ export default function SettingsPage() {
               {/* Reduce animations toggle */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Zap className="w-5 h-5 text-yellow-400" />
+                  <Zap className="w-5 h-5 text-yellow-400" aria-hidden />
                   <div>
-                    <p className="text-white font-semibold text-sm">Réduire les animations</p>
+                    <p id="reduce-anim-label" className="text-white font-semibold text-sm">
+                      Réduire les animations
+                    </p>
                     <p className="text-gray-500 text-xs">Limite les mouvements et transitions</p>
                   </div>
                 </div>
                 <button
+                  type="button"
+                  role="switch"
+                  aria-checked={preferences.reduceAnimations}
+                  aria-labelledby="reduce-anim-label"
                   onClick={() => updatePreferences({ reduceAnimations: !preferences.reduceAnimations })}
                   className={`relative w-12 h-7 rounded-full transition-all ${
                     preferences.reduceAnimations ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10'
@@ -576,13 +804,19 @@ export default function SettingsPage() {
               {/* High contrast toggle */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Eye className="w-5 h-5 text-cyan-400" />
+                  <Eye className="w-5 h-5 text-cyan-400" aria-hidden />
                   <div>
-                    <p className="text-white font-semibold text-sm">Contraste élevé</p>
+                    <p id="high-contrast-label" className="text-white font-semibold text-sm">
+                      Contraste élevé
+                    </p>
                     <p className="text-gray-500 text-xs">Augmente le contraste des textes</p>
                   </div>
                 </div>
                 <button
+                  type="button"
+                  role="switch"
+                  aria-checked={preferences.highContrast}
+                  aria-labelledby="high-contrast-label"
                   onClick={() => updatePreferences({ highContrast: !preferences.highContrast })}
                   className={`relative w-12 h-7 rounded-full transition-all ${
                     preferences.highContrast ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10'
@@ -623,13 +857,19 @@ export default function SettingsPage() {
               ]).map(({ key, icon: Icon, color, label, desc }) => (
                 <div key={key} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Icon className={`w-5 h-5 ${color}`} />
+                    <Icon className={`w-5 h-5 ${color}`} aria-hidden />
                     <div>
-                      <p className="text-white font-semibold text-sm">{label}</p>
+                      <p id={`notif-pref-label-${key}`} className="text-white font-semibold text-sm">
+                        {label}
+                      </p>
                       <p className="text-gray-500 text-xs">{desc}</p>
                     </div>
                   </div>
                   <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notifPrefs[key]}
+                    aria-labelledby={`notif-pref-label-${key}`}
                     onClick={() => toggleNotifPref(key)}
                     className={`relative w-12 h-7 rounded-full transition-all ${
                       notifPrefs[key] ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10'
@@ -656,6 +896,7 @@ export default function SettingsPage() {
             <h3 className="text-white font-bold text-lg mb-2">Guides d&apos;utilisation</h3>
             <p className="text-gray-400 text-sm mb-4">Réafficher les guides contextuels pour redécouvrir les fonctionnalités.</p>
             <button
+              type="button"
               onClick={() => {
                 try { localStorage.removeItem('beefs_seen_features'); } catch {}
                 setMessage({ type: 'success', text: 'Guides réinitialisés ! Ils réapparaitront lors de ta prochaine navigation.' });
@@ -682,6 +923,7 @@ export default function SettingsPage() {
 
             <div className="space-y-4">
               <button
+                type="button"
                 onClick={handleDeleteAccount}
                 className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold py-3 rounded-lg transition-all"
               >

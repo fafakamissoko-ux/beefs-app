@@ -22,7 +22,8 @@ interface AnimatedGift {
 
 interface GiftSystemProps {
   roomId: string;
-  userId: string;
+  /** Conservé pour compatibilité éventuelle des parents ; l’expéditeur est dérivé de la session côté API. */
+  userId?: string;
   targetUserId: string;
   targetUserName: string;
 }
@@ -58,8 +59,9 @@ const giftConfig = {
   },
 };
 
-export function GiftSystem({ roomId, userId, targetUserId, targetUserName }: GiftSystemProps) {
+export function GiftSystem({ roomId, targetUserId, targetUserName }: GiftSystemProps) {
   const [showGiftMenu, setShowGiftMenu] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [animatedGifts, setAnimatedGifts] = useState<AnimatedGift[]>([]);
 
   useEffect(() => {
@@ -101,15 +103,34 @@ export function GiftSystem({ roomId, userId, targetUserId, targetUserName }: Gif
 
   const sendGift = async (giftType: keyof typeof giftConfig) => {
     const config = giftConfig[giftType];
-    await supabase.from('gifts').insert({
-      beef_id: roomId,
-      sender_id: userId,
-      recipient_id: targetUserId,
-      gift_type_id: config.giftTypeId,
-      points_amount: config.cost,
-    });
-
-    setShowGiftMenu(false);
+    setSendError(null);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setSendError('Non authentifié');
+      return;
+    }
+    try {
+      const res = await fetch('/api/gifts/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          beef_id: roomId,
+          recipient_id: targetUserId,
+          gift_type_id: config.giftTypeId,
+          points_amount: config.cost,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.error === 'string' ? data.error : 'Erreur lors de l’envoi');
+      setShowGiftMenu(false);
+    } catch (e: unknown) {
+      setSendError(e instanceof Error ? e.message : 'Erreur lors de l’envoi');
+    }
   };
 
   return (
@@ -135,7 +156,11 @@ export function GiftSystem({ roomId, userId, targetUserId, targetUserName }: Gif
             <div className="text-sm font-bold mb-3">
               Envoyer à {targetUserName}
             </div>
-            
+            {sendError && (
+              <p className="text-xs text-red-400 mb-2" role="alert">
+                {sendError}
+              </p>
+            )}
             <div className="grid grid-cols-2 gap-2">
               {Object.entries(giftConfig).map(([key, config]) => {
                 const Icon = config.icon;

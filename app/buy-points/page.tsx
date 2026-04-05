@@ -11,6 +11,7 @@ import { POINT_PACKS } from '@/lib/stripe/client';
 import { supabase } from '@/lib/supabase/client';
 import { useCountryDetection } from '@/hooks/useCountryDetection';
 import { calculatePrice } from '@/lib/geo';
+import { isProductionBeefsHostname } from '@/lib/stripe-public-ui';
 
 export default function BuyPointsPage() {
   const router = useRouter();
@@ -18,7 +19,18 @@ export default function BuyPointsPage() {
   const [selectedPack, setSelectedPack] = useState<string>(POINT_PACKS[1].id);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  /** Bandeaux techniques Stripe : jamais sur www.beefs.live (utilisateurs finaux). */
+  const [showStripeTestHint, setShowStripeTestHint] = useState(false);
+  const [showStripeLiveDevHint, setShowStripeLiveDevHint] = useState(false);
   const { country, loading: countryLoading, testMode } = useCountryDetection();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
+    const prodHost = isProductionBeefsHostname(window.location.hostname);
+    setShowStripeTestHint(key.startsWith('pk_test') && !prodHost);
+    setShowStripeLiveDevHint(key.startsWith('pk_live') && !prodHost);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -94,15 +106,13 @@ export default function BuyPointsPage() {
             Paiement sécurisé par Stripe : carte, Link ; Apple Pay / Google Pay peuvent s’afficher sur la page de paiement selon l’appareil et la config du compte Stripe.
           </p>
 
-          {typeof process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY === 'string' &&
-            process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.startsWith('pk_live') && (
+          {showStripeLiveDevHint && (
               <p className="text-amber-200/90 text-xs mt-3 px-3 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 max-w-sm mx-auto text-center leading-snug">
-                <strong className="text-amber-100">Production Stripe :</strong> utilise une carte bancaire réelle.
+                <strong className="text-amber-100">Clés Live :</strong> utilise une carte bancaire réelle.
                 La carte de test 4242… ne fonctionne qu’avec des clés <strong>test</strong> (pk_test / sk_test).
               </p>
             )}
-          {typeof process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY === 'string' &&
-            process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.startsWith('pk_test') && (
+          {showStripeTestHint && (
               <p className="text-emerald-200/90 text-xs mt-3 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 max-w-sm mx-auto text-center">
                 Mode test Stripe : carte 4242 4242 4242 4242, date future, CVC au choix.
               </p>

@@ -20,14 +20,20 @@ export function PWAInstallPrompt() {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      
-      // Show prompt after 10 seconds
+
+      const hasSeenPrompt = localStorage.getItem('pwa-install-prompt-seen');
+      if (hasSeenPrompt) return;
+
+      const onboardingDone =
+        localStorage.getItem('hasSeenOnboarding') === 'true' ||
+        localStorage.getItem('onboarding_reminder_dismissed_v1') === 'true';
+      // Après onboarding / rappel : délai court ; sinon attendre pour limiter le chevauchement avec le rappel onboarding
+      const delayMs = onboardingDone ? 12000 : 26000;
+
       setTimeout(() => {
-        const hasSeenPrompt = localStorage.getItem('pwa-install-prompt-seen');
-        if (!hasSeenPrompt) {
-          setShowPrompt(true);
-        }
-      }, 10000);
+        if (localStorage.getItem('pwa-install-prompt-seen')) return;
+        setShowPrompt(true);
+      }, delayMs);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -81,7 +87,7 @@ export function PWAInstallPrompt() {
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 50 }}
-        className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50"
+        className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[90] max-h-[min(85vh,480px)] overflow-y-auto"
       >
         <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-brand-500/30 rounded-xl p-4 shadow-2xl">
           {/* Close button */}
