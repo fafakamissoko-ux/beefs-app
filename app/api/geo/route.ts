@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+/** Évite l’erreur "Dynamic server usage: headers" pendant le build static. */
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Try Cloudflare headers (works on Vercel/Cloudflare)

@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
 
 
   try {
+    console.info('[stripe webhook]', event.type, event.id);
+
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -111,19 +113,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, stripeE
 
   const packCheck = validatePointPackFromMetadata(packIdRaw, pointsRaw);
   if (!packCheck.ok) {
-    console.error('[stripe webhook] Metadata pack invalide:', packCheck.reason, session.id);
+    console.error('[stripe webhook] Metadata pack invalide:', packCheck.reason, {
+      sessionId: session.id,
+      pack_id: packIdRaw,
+      points_amount: pointsRaw,
+    });
     return;
   }
 
   const { points: pointsAmount, packId } = packCheck;
 
-  const { data: already } = await supabaseAdmin
+  const { data: already, error: dupErr } = await supabaseAdmin
     .from('transactions')
     .select('id')
     .eq('user_id', userId)
     .eq('type', 'purchase')
-    .contains('metadata', { stripe_session_id: session.id })
+    .filter('metadata->>stripe_session_id', 'eq', session.id)
     .maybeSingle();
+
+  if (dupErr) {
+    console.error('[stripe webhook] idempotence select:', dupErr);
+  }
 
   if (already) {
     console.info('[stripe webhook] checkout.session.completed déjà traité:', session.id);
