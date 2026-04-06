@@ -32,6 +32,37 @@ const defaultPrefs: DisplayPreferences = {
   highContrast: false,
 };
 
+/** Fusionne avec les défauts et corrige les valeurs invalides (JSONB / anciennes données). */
+function normalizeDisplayPreferences(raw: unknown): DisplayPreferences {
+  const base =
+    raw && typeof raw === 'object' && !Array.isArray(raw)
+      ? { ...defaultPrefs, ...(raw as Record<string, unknown>) }
+      : { ...defaultPrefs };
+
+  const theme =
+    base.theme === 'dark' || base.theme === 'light' || base.theme === 'auto'
+      ? base.theme
+      : defaultPrefs.theme;
+
+  const autoThemeSource =
+    base.autoThemeSource === 'system' || base.autoThemeSource === 'schedule'
+      ? base.autoThemeSource
+      : defaultPrefs.autoThemeSource;
+
+  const fontSize =
+    base.fontSize === 'small' || base.fontSize === 'normal' || base.fontSize === 'large'
+      ? base.fontSize
+      : defaultPrefs.fontSize;
+
+  return {
+    theme,
+    autoThemeSource,
+    fontSize,
+    reduceAnimations: Boolean(base.reduceAnimations),
+    highContrast: Boolean(base.highContrast),
+  };
+}
+
 /** Clair entre 7h et 20h (heure locale du navigateur), sombre sinon. */
 export function effectiveThemeFromLocalSchedule(): 'dark' | 'light' {
   const h = new Date().getHours();
@@ -78,7 +109,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       .single()
       .then(({ data }) => {
         if (data?.display_preferences) {
-          const prefs = { ...defaultPrefs, ...data.display_preferences };
+          const prefs = normalizeDisplayPreferences(data.display_preferences);
           setPreferences(prefs);
           setEffectiveTheme(computeEffectiveTheme(prefs));
         }
@@ -120,7 +151,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [effectiveTheme, preferences]);
 
   const updatePreferences = async (partial: Partial<DisplayPreferences>) => {
-    const newPrefs = { ...preferences, ...partial };
+    const newPrefs = normalizeDisplayPreferences({ ...preferences, ...partial });
     setPreferences(newPrefs);
     setEffectiveTheme(computeEffectiveTheme(newPrefs));
 
