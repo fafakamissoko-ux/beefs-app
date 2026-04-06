@@ -16,7 +16,7 @@ import {
 } from '@/lib/password-policy';
 import { validateSignupEmail } from '@/lib/email-signup-policy';
 
-type SignupFieldKey = 'username' | 'email' | 'password' | 'confirmPassword' | 'oauth' | 'general';
+type SignupFieldKey = 'username' | 'email' | 'password' | 'confirmPassword' | 'oauth';
 
 function mapSignUpApiError(message: string): { key: SignupFieldKey; text: string } {
   const m = message.toLowerCase();
@@ -29,7 +29,7 @@ function mapSignUpApiError(message: string): { key: SignupFieldKey; text: string
     return { key: 'email', text: 'Cette adresse e-mail est déjà utilisée.' };
   }
   if (m.includes('invalid login credentials') || m.includes('invalid email or password')) {
-    return { key: 'general', text: message };
+    return { key: 'email', text: message || 'Inscription impossible. Vérifie l’e-mail et le mot de passe.' };
   }
   if (m.includes('password') && (m.includes('weak') || m.includes('short') || m.includes('least'))) {
     return { key: 'password', text: message };
@@ -40,7 +40,7 @@ function mapSignUpApiError(message: string): { key: SignupFieldKey; text: string
   if (m.includes('jetable') || m.includes('disposable') || m.includes('temporaire')) {
     return { key: 'email', text: message };
   }
-  return { key: 'general', text: message };
+  return { key: 'email', text: message || 'Inscription impossible. Réessaie ou contacte le support.' };
 }
 
 function InlineFieldError({ id, message }: { id: string; message: string | undefined }) {
@@ -132,7 +132,9 @@ export default function SignUpPage() {
 
     const policy = validatePasswordPolicy(formData.password);
     if (!policy.ok) {
-      next.password = policy.message;
+      /* La liste à coches détaille les critères ; éviter le long paragraphe qui ressemble à un seul bandeau. */
+      next.password =
+        'Le mot de passe ne respecte pas encore tous les critères (voir la liste ci-dessous).';
     }
 
     if (formData.password !== formData.confirmPassword) {
@@ -142,6 +144,16 @@ export default function SignUpPage() {
     if (Object.keys(next).length > 0) {
       setFieldErrors(next);
       setLoading(false);
+      requestAnimationFrame(() => {
+        const order: (keyof typeof next)[] = ['username', 'email', 'password', 'confirmPassword'];
+        for (const k of order) {
+          if (!next[k]) continue;
+          const id =
+            k === 'confirmPassword' ? 'signup-confirm-password-error' : `signup-${String(k)}-error`;
+          document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          break;
+        }
+      });
       return;
     }
 
@@ -156,6 +168,9 @@ export default function SignUpPage() {
         email: 'Cette adresse e-mail ne peut pas être utilisée pour créer un compte.',
       });
       setLoading(false);
+      requestAnimationFrame(() => {
+        document.getElementById('signup-email-error')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
       return;
     }
 
@@ -173,6 +188,13 @@ export default function SignUpPage() {
       const mapped = mapSignUpApiError(msg);
       setFieldErrors({ [mapped.key]: mapped.text });
       setLoading(false);
+      requestAnimationFrame(() => {
+        const id =
+          mapped.key === 'confirmPassword'
+            ? 'signup-confirm-password-error'
+            : `signup-${mapped.key}-error`;
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
     } else {
       setSuccess(true);
       setLoading(false);
@@ -281,7 +303,7 @@ export default function SignUpPage() {
                   onChange={(e) => {
                     handleUsernameChange(e.target.value);
                     setFieldErrors((p) => {
-                      const { username: _u, general: _g, ...rest } = p;
+                      const { username: _u, ...rest } = p;
                       return rest;
                     });
                   }}
@@ -328,7 +350,7 @@ export default function SignUpPage() {
                   onChange={(e) => {
                     setFormData({ ...formData, email: e.target.value });
                     setFieldErrors((p) => {
-                      const { email: _e, general: _g, ...rest } = p;
+                      const { email: _e, ...rest } = p;
                       return rest;
                     });
                   }}
@@ -364,7 +386,7 @@ export default function SignUpPage() {
                   onChange={(e) => {
                     setFormData({ ...formData, password: e.target.value });
                     setFieldErrors((p) => {
-                      const { password: _pw, general: _g, ...rest } = p;
+                      const { password: _pw, ...rest } = p;
                       return rest;
                     });
                   }}
@@ -442,7 +464,7 @@ export default function SignUpPage() {
                   onChange={(e) => {
                     setFormData({ ...formData, confirmPassword: e.target.value });
                     setFieldErrors((p) => {
-                      const { confirmPassword: _c, general: _g, ...rest } = p;
+                      const { confirmPassword: _c, ...rest } = p;
                       return rest;
                     });
                   }}
@@ -497,15 +519,6 @@ export default function SignUpPage() {
                 Je confirme avoir 13 ans ou plus
               </label>
             </div>
-
-            {fieldErrors.general && (
-              <div
-                role="alert"
-                className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400"
-              >
-                {fieldErrors.general}
-              </div>
-            )}
 
             {/* Submit */}
             <button
