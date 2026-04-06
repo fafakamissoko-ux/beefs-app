@@ -16,6 +16,43 @@ import {
 } from '@/lib/password-policy';
 import { validateSignupEmail } from '@/lib/email-signup-policy';
 
+type SignupFieldKey = 'username' | 'email' | 'password' | 'confirmPassword' | 'oauth' | 'general';
+
+function mapSignUpApiError(message: string): { key: SignupFieldKey; text: string } {
+  const m = message.toLowerCase();
+  if (
+    m.includes('already registered') ||
+    m.includes('already been registered') ||
+    m.includes('user already exists') ||
+    m.includes('email address is already')
+  ) {
+    return { key: 'email', text: 'Cette adresse e-mail est déjà utilisée.' };
+  }
+  if (m.includes('invalid login credentials') || m.includes('invalid email or password')) {
+    return { key: 'general', text: message };
+  }
+  if (m.includes('password') && (m.includes('weak') || m.includes('short') || m.includes('least'))) {
+    return { key: 'password', text: message };
+  }
+  if (m.includes('email') && m.includes('invalid')) {
+    return { key: 'email', text: 'Adresse e-mail invalide.' };
+  }
+  if (m.includes('jetable') || m.includes('disposable') || m.includes('temporaire')) {
+    return { key: 'email', text: message };
+  }
+  return { key: 'general', text: message };
+}
+
+function InlineFieldError({ id, message }: { id: string; message: string | undefined }) {
+  if (!message) return null;
+  return (
+    <p id={id} role="alert" className="text-red-400 text-xs mt-1.5 flex items-start gap-1.5">
+      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" aria-hidden />
+      <span>{message}</span>
+    </p>
+  );
+}
+
 export default function SignUpPage() {
   const router = useRouter();
   const { signUp, signInWithGoogle, user } = useAuth();
@@ -27,7 +64,7 @@ export default function SignUpPage() {
     confirmPassword: '',
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<SignupFieldKey, string>>>({});
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -79,37 +116,35 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setFieldErrors({});
     setLoading(true);
 
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
-      setLoading(false);
-      return;
-    }
+    const next: Partial<Record<SignupFieldKey, string>> = {};
 
-    const policy = validatePasswordPolicy(formData.password);
-    if (!policy.ok) {
-      setError(policy.message);
-      setLoading(false);
-      return;
-    }
-
-    if (formData.username.length < 3) {
-      setError('Le pseudo doit contenir au moins 3 caractères');
-      setLoading(false);
-      return;
+    if (formData.username.trim().length < 3) {
+      next.username = 'Le pseudo doit contenir au moins 3 caractères.';
     }
 
     const emailPolicy = validateSignupEmail(formData.email);
     if (!emailPolicy.ok) {
-      setError(emailPolicy.message);
+      next.email = emailPolicy.message;
+    }
+
+    const policy = validatePasswordPolicy(formData.password);
+    if (!policy.ok) {
+      next.password = policy.message;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      next.confirmPassword = 'Les mots de passe ne correspondent pas.';
+    }
+
+    if (Object.keys(next).length > 0) {
+      setFieldErrors(next);
       setLoading(false);
       return;
     }
 
-    // Check if email is banned
     const { data: bannedEmail } = await supabase
       .from('banned_emails')
       .select('id')
@@ -117,7 +152,9 @@ export default function SignUpPage() {
       .single();
 
     if (bannedEmail) {
-      setError('Cette adresse email ne peut pas être utilisée pour créer un compte.');
+      setFieldErrors({
+        email: 'Cette adresse e-mail ne peut pas être utilisée pour créer un compte.',
+      });
       setLoading(false);
       return;
     }
@@ -129,7 +166,12 @@ export default function SignUpPage() {
     );
 
     if (signUpError) {
-      setError(signUpError.message || 'Une erreur est survenue');
+      const msg =
+        typeof signUpError === 'object' && signUpError !== null && 'message' in signUpError
+          ? String((signUpError as { message?: string }).message || '')
+          : 'Une erreur est survenue.';
+      const mapped = mapSignUpApiError(msg);
+      setFieldErrors({ [mapped.key]: mapped.text });
       setLoading(false);
     } else {
       setSuccess(true);
@@ -186,8 +228,18 @@ export default function SignUpPage() {
             type="button"
             onClick={async () => {
               setGoogleLoading(true);
+              setFieldErrors((prev) => {
+                const { oauth: _o, ...rest } = prev;
+                return rest;
+              });
               const { error: gError } = await signInWithGoogle();
-              if (gError) { setError(gError.message || 'Erreur Google'); setGoogleLoading(false); }
+              if (gError) {
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  oauth: gError.message || 'Erreur lors de la connexion avec Google.',
+                }));
+                setGoogleLoading(false);
+              }
             }}
             disabled={googleLoading}
             aria-busy={googleLoading}
@@ -203,6 +255,7 @@ export default function SignUpPage() {
               </>
             )}
           </button>
+          <InlineFieldError id="signup-oauth-error" message={fieldErrors.oauth} />
 
           {/* Separator */}
           <div className="flex items-center gap-3 mb-4">
@@ -211,18 +264,8 @@ export default function SignUpPage() {
             <div className="flex-1 h-px bg-white/10" />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Error Alert */}
-            {error && (
-              <div
-                role="alert"
-                aria-live="polite"
-                className="bg-red-500/10 border border-red-500 rounded-lg p-3 flex items-center gap-2"
-              >
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" aria-hidden />
-                <p className="text-red-500 text-sm">{error}</p>
-              </div>
-            )}
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <InlineFieldError id="signup-general-error" message={fieldErrors.general} />
 
             {/* Username */}
             <div>
@@ -237,9 +280,21 @@ export default function SignUpPage() {
                   name="username"
                   autoComplete="username"
                   value={formData.username}
-                  onChange={(e) => handleUsernameChange(e.target.value)}
+                  onChange={(e) => {
+                    handleUsernameChange(e.target.value);
+                    setFieldErrors((p) => {
+                      const { username: _u, ...rest } = p;
+                      return rest;
+                    });
+                  }}
                   placeholder="ton_pseudo"
-                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
+                  aria-invalid={!!fieldErrors.username}
+                  aria-describedby={
+                    fieldErrors.username ? 'signup-username-error' : undefined
+                  }
+                  className={`w-full bg-white/[0.04] rounded-xl pl-10 pr-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors border ${
+                    fieldErrors.username ? 'border-red-500/50' : 'border-white/[0.06]'
+                  }`}
                   required
                 />
                 {usernameStatus !== 'idle' && (
@@ -256,6 +311,7 @@ export default function SignUpPage() {
               {usernameStatus === 'taken' && (
                 <p className="text-red-500 text-xs mt-1">Pseudo déjà pris</p>
               )}
+              <InlineFieldError id="signup-username-error" message={fieldErrors.username} />
             </div>
 
             {/* Email */}
@@ -271,12 +327,24 @@ export default function SignUpPage() {
                   name="email"
                   autoComplete="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, email: e.target.value });
+                    setFieldErrors((p) => {
+                      const { email: _e, ...rest } = p;
+                      return rest;
+                    });
+                  }}
                   placeholder="ton@email.com"
-                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
+                  autoCapitalize="none"
+                  aria-invalid={!!fieldErrors.email}
+                  aria-describedby={fieldErrors.email ? 'signup-email-error' : undefined}
+                  className={`w-full bg-white/[0.04] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors border ${
+                    fieldErrors.email ? 'border-red-500/50' : 'border-white/[0.06]'
+                  }`}
                   required
                 />
               </div>
+              <InlineFieldError id="signup-email-error" message={fieldErrors.email} />
             </div>
 
             {/* Password */}
@@ -295,10 +363,27 @@ export default function SignUpPage() {
                   name="new-password"
                   autoComplete="new-password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    setFieldErrors((p) => {
+                      const { password: _pw, ...rest } = p;
+                      return rest;
+                    });
+                  }}
                   placeholder="••••••••"
-                  aria-describedby="signup-password-hint signup-password-criteria"
-                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-12 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
+                  aria-describedby={
+                    [
+                      'signup-password-hint',
+                      'signup-password-criteria',
+                      fieldErrors.password ? 'signup-password-error' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ') || undefined
+                  }
+                  aria-invalid={!!fieldErrors.password}
+                  className={`w-full bg-white/[0.04] rounded-xl pl-10 pr-12 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors border ${
+                    fieldErrors.password ? 'border-red-500/50' : 'border-white/[0.06]'
+                  }`}
                   required
                 />
                 <button
@@ -340,6 +425,7 @@ export default function SignUpPage() {
                   );
                 })}
               </ul>
+              <InlineFieldError id="signup-password-error" message={fieldErrors.password} />
             </div>
 
             {/* Confirm Password */}
@@ -355,12 +441,28 @@ export default function SignUpPage() {
                   name="confirm-password"
                   autoComplete="new-password"
                   value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, confirmPassword: e.target.value });
+                    setFieldErrors((p) => {
+                      const { confirmPassword: _c, ...rest } = p;
+                      return rest;
+                    });
+                  }}
                   placeholder="••••••••"
-                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
+                  aria-invalid={!!fieldErrors.confirmPassword}
+                  aria-describedby={
+                    fieldErrors.confirmPassword ? 'signup-confirm-password-error' : undefined
+                  }
+                  className={`w-full bg-white/[0.04] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors border ${
+                    fieldErrors.confirmPassword ? 'border-red-500/50' : 'border-white/[0.06]'
+                  }`}
                   required
                 />
               </div>
+              <InlineFieldError
+                id="signup-confirm-password-error"
+                message={fieldErrors.confirmPassword}
+              />
             </div>
 
             {/* CGU Checkbox */}

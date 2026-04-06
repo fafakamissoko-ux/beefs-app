@@ -17,7 +17,11 @@ export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{
+    identifier?: string;
+    password?: string;
+    oauth?: string;
+  }>({});
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -27,7 +31,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setFieldErrors({});
     setLoading(true);
 
     let email = identifier;
@@ -41,7 +45,7 @@ export default function LoginPage() {
         .single();
 
       if (!data?.email) {
-        setError('Utilisateur introuvable');
+        setFieldErrors({ identifier: 'Utilisateur introuvable.' });
         setLoading(false);
         return;
       }
@@ -60,17 +64,25 @@ export default function LoginPage() {
       const isStillBanned = isPermanent || new Date(userData.banned_until) > new Date();
       if (isStillBanned) {
         const banMsg = isPermanent
-          ? 'Votre compte a été suspendu définitivement.'
-          : `Votre compte est suspendu jusqu'au ${new Date(userData.banned_until).toLocaleDateString('fr-FR')}.`;
-        setError(`${banMsg}${userData.ban_reason ? ` Raison : ${userData.ban_reason}` : ''}`);
+          ? 'Compte suspendu définitivement.'
+          : `Compte suspendu jusqu'au ${new Date(userData.banned_until).toLocaleDateString('fr-FR')}.`;
+        setFieldErrors({
+          identifier: `${banMsg}${userData.ban_reason ? ` Raison : ${userData.ban_reason}` : ''}`,
+        });
         setLoading(false);
         return;
       }
     }
 
     const { error: signInError } = await signIn(email, password);
-    if (signInError) { setError('Identifiant ou mot de passe incorrect'); setLoading(false); }
-    else { router.push(searchParams.get('redirect') || '/feed'); }
+    if (signInError) {
+      setFieldErrors({
+        password: 'Identifiant ou mot de passe incorrect.',
+      });
+      setLoading(false);
+    } else {
+      router.push(searchParams.get('redirect') || '/feed');
+    }
   };
 
   return (
@@ -103,8 +115,18 @@ export default function LoginPage() {
             type="button"
             onClick={async () => {
               setGoogleLoading(true);
+              setFieldErrors((p) => {
+                const { oauth: _o, ...rest } = p;
+                return rest;
+              });
               const { error } = await signInWithGoogle();
-              if (error) { setError(error.message || 'Erreur Google'); setGoogleLoading(false); }
+              if (error) {
+                setFieldErrors((p) => ({
+                  ...p,
+                  oauth: error.message || 'Erreur lors de la connexion avec Google.',
+                }));
+                setGoogleLoading(false);
+              }
             }}
             disabled={googleLoading}
             aria-busy={googleLoading}
@@ -120,6 +142,16 @@ export default function LoginPage() {
               </>
             )}
           </button>
+          {fieldErrors.oauth && (
+            <p
+              id="login-oauth-error"
+              role="alert"
+              className="text-red-400 text-xs mt-2 flex items-start gap-1.5 mb-1"
+            >
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" aria-hidden />
+              <span>{fieldErrors.oauth}</span>
+            </p>
+          )}
 
           {/* Separator */}
           <div className="flex items-center gap-3 mb-4">
@@ -129,20 +161,6 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4" aria-describedby="login-subtitle">
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                role="alert"
-                aria-live="polite"
-                className="flex items-center gap-2.5 px-4 py-3 rounded-xl"
-                style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)' }}
-              >
-                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" aria-hidden />
-                <p className="text-red-400 text-sm">{error}</p>
-              </motion.div>
-            )}
-
             <div>
               <label htmlFor="login-identifier" className="block text-sm font-medium text-gray-300 mb-1.5">
                 Pseudo ou email
@@ -155,13 +173,32 @@ export default function LoginPage() {
                   name="identifier"
                   autoComplete="username"
                   value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
+                  onChange={(e) => {
+                    setIdentifier(e.target.value);
+                    setFieldErrors((p) => {
+                      const { identifier: _i, ...rest } = p;
+                      return rest;
+                    });
+                  }}
                   placeholder="ton_pseudo ou email"
-                  className="input-field pl-10"
+                  aria-invalid={!!fieldErrors.identifier}
+                  aria-describedby={
+                    [fieldErrors.identifier ? 'login-identifier-error' : '', 'login-identifier-hint']
+                      .filter(Boolean)
+                      .join(' ') || undefined
+                  }
+                  className={`input-field pl-10 border ${
+                    fieldErrors.identifier ? 'border-red-500/50' : ''
+                  }`}
                   required
-                  aria-describedby="login-identifier-hint"
                 />
               </div>
+              {fieldErrors.identifier && (
+                <p id="login-identifier-error" role="alert" className="text-red-400 text-xs mt-1.5 flex items-start gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" aria-hidden />
+                  <span>{fieldErrors.identifier}</span>
+                </p>
+              )}
               <p id="login-identifier-hint" className="sr-only">
                 Tu peux te connecter avec ton pseudo Beefs ou ton adresse e-mail.
               </p>
@@ -188,9 +225,19 @@ export default function LoginPage() {
                   name="password"
                   autoComplete="current-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setFieldErrors((p) => {
+                      const { password: _pw, ...rest } = p;
+                      return rest;
+                    });
+                  }}
                   placeholder="••••••••"
-                  className="input-field pl-10 pr-11"
+                  aria-invalid={!!fieldErrors.password}
+                  aria-describedby={fieldErrors.password ? 'login-password-error' : undefined}
+                  className={`input-field pl-10 pr-11 border ${
+                    fieldErrors.password ? 'border-red-500/50' : ''
+                  }`}
                   required
                 />
                 <button
@@ -202,6 +249,12 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" aria-hidden /> : <Eye className="w-4 h-4" aria-hidden />}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <p id="login-password-error" role="alert" className="text-red-400 text-xs mt-1.5 flex items-start gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" aria-hidden />
+                  <span>{fieldErrors.password}</span>
+                </p>
+              )}
             </div>
 
             <button
