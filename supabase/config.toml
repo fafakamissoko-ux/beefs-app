@@ -1,0 +1,6 @@
+# Config CLI Supabase (https://supabase.com/docs/guides/cli/config)
+# Après `supabase link`, le project ref est enregistré localement.
+
+[functions.before-user-created]
+# Hook Auth : pas de JWT ; authenticité via en-têtes Standard Webhooks.
+verify_jwt = false

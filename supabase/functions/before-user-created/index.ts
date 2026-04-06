@@ -1,7 +1,8 @@
 /**
  * Auth Hook « before-user-created » — rejette les inscriptions avec domaine jetable.
- * Configurer dans Supabase : Authentication → Hooks → Before User Created → cette Edge Function.
- * Secret : BEFORE_USER_CREATED_HOOK_SECRET (Dashboard Auth Hooks).
+ *
+ * Déploiement + branchement prod : voir docs/supabase-auth-hook-before-user-created.md
+ * (secret BEFORE_USER_CREATED_HOOK_SECRET, Authentication → Hooks, verify_jwt false).
  *
  * Liste : disposable-domains.json (généré par scripts/sync-disposable-domains.mjs au postinstall).
  * Quand tu activeras l’inscription uniquement par SMS : autoriser ici les cas sans email (voir commentaire).
