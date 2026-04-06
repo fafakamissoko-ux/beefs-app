@@ -1,31 +1,71 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { AlertCircle, Mail } from 'lucide-react';
 import { AppBackButton } from '@/components/AppBackButton';
 import { supabase } from '@/lib/supabase/client';
+import { validateSignupEmail } from '@/lib/email-signup-policy';
+
+function InlineFieldError({ id, message }: { id: string; message: string | undefined }) {
+  if (!message) return null;
+  return (
+    <p id={id} role="alert" className="text-red-400 text-xs mt-1.5 flex items-start gap-1.5">
+      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" aria-hidden />
+      <span>{message}</span>
+    </p>
+  );
+}
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
+  const [fieldError, setFieldError] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
+  const validateEmailBlur = useCallback((raw: string) => {
+    const trimmed = raw.trim();
+    setFieldError(undefined);
+    if (trimmed.length === 0) return;
+    const policy = validateSignupEmail(trimmed);
+    if (!policy.ok) setFieldError(policy.message);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldError(undefined);
+
+    const policy = validateSignupEmail(email);
+    if (!policy.ok) {
+      setFieldError(policy.message);
+      requestAnimationFrame(() => {
+        document.getElementById('forgot-email')?.focus();
+        document.getElementById('forgot-email')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
       });
       if (resetError) throw resetError;
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de l\'envoi. Vérifie ton email.');
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message?: string }).message)
+          : 'Erreur lors de l\'envoi. Vérifie ton email.';
+      setError(msg);
+      requestAnimationFrame(() => {
+        document.getElementById('forgot-email')?.focus();
+        document.getElementById('forgot-email')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
     } finally {
       setLoading(false);
     }
@@ -94,7 +134,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <div className="card rounded-2xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-4" aria-describedby="forgot-description">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate aria-describedby="forgot-description">
             {error && (
               <div
                 role="alert"
@@ -117,13 +157,24 @@ export default function ForgotPasswordPage() {
                   name="email"
                   autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setFieldError(undefined);
+                  }}
+                  onBlur={(e) => validateEmailBlur(e.target.value)}
                   placeholder="ton@email.com"
-                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
-                  required
-                  aria-describedby="forgot-description"
+                  autoCapitalize="none"
+                  className={`w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors ${
+                    fieldError ? 'beefs-field-invalid' : ''
+                  }`}
+                  aria-invalid={!!fieldError}
+                  aria-describedby={
+                    [fieldError ? 'forgot-email-error' : '', 'forgot-description'].filter(Boolean).join(' ') ||
+                    undefined
+                  }
                 />
               </div>
+              <InlineFieldError id="forgot-email-error" message={fieldError} />
             </div>
 
             <button

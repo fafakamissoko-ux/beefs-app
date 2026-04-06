@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, Sun, Moon, Monitor, Type, Zap, MessageSquare, UserPlus, Gift, Flame, History } from 'lucide-react';
+import { User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, Sun, Moon, Monitor, Type, Zap, MessageSquare, UserPlus, Gift, Flame, History, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -11,6 +11,39 @@ import { supabase } from '@/lib/supabase/client';
 import { FeatureGuide } from '@/components/FeatureGuide';
 import { AppBackButton } from '@/components/AppBackButton';
 import { PASSWORD_POLICY_SHORT_HINT, validatePasswordPolicy } from '@/lib/password-policy';
+
+type PasswordFieldKey = 'current' | 'new' | 'confirm' | 'otp';
+
+function focusFirstPasswordFieldError(errors: Partial<Record<PasswordFieldKey, string>>) {
+  const order: PasswordFieldKey[] = ['current', 'new', 'confirm', 'otp'];
+  requestAnimationFrame(() => {
+    for (const k of order) {
+      if (!errors[k]) continue;
+      const id =
+        k === 'otp'
+          ? 'settings-password-otp'
+          : k === 'current'
+            ? 'settings-current-password'
+            : k === 'new'
+              ? 'settings-new-password'
+              : 'settings-confirm-password';
+      const el = document.getElementById(id);
+      el?.focus({ preventScroll: false });
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      break;
+    }
+  });
+}
+
+function PasswordInlineError({ id, message }: { id: string; message: string | undefined }) {
+  if (!message) return null;
+  return (
+    <p id={id} role="alert" className="text-red-400 text-xs mt-1.5 flex items-start gap-1.5">
+      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" aria-hidden />
+      <span>{message}</span>
+    </p>
+  );
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -52,6 +85,9 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [passwordFieldErrors, setPasswordFieldErrors] = useState<
+    Partial<Record<PasswordFieldKey, string>>
+  >({});
 
   type PointTx = {
     id: string;
@@ -148,7 +184,34 @@ export default function SettingsPage() {
     setPasswords({ current: '', new: '', confirm: '' });
     setPasswordOtp('');
     setPasswordStep('form');
+    setPasswordFieldErrors({});
   };
+
+  const validateSettingsNewPasswordBlur = useCallback((raw: string) => {
+    setPasswordFieldErrors((prev) => {
+      const { new: _n, ...rest } = prev;
+      if (raw.length === 0) return rest;
+      const policy = validatePasswordPolicy(raw);
+      if (!policy.ok) {
+        return {
+          ...rest,
+          new: 'Le mot de passe ne respecte pas encore tous les critères (voir la politique ci-dessus).',
+        };
+      }
+      return rest;
+    });
+  }, []);
+
+  const validateSettingsConfirmBlur = useCallback((newPwd: string, confirm: string) => {
+    setPasswordFieldErrors((prev) => {
+      const { confirm: _c, ...rest } = prev;
+      if (confirm.length === 0) return rest;
+      if (newPwd !== confirm) {
+        return { ...rest, confirm: 'Les mots de passe ne correspondent pas.' };
+      }
+      return rest;
+    });
+  }, []);
 
   const handleResendPasswordOtp = async () => {
     setSaving(true);
@@ -170,33 +233,30 @@ export default function SettingsPage() {
   };
 
   const handleChangePassword = async () => {
-    const policy = validatePasswordPolicy(passwords.new);
-    if (!policy.ok) {
-      setMessage({ type: 'error', text: policy.message });
-      return;
-    }
+    setPasswordFieldErrors({});
 
-    if (passwords.new !== passwords.confirm) {
-      setMessage({ type: 'error', text: 'Les mots de passe ne correspondent pas' });
-      return;
-    }
+    if (passwordStep === 'otp') {
+      const code = passwordOtp.trim();
+      if (!code) {
+        const err: Partial<Record<PasswordFieldKey, string>> = {
+          otp: 'Saisis le code reçu par e-mail ou SMS.',
+        };
+        setPasswordFieldErrors(err);
+        focusFirstPasswordFieldError(err);
+        return;
+      }
+      if (!passwords.current.trim()) {
+        const err: Partial<Record<PasswordFieldKey, string>> = {
+          current: 'Saisis ton mot de passe actuel.',
+        };
+        setPasswordFieldErrors(err);
+        focusFirstPasswordFieldError(err);
+        return;
+      }
 
-    if (!passwords.current.trim()) {
-      setMessage({ type: 'error', text: 'Saisis ton mot de passe actuel.' });
-      return;
-    }
-
-    setSaving(true);
-    setMessage(null);
-
-    try {
-      if (passwordStep === 'otp') {
-        const code = passwordOtp.trim();
-        if (!code) {
-          setMessage({ type: 'error', text: 'Saisis le code reçu par e-mail ou SMS.' });
-          setSaving(false);
-          return;
-        }
+      setSaving(true);
+      setMessage(null);
+      try {
         const { error } = await supabase.auth.updateUser({
           password: passwords.new,
           current_password: passwords.current,
@@ -206,9 +266,61 @@ export default function SettingsPage() {
         setMessage({ type: 'success', text: 'Mot de passe modifié avec succès !' });
         resetPasswordChangeForm();
         setTimeout(() => setMessage(null), 3000);
-        return;
+      } catch (error: unknown) {
+        const msg =
+          error && typeof error === 'object' && 'message' in error
+            ? String((error as { message?: string }).message)
+            : 'Erreur lors du changement de mot de passe';
+        const lower = msg.toLowerCase();
+        if (
+          lower.includes('invalid') &&
+          (lower.includes('credential') || lower.includes('password') || lower.includes('login'))
+        ) {
+          setPasswordFieldErrors({
+            current: 'Mot de passe actuel incorrect ou session expirée.',
+          });
+          focusFirstPasswordFieldError({ current: 'x' });
+        } else {
+          setMessage({ type: 'error', text: msg });
+        }
+      } finally {
+        setSaving(false);
       }
+      return;
+    }
 
+    const policy = validatePasswordPolicy(passwords.new);
+    if (!policy.ok) {
+      const err: Partial<Record<PasswordFieldKey, string>> = {
+        new: 'Le mot de passe ne respecte pas encore tous les critères (voir la politique ci-dessus).',
+      };
+      setPasswordFieldErrors(err);
+      focusFirstPasswordFieldError(err);
+      return;
+    }
+
+    if (passwords.new !== passwords.confirm) {
+      const err: Partial<Record<PasswordFieldKey, string>> = {
+        confirm: 'Les mots de passe ne correspondent pas.',
+      };
+      setPasswordFieldErrors(err);
+      focusFirstPasswordFieldError(err);
+      return;
+    }
+
+    if (!passwords.current.trim()) {
+      const err: Partial<Record<PasswordFieldKey, string>> = {
+        current: 'Saisis ton mot de passe actuel.',
+      };
+      setPasswordFieldErrors(err);
+      focusFirstPasswordFieldError(err);
+      return;
+    }
+
+    setSaving(true);
+    setMessage(null);
+
+    try {
       const { error } = await supabase.auth.updateUser({
         password: passwords.new,
         current_password: passwords.current,
@@ -220,6 +332,7 @@ export default function SettingsPage() {
           const { error: reErr } = await supabase.auth.reauthenticate();
           if (reErr) throw reErr;
           setPasswordStep('otp');
+          setPasswordFieldErrors({});
           setMessage({
             type: 'success',
             text:
@@ -238,7 +351,18 @@ export default function SettingsPage() {
         error && typeof error === 'object' && 'message' in error
           ? String((error as { message?: string }).message)
           : 'Erreur lors du changement de mot de passe';
-      setMessage({ type: 'error', text: msg });
+      const lower = msg.toLowerCase();
+      if (
+        lower.includes('invalid') &&
+        (lower.includes('credential') || lower.includes('password') || lower.includes('login'))
+      ) {
+        setPasswordFieldErrors({
+          current: 'Mot de passe actuel incorrect ou session expirée.',
+        });
+        focusFirstPasswordFieldError({ current: 'x' });
+      } else {
+        setMessage({ type: 'error', text: msg });
+      }
     } finally {
       setSaving(false);
     }
@@ -452,11 +576,23 @@ export default function SettingsPage() {
                     id="settings-current-password"
                     type={showPasswords.current ? 'text' : 'password'}
                     value={passwords.current}
-                    onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+                    onChange={(e) => {
+                      setPasswords({ ...passwords, current: e.target.value });
+                      setPasswordFieldErrors((p) => {
+                        const { current: _c, ...rest } = p;
+                        return rest;
+                      });
+                    }}
                     placeholder="••••••••"
                     autoComplete="current-password"
                     disabled={passwordStep === 'otp'}
-                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50"
+                    aria-invalid={!!passwordFieldErrors.current}
+                    aria-describedby={
+                      passwordFieldErrors.current ? 'settings-current-password-error' : undefined
+                    }
+                    className={`w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50 ${
+                      passwordFieldErrors.current ? 'beefs-field-invalid' : ''
+                    }`}
                   />
                   <button
                     type="button"
@@ -470,6 +606,10 @@ export default function SettingsPage() {
                     {showPasswords.current ? <EyeOff className="w-5 h-5" aria-hidden /> : <Eye className="w-5 h-5" aria-hidden />}
                   </button>
                 </div>
+                <PasswordInlineError
+                  id="settings-current-password-error"
+                  message={passwordFieldErrors.current}
+                />
               </div>
 
               <div>
@@ -481,12 +621,26 @@ export default function SettingsPage() {
                     id="settings-new-password"
                     type={showPasswords.new ? 'text' : 'password'}
                     value={passwords.new}
-                    onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+                    onChange={(e) => {
+                      setPasswords({ ...passwords, new: e.target.value });
+                      setPasswordFieldErrors((p) => {
+                        const { new: _n, ...rest } = p;
+                        return rest;
+                      });
+                    }}
+                    onBlur={(e) => validateSettingsNewPasswordBlur(e.target.value)}
                     placeholder="••••••••"
                     autoComplete="new-password"
-                    aria-describedby="settings-password-policy-hint"
+                    aria-describedby={
+                      ['settings-password-policy-hint', passwordFieldErrors.new ? 'settings-new-password-error' : '']
+                        .filter(Boolean)
+                        .join(' ') || undefined
+                    }
+                    aria-invalid={!!passwordFieldErrors.new}
                     disabled={passwordStep === 'otp'}
-                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50"
+                    className={`w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50 ${
+                      passwordFieldErrors.new ? 'beefs-field-invalid' : ''
+                    }`}
                   />
                   <button
                     type="button"
@@ -498,6 +652,10 @@ export default function SettingsPage() {
                     {showPasswords.new ? <EyeOff className="w-5 h-5" aria-hidden /> : <Eye className="w-5 h-5" aria-hidden />}
                   </button>
                 </div>
+                <PasswordInlineError
+                  id="settings-new-password-error"
+                  message={passwordFieldErrors.new}
+                />
               </div>
 
               <div>
@@ -509,11 +667,29 @@ export default function SettingsPage() {
                     id="settings-confirm-password"
                     type={showPasswords.confirm ? 'text' : 'password'}
                     value={passwords.confirm}
-                    onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+                    onChange={(e) => {
+                      setPasswords({ ...passwords, confirm: e.target.value });
+                      setPasswordFieldErrors((p) => {
+                        const { confirm: _c, ...rest } = p;
+                        return rest;
+                      });
+                    }}
+                    onBlur={(e) => {
+                      const pwd =
+                        (document.getElementById('settings-new-password') as HTMLInputElement | null)
+                          ?.value ?? '';
+                      validateSettingsConfirmBlur(pwd, e.target.value);
+                    }}
                     placeholder="Répétez le mot de passe"
                     autoComplete="new-password"
+                    aria-invalid={!!passwordFieldErrors.confirm}
+                    aria-describedby={
+                      passwordFieldErrors.confirm ? 'settings-confirm-password-error' : undefined
+                    }
                     disabled={passwordStep === 'otp'}
-                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50"
+                    className={`w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50 ${
+                      passwordFieldErrors.confirm ? 'beefs-field-invalid' : ''
+                    }`}
                   />
                   <button
                     type="button"
@@ -527,6 +703,10 @@ export default function SettingsPage() {
                     {showPasswords.confirm ? <EyeOff className="w-5 h-5" aria-hidden /> : <Eye className="w-5 h-5" aria-hidden />}
                   </button>
                 </div>
+                <PasswordInlineError
+                  id="settings-confirm-password-error"
+                  message={passwordFieldErrors.confirm}
+                />
               </div>
 
               {passwordStep === 'otp' && (
@@ -540,14 +720,28 @@ export default function SettingsPage() {
                     inputMode="numeric"
                     autoComplete="one-time-code"
                     value={passwordOtp}
-                    onChange={(e) => setPasswordOtp(e.target.value.replace(/\s/g, ''))}
+                    onChange={(e) => {
+                      setPasswordOtp(e.target.value.replace(/\s/g, ''));
+                      setPasswordFieldErrors((p) => {
+                        const { otp: _o, ...rest } = p;
+                        return rest;
+                      });
+                    }}
                     placeholder="Code reçu par e-mail ou SMS"
-                    aria-describedby="settings-otp-hint"
-                    className="w-full bg-white/[0.04] border border-brand-500/40 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors tracking-widest text-center text-lg"
+                    aria-describedby={
+                      ['settings-otp-hint', passwordFieldErrors.otp ? 'settings-password-otp-error' : '']
+                        .filter(Boolean)
+                        .join(' ') || undefined
+                    }
+                    aria-invalid={!!passwordFieldErrors.otp}
+                    className={`w-full bg-white/[0.04] border border-brand-500/40 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors tracking-widest text-center text-lg ${
+                      passwordFieldErrors.otp ? 'beefs-field-invalid' : ''
+                    }`}
                   />
                   <p id="settings-otp-hint" className="text-gray-500 text-xs mt-2">
                     Colle le code à une seule utilisation envoyé par Supabase (vérifie les spams).
                   </p>
+                  <PasswordInlineError id="settings-password-otp-error" message={passwordFieldErrors.otp} />
                   <button
                     type="button"
                     onClick={handleResendPasswordOtp}
@@ -583,6 +777,10 @@ export default function SettingsPage() {
                     onClick={() => {
                       setPasswordStep('form');
                       setPasswordOtp('');
+                      setPasswordFieldErrors((p) => {
+                        const { otp: _o, ...rest } = p;
+                        return rest;
+                      });
                     }}
                     className="w-full py-3 rounded-lg border border-white/15 text-gray-300 hover:bg-white/5 text-sm font-semibold"
                   >
