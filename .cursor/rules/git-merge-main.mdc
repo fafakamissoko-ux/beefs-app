@@ -1,0 +1,10 @@
+---
+description: Rappeler de fusionner les branches de travail dans main avant d’aligner la prod / la branche par défaut
+alwaysApply: true
+---
+
+# Git — alignement `main` / production
+
+Quand des changements importants ont été faits sur une branche de travail (ex. `stripe-test-preview`, feature, correctifs Stripe ou API), **rappeler explicitement à l’utilisateur** qu’il faudra **fusionner cette branche dans `main`** (puis `git push origin main`) **lorsqu’il voudra aligner la branche par défaut, Vercel ou la prod**.
+
+Ne pas supposer que la fusion est faite : proposer de la faire ou de vérifier `main` / `origin/main` si le contexte parle de déploiement ou de « mettre en prod ».

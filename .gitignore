@@ -20,8 +20,10 @@
 .DS_Store
 *.pem
 
-# Cursor IDE
-.cursor/
+# Cursor IDE — ignorer le cache local, garder les règles partagées
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 # debug
 npm-debug.log*

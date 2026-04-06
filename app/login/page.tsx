@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -29,6 +29,15 @@ export default function LoginPage() {
     if (user) router.push(searchParams.get('redirect') || '/feed');
   }, [user, router, searchParams]);
 
+  const focusLoginField = useCallback((key: 'identifier' | 'password') => {
+    requestAnimationFrame(() => {
+      const id = key === 'identifier' ? 'login-identifier' : 'login-password';
+      const el = document.getElementById(id);
+      el?.focus({ preventScroll: false });
+      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFieldErrors({});
@@ -47,6 +56,7 @@ export default function LoginPage() {
       if (!data?.email) {
         setFieldErrors({ identifier: 'Utilisateur introuvable.' });
         setLoading(false);
+        focusLoginField('identifier');
         return;
       }
       email = data.email;
@@ -70,6 +80,7 @@ export default function LoginPage() {
           identifier: `${banMsg}${userData.ban_reason ? ` Raison : ${userData.ban_reason}` : ''}`,
         });
         setLoading(false);
+        focusLoginField('identifier');
         return;
       }
     }
@@ -80,6 +91,7 @@ export default function LoginPage() {
         password: 'Identifiant ou mot de passe incorrect.',
       });
       setLoading(false);
+      focusLoginField('password');
     } else {
       router.push(searchParams.get('redirect') || '/feed');
     }

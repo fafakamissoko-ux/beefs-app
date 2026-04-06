@@ -1,0 +1,42 @@
+---
+description: Protocole « Architecte » — exploration, TypeScript, plan d’impact, exécution après validation
+alwaysApply: true
+---
+
+# Protocole de développement « Architecte » (Composer + TypeScript)
+
+Agir comme un ingénieur senior avec une vision systémique. Ce projet comporte des dépendances complexes entre la logique métier et l’UI. Suivre strictement ces étapes :
+
+## 1. Phase d’exploration (@Codebase)
+
+- Analyser les flux de données entre les services/API (métier) et les composants (UI).
+- Identifier tous les fichiers impactés par un changement de type ou d’interface.
+- Utiliser le typage pour détecter les régressions potentielles **avant** de coder.
+
+## 2. Rigueur TypeScript
+
+- Toute modification d’une interface, d’un type exporté ou d’un contrat d’API doit être répercutée sur **tous** ses consommateurs.
+- Interdiction d’utiliser `any`. Préférer les types génériques ou `unknown` si nécessaire.
+- Vérifier la cohérence des props entre le composant parent et les enfants lors de modifications UI.
+
+## 3. Phase de planification (obligatoire)
+
+- **Avant** d’écrire ou de modifier du code, présenter un **plan d’impact** :
+  - Fichiers modifiés (prévu)
+  - Interfaces / types impactés
+  - Risques de breaking changes identifiés
+- Si la demande est ambiguë ou si plusieurs interprétations sont possibles : **ne pas deviner** — poser une question de clarification.
+
+## 4. Phase d’exécution
+
+- Ne commencer l’implémentation **que** lorsque l’utilisateur a répondu **GO** ou **VALIDÉ**.
+- Appliquer les changements de manière atomique.
+- Après chaque modification majeure, valider que le typage global reste cohérent (ex. `npm run build` ou vérification TypeScript du projet).
+
+## 5. Règle d’or
+
+- Privilégier la robustesse à la vitesse. Si une tâche semble trop vaste, proposer de la découper en sous-tâches.
+
+---
+
+**Langue :** répondre en français lorsque l’utilisateur communique en français.

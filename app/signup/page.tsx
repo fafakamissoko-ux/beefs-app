@@ -18,6 +18,32 @@ import { validateSignupEmail } from '@/lib/email-signup-policy';
 
 type SignupFieldKey = 'username' | 'email' | 'password' | 'confirmPassword' | 'oauth';
 
+const SIGNUP_FIELD_ORDER: Array<Exclude<SignupFieldKey, 'oauth'>> = [
+  'username',
+  'email',
+  'password',
+  'confirmPassword',
+];
+
+function focusSignupInput(key: Exclude<SignupFieldKey, 'oauth'>) {
+  const id =
+    key === 'confirmPassword' ? 'signup-confirm-password' : `signup-${key}`;
+  const el = document.getElementById(id);
+  el?.focus({ preventScroll: false });
+  el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function focusFirstSignupError(next: Partial<Record<SignupFieldKey, string>>) {
+  requestAnimationFrame(() => {
+    for (const k of SIGNUP_FIELD_ORDER) {
+      if (next[k]) {
+        focusSignupInput(k);
+        break;
+      }
+    }
+  });
+}
+
 function mapSignUpApiError(message: string): { key: SignupFieldKey; text: string } {
   const m = message.toLowerCase();
   if (
@@ -114,6 +140,56 @@ export default function SignUpPage() {
 
   const passwordProgress = getPasswordPolicyProgress(formData.password);
 
+  const validateUsernameBlur = useCallback((raw: string) => {
+    const v = raw.trim();
+    setFieldErrors((prev) => {
+      const { username: _u, ...rest } = prev;
+      if (v.length === 0) return rest;
+      if (v.length < 3) {
+        return { ...rest, username: 'Le pseudo doit contenir au moins 3 caractères.' };
+      }
+      return rest;
+    });
+  }, []);
+
+  const validateEmailBlur = useCallback((raw: string) => {
+    const trimmed = raw.trim();
+    setFieldErrors((prev) => {
+      const { email: _e, ...rest } = prev;
+      if (trimmed.length === 0) return rest;
+      const policy = validateSignupEmail(trimmed);
+      if (!policy.ok) return { ...rest, email: policy.message };
+      return rest;
+    });
+  }, []);
+
+  const validatePasswordBlur = useCallback((raw: string) => {
+    setFieldErrors((prev) => {
+      const { password: _pw, ...rest } = prev;
+      if (raw.length === 0) return rest;
+      const policy = validatePasswordPolicy(raw);
+      if (!policy.ok) {
+        return {
+          ...rest,
+          password:
+            'Le mot de passe ne respecte pas encore tous les critères (voir la liste ci-dessous).',
+        };
+      }
+      return rest;
+    });
+  }, []);
+
+  const validateConfirmBlur = useCallback((password: string, confirm: string) => {
+    setFieldErrors((prev) => {
+      const { confirmPassword: _c, ...rest } = prev;
+      if (confirm.length === 0) return rest;
+      if (password !== confirm) {
+        return { ...rest, confirmPassword: 'Les mots de passe ne correspondent pas.' };
+      }
+      return rest;
+    });
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFieldErrors({});
@@ -144,16 +220,7 @@ export default function SignUpPage() {
     if (Object.keys(next).length > 0) {
       setFieldErrors(next);
       setLoading(false);
-      requestAnimationFrame(() => {
-        const order: (keyof typeof next)[] = ['username', 'email', 'password', 'confirmPassword'];
-        for (const k of order) {
-          if (!next[k]) continue;
-          const id =
-            k === 'confirmPassword' ? 'signup-confirm-password-error' : `signup-${String(k)}-error`;
-          document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          break;
-        }
-      });
+      focusFirstSignupError(next);
       return;
     }
 
@@ -168,9 +235,7 @@ export default function SignUpPage() {
         email: 'Cette adresse e-mail ne peut pas être utilisée pour créer un compte.',
       });
       setLoading(false);
-      requestAnimationFrame(() => {
-        document.getElementById('signup-email-error')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      });
+      focusFirstSignupError({ email: 'Cette adresse e-mail ne peut pas être utilisée pour créer un compte.' });
       return;
     }
 
@@ -188,13 +253,7 @@ export default function SignUpPage() {
       const mapped = mapSignUpApiError(msg);
       setFieldErrors({ [mapped.key]: mapped.text });
       setLoading(false);
-      requestAnimationFrame(() => {
-        const id =
-          mapped.key === 'confirmPassword'
-            ? 'signup-confirm-password-error'
-            : `signup-${mapped.key}-error`;
-        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      });
+      focusFirstSignupError({ [mapped.key]: mapped.text });
     } else {
       setSuccess(true);
       setLoading(false);
@@ -307,6 +366,7 @@ export default function SignUpPage() {
                       return rest;
                     });
                   }}
+                  onBlur={(e) => validateUsernameBlur(e.target.value)}
                   placeholder="ton_pseudo"
                   aria-invalid={!!fieldErrors.username}
                   aria-describedby={
@@ -354,6 +414,7 @@ export default function SignUpPage() {
                       return rest;
                     });
                   }}
+                  onBlur={(e) => validateEmailBlur(e.target.value)}
                   placeholder="ton@email.com"
                   autoCapitalize="none"
                   aria-invalid={!!fieldErrors.email}
@@ -390,6 +451,7 @@ export default function SignUpPage() {
                       return rest;
                     });
                   }}
+                  onBlur={(e) => validatePasswordBlur(e.target.value)}
                   placeholder="••••••••"
                   aria-describedby={
                     [
@@ -467,6 +529,12 @@ export default function SignUpPage() {
                       const { confirmPassword: _c, ...rest } = p;
                       return rest;
                     });
+                  }}
+                  onBlur={(e) => {
+                    const pwd =
+                      (document.getElementById('signup-password') as HTMLInputElement | null)
+                        ?.value ?? '';
+                    validateConfirmBlur(pwd, e.target.value);
                   }}
                   placeholder="••••••••"
                   aria-invalid={!!fieldErrors.confirmPassword}
