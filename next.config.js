@@ -10,6 +10,24 @@ const nextConfig = {
   async headers() {
     return [
       {
+        source: '/signup',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'private, no-cache, no-store, must-revalidate, max-age=0',
+          },
+        ],
+      },
+      {
+        source: '/login',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'private, no-cache, no-store, must-revalidate, max-age=0',
+          },
+        ],
+      },
+      {
         source: '/(.*)',
         headers: [
           // Prevent clickjacking
