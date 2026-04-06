@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import ProfileContent from './ProfileContent';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -29,7 +30,5 @@ export default function ProfilePage() {
     return null;
   }
 
-  // Import the actual profile page content
-  const ProfileContent = require('./ProfileContent').default;
   return <ProfileContent />;
 }

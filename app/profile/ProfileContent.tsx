@@ -336,6 +336,30 @@ export default function ProfileContent() {
       .then(({ data }) => setWithdrawalHistory(data || []));
   }, [activeTab, user]);
 
+  const closePublicPreview = useCallback(() => setPublicPreviewOpen(false), []);
+
+  useEffect(() => {
+    if (!publicPreviewOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closePublicPreview();
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [publicPreviewOpen, closePublicPreview]);
+
+  useEffect(() => {
+    if (!publicPreviewOpen) return;
+    const t = window.setTimeout(() => {
+      document.getElementById('profile-preview-close')?.focus();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [publicPreviewOpen]);
+
   const handleWithdrawalSubmit = async () => {
     if (!user || !profile) return;
     setWithdrawalLoading(true);
@@ -500,30 +524,6 @@ export default function ProfileContent() {
 
   const showPremiumBadge = profile.is_premium && profile.premium_settings?.showPremiumBadge;
   const showPremiumFrame = profile.is_premium && profile.premium_settings?.showPremiumFrame;
-
-  const closePublicPreview = useCallback(() => setPublicPreviewOpen(false), []);
-
-  useEffect(() => {
-    if (!publicPreviewOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closePublicPreview();
-    };
-    window.addEventListener('keydown', onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [publicPreviewOpen, closePublicPreview]);
-
-  useEffect(() => {
-    if (!publicPreviewOpen) return;
-    const t = window.setTimeout(() => {
-      document.getElementById('profile-preview-close')?.focus();
-    }, 0);
-    return () => window.clearTimeout(t);
-  }, [publicPreviewOpen]);
 
   return (
     <div className="min-h-screen bg-black">
