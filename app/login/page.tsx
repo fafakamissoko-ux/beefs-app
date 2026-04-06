@@ -187,9 +187,7 @@ export default function LoginPage() {
                       .filter(Boolean)
                       .join(' ') || undefined
                   }
-                  className={`input-field pl-10 border ${
-                    fieldErrors.identifier ? 'border-red-500/50' : ''
-                  }`}
+                  className={`input-field pl-10 ${fieldErrors.identifier ? 'beefs-field-invalid' : ''}`}
                   required
                 />
               </div>
@@ -235,9 +233,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   aria-invalid={!!fieldErrors.password}
                   aria-describedby={fieldErrors.password ? 'login-password-error' : undefined}
-                  className={`input-field pl-10 pr-11 border ${
-                    fieldErrors.password ? 'border-red-500/50' : ''
-                  }`}
+                  className={`input-field pl-10 pr-11 ${fieldErrors.password ? 'beefs-field-invalid' : ''}`}
                   required
                 />
                 <button

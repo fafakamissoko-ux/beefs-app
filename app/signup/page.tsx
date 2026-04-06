@@ -265,8 +265,6 @@ export default function SignUpPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            <InlineFieldError id="signup-general-error" message={fieldErrors.general} />
-
             {/* Username */}
             <div>
               <label htmlFor="signup-username" className="block text-white font-semibold mb-2">
@@ -283,7 +281,7 @@ export default function SignUpPage() {
                   onChange={(e) => {
                     handleUsernameChange(e.target.value);
                     setFieldErrors((p) => {
-                      const { username: _u, ...rest } = p;
+                      const { username: _u, general: _g, ...rest } = p;
                       return rest;
                     });
                   }}
@@ -292,8 +290,8 @@ export default function SignUpPage() {
                   aria-describedby={
                     fieldErrors.username ? 'signup-username-error' : undefined
                   }
-                  className={`w-full bg-white/[0.04] rounded-xl pl-10 pr-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors border ${
-                    fieldErrors.username ? 'border-red-500/50' : 'border-white/[0.06]'
+                  className={`w-full rounded-xl border border-white/[0.06] bg-white/[0.04] py-3 pl-10 pr-10 text-white placeholder-gray-500 transition-colors focus:border-brand-500 focus:outline-none ${
+                    fieldErrors.username ? 'beefs-field-invalid' : ''
                   }`}
                   required
                 />
@@ -330,7 +328,7 @@ export default function SignUpPage() {
                   onChange={(e) => {
                     setFormData({ ...formData, email: e.target.value });
                     setFieldErrors((p) => {
-                      const { email: _e, ...rest } = p;
+                      const { email: _e, general: _g, ...rest } = p;
                       return rest;
                     });
                   }}
@@ -338,8 +336,8 @@ export default function SignUpPage() {
                   autoCapitalize="none"
                   aria-invalid={!!fieldErrors.email}
                   aria-describedby={fieldErrors.email ? 'signup-email-error' : undefined}
-                  className={`w-full bg-white/[0.04] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors border ${
-                    fieldErrors.email ? 'border-red-500/50' : 'border-white/[0.06]'
+                  className={`w-full rounded-xl border border-white/[0.06] bg-white/[0.04] py-3 pl-10 pr-4 text-white placeholder-gray-500 transition-colors focus:border-brand-500 focus:outline-none ${
+                    fieldErrors.email ? 'beefs-field-invalid' : ''
                   }`}
                   required
                 />
@@ -366,7 +364,7 @@ export default function SignUpPage() {
                   onChange={(e) => {
                     setFormData({ ...formData, password: e.target.value });
                     setFieldErrors((p) => {
-                      const { password: _pw, ...rest } = p;
+                      const { password: _pw, general: _g, ...rest } = p;
                       return rest;
                     });
                   }}
@@ -381,8 +379,8 @@ export default function SignUpPage() {
                       .join(' ') || undefined
                   }
                   aria-invalid={!!fieldErrors.password}
-                  className={`w-full bg-white/[0.04] rounded-xl pl-10 pr-12 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors border ${
-                    fieldErrors.password ? 'border-red-500/50' : 'border-white/[0.06]'
+                  className={`w-full rounded-xl border border-white/[0.06] bg-white/[0.04] py-3 pl-10 pr-12 text-white placeholder-gray-500 transition-colors focus:border-brand-500 focus:outline-none ${
+                    fieldErrors.password ? 'beefs-field-invalid' : ''
                   }`}
                   required
                 />
@@ -395,6 +393,7 @@ export default function SignUpPage() {
                   {showPassword ? <EyeOff className="w-5 h-5" aria-hidden /> : <Eye className="w-5 h-5" aria-hidden />}
                 </button>
               </div>
+              <InlineFieldError id="signup-password-error" message={fieldErrors.password} />
               <ul
                 id="signup-password-criteria"
                 className="mt-3 space-y-1.5 text-xs"
@@ -425,7 +424,6 @@ export default function SignUpPage() {
                   );
                 })}
               </ul>
-              <InlineFieldError id="signup-password-error" message={fieldErrors.password} />
             </div>
 
             {/* Confirm Password */}
@@ -444,7 +442,7 @@ export default function SignUpPage() {
                   onChange={(e) => {
                     setFormData({ ...formData, confirmPassword: e.target.value });
                     setFieldErrors((p) => {
-                      const { confirmPassword: _c, ...rest } = p;
+                      const { confirmPassword: _c, general: _g, ...rest } = p;
                       return rest;
                     });
                   }}
@@ -453,8 +451,8 @@ export default function SignUpPage() {
                   aria-describedby={
                     fieldErrors.confirmPassword ? 'signup-confirm-password-error' : undefined
                   }
-                  className={`w-full bg-white/[0.04] rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors border ${
-                    fieldErrors.confirmPassword ? 'border-red-500/50' : 'border-white/[0.06]'
+                  className={`w-full rounded-xl border border-white/[0.06] bg-white/[0.04] py-3 pl-10 pr-4 text-white placeholder-gray-500 transition-colors focus:border-brand-500 focus:outline-none ${
+                    fieldErrors.confirmPassword ? 'beefs-field-invalid' : ''
                   }`}
                   required
                 />
@@ -499,6 +497,15 @@ export default function SignUpPage() {
                 Je confirme avoir 13 ans ou plus
               </label>
             </div>
+
+            {fieldErrors.general && (
+              <div
+                role="alert"
+                className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400"
+              >
+                {fieldErrors.general}
+              </div>
+            )}
 
             {/* Submit */}
             <button

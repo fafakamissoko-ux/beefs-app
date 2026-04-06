@@ -412,3 +412,17 @@
 .high-contrast.theme-light .text-gray-400 { color: #2C2C2E !important; }
 .high-contrast.theme-light .text-gray-500 { color: #3A3A3C !important; }
 .high-contrast.theme-light .text-gray-600 { color: #48484A !important; }
+
+/* ============================================================
+   Champs formulaire en erreur (hors @layer : doit battre .theme-light input)
+   ============================================================ */
+input.beefs-field-invalid,
+textarea.beefs-field-invalid {
+  border-color: rgba(239, 68, 68, 0.75) !important;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35);
+}
+.theme-light input.beefs-field-invalid,
+.theme-light textarea.beefs-field-invalid {
+  border-color: rgba(220, 38, 38, 0.9) !important;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.28);
+}
