@@ -207,7 +207,7 @@ export default function SettingsPage() {
       const { confirm: _c, ...rest } = prev;
       if (confirm.length === 0) return rest;
       if (newPwd !== confirm) {
-        return { ...rest, confirm: 'Les mots de passe ne correspondent pas.' };
+        return { ...rest, confirm: 'Les deux mots de passe doivent être identiques.' };
       }
       return rest;
     });
@@ -301,7 +301,7 @@ export default function SettingsPage() {
 
     if (passwords.new !== passwords.confirm) {
       const err: Partial<Record<PasswordFieldKey, string>> = {
-        confirm: 'Les mots de passe ne correspondent pas.',
+        confirm: 'Les deux mots de passe doivent être identiques.',
       };
       setPasswordFieldErrors(err);
       focusFirstPasswordFieldError(err);
@@ -869,7 +869,7 @@ export default function SettingsPage() {
                 <FeatureGuide
                   id="settings-theme"
                   title="Personnalise ton thème"
-                  description="Choisis entre sombre, clair ou automatique. L'app s'adapte à tes préférences."
+                  description="Sombre, clair, ou automatique. En automatique, choisis entre le thème du système ou clair le jour / sombre la nuit (heure locale)."
                   position="bottom"
                 />
                 <div className="grid grid-cols-3 gap-2" role="group" aria-label="Thème d&apos;affichage">
@@ -894,6 +894,43 @@ export default function SettingsPage() {
                     </button>
                   ))}
                 </div>
+                {preferences.theme === 'auto' && (
+                  <div className="mt-4 pt-4 border-t border-white/[0.08]">
+                    <p className="text-gray-400 text-xs mb-3">Mode automatique</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="group" aria-label="Comportement du thème automatique">
+                      <button
+                        type="button"
+                        onClick={() => updatePreferences({ autoThemeSource: 'schedule' })}
+                        aria-pressed={preferences.autoThemeSource === 'schedule'}
+                        className={`text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                          preferences.autoThemeSource === 'schedule'
+                            ? 'bg-brand-500/25 border border-brand-500/50 text-white'
+                            : 'bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        Jour / nuit (heure locale)
+                        <span className="block text-xs font-normal text-gray-500 mt-1">
+                          Clair ~7h–20h, sombre la nuit (fuseau du navigateur).
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updatePreferences({ autoThemeSource: 'system' })}
+                        aria-pressed={preferences.autoThemeSource === 'system'}
+                        className={`text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                          preferences.autoThemeSource === 'system'
+                            ? 'bg-brand-500/25 border border-brand-500/50 text-white'
+                            : 'bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        Comme le système
+                        <span className="block text-xs font-normal text-gray-500 mt-1">
+                          Suit le réglage clair / sombre de l’appareil ou du navigateur.
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Accent color */}

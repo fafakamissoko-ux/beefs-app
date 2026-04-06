@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Edit, Share2, Settings, TrendingUp, Users, MessageCircle, Trophy, Crown, Flame, Upload, X, Check, ArrowLeft, Clock, Wallet, Euro, ChevronDown, AlertCircle, Eye } from 'lucide-react';
 import Link from 'next/link';
@@ -86,6 +86,7 @@ export default function ProfileContent() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedResolutionFilter, setSelectedResolutionFilter] = useState<string | null>(null);
+  const [publicPreviewOpen, setPublicPreviewOpen] = useState(false);
 
   // Withdrawal state — amounts stored in EUROS for clarity
   const [withdrawalStep, setWithdrawalStep] = useState<'summary' | 'form' | 'confirm' | 'success'>('summary');
@@ -500,6 +501,30 @@ export default function ProfileContent() {
   const showPremiumBadge = profile.is_premium && profile.premium_settings?.showPremiumBadge;
   const showPremiumFrame = profile.is_premium && profile.premium_settings?.showPremiumFrame;
 
+  const closePublicPreview = useCallback(() => setPublicPreviewOpen(false), []);
+
+  useEffect(() => {
+    if (!publicPreviewOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closePublicPreview();
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [publicPreviewOpen, closePublicPreview]);
+
+  useEffect(() => {
+    if (!publicPreviewOpen) return;
+    const t = window.setTimeout(() => {
+      document.getElementById('profile-preview-close')?.focus();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [publicPreviewOpen]);
+
   return (
     <div className="min-h-screen bg-black">
       <div className="max-w-5xl mx-auto px-4 py-8">
@@ -557,16 +582,15 @@ export default function ProfileContent() {
               </div>
 
               <div className="flex flex-wrap gap-2 justify-end">
-                <Link
-                  href={`/profile/${encodeURIComponent(profile.username)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => setPublicPreviewOpen(true)}
                   className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-white/10 rounded-xl text-white font-semibold transition-colors flex items-center gap-2 text-sm"
-                  title="Ouvre ton profil public dans un nouvel onglet"
+                  title="Voir ton profil public tel qu’il apparaît pour les autres"
                 >
-                  <Eye className="w-4 h-4" />
-                  Aperçu public
-                </Link>
+                  <Eye className="w-4 h-4" aria-hidden />
+                  Aperçu
+                </button>
                 <button
                   type="button"
                   onClick={async () => {
@@ -1348,6 +1372,44 @@ export default function ProfileContent() {
           )}
         </div>
       </div>
+
+      {publicPreviewOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm"
+          role="presentation"
+          onClick={closePublicPreview}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-preview-title"
+            className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl border border-white/10 bg-[#0f0f0f] shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 flex-shrink-0">
+              <h2 id="profile-preview-title" className="text-lg font-bold text-white">
+                Aperçu du profil public
+              </h2>
+              <button
+                type="button"
+                id="profile-preview-close"
+                onClick={closePublicPreview}
+                className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10"
+                aria-label="Fermer l’aperçu"
+              >
+                <X className="w-5 h-5" aria-hidden />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 p-2 sm:p-3 overflow-hidden">
+              <iframe
+                title="Profil public"
+                src={`${typeof window !== 'undefined' ? window.location.origin : ''}/profile/${encodeURIComponent(profile.username)}`}
+                className="w-full h-[min(70vh,720px)] rounded-xl border border-white/10 bg-black"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

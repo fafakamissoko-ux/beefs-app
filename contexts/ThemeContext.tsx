@@ -5,10 +5,14 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuth } from './AuthContext';
 
 type Theme = 'dark' | 'light' | 'auto';
+/** Quand `theme === 'auto'` : suivre le système ou l’heure locale (jour / nuit). */
+export type AutoThemeSource = 'system' | 'schedule';
 type FontSize = 'small' | 'normal' | 'large';
 
 interface DisplayPreferences {
   theme: Theme;
+  /** Utilisé uniquement si `theme === 'auto'`. Défaut : `schedule`. */
+  autoThemeSource: AutoThemeSource;
   fontSize: FontSize;
   reduceAnimations: boolean;
   highContrast: boolean;
@@ -22,10 +26,32 @@ interface ThemeContextType {
 
 const defaultPrefs: DisplayPreferences = {
   theme: 'dark',
+  autoThemeSource: 'schedule',
   fontSize: 'normal',
   reduceAnimations: false,
   highContrast: false,
 };
+
+/** Clair entre 7h et 20h (heure locale du navigateur), sombre sinon. */
+export function effectiveThemeFromLocalSchedule(): 'dark' | 'light' {
+  const h = new Date().getHours();
+  return h >= 7 && h < 20 ? 'light' : 'dark';
+}
+
+function computeEffectiveTheme(prefs: DisplayPreferences): 'dark' | 'light' {
+  if (prefs.theme === 'dark') return 'dark';
+  if (prefs.theme === 'light') return 'light';
+  if (prefs.theme === 'auto') {
+    if (prefs.autoThemeSource === 'schedule') {
+      return effectiveThemeFromLocalSchedule();
+    }
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'dark';
+  }
+  return 'dark';
+}
 
 const ThemeContext = createContext<ThemeContextType>({
   preferences: defaultPrefs,
@@ -41,16 +67,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [preferences, setPreferences] = useState<DisplayPreferences>(defaultPrefs);
 
-  const getEffectiveTheme = (theme: Theme): 'dark' | 'light' => {
-    if (theme === 'auto') {
-      if (typeof window !== 'undefined') {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      }
-      return 'dark';
-    }
-    return theme;
-  };
-
   const [effectiveTheme, setEffectiveTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
@@ -64,22 +80,28 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (data?.display_preferences) {
           const prefs = { ...defaultPrefs, ...data.display_preferences };
           setPreferences(prefs);
-          setEffectiveTheme(getEffectiveTheme(prefs.theme));
+          setEffectiveTheme(computeEffectiveTheme(prefs));
         }
       });
   }, [user]);
 
   useEffect(() => {
     if (preferences.theme !== 'auto') {
-      setEffectiveTheme(getEffectiveTheme(preferences.theme));
+      setEffectiveTheme(computeEffectiveTheme(preferences));
       return;
+    }
+    if (preferences.autoThemeSource === 'schedule') {
+      const tick = () => setEffectiveTheme(effectiveThemeFromLocalSchedule());
+      tick();
+      const id = window.setInterval(tick, 60_000);
+      return () => window.clearInterval(id);
     }
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e: MediaQueryListEvent) => setEffectiveTheme(e.matches ? 'dark' : 'light');
     mq.addEventListener('change', handler);
     setEffectiveTheme(mq.matches ? 'dark' : 'light');
     return () => mq.removeEventListener('change', handler);
-  }, [preferences.theme]);
+  }, [preferences.theme, preferences.autoThemeSource]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -100,7 +122,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const updatePreferences = async (partial: Partial<DisplayPreferences>) => {
     const newPrefs = { ...preferences, ...partial };
     setPreferences(newPrefs);
-    setEffectiveTheme(getEffectiveTheme(newPrefs.theme));
+    setEffectiveTheme(computeEffectiveTheme(newPrefs));
 
     if (user) {
       await supabase.from('users').update({ display_preferences: newPrefs }).eq('id', user.id);

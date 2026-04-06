@@ -184,7 +184,7 @@ export default function SignUpPage() {
       const { confirmPassword: _c, ...rest } = prev;
       if (confirm.length === 0) return rest;
       if (password !== confirm) {
-        return { ...rest, confirmPassword: 'Les mots de passe ne correspondent pas.' };
+        return { ...rest, confirmPassword: 'Les deux mots de passe doivent être identiques.' };
       }
       return rest;
     });
@@ -214,7 +214,7 @@ export default function SignUpPage() {
     }
 
     if (formData.password !== formData.confirmPassword) {
-      next.confirmPassword = 'Les mots de passe ne correspondent pas.';
+      next.confirmPassword = 'Les deux mots de passe doivent être identiques.';
     }
 
     if (Object.keys(next).length > 0) {
