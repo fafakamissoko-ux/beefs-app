@@ -23,6 +23,8 @@ interface UseDailyCallReturn {
   stopCamera: () => void;
   toggleMic: () => void;
   toggleCam: () => void;
+  /** Force le micro local (hors mode viewer) — ex. tours de parole imposés par le médiateur */
+  setLocalAudioEnabled: (enabled: boolean) => void;
   isJoined: boolean;
   isJoining: boolean;
   micEnabled: boolean;
@@ -297,6 +299,16 @@ export function useDailyCall(
     setCamEnabled(next);
   }, [camEnabled, viewerMode]);
 
+  const setLocalAudioEnabled = useCallback((enabled: boolean) => {
+    if (!callRef.current || viewerModeRef.current) return;
+    try {
+      callRef.current.setLocalAudio(enabled);
+      setMicEnabled(enabled);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   // ── AUTO-RECONNECT on network loss ──
   useEffect(() => {
     if (!isJoined) return;
@@ -409,5 +421,19 @@ export function useDailyCall(
     };
   }, []);
 
-  return { join, leave, stopCamera, toggleMic, toggleCam, isJoined, isJoining, micEnabled, camEnabled, localParticipant, remoteParticipants, error };
+  return {
+    join,
+    leave,
+    stopCamera,
+    toggleMic,
+    toggleCam,
+    setLocalAudioEnabled,
+    isJoined,
+    isJoining,
+    micEnabled,
+    camEnabled,
+    localParticipant,
+    remoteParticipants,
+    error,
+  };
 }

@@ -177,7 +177,14 @@ export function TikTokStyleArena({
   const [speakingTurnDuration, setSpeakingTurnDuration] = useState(60);
   const speakingTurnIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { join, leave, toggleMic, toggleCam, isJoined, isJoining, micEnabled, camEnabled,
+  /** Débat structuré (budget challengers, tours imposés, micros) */
+  const [structuredDebateEnabled, setStructuredDebateEnabled] = useState(false);
+  const [debateBudgetMinutes, setDebateBudgetMinutes] = useState(60);
+  const [challengerBudgetRemaining, setChallengerBudgetRemaining] = useState(60 * 60);
+  /** Quand le médiateur parle : les chronos challengers sont en pause (ne consomment pas le budget) */
+  const [mediatorHoldingFloor, setMediatorHoldingFloor] = useState(false);
+
+  const { join, leave, toggleMic, toggleCam, setLocalAudioEnabled, isJoined, isJoining, micEnabled, camEnabled,
     localParticipant, remoteParticipants, error: callError } = useDailyCall(dailyRoomUrl ?? null, userName, isViewer, userId, roomId);
 
   // Auto-join when user clicked "Rejoindre" AND dailyRoomUrl becomes available
@@ -853,6 +860,23 @@ export function TikTokStyleArena({
     ? (sortedRemoteParticipants[1]?.userName || 'Challenger 2')
     : (nonHostRemotes[0]?.userName || 'Challenger 2');
 
+  const leftIsSpeaking =
+    speakingTurnActive &&
+    !!leftPanel?.arenaUserId &&
+    speakingTurnTarget === leftPanel.arenaUserId;
+  const rightIsSpeaking =
+    speakingTurnActive &&
+    !!rightPanel?.arenaUserId &&
+    speakingTurnTarget === rightPanel.arenaUserId;
+
+  const leftRemoteAudioMuted =
+    structuredDebateEnabled &&
+    !leftPanelIsLocal &&
+    !!leftPanel &&
+    (!leftIsSpeaking || mediatorHoldingFloor);
+  const rightRemoteAudioMuted =
+    structuredDebateEnabled && !!rightPanel && (!rightIsSpeaking || mediatorHoldingFloor);
+
   const mediatorParticipant = isHost ? localParticipant : hostRemoteParticipant;
   const mediatorIsLocal = isHost;
   const mediatorName = isHost ? userName : host.name;
@@ -873,6 +897,20 @@ export function TikTokStyleArena({
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   
   const profileCache = useRef<Record<string, UserProfile>>({});
+
+  useEffect(() => {
+    const rows = Object.entries(participantRoles)
+      .filter(([uid]) => uid !== host.id)
+      .map(([id, meta]) => ({
+        id,
+        name: meta.name,
+        isMuted: true,
+        speakingTime: 0,
+      }))
+      .sort((a, b) => a.id.localeCompare(b.id));
+    if (rows.length === 0) return;
+    setDebaters((prev) => (prev.length === 0 ? rows : prev));
+  }, [participantRoles, host.id]);
 
   // ── HYBRID LIVE SYNC: Broadcast (instant) + Polling (fallback) ──
   const [liveConnected, setLiveConnected] = useState(false);
@@ -922,6 +960,22 @@ export function TikTokStyleArena({
         if (payload.side === 'A') setVotesA(v => v + 1);
         if (payload.side === 'B') setVotesB(v => v + 1);
       })
+      .on('broadcast', { event: 'mediator_floor' }, ({ payload }: any) => {
+        if (typeof payload?.active === 'boolean') setMediatorHoldingFloor(payload.active);
+      })
+      .on('broadcast', { event: 'mediation_toss' }, ({ payload }: any) => {
+        if (payload?.firstName && userRole !== 'mediator') {
+          toast(`Tirage : ${payload.firstName} commence`, 'info');
+        }
+      })
+      .on('broadcast', { event: 'structured_debate' }, ({ payload }: any) => {
+        if (payload?.enabled) {
+          setStructuredDebateEnabled(true);
+          if (typeof payload.budgetSeconds === 'number') {
+            setChallengerBudgetRemaining(payload.budgetSeconds);
+          }
+        }
+      })
       .subscribe((status: string) => {
         console.log('[Live] Broadcast channel:', status);
         if (status === 'SUBSCRIBED') {
@@ -938,7 +992,7 @@ export function TikTokStyleArena({
       setLiveConnected(false);
       supabase.removeChannel(channel);
     };
-  }, [roomId, addRemoteMessage, addRemoteReaction]);
+  }, [roomId, addRemoteMessage, addRemoteReaction, userRole, toast]);
 
   // 2) Polling fallback — queries DB for new messages every 3s (guaranteed delivery)
   useEffect(() => {
@@ -1012,28 +1066,6 @@ export function TikTokStyleArena({
     supabase.from('beef_reactions').insert({ beef_id: roomId, user_id: userId, emoji }).then(() => {});
   };
 
-  // Timer effect
-  useEffect(() => {
-    if (timerRunning && timeRemaining > 0) {
-      const timer = setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev <= 1) {
-            setTimerRunning(false);
-            // Auto-mute speaker when time is up
-            if (currentSpeaker) {
-              setDebaters(debaters.map(d => 
-                d.id === currentSpeaker ? { ...d, isMuted: true } : d
-              ));
-            }
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [timerRunning, timeRemaining, currentSpeaker, debaters]);
-
   // Messages and reactions are now received via Broadcast channel above
 
   // Debate title animation - show for 5s every 60s (1 minute)
@@ -1056,7 +1088,40 @@ export function TikTokStyleArena({
     return () => clearInterval(interval);
   }, []);
 
+  const toggleMediatorFloor = () => {
+    if (!isHost) return;
+    setMediatorHoldingFloor((prev) => {
+      const next = !prev;
+      channelRef.current
+        ?.send({ type: 'broadcast', event: 'mediator_floor', payload: { active: next } })
+        .catch(() => {});
+      return next;
+    });
+  };
+
+  const runTossForFirstSpeaker = () => {
+    if (debaters.length < 2) {
+      toast('Au moins 2 challengers pour un tirage au sort.', 'info');
+      return;
+    }
+    const pick = debaters[Math.floor(Math.random() * debaters.length)];
+    toast(`${pick.name} parle en premier (tirage au sort).`, 'success');
+    channelRef.current
+      ?.send({
+        type: 'broadcast',
+        event: 'mediation_toss',
+        payload: { firstSpeakerId: pick.id, firstName: pick.name },
+      })
+      .catch(() => {});
+  };
+
   const startTimer = (debaterId: string) => {
+    setMediatorHoldingFloor(false);
+    if (channelRef.current) {
+      channelRef.current
+        .send({ type: 'broadcast', event: 'mediator_floor', payload: { active: false } })
+        .catch(() => {});
+    }
     setCurrentSpeaker(debaterId);
     setTimeRemaining(speakingTurnDuration);
     setTimerRunning(true);
@@ -1064,12 +1129,12 @@ export function TikTokStyleArena({
     setSpeakingTurnTarget(debaterId);
     setSpeakingTurnRemaining(speakingTurnDuration);
 
-    // Deduct from beef time
-    setDebaters(debaters.map(d => 
-      d.id === debaterId ? { ...d, isMuted: false } : { ...d, isMuted: true }
-    ));
+    setDebaters((prev) =>
+      prev.map((d) =>
+        d.id === debaterId ? { ...d, isMuted: false } : { ...d, isMuted: true },
+      ),
+    );
 
-    // Broadcast speaking turn
     if (channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
@@ -1089,6 +1154,10 @@ export function TikTokStyleArena({
       speakingTurnIntervalRef.current = null;
     }
 
+    setDebaters((prev) =>
+      structuredDebateEnabled ? prev.map((d) => ({ ...d, isMuted: true })) : prev,
+    );
+
     if (channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
@@ -1098,28 +1167,31 @@ export function TikTokStyleArena({
     }
   };
 
-  // Speaking turn countdown (separate from beef timer)
+  // Compte à rebours du tour (+ budget « temps challengers » si débat structuré, sans grignoter le chrono global du beef)
   useEffect(() => {
     if (!speakingTurnActive || !speakingTurnTarget) return;
 
     speakingTurnIntervalRef.current = setInterval(() => {
-      setSpeakingTurnRemaining(prev => {
+      if (mediatorHoldingFloor) return;
+
+      setSpeakingTurnRemaining((prev) => {
         if (prev <= 1) {
           stopTimer();
-          toast('Temps de parole écoulé !', 'info');
+          toast('Temps de parole écoulé — donne la parole au suivant quand tu es prêt.', 'info');
           return 0;
         }
         return prev - 1;
       });
 
-      // Also deduct from beef time
-      setBeefTimeRemaining(prev => Math.max(0, prev - 1));
+      if (structuredDebateEnabled) {
+        setChallengerBudgetRemaining((prev) => Math.max(0, prev - 1));
+      }
     }, 1000);
 
     return () => {
       if (speakingTurnIntervalRef.current) clearInterval(speakingTurnIntervalRef.current);
     };
-  }, [speakingTurnActive, speakingTurnTarget, toast]);
+  }, [speakingTurnActive, speakingTurnTarget, structuredDebateEnabled, mediatorHoldingFloor, toast]);
 
   // Listen for speaking turn broadcasts (for non-hosts)
   useEffect(() => {
@@ -1136,6 +1208,34 @@ export function TikTokStyleArena({
     };
     channelRef.current.on('broadcast', { event: 'speaking_turn' }, handler);
   }, [isHost]);
+
+  /** Micro challengers : coupé hors tour (débat structuré) ou quand le médiateur prend la parole */
+  useEffect(() => {
+    if (isViewer || isHost || !isJoined) return;
+    if (mediatorHoldingFloor) {
+      setLocalAudioEnabled(false);
+      return;
+    }
+    if (!structuredDebateEnabled) {
+      setLocalAudioEnabled(true);
+      return;
+    }
+    if (speakingTurnActive && speakingTurnTarget && userId === speakingTurnTarget) {
+      setLocalAudioEnabled(true);
+    } else {
+      setLocalAudioEnabled(false);
+    }
+  }, [
+    isViewer,
+    isHost,
+    isJoined,
+    mediatorHoldingFloor,
+    structuredDebateEnabled,
+    speakingTurnActive,
+    speakingTurnTarget,
+    userId,
+    setLocalAudioEnabled,
+  ]);
 
   const toggleMute = (debaterId: string) => {
     setDebaters(debaters.map(d => 
@@ -1723,7 +1823,7 @@ export function TikTokStyleArena({
                   <ParticipantVideo
                     videoTrack={leftPanel.videoTrack}
                     audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack}
-                    muted={leftPanelIsLocal}
+                    muted={leftPanelIsLocal ? true : leftRemoteAudioMuted}
                     mirror={leftPanelIsLocal}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
@@ -1911,6 +2011,7 @@ export function TikTokStyleArena({
                   <ParticipantVideo
                     videoTrack={rightPanel.videoTrack}
                     audioTrack={rightPanel.audioTrack}
+                    muted={rightRemoteAudioMuted}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : (
@@ -2706,17 +2807,95 @@ export function TikTokStyleArena({
                 )}
               </div>
 
+              {/* Débat structuré : budget challengers, médiateur, toss */}
+              <div className="bg-white/5 rounded-xl p-4 border border-white/10 space-y-3">
+                <h3 className="text-white font-bold text-sm">⚖️ Débat structuré</h3>
+                <p className="text-gray-500 text-[11px] leading-snug">
+                  Le temps où tu parles ne compte pas dans le budget challengers. Utilise le bouton ci‑dessous pour mettre leurs chronos en pause.
+                </p>
+                <div>
+                  <span className="text-gray-400 text-xs block mb-1.5">Budget temps challengers (minutes)</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[15, 30, 45, 60].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => {
+                          setDebateBudgetMinutes(m);
+                          setChallengerBudgetRemaining(m * 60);
+                        }}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-colors ${
+                          debateBudgetMinutes === m ? 'bg-brand-500 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                        }`}
+                      >
+                        {m} min
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sec = debateBudgetMinutes * 60;
+                    setStructuredDebateEnabled(true);
+                    setChallengerBudgetRemaining(sec);
+                    channelRef.current
+                      ?.send({
+                        type: 'broadcast',
+                        event: 'structured_debate',
+                        payload: { enabled: true, budgetSeconds: sec },
+                      })
+                      .catch(() => {});
+                    toast('Mode structuré activé — budget challengers appliqué.', 'success');
+                  }}
+                  className={`w-full py-2.5 rounded-xl text-xs font-bold transition-colors ${
+                    structuredDebateEnabled ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'brand-gradient text-black'
+                  }`}
+                >
+                  {structuredDebateEnabled ? '✓ Mode structuré actif' : 'Activer le mode structuré'}
+                </button>
+                {structuredDebateEnabled && (
+                  <>
+                    <div className="flex justify-between items-center text-xs text-gray-400 pt-1 border-t border-white/10">
+                      <span>Budget challengers restant</span>
+                      <span className="font-mono text-white tabular-nums">
+                        {Math.floor(challengerBudgetRemaining / 60)}:
+                        {(challengerBudgetRemaining % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={toggleMediatorFloor}
+                      className={`w-full py-2.5 rounded-xl text-xs font-bold ${
+                        mediatorHoldingFloor ? 'bg-amber-500/25 text-amber-200 border border-amber-500/40' : 'bg-white/10 text-white border border-white/15'
+                      }`}
+                    >
+                      {mediatorHoldingFloor
+                        ? '▶️ Fin de mon intervention (reprendre le chrono challengers)'
+                        : '🎤 Je prends la parole (pause chrono challengers)'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={runTossForFirstSpeaker}
+                      className="w-full py-2 rounded-xl bg-cyan-500/15 text-cyan-200 text-xs font-bold border border-cyan-500/30"
+                    >
+                      🎲 Tirage au sort — qui commence ?
+                    </button>
+                  </>
+                )}
+              </div>
+
               {/* Speaking Turns Control */}
               <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                 <h3 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
-                  🎤 Temps de parole
+                  🎤 Temps de parole (tour par tour)
                 </h3>
 
                 {/* Duration selector */}
                 <div className="mb-3">
                   <label className="text-gray-400 text-xs mb-1.5 block">Durée par tour</label>
-                  <div className="flex gap-1.5">
-                    {[30, 60, 90, 120].map(sec => (
+                  <div className="flex flex-wrap gap-1.5">
+                    {[30, 45, 60, 90, 120].map(sec => (
                       <button
                         key={sec}
                         onClick={() => setSpeakingTurnDuration(sec)}
@@ -2770,7 +2949,7 @@ export function TikTokStyleArena({
                       <div className="flex gap-2">
                         <button
                           onClick={() => currentSpeaker === debater.id ? stopTimer() : startTimer(debater.id)}
-                          disabled={timerRunning && currentSpeaker !== debater.id}
+                          disabled={speakingTurnActive && currentSpeaker !== debater.id}
                           className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
                             currentSpeaker === debater.id
                               ? 'bg-green-500 text-white animate-pulse'
