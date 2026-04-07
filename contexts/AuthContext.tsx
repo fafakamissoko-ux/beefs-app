@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { validateSignupEmail } from '@/lib/email-signup-policy';
+import { hydrateLocalPrefsFromUser } from '@/lib/sync-user-client-prefs';
 import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        hydrateLocalPrefsFromUser(session.user);
         loadUserRole(session.user.id);
       } else {
         setUserRole(null);
@@ -55,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        hydrateLocalPrefsFromUser(session.user);
         loadUserRole(session.user.id);
       } else {
         setUserRole(null);

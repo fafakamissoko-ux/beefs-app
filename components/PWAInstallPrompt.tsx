@@ -3,11 +3,21 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, Bell } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { persistPwaInstallDismissed } from '@/lib/sync-user-client-prefs';
 
 export function PWAInstallPrompt() {
+  const { user } = useAuth();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    const m = user?.user_metadata as { pwa_install_dismissed?: boolean } | undefined;
+    if (m?.pwa_install_dismissed === true) {
+      setShowPrompt(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     // Check if already installed
@@ -64,18 +74,19 @@ export function PWAInstallPrompt() {
 
     setDeferredPrompt(null);
     setShowPrompt(false);
-    localStorage.setItem('pwa-install-prompt-seen', 'true');
+    await persistPwaInstallDismissed();
   };
 
-  const handleDismiss = (permanent: boolean) => {
+  const handleDismiss = async (permanent: boolean) => {
     setShowPrompt(false);
     if (permanent) {
-      localStorage.setItem('pwa-install-prompt-seen', 'true');
+      await persistPwaInstallDismissed();
     } else {
-      // Show again in 7 days
-      const reminderDate = new Date();
-      reminderDate.setDate(reminderDate.getDate() + 7);
-      localStorage.setItem('pwa-install-reminder', reminderDate.toISOString());
+      try {
+        const reminderDate = new Date();
+        reminderDate.setDate(reminderDate.getDate() + 7);
+        localStorage.setItem('pwa-install-reminder', reminderDate.toISOString());
+      } catch {}
     }
   };
 

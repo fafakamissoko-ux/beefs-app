@@ -1388,7 +1388,7 @@ export default function ProfileContent() {
           >
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 flex-shrink-0">
               <h2 id="profile-preview-title" className="text-lg font-bold text-white">
-                Aperçu du profil public
+                Aperçu
               </h2>
               <button
                 type="button"
@@ -1400,12 +1400,64 @@ export default function ProfileContent() {
                 <X className="w-5 h-5" aria-hidden />
               </button>
             </div>
-            <div className="flex-1 min-h-0 p-2 sm:p-3 overflow-hidden">
-              <iframe
-                title="Profil public"
-                src={`${typeof window !== 'undefined' ? window.location.origin : ''}/profile/${encodeURIComponent(profile.username)}`}
-                className="w-full h-[min(70vh,720px)] rounded-xl border border-white/10 bg-black"
-              />
+            <div className="flex-1 min-h-0 p-4 overflow-y-auto max-h-[min(78vh,760px)]">
+              <p className="text-gray-500 text-xs mb-4">
+                Extrait du profil tel qu&apos;il est vu par les autres (sans boutons d&apos;édition).
+              </p>
+              <div className="rounded-2xl border border-white/10 overflow-hidden bg-black/50">
+                <div
+                  className="h-28 bg-cover bg-center"
+                  style={
+                    profile.banner_url
+                      ? { backgroundImage: `url(${profile.banner_url})` }
+                      : {
+                          background: `linear-gradient(135deg, ${profile.accent_color || '#E83A14'}44, ${profile.accent_color || '#E83A14'}11)`,
+                        }
+                  }
+                />
+                <div className="px-5 pb-5 -mt-12 relative">
+                  <div
+                    className="w-24 h-24 rounded-full border-4 border-[#0f0f0f] overflow-hidden bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-3xl font-black text-white"
+                    style={{ borderColor: profile.accent_color || '#E83A14' }}
+                  >
+                    {profile.avatar_url ? (
+                      <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      profile.username[0].toUpperCase()
+                    )}
+                  </div>
+                  <h3 className="text-xl font-black text-white mt-3">{profile.display_name}</h3>
+                  <p className="text-gray-500 text-sm">@{profile.username}</p>
+                  {profile.bio ? (
+                    <p className="text-gray-300 text-sm mt-3 whitespace-pre-wrap line-clamp-6">{profile.bio}</p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-sm">
+                    <span>
+                      <span className="text-white font-black">{stats.beefs_participated}</span>
+                      <span className="text-gray-500 ml-1">Participations</span>
+                    </span>
+                    <span>
+                      <span className="text-white font-black">{stats.beefs_hosted}</span>
+                      <span className="text-gray-500 ml-1">Médiations</span>
+                    </span>
+                    <span>
+                      <span className="text-white font-black">{stats.followers}</span>
+                      <span className="text-gray-500 ml-1">Abonnés</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-center mt-4">
+                <Link
+                  href={`/profile/${encodeURIComponent(profile.username)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-400 text-sm font-semibold hover:underline"
+                  onClick={() => setPublicPreviewOpen(false)}
+                >
+                  Ouvrir la page publique dans un onglet
+                </Link>
+              </p>
             </div>
           </div>
         </div>

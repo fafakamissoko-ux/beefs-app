@@ -30,8 +30,8 @@ const nextConfig = {
       {
         source: '/(.*)',
         headers: [
-          // Prevent clickjacking
-          { key: 'X-Frame-Options', value: 'DENY' },
+          // Même origine uniquement (iframes internes ex. aperçu profil) ; clickjacking cross-site évité
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           // Prevent MIME sniffing
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           // XSS protection (legacy browsers)
@@ -57,6 +57,7 @@ const nextConfig = {
               "frame-src https://js.stripe.com https://checkout.stripe.com https://*.daily.co",
               "media-src 'self' blob: https://*.daily.co",
               "worker-src 'self' blob:",
+              "frame-ancestors 'self'",
             ].join('; '),
           },
         ],

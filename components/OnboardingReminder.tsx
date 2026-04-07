@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Flame } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { persistHasSeenOnboarding } from '@/lib/sync-user-client-prefs';
 
 const DISMISS_KEY = 'onboarding_reminder_dismissed_v1';
 
@@ -15,6 +16,10 @@ export function OnboardingReminder() {
 
   useEffect(() => {
     if (!user) return;
+
+    const meta = user.user_metadata as { has_seen_onboarding?: boolean } | undefined;
+    if (meta?.has_seen_onboarding === true) return;
+
     try {
       if (localStorage.getItem('hasSeenOnboarding') === 'true') {
         localStorage.setItem(DISMISS_KEY, 'true');
@@ -34,15 +39,16 @@ export function OnboardingReminder() {
     return () => clearTimeout(timer);
   }, [user]);
 
-  const handleDismiss = (permanent: boolean = false) => {
+  const handleDismiss = async (permanent: boolean = false) => {
     if (permanent) {
-      localStorage.setItem(DISMISS_KEY, 'true');
-      localStorage.setItem('hasSeenOnboarding', 'true');
-      localStorage.removeItem('onboardingReminder');
+      await persistHasSeenOnboarding();
     } else {
-      const reminderDate = new Date();
-      reminderDate.setDate(reminderDate.getDate() + 7);
-      localStorage.setItem('onboardingReminder', reminderDate.toISOString());
+      try {
+        const reminderDate = new Date();
+        reminderDate.setDate(reminderDate.getDate() + 7);
+        localStorage.setItem('onboardingReminder', reminderDate.toISOString());
+        localStorage.setItem('hasSeenOnboarding', 'true');
+      } catch {}
     }
     setShowReminder(false);
   };
