@@ -11,6 +11,7 @@ import { useToast } from '@/components/Toast';
 import { AppBackButton } from '@/components/AppBackButton';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
 import { normalizeScheduledAtForInsert } from '@/lib/beef-schedule';
+import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 
 // Feed logic like X/Twitter: "Pour vous" = algorithmic, "Abonnements" = chronological
 
@@ -231,7 +232,7 @@ export default function LivePage() {
       toast(`Points insuffisants — il te manque ${need} pts (solde ${userPoints})`, 'error', {
         action: {
           label: 'Recharger des points',
-          onClick: () => router.push('/buy-points'),
+          onClick: () => openBuyPointsPage(router),
         },
       });
       setPurchaseLoading(false);
@@ -550,7 +551,7 @@ export default function LivePage() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => router.push('/buy-points')}
+                    onClick={() => openBuyPointsPage(router)}
                     className="w-full brand-gradient text-black font-bold py-3.5 rounded-xl flex items-center justify-center gap-2"
                   >
                     <Flame className="w-5 h-5" />

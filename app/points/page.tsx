@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Coins, History, ShoppingBag, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -101,14 +100,16 @@ export default function PointsDashboardPage() {
               </p>
             </div>
           </div>
-          <Link
+          <a
             href="/buy-points"
+            target="_blank"
+            rel="noopener noreferrer"
             className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white brand-gradient hover:opacity-95 transition-opacity"
           >
             <ShoppingBag className="w-4 h-4" aria-hidden />
             Acheter des points
             <ArrowRight className="w-4 h-4" aria-hidden />
-          </Link>
+          </a>
         </motion.div>
 
         <div className="flex items-center gap-2 mb-4">

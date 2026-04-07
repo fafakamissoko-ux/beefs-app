@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
@@ -381,13 +380,15 @@ export default function FeedPage() {
               </button>
             ))}
           </div>
-          <Link
+          <a
             href={hrefWithFrom('/buy-points', pathname)}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center justify-center sm:justify-end gap-2 px-4 py-2.5 mb-2 sm:mb-3 self-stretch sm:self-auto rounded-xl text-sm font-semibold text-brand-400 hover:text-white hover:bg-brand-500/15 transition-colors border border-brand-500/25"
           >
             <Coins className="w-4 h-4 flex-shrink-0" />
             <span>Acheter des points</span>
-          </Link>
+          </a>
         </div>
 
         {/* Filters */}

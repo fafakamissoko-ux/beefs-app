@@ -806,12 +806,14 @@ export default function SettingsPage() {
                 <h3 className="text-white font-bold text-xl">Historique des points</h3>
                 <p className="text-gray-500 text-xs mt-0.5">Achats, accès aux directs, cadeaux, retraits (50 derniers)</p>
               </div>
-              <Link
+              <a
                 href="/buy-points"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-xs font-semibold text-brand-400 hover:text-brand-300 whitespace-nowrap"
               >
                 Acheter des points
-              </Link>
+              </a>
             </div>
             {pointTx.length === 0 ? (
               <p className="text-gray-500 text-sm py-4 text-center">Aucun mouvement enregistré pour l’instant.</p>

@@ -13,6 +13,9 @@ import { BeefNotificationToasts } from '@/components/BeefNotificationToasts';
 import { supabase } from '@/lib/supabase/client';
 import { hrefWithFrom } from '@/lib/navigation-return';
 
+const buyPointsAnchorClass =
+  'flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors';
+
 function getNotifPrefs(): Record<string, boolean> {
   try {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('beefs_notif_prefs') : null;
@@ -267,17 +270,31 @@ export function Header() {
                               { href: '/invitations', icon: Mail, label: 'Invitations' },
                               { href: '/settings', icon: SettingsIcon, label: 'Paramètres' },
                               ...(userRole === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
-                            ].map(item => (
-                              <Link
-                                key={item.href}
-                                href={hrefWithFrom(item.href, pathname)}
-                                onClick={() => setUserMenuOpen(false)}
-                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors"
-                              >
-                                <item.icon className="w-4 h-4 text-gray-500" />
-                                <span>{item.label}</span>
-                              </Link>
-                            ))}
+                            ].map(item =>
+                              item.href === '/buy-points' ? (
+                                <a
+                                  key={item.href}
+                                  href="/buy-points"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={() => setUserMenuOpen(false)}
+                                  className={buyPointsAnchorClass}
+                                >
+                                  <item.icon className="w-4 h-4 text-gray-500" />
+                                  <span>{item.label}</span>
+                                </a>
+                              ) : (
+                                <Link
+                                  key={item.href}
+                                  href={hrefWithFrom(item.href, pathname)}
+                                  onClick={() => setUserMenuOpen(false)}
+                                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors"
+                                >
+                                  <item.icon className="w-4 h-4 text-gray-500" />
+                                  <span>{item.label}</span>
+                                </Link>
+                              ),
+                            )}
                           </div>
                           <div className="py-1 dropdown-divider-top">
                             <button
@@ -383,6 +400,16 @@ export function Header() {
                           <p className="text-xs text-gray-500 truncate">{user.email}</p>
                         </div>
                       </div>
+                      <a
+                        href="/buy-points"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] rounded-xl transition-colors"
+                      >
+                        <Flame className="w-5 h-5 text-gray-500" />
+                        <span>Acheter des points</span>
+                      </a>
                       {[
                         { href: '/profile', icon: User, label: 'Profil' },
                         { href: '/settings', icon: SettingsIcon, label: 'Paramètres' },
