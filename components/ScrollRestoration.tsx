@@ -23,35 +23,64 @@ function savePosition(path: string, y: number) {
   }
 }
 
+function restoreScroll(path: string) {
+  const saved = getPositions()[path];
+  if (typeof saved !== 'number' || saved <= 0) return;
+  const apply = () => {
+    window.scrollTo({ top: saved, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = saved;
+    document.body.scrollTop = saved;
+  };
+  apply();
+  requestAnimationFrame(apply);
+}
+
 /**
- * - Première visite d’une route (aucune position enregistrée ou 0) : haut de page
- *   (évite de garder le scroll de la page précédente).
- * - Retour sur une route déjà visitée avec scroll sauvegardé : restauration de la position.
+ * - Navigation : restaure la position enregistrée pour la route, sinon haut de page.
+ * - Changement d’onglet / retour app : sauvegarde au `hidden` et restaure au `visible`
+ *   pour éviter le retour en haut imposé par certains navigateurs.
  */
 export function ScrollRestoration() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const saved = getPositions()[pathname];
+    const onScroll = () => savePosition(pathname, window.scrollY);
 
-    const applyScroll = () => {
-      if (typeof saved === 'number' && saved > 0) {
-        window.scrollTo({ top: saved, left: 0, behavior: 'auto' });
-        document.documentElement.scrollTop = saved;
-        document.body.scrollTop = saved;
+    const onHidden = () => savePosition(pathname, window.scrollY);
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        onHidden();
       } else {
-        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
+        restoreScroll(pathname);
       }
     };
 
-    applyScroll();
-    requestAnimationFrame(applyScroll);
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) restoreScroll(pathname);
+    };
 
-    const handleScroll = () => savePosition(pathname, window.scrollY);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', onHidden);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    const saved = getPositions()[pathname];
+    if (typeof saved === 'number' && saved > 0) {
+      restoreScroll(pathname);
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+    requestAnimationFrame(() => restoreScroll(pathname));
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', onHidden);
+      window.removeEventListener('pageshow', onPageShow);
+    };
   }, [pathname]);
 
   return null;

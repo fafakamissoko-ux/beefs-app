@@ -17,6 +17,8 @@ import {
   DEFAULT_STATS_SHORTCUTS,
   mergeStatsShortcuts,
 } from '@/lib/profile-stats-shortcuts';
+import { mediationCategoryForBeef } from '@/lib/mediation-resolution';
+import { StatShortcutToggles } from '@/components/StatShortcutToggles';
 
 interface UserProfile {
   id: string;
@@ -294,18 +296,15 @@ export default function ProfileContent() {
           const beefsParticipatedCount = new Set((participantRows || []).map((r: { beef_id: string }) => r.beef_id)).size;
           const beefsHostedCount = mediatedList.length;
 
-          // Résolution stats = uniquement beefs médiés
-          const resolvedBeefs = mediatedList.filter((beef) => beef.resolution_status === 'resolved').length || 0;
-          const unresolvedBeefs = mediatedList.filter((beef) => beef.resolution_status === 'unresolved').length || 0;
+          // Résolution stats = uniquement beefs médiés (catégorie dérivée status + resolution_status)
+          const resolvedBeefs =
+            mediatedList.filter((beef) => mediationCategoryForBeef(beef) === 'resolved').length || 0;
+          const unresolvedBeefs =
+            mediatedList.filter((beef) => mediationCategoryForBeef(beef) === 'unresolved').length || 0;
           const inProgressBeefs =
-            mediatedList.filter(
-              (beef) =>
-                beef.resolution_status === 'in_progress' ||
-                beef.status === 'live' ||
-                beef.status === 'scheduled'
-            ).length || 0;
+            mediatedList.filter((beef) => mediationCategoryForBeef(beef) === 'in_progress').length || 0;
           const abandonedBeefs =
-            mediatedList.filter((beef) => beef.resolution_status === 'abandoned' || beef.status === 'cancelled').length || 0;
+            mediatedList.filter((beef) => mediationCategoryForBeef(beef) === 'abandoned').length || 0;
 
           setStats({
             beefs_participated: beefsParticipatedCount,
@@ -796,43 +795,11 @@ export default function ProfileContent() {
                 </div>
               )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4 max-w-lg text-xs text-gray-500">
-              <label className="flex items-start gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={statsShortcuts.participations}
-                  onChange={(e) => persistStatsShortcut('participations', e.target.checked)}
-                  className="mt-0.5 rounded border-white/20 bg-transparent shrink-0"
-                />
-                <span>Lien sur Participations</span>
-              </label>
-              <label className="flex items-start gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={statsShortcuts.mediations}
-                  onChange={(e) => persistStatsShortcut('mediations', e.target.checked)}
-                  className="mt-0.5 rounded border-white/20 bg-transparent shrink-0"
-                />
-                <span>Lien sur Médiations</span>
-              </label>
-              <label className="flex items-start gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={statsShortcuts.followers}
-                  onChange={(e) => persistStatsShortcut('followers', e.target.checked)}
-                  className="mt-0.5 rounded border-white/20 bg-transparent shrink-0"
-                />
-                <span>Lien sur Abonnés</span>
-              </label>
-              <label className="flex items-start gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={statsShortcuts.following}
-                  onChange={(e) => persistStatsShortcut('following', e.target.checked)}
-                  className="mt-0.5 rounded border-white/20 bg-transparent shrink-0"
-                />
-                <span>Lien sur Abonnements</span>
-              </label>
+            <div className="mb-4 max-w-lg">
+              <StatShortcutToggles
+                value={statsShortcuts}
+                onChange={(key, next) => persistStatsShortcut(key, next)}
+              />
             </div>
 
             {/* Beefs récents (participant ou médiateur) */}
@@ -906,7 +873,16 @@ export default function ProfileContent() {
 
           {activeTab === 'stats' && (
             <div>
-              <h3 className="text-white font-bold text-lg mb-4">📊 Résultats des médiations</h3>
+              <h3 className="text-white font-bold text-lg mb-2">📊 Résultats des médiations</h3>
+              <p className="text-gray-500 text-xs leading-relaxed mb-4 max-w-3xl">
+                Chaque beef médié est classé selon son statut en base :{' '}
+                <strong className="text-gray-400">En cours</strong> (live, programmé, préparation),{' '}
+                <strong className="text-gray-400">Résolu</strong> quand la session se termine avec une clôture « succès »
+                (fin explicite par le médiateur, temps max, etc.),{' '}
+                <strong className="text-gray-400">Non résolu</strong> si personne n’a pu débattre jusqu’au bout,{' '}
+                <strong className="text-gray-400">Abandonné</strong> si la room s’arrête sans médiation aboutie (déconnexion, bug, fin sans statut).
+                Les anciens tests marqués « résolus » par défaut peuvent encore apparaître ainsi jusqu’à correction des données.
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 {/* Resolved */}
                 <button
@@ -1028,7 +1004,7 @@ export default function ProfileContent() {
                   </div>
                   <div className="grid grid-cols-1 gap-4">
                     {mediationBeefs
-                      .filter(beef => beef.resolution_status === selectedResolutionFilter)
+                      .filter((beef) => mediationCategoryForBeef(beef) === selectedResolutionFilter)
                       .map((beef, idx) => (
                         <BeefCard
                           key={beef.id}
@@ -1046,7 +1022,8 @@ export default function ProfileContent() {
                           onClick={() => router.push(`/arena/${beef.id}`)}
                         />
                       ))}
-                    {mediationBeefs.filter(beef => beef.resolution_status === selectedResolutionFilter).length === 0 && (
+                    {mediationBeefs.filter((beef) => mediationCategoryForBeef(beef) === selectedResolutionFilter)
+                      .length === 0 && (
                       <div className="text-center py-12 bg-white/5 rounded-xl">
                         <Flame className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                         <p className="text-gray-400">Aucun beef dans cette catégorie</p>

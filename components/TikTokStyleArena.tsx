@@ -361,13 +361,17 @@ export function TikTokStyleArena({
     if (beefEndedRef.current) return;
     beefEndedRef.current = true;
 
-    const resolutionMap: Record<string, string> = {
+    const resolutionMap: Record<string, 'resolved' | 'unresolved' | 'abandoned'> = {
       'Terminé par le médiateur': 'resolved',
+      'Le médiateur a mis fin au beef': 'resolved',
       'Temps écoulé': 'resolved',
+      'Temps écoulé (60 min)': 'resolved',
       'Tous les challengers ont quitté': 'unresolved',
       'Médiateur déconnecté': 'abandoned',
+      'Le médiateur a quitté': 'abandoned',
     };
-    const resolution = resolutionMap[reason] || 'resolved';
+    // Raison inconnue → abandoned (évite de marquer « résolu » des fins crash / libellés oubliés)
+    const resolution = resolutionMap[reason] ?? 'abandoned';
 
     await supabase.from('beefs').update({
       status: 'ended',
