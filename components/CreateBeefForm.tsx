@@ -7,6 +7,11 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
+import {
+  minDateTimeLocalValue,
+  scheduledLocalInputToIso,
+  isScheduledTimeValid,
+} from '@/lib/beef-schedule';
 
 interface BeefParticipant {
   user_id: string;
@@ -217,8 +222,17 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
       if (!beefData.description.trim()) errors.description = 'La description est obligatoire.';
       else if (beefData.description.trim().length < 50)
         errors.description = `Description trop courte (${beefData.description.trim().length}/50 caractères minimum).`;
-      if (beefData.is_scheduled && !beefData.scheduled_at)
-        errors.scheduled_at = 'Sélectionne une date et heure de programmation.';
+      if (beefData.is_scheduled) {
+        if (!beefData.scheduled_at?.trim()) {
+          errors.scheduled_at = 'Sélectionne une date et heure de programmation.';
+        } else {
+          const iso = scheduledLocalInputToIso(beefData.scheduled_at);
+          if (!iso || !isScheduledTimeValid(iso)) {
+            errors.scheduled_at =
+              'Choisis une date et heure au moins ~2 minutes dans le futur (fuseau horaire de l’appareil).';
+          }
+        }
+      }
     }
     return errors;
   };
@@ -236,7 +250,10 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
 
     setLoading(true);
     try {
-      await onSubmit(beefData);
+      await onSubmit({
+        ...beefData,
+        scheduled_at: beefData.is_scheduled ? beefData.scheduled_at : '',
+      });
     } catch (error: any) {
       console.error('Error creating beef:', error);
       setFieldErrors({ submit: error?.message || 'Erreur inconnue. Réessaie.' });
@@ -430,24 +447,6 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
               </p>
               </div>{/* closes relative */}
             </div>{/* closes tag section */}
-
-            {/* Date de démarrage (optionnel = maintenant, rempli = programmé) */}
-            <div>
-              <label className="block text-white font-semibold mb-2 flex items-center gap-2 text-sm">
-                <Calendar className="w-4 h-4 text-blue-400" />
-                Date de démarrage (optionnelle)
-              </label>
-              <input
-                type="datetime-local"
-                value={beefData.scheduled_at}
-                onChange={(e) => updateData('scheduled_at', e.target.value)}
-                min={new Date().toISOString().slice(0, 16)}
-                className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
-              />
-              <p className="text-gray-400 text-xs mt-1">
-                {beefData.scheduled_at ? '📅 Le beef sera programmé' : '🔴 Le beef démarre après validation'}
-              </p>
-            </div>
           </motion.div>
         )}
 
@@ -612,38 +611,81 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
               </p>
             </div>
 
-            {/* Scheduled Option - Only show if not already scheduled */}
-            {!beefData.scheduled_at && (
-              <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-xl p-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={beefData.is_scheduled}
-                    onChange={(e) => updateData('is_scheduled', e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-700 text-blue-500 focus:ring-blue-500"
-                  />
-                  <div className="flex-1">
-                    <span className="text-white font-semibold flex items-center gap-2 text-sm">
-                      <span>📅</span>
-                      Programmer pour plus tard
-                    </span>
-                    <p className="text-gray-400 text-xs">Comme Twitter Spaces - programmez une date/heure</p>
-                  </div>
-                </label>
-                {beefData.is_scheduled && (
-                  <div className="mt-2">
-                    <label className="block text-white font-semibold mb-1 text-xs">Date et heure de démarrage</label>
-                    <input
-                      type="datetime-local"
-                      value={beefData.scheduled_at}
-                      onChange={(e) => updateData('scheduled_at', e.target.value)}
-                      min={new Date().toISOString().slice(0, 16)}
-                      className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-                )}
+            {/* Planification : une seule zone, choix explicite (évite min UTC + doublon étape 1 / mobile) */}
+            <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-xl p-3 space-y-3">
+              <div className="flex items-center gap-2 text-white font-semibold text-sm">
+                <Calendar className="w-4 h-4 text-cyan-400 shrink-0" aria-hidden />
+                Démarrage du beef
               </div>
-            )}
+              <p className="text-gray-400 text-xs">
+                Choisis si le direct commence après les invitations, ou une date précise (heure de cet appareil).
+              </p>
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 cursor-pointer rounded-lg p-2 hover:bg-white/5">
+                  <input
+                    type="radio"
+                    name="beef-schedule-mode"
+                    checked={!beefData.is_scheduled}
+                    onChange={() => {
+                      setFieldErrors((p) => {
+                        const n = { ...p };
+                        delete n.scheduled_at;
+                        return n;
+                      });
+                      setBeefData((prev) => ({ ...prev, is_scheduled: false, scheduled_at: '' }));
+                    }}
+                    className="mt-1 w-4 h-4 border-gray-600 text-cyan-500 focus:ring-cyan-500"
+                  />
+                  <span>
+                    <span className="text-white font-semibold text-sm">Dès que c’est prêt</span>
+                    <span className="block text-gray-400 text-xs">Pas de date fixe ; le beef reste en préparation jusqu’au lancement.</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer rounded-lg p-2 hover:bg-white/5">
+                  <input
+                    type="radio"
+                    name="beef-schedule-mode"
+                    checked={beefData.is_scheduled}
+                    onChange={() => {
+                      setFieldErrors((p) => {
+                        const n = { ...p };
+                        delete n.scheduled_at;
+                        return n;
+                      });
+                      setBeefData((prev) => ({
+                        ...prev,
+                        is_scheduled: true,
+                        scheduled_at: prev.scheduled_at?.trim() ? prev.scheduled_at : minDateTimeLocalValue(),
+                      }));
+                    }}
+                    className="mt-1 w-4 h-4 border-gray-600 text-cyan-500 focus:ring-cyan-500"
+                  />
+                  <span className="flex-1 min-w-0">
+                    <span className="text-white font-semibold text-sm">Programmer une date et heure</span>
+                    <span className="block text-gray-400 text-xs mb-2">Tu peux modifier la valeur ci-dessous avant de créer.</span>
+                    {beefData.is_scheduled && (
+                      <input
+                        type="datetime-local"
+                        value={beefData.scheduled_at}
+                        min={minDateTimeLocalValue()}
+                        onChange={(e) => {
+                          updateData('scheduled_at', e.target.value);
+                          setFieldErrors((p) => {
+                            const n = { ...p };
+                            delete n.scheduled_at;
+                            return n;
+                          });
+                        }}
+                        className="w-full mt-1 bg-black/40 border border-white/[0.12] rounded-xl px-3 py-2.5 text-white text-base focus:outline-none focus:border-cyan-500 transition-colors min-h-[44px]"
+                      />
+                    )}
+                  </span>
+                </label>
+              </div>
+              {fieldErrors.scheduled_at && (
+                <p className="text-red-400 text-xs">⚠️ {fieldErrors.scheduled_at}</p>
+              )}
+            </div>
 
             {/* Summary */}
             <div className="bg-brand-500/10 border border-brand-500/30 rounded-xl p-3">
@@ -657,19 +699,19 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                   <span className="text-gray-400">Tags:</span>
                   <span className="text-white font-semibold">{beefData.tags.length}</span>
                 </div>
-                {beefData.scheduled_at && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Démarrage:</span>
-                    <span className="text-blue-400 font-semibold">
-                      {new Date(beefData.scheduled_at).toLocaleString('fr-FR', {
-                        day: '2-digit',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Démarrage:</span>
+                  <span className="text-blue-400 font-semibold text-right max-w-[58%]">
+                    {beefData.is_scheduled && beefData.scheduled_at?.trim()
+                      ? new Date(beefData.scheduled_at).toLocaleString('fr-FR', {
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : 'Après invitations (pas de date fixe)'}
+                  </span>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Participants:</span>
                   <span className="text-white font-semibold">{beefData.participants.length}</span>

@@ -226,7 +226,12 @@ export default function FeedPage() {
         .order('feed_position', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(fetchLimit);
-      if (selectedStatus !== 'all') query = query.eq('status', selectedStatus);
+      if (selectedStatus !== 'all' && selectedStatus !== 'scheduled') {
+        query = query.eq('status', selectedStatus);
+      }
+      if (selectedStatus === 'scheduled') {
+        query = query.in('status', ['scheduled', 'pending']);
+      }
       const { data, error } = await query;
       if (error) throw error;
 
@@ -238,6 +243,16 @@ export default function FeedPage() {
         tags: beef.tags || [],
         participants_count: beef.beef_participants?.[0]?.count || 0,
       }));
+
+      if (selectedStatus === 'scheduled') {
+        const now = Date.now();
+        beefsWithData = beefsWithData.filter((beef: any) => {
+          const at = beef.scheduled_at ? new Date(beef.scheduled_at).getTime() : 0;
+          if (beef.status === 'pending' && beef.scheduled_at) return at > now;
+          if (beef.status === 'scheduled') return !beef.scheduled_at || at > now;
+          return false;
+        });
+      }
 
       if (selectedTags.length > 0) {
         beefsWithData = beefsWithData.filter((beef: any) => beef.tags?.some((tag: string) => selectedTags.includes(tag)));

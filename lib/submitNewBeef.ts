@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
+import { normalizeScheduledAtForInsert } from '@/lib/beef-schedule';
 
 /**
  * Crée un beef + participants / invitations (même logique que le feed).
@@ -27,16 +28,15 @@ export async function submitNewBeef(
     subject: beefData.title,
     description: beefData.description || '',
     mediator_id: userId,
+    /** Toujours `pending` : la contrainte SQL `beefs_status_check` n’inclut souvent pas `scheduled`. */
     status: 'pending',
     is_premium: false,
     price,
     tags: beefData.tags || [],
   };
 
-  if (beefData.scheduled_at) {
-    insertData.scheduled_at = beefData.scheduled_at;
-    insertData.status = 'scheduled';
-  }
+  const when = normalizeScheduledAtForInsert(beefData.scheduled_at);
+  if (when) insertData.scheduled_at = when;
 
   const { data: beef, error } = await supabase.from('beefs').insert(insertData).select().single();
   if (error) throw new Error(error.message);

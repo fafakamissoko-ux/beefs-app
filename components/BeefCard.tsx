@@ -11,7 +11,7 @@ interface BeefCardProps {
   title: string;
   description?: string;
   host_name: string;
-  status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled';
+  status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled' | 'pending';
   created_at: string;
   scheduled_at?: string;
   viewer_count?: number;
@@ -47,12 +47,20 @@ export function BeefCard({
 }: BeefCardProps) {
   const [hasOpenedArena, setHasOpenedArena] = useState(false);
 
+  /** `pending` + date future → affichage « À venir » (aligné sur statut scheduled). */
+  const uiStatus: typeof status | 'scheduled' | 'preparing' =
+    status === 'pending' && scheduled_at && new Date(scheduled_at).getTime() > Date.now()
+      ? 'scheduled'
+      : status === 'pending'
+        ? 'preparing'
+        : status;
+
   useEffect(() => {
     setHasOpenedArena(hasBeefWatchStarted(id));
   }, [id, status, price]);
 
   const getStatusBadge = () => {
-    switch (status) {
+    switch (uiStatus) {
       case 'live':
         return (
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
@@ -88,6 +96,13 @@ export function BeefCard({
             <span className="text-amber-500/90">ANNULÉ</span>
           </div>
         );
+      case 'preparing':
+        return (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
+            <Clock className="w-3 h-3 text-amber-400" />
+            <span className="text-amber-300">PRÉPARATION</span>
+          </div>
+        );
     }
   };
 
@@ -95,7 +110,7 @@ export function BeefCard({
     const now = Date.now();
     const createdTime = new Date(created_at).getTime();
     const minutesAgo = Math.floor((now - createdTime) / 60000);
-    if (status === 'live') {
+    if (status === 'live' || uiStatus === 'live') {
       if (minutesAgo < 60) return `${minutesAgo}min`;
       return `${Math.floor(minutesAgo / 60)}h`;
     } else if (duration) {
@@ -124,6 +139,7 @@ export function BeefCard({
             const gradients: Record<string, string> = {
               live: `linear-gradient(145deg, hsl(${hueBase}, 85%, 18%) 0%, hsl(${(hueBase + 30) % 360}, 75%, 12%) 50%, hsl(${(hueBase + 60) % 360}, 70%, 8%) 100%)`,
               scheduled: `linear-gradient(145deg, hsl(${hueBase}, 60%, 15%) 0%, hsl(${(hueBase + 40) % 360}, 50%, 10%) 50%, hsl(${(hueBase + 80) % 360}, 45%, 7%) 100%)`,
+              preparing: `linear-gradient(145deg, hsl(${hueBase}, 55%, 14%) 0%, hsl(${(hueBase + 35) % 360}, 45%, 9%) 100%)`,
               replay: `linear-gradient(145deg, hsl(${hueBase}, 50%, 14%) 0%, hsl(${(hueBase + 35) % 360}, 40%, 9%) 100%)`,
               ended: `linear-gradient(145deg, hsl(${hueBase}, 20%, 12%) 0%, hsl(${(hueBase + 20) % 360}, 15%, 8%) 100%)`,
             };
@@ -134,7 +150,10 @@ export function BeefCard({
             return (
               <div className="w-full h-full relative flex flex-col justify-end overflow-hidden p-4">
                 {/* Unique gradient per beef */}
-                <div className="absolute inset-0" style={{ background: gradients[status] || gradients.ended }} />
+                <div
+                  className="absolute inset-0"
+                  style={{ background: gradients[uiStatus] || gradients.ended }}
+                />
 
                 {/* Decorative shapes */}
                 <div
@@ -147,7 +166,7 @@ export function BeefCard({
                 />
 
                 {/* Live pulse ring */}
-                {status === 'live' && (
+                {uiStatus === 'live' && (
                   <motion.div
                     className="absolute top-4 right-4 w-3 h-3 rounded-full bg-red-500"
                     animate={{ boxShadow: ['0 0 0 0 rgba(239,68,68,0.5)', '0 0 0 10px rgba(239,68,68,0)', '0 0 0 0 rgba(239,68,68,0)'] }}
@@ -189,13 +208,13 @@ export function BeefCard({
                   )}
 
                   {/* CTA hint */}
-                  {status === 'live' && (
+                  {uiStatus === 'live' && (
                     <div className="ml-auto flex items-center gap-0.5 text-[10px] text-brand-400 font-semibold">
                       <span>Regarder</span>
                       <ArrowUpRight className="w-3 h-3" />
                     </div>
                   )}
-                  {status === 'scheduled' && (
+                  {uiStatus === 'scheduled' && (
                     <div className="ml-auto flex items-center gap-0.5 text-[10px] text-cyan-400 font-semibold">
                       <span>Bientôt</span>
                       <Calendar className="w-3 h-3" />
@@ -224,7 +243,7 @@ export function BeefCard({
         )}
 
         {/* À venir payant : prix d’entrée / suite annoncé (pas encore de visionnage) */}
-        {status === 'scheduled' && (price ?? 0) > 0 && (
+        {uiStatus === 'scheduled' && (price ?? 0) > 0 && (
           <div className="absolute top-3 right-3">
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-500/10 border border-cyan-500/25 text-cyan-200">
               <Flame className="w-3 h-3 text-cyan-400" />
@@ -234,7 +253,7 @@ export function BeefCard({
         )}
 
         {/* Suite : direct en cours + payant + spectateur a déjà ouvert l’arène sur cet appareil */}
-        {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
+        {uiStatus === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
           <div className="absolute top-3 right-3">
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 border border-white/15 text-brand-200">
               <Eye className="w-3 h-3 text-brand-400" />
@@ -245,7 +264,7 @@ export function BeefCard({
 
         {/* Bottom row */}
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-          {status === 'scheduled' && scheduled_at ? (
+          {uiStatus === 'scheduled' && scheduled_at ? (
             <Countdown scheduledAt={scheduled_at} />
           ) : getTimeDisplay() ? (
             <div className="flex items-center gap-1 text-xs text-gray-400">

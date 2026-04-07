@@ -10,6 +10,7 @@ import { CreateBeefForm } from '@/components/CreateBeefForm';
 import { useToast } from '@/components/Toast';
 import { AppBackButton } from '@/components/AppBackButton';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
+import { normalizeScheduledAtForInsert } from '@/lib/beef-schedule';
 
 // Feed logic like X/Twitter: "Pour vous" = algorithmic, "Abonnements" = chronological
 
@@ -159,10 +160,8 @@ export default function LivePage() {
         tags: beefData.tags || [],
       };
 
-      if (beefData.scheduled_at) {
-        insertData.scheduled_at = beefData.scheduled_at;
-        insertData.status = 'scheduled';
-      }
+      const when = normalizeScheduledAtForInsert(beefData.scheduled_at);
+      if (when) insertData.scheduled_at = when;
 
       const { data: beef, error: beefError } = await supabase
         .from('beefs')
