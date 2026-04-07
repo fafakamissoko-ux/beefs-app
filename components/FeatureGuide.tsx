@@ -1,6 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 import { useFeatureGuide } from '@/hooks/useFeatureGuide';
 
 interface FeatureGuideProps {
@@ -91,10 +92,12 @@ export function FeatureGuide({
             <div className={`absolute w-0 h-0 border-[6px] ${getArrowPosition(position, align)} ${arrowBorderDir[position]}`} />
 
             <button
+              type="button"
               onClick={dismiss}
-              className={`absolute top-1.5 right-2 ${subtextClass} hover:text-white text-sm leading-none`}
+              className={`absolute top-0.5 right-0.5 sm:top-1.5 sm:right-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded-lg ${subtextClass} hover:text-white transition-colors touch-manipulation`}
+              aria-label="Fermer"
             >
-              ✕
+              <X className="w-6 h-6 sm:w-4 sm:h-4" aria-hidden />
             </button>
 
             <p className={`text-[12px] font-bold ${textClass} pr-4`}>{title}</p>

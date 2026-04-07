@@ -18,7 +18,7 @@ export interface CallParticipant {
 }
 
 interface UseDailyCallReturn {
-  join: () => Promise<void>;
+  join: (preAcquiredStream?: MediaStream | null) => Promise<void>;
   leave: () => Promise<void>;
   stopCamera: () => void;
   toggleMic: () => void;
@@ -64,6 +64,7 @@ export function useDailyCall(
   const [remoteParticipants, setRemoteParticipants] = useState<CallParticipant[]>([]);
   const [error, setError] = useState<string | null>(null);
   const reconnectingRef = useRef(false);
+  const joinWatchdogRef = useRef<number | null>(null);
   const roomUrlRef = useRef(roomUrl);
   const userNameRef = useRef(userName);
   const arenaUserIdRef = useRef(arenaUserId);
@@ -110,10 +111,18 @@ export function useDailyCall(
     setRemoteParticipants(remotes.map(toCallParticipant));
   }, []);
 
-  const join = useCallback(async () => {
+  const clearJoinWatchdog = useCallback(() => {
+    if (joinWatchdogRef.current != null) {
+      window.clearTimeout(joinWatchdogRef.current);
+      joinWatchdogRef.current = null;
+    }
+  }, []);
+
+  const join = useCallback(async (preAcquiredStream?: MediaStream | null) => {
     if (!roomUrl || isJoining || isJoined) return;
     setIsJoining(true);
     setError(null);
+    clearJoinWatchdog();
 
     try {
       // Destroy our own previous instance if any (safe approach)
@@ -125,13 +134,26 @@ export function useDailyCall(
         callRef.current = null;
       }
 
+      /** Flux déjà obtenu sur l’écran pré-joint : même geste utilisateur → évite le blocage iOS/Safari/Brave après await fetchMeetingToken(). */
+      let videoSource: boolean | MediaStreamTrack = !viewerMode;
+      let audioSource: boolean | MediaStreamTrack = !viewerMode;
+      if (!viewerMode && preAcquiredStream) {
+        const vt = preAcquiredStream.getVideoTracks()[0];
+        const at = preAcquiredStream.getAudioTracks()[0];
+        if (vt) videoSource = vt;
+        else videoSource = false;
+        if (at) audioSource = at;
+        else audioSource = false;
+      }
+
       const co = DailyIframe.createCallObject({
-        audioSource: !viewerMode,
-        videoSource: !viewerMode,
+        audioSource,
+        videoSource,
       });
       callRef.current = co;
 
       co.on('joined-meeting', () => {
+        clearJoinWatchdog();
         console.log('✅ Daily.co joined-meeting');
         setIsJoined(true);
         setIsJoining(false);
@@ -152,28 +174,62 @@ export function useDailyCall(
         setRemoteParticipants([]);
       });
       co.on('error', (e: any) => {
+        clearJoinWatchdog();
         console.error('❌ Daily.co error:', e);
         setError(e?.errorMsg || 'Erreur de connexion');
         setIsJoining(false);
       });
+      co.on('load-attempt-failed', (e: any) => {
+        clearJoinWatchdog();
+        console.error('❌ Daily load-attempt-failed:', e);
+        setError(e?.errorMsg || 'Impossible de charger la salle Daily (token, réseau ou salle expirée).');
+        setIsJoining(false);
+      });
       co.on('camera-error', (e: any) => {
+        clearJoinWatchdog();
         setError(`Caméra inaccessible: ${e?.errorMsg || 'vérifiez les permissions'}`);
+        setIsJoining(false);
       });
 
       console.log('🔌 Daily.co joining room:', roomUrl, viewerMode ? '(viewer)' : '');
       const userData = buildDailyJoinUserData(arenaUserId);
+      /** Salles privées Daily : le token est obligatoire (même logique que la reconnexion réseau). */
+      let token: string | undefined;
+      if (beefIdRef.current) {
+        token = await fetchMeetingToken();
+      }
+
+      joinWatchdogRef.current = window.setTimeout(() => {
+        joinWatchdogRef.current = null;
+        const c = callRef.current;
+        if (!c) return;
+        try {
+          const st = c.meetingState();
+          if (st !== 'joined-meeting') {
+            setError(
+              'Connexion trop lente ou bloquée. Vérifie le réseau, autorise micro/caméra, ou désactive le bouclier Brave sur ce site.',
+            );
+            setIsJoining(false);
+          }
+        } catch {
+          setIsJoining(false);
+        }
+      }, 50_000);
+
       await co.join({
         url: roomUrl,
+        ...(token ? { token } : {}),
         userName,
         ...(userData ? { userData } : {}),
         startVideoOff: viewerMode,
         startAudioOff: viewerMode,
       });
     } catch (err: any) {
+      clearJoinWatchdog();
       setError(err.message || 'Impossible de rejoindre');
       setIsJoining(false);
     }
-  }, [roomUrl, userName, isJoining, isJoined, refreshParticipants, viewerMode, arenaUserId, fetchMeetingToken]);
+  }, [roomUrl, userName, isJoining, isJoined, refreshParticipants, viewerMode, arenaUserId, fetchMeetingToken, clearJoinWatchdog]);
 
   const leave = useCallback(async () => {
     if (!callRef.current) return;

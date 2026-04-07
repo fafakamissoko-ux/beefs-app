@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { normalizeBeefId } from '@/lib/beef-id';
 
 /** Contexte minimal pour autoriser une action sur un beef (arène / token / fact-check). */
 export async function userMayActOnBeef(
@@ -6,10 +7,15 @@ export async function userMayActOnBeef(
   beefId: string,
   userId: string,
 ): Promise<{ ok: true; beef: { mediator_id: string | null; status: string } } | { ok: false; status: number; error: string }> {
+  const id = normalizeBeefId(beefId);
+  if (!id) {
+    return { ok: false, status: 400, error: 'beefId invalide' };
+  }
+
   const { data: beef, error: beefErr } = await supabaseAdmin
     .from('beefs')
     .select('id, mediator_id, status')
-    .eq('id', beefId)
+    .eq('id', id)
     .single();
 
   if (beefErr || !beef) {
@@ -27,7 +33,7 @@ export async function userMayActOnBeef(
   const { data: part } = await supabaseAdmin
     .from('beef_participants')
     .select('id')
-    .eq('beef_id', beefId)
+    .eq('beef_id', id)
     .eq('user_id', userId)
     .eq('invite_status', 'accepted')
     .maybeSingle();

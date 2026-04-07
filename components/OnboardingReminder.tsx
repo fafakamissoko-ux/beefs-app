@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Flame } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { persistHasSeenOnboarding } from '@/lib/sync-user-client-prefs';
+import { supabase } from '@/lib/supabase/client';
+import { hydrateLocalPrefsFromUser, persistHasSeenOnboarding } from '@/lib/sync-user-client-prefs';
 
 const DISMISS_KEY = 'onboarding_reminder_dismissed_v1';
 
@@ -13,31 +14,62 @@ export function OnboardingReminder() {
   const router = useRouter();
   const { user } = useAuth();
   const [showReminder, setShowReminder] = useState(false);
+  const reminderTimerRef = useRef<number | null>(null);
 
+  /** Préférence serveur (getUser) + localStorage — évite le rappel à chaque login si métadonnées OK */
   useEffect(() => {
-    if (!user) return;
-
-    const meta = user.user_metadata as { has_seen_onboarding?: boolean } | undefined;
-    if (meta?.has_seen_onboarding === true) return;
+    if (!user?.id) return;
 
     try {
-      if (localStorage.getItem('hasSeenOnboarding') === 'true') {
-        localStorage.setItem(DISMISS_KEY, 'true');
+      if (
+        localStorage.getItem(DISMISS_KEY) === 'true' ||
+        localStorage.getItem('hasSeenOnboarding') === 'true'
+      ) {
+        return;
       }
-    } catch {}
-
-    const dismissed = localStorage.getItem(DISMISS_KEY) === 'true';
-    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding') === 'true';
-    if (dismissed || hasSeenOnboarding) return;
-
-    const reminderRaw = localStorage.getItem('onboardingReminder');
-    if (reminderRaw && new Date() < new Date(reminderRaw)) {
-      return;
+    } catch {
+      /* ignore */
     }
 
-    const timer = setTimeout(() => setShowReminder(true), 8000);
-    return () => clearTimeout(timer);
-  }, [user]);
+    let cancelled = false;
+
+    void (async () => {
+      const { data: { user: fresh } } = await supabase.auth.getUser();
+      if (cancelled || !fresh) return;
+
+      hydrateLocalPrefsFromUser(fresh);
+      const meta = fresh.user_metadata as { has_seen_onboarding?: boolean } | undefined;
+      if (meta?.has_seen_onboarding === true) return;
+
+      try {
+        if (localStorage.getItem('hasSeenOnboarding') === 'true') {
+          localStorage.setItem(DISMISS_KEY, 'true');
+        }
+      } catch {}
+
+      const dismissed = localStorage.getItem(DISMISS_KEY) === 'true';
+      const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding') === 'true';
+      if (dismissed || hasSeenOnboarding) return;
+
+      const reminderRaw = localStorage.getItem('onboardingReminder');
+      if (reminderRaw && new Date() < new Date(reminderRaw)) {
+        return;
+      }
+
+      if (cancelled) return;
+      reminderTimerRef.current = window.setTimeout(() => {
+        if (!cancelled) setShowReminder(true);
+      }, 8000);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (reminderTimerRef.current !== null) {
+        window.clearTimeout(reminderTimerRef.current);
+        reminderTimerRef.current = null;
+      }
+    };
+  }, [user?.id]);
 
   const handleDismiss = async (permanent: boolean = false) => {
     if (permanent) {
@@ -74,10 +106,10 @@ export function OnboardingReminder() {
           <button
             type="button"
             onClick={() => handleDismiss(true)}
-            className="absolute top-2 right-2 text-gray-400 hover:text-white transition-colors"
+            className="absolute top-1 right-1 sm:top-2 sm:right-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center p-2 text-gray-400 hover:text-white transition-colors touch-manipulation"
             aria-label="Ne plus afficher"
           >
-            <X className="w-4 h-4" />
+            <X className="w-6 h-6 sm:w-4 sm:h-4" />
           </button>
 
           {/* Content */}

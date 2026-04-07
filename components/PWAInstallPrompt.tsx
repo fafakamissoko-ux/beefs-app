@@ -1,16 +1,49 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, Bell } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { persistPwaInstallDismissed } from '@/lib/sync-user-client-prefs';
+import { supabase } from '@/lib/supabase/client';
+import { hydrateLocalPrefsFromUser, persistPwaInstallDismissed } from '@/lib/sync-user-client-prefs';
+
+function isPwaSnoozed(): boolean {
+  try {
+    const raw = localStorage.getItem('pwa-install-reminder');
+    if (!raw) return false;
+    return new Date() < new Date(raw);
+  } catch {
+    return false;
+  }
+}
 
 export function PWAInstallPrompt() {
   const { user } = useAuth();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const showTimerRef = useRef<number | null>(null);
+
+  const clearShowTimer = useCallback(() => {
+    if (showTimerRef.current != null) {
+      window.clearTimeout(showTimerRef.current);
+      showTimerRef.current = null;
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (
+        localStorage.getItem('pwa-install-prompt-seen') === 'true' ||
+        isPwaSnoozed()
+      ) {
+        setShowPrompt(false);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     const m = user?.user_metadata as { pwa_install_dismissed?: boolean } | undefined;
@@ -33,6 +66,9 @@ export function PWAInstallPrompt() {
 
       const hasSeenPrompt = localStorage.getItem('pwa-install-prompt-seen');
       if (hasSeenPrompt) return;
+      if (isPwaSnoozed()) return;
+
+      clearShowTimer();
 
       const onboardingDone =
         localStorage.getItem('hasSeenOnboarding') === 'true' ||
@@ -40,25 +76,38 @@ export function PWAInstallPrompt() {
       // Après onboarding / rappel : délai court ; sinon attendre pour limiter le chevauchement avec le rappel onboarding
       const delayMs = onboardingDone ? 12000 : 26000;
 
-      setTimeout(() => {
+      showTimerRef.current = window.setTimeout(async () => {
+        showTimerRef.current = null;
         if (localStorage.getItem('pwa-install-prompt-seen')) return;
+        if (isPwaSnoozed()) return;
+        const { data: { user: fresh } } = await supabase.auth.getUser();
+        if (fresh) {
+          hydrateLocalPrefsFromUser(fresh);
+          const meta = fresh.user_metadata as { pwa_install_dismissed?: boolean } | undefined;
+          if (meta?.pwa_install_dismissed === true) return;
+        }
+        if (localStorage.getItem('pwa-install-prompt-seen')) return;
+        if (isPwaSnoozed()) return;
         setShowPrompt(true);
       }, delayMs);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Listen for successful install
-    window.addEventListener('appinstalled', () => {
+    const onAppInstalled = () => {
       setIsInstalled(true);
       setShowPrompt(false);
+      clearShowTimer();
       console.log('PWA installed successfully');
-    });
+    };
+    window.addEventListener('appinstalled', onAppInstalled);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', onAppInstalled);
+      clearShowTimer();
     };
-  }, []);
+  }, [clearShowTimer]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -78,6 +127,7 @@ export function PWAInstallPrompt() {
   };
 
   const handleDismiss = async (permanent: boolean) => {
+    clearShowTimer();
     setShowPrompt(false);
     if (permanent) {
       await persistPwaInstallDismissed();
@@ -107,10 +157,10 @@ export function PWAInstallPrompt() {
           <button
             type="button"
             onClick={() => handleDismiss(false)}
-            className="absolute top-2 right-2 text-gray-400 hover:text-white transition-colors"
+            className="absolute top-1 right-1 sm:top-2 sm:right-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center p-2 text-gray-400 hover:text-white transition-colors touch-manipulation"
             aria-label="Fermer la suggestion d’installation"
           >
-            <X className="w-4 h-4" aria-hidden />
+            <X className="w-6 h-6 sm:w-4 sm:h-4" aria-hidden />
           </button>
 
           {/* Content */}
@@ -140,21 +190,30 @@ export function PWAInstallPrompt() {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleInstall}
-              className="flex-1 brand-gradient hover:opacity-90 text-black font-bold py-2 px-4 rounded-lg text-xs transition-all"
-            >
-              Installer
-            </button>
+          {/* Actions — « Plus tard » = rappel dans 7 j ; « Ne plus proposer » = persistance compte + local */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleInstall}
+                className="flex-1 brand-gradient hover:opacity-90 text-black font-bold py-2 px-4 rounded-lg text-xs transition-all"
+              >
+                Installer
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDismiss(false)}
+                className="text-gray-400 hover:text-white text-xs font-semibold transition-colors px-3 py-2 min-h-[44px] sm:min-h-0 touch-manipulation"
+              >
+                Plus tard
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => handleDismiss(true)}
-              className="text-gray-400 hover:text-white text-xs font-semibold transition-colors px-3"
+              className="text-[11px] text-gray-500 hover:text-gray-400 text-center"
             >
-              Plus tard
+              Ne plus proposer
             </button>
           </div>
         </div>

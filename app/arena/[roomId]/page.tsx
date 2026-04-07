@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { TikTokStyleArena } from '@/components/TikTokStyleArena';
 import { supabase } from '@/lib/supabase/client';
@@ -10,11 +10,14 @@ import { motion } from 'framer-motion';
 import { Clock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { navigateSmartBack } from '@/lib/navigation-return';
+import { normalizeBeefId } from '@/lib/beef-id';
 
 export default function ArenaPage() {
   const params = useParams();
   const router = useRouter();
-  const roomId = params.roomId as string;
+  const rawRoom = params.roomId;
+  const roomIdParam = typeof rawRoom === 'string' ? rawRoom : Array.isArray(rawRoom) ? rawRoom[0] ?? '' : '';
+  const roomId = normalizeBeefId(roomIdParam) ?? '';
 
   const [userId, setUserId] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
@@ -43,6 +46,14 @@ export default function ArenaPage() {
   const [freePreviewMinutes, setFreePreviewMinutes] = useState(10);
   const [continuationPricePoints, setContinuationPricePoints] = useState(0);
   const [hasPaidContinuation, setHasPaidContinuation] = useState(false);
+  /** Évite de monter l’arène avec rôle « viewer » par défaut + mauvais host.id avant chargement du beef. */
+  const [arenaReady, setArenaReady] = useState(false);
+
+  useEffect(() => {
+    if (roomIdParam.trim() !== '' && !roomId) {
+      router.replace('/feed');
+    }
+  }, [roomIdParam, roomId, router]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -66,11 +77,12 @@ export default function ArenaPage() {
     loadUser();
   }, []);
 
-  const roomLoadedRef = useRef(false);
-
   useEffect(() => {
-    if (!userId || roomLoadedRef.current) return;
-    roomLoadedRef.current = true;
+    if (!userId || !roomId) return;
+    let cancelled = false;
+    setArenaReady(false);
+    setBeefEndedInfo(null);
+    setDailyRoomUrl(null);
 
     const loadRoomData = async () => {
       const { data: beef } = await supabase
@@ -78,6 +90,8 @@ export default function ArenaPage() {
         .select('*, users!beefs_mediator_id_fkey(username, display_name, avatar_url)')
         .eq('id', roomId)
         .single();
+
+      if (cancelled) return;
 
       if (!beef) {
         window.location.href = '/feed';
@@ -105,6 +119,7 @@ export default function ArenaPage() {
           started_at: beef.started_at,
           ended_at: beef.ended_at,
         });
+        setArenaReady(false);
         return;
       }
 
@@ -149,10 +164,16 @@ export default function ArenaPage() {
         markBeefWatchStarted(roomId);
       }
 
+      if (cancelled) return;
       await ensureDailyRoom(roomId);
+      if (cancelled) return;
+      setArenaReady(true);
     };
 
     loadRoomData();
+    return () => {
+      cancelled = true;
+    };
   }, [roomId, userId]);
 
   useEffect(() => {
@@ -272,6 +293,17 @@ export default function ArenaPage() {
         <div className="text-white text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto mb-4" />
           <p>Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!beefEndedInfo && !arenaReady) {
+    return (
+      <div className="fixed inset-0 bg-black flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto mb-4" />
+          <p>Chargement de l’arène…</p>
         </div>
       </div>
     );

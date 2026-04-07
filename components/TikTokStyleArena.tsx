@@ -49,7 +49,8 @@ interface TikTokStyleArenaProps {
   roomId: string;
   userId: string;
   userName: string;
-  userRole?: 'mediator' | 'challenger' | 'viewer';
+  /** Toujours fourni par la page arène (pas de défaut « viewer » — évite des GET /api/beef/access fantômes). */
+  userRole: 'mediator' | 'challenger' | 'viewer';
   viewerCount?: number;
   tension?: number;
   points?: number;
@@ -123,7 +124,7 @@ export function TikTokStyleArena({
   roomId,
   userId,
   userName,
-  userRole = 'viewer',
+  userRole,
   viewerCount = 0,
   points = 0,
   debateTitle = 'Débat en direct',
@@ -140,6 +141,8 @@ export function TikTokStyleArena({
   const { toast } = useToast();
   const isViewer = userRole === 'viewer';
   const [hasJoined, setHasJoined] = useState(false);
+  /** MediaStream du pré-joint (médiateur / challenger) — réutilisé par Daily pour éviter un 2ᵉ getUserMedia bloqué sur mobile. */
+  const [preJoinMediaStream, setPreJoinMediaStream] = useState<MediaStream | null>(null);
   const [chatInput, setChatInput] = useState('');
   const [showGiftPicker, setShowGiftPicker] = useState(false);
   const [showViewerList, setShowViewerList] = useState(false);
@@ -179,9 +182,9 @@ export function TikTokStyleArena({
   // Auto-join when user clicked "Rejoindre" AND dailyRoomUrl becomes available
   useEffect(() => {
     if (hasJoined && dailyRoomUrl && !isJoined && !isJoining) {
-      join();
+      void join(preJoinMediaStream);
     }
-  }, [hasJoined, dailyRoomUrl, isJoined, isJoining, join]);
+  }, [hasJoined, dailyRoomUrl, isJoined, isJoining, join, preJoinMediaStream]);
   const [flyingReactions, setFlyingReactions] = useState<Array<{ id: string; emoji: string; x: number }>>([]);
   const [showMenu, setShowMenu] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
@@ -642,24 +645,59 @@ export function TikTokStyleArena({
     previewEndsInSeconds?: number;
   };
   const [serverAccess, setServerAccess] = useState<ServerAccessPayload | null>(null);
+  /** True après la 1ʳᵉ tentative GET /api/beef/access (évite paywall + leave avant réponse serveur). */
+  const [viewerAccessReady, setViewerAccessReady] = useState(false);
+  /** True si le GET a échoué — ne pas traiter comme « pas encore résolu » + clientLocked (sinon leave() et blocage room). */
+  const [viewerAccessFetchFailed, setViewerAccessFetchFailed] = useState(false);
 
   const fetchViewerAccess = useCallback(async () => {
     if (!isViewer) return;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`/api/beef/access?beefId=${encodeURIComponent(roomId)}`, {
-        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
-      });
-      const data = await res.json();
-      if (!res.ok) return;
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const { data } = await supabase.auth.refreshSession();
+        session = data.session ?? null;
+      }
+
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      let res = await fetch(`/api/beef/access?beefId=${encodeURIComponent(roomId)}`, { headers });
+
+      if (res.status === 401) {
+        await supabase.auth.refreshSession();
+        const { data: { session: s2 } } = await supabase.auth.getSession();
+        const h: Record<string, string> = {};
+        if (s2?.access_token) h.Authorization = `Bearer ${s2.access_token}`;
+        res = await fetch(`/api/beef/access?beefId=${encodeURIComponent(roomId)}`, { headers: h });
+      }
+
+      const data = (await res.json()) as ServerAccessPayload & { error?: string };
+      if (!res.ok) {
+        setServerAccess(null);
+        setViewerAccessFetchFailed(true);
+        return;
+      }
+      setViewerAccessFetchFailed(false);
       setServerAccess(data);
       if (typeof data.continuationPrice === 'number') {
         setLiveContinuationPrice(data.continuationPrice);
       }
     } catch {
-      /* ignore */
+      setServerAccess(null);
+      setViewerAccessFetchFailed(true);
+    } finally {
+      setViewerAccessReady(true);
     }
   }, [isViewer, roomId]);
+
+  useEffect(() => {
+    setViewerAccessReady(false);
+    setViewerAccessFetchFailed(false);
+    setServerAccess(null);
+  }, [roomId]);
 
   useEffect(() => {
     const ch = supabase
@@ -710,7 +748,15 @@ export function TikTokStyleArena({
       liveContinuationPrice,
       hasPaidContinuation
     );
-  const previewPaywall = serverLocked || (!accessResolved && clientLocked);
+  /**
+   * Si le GET access échoue, accessResolved reste false : l’ancienne formule
+   * (!accessResolved && clientLocked) forçait le paywall et leave() — room inaccessible.
+   * En cas d’échec API, on ne verrouille pas sur la seule logique client.
+   */
+  const previewPaywall =
+    viewerAccessReady &&
+    !viewerAccessFetchFailed &&
+    (serverLocked || (!accessResolved && clientLocked));
 
   const paywallLeaveRef = useRef(false);
   const [continuationLoading, setContinuationLoading] = useState(false);
@@ -1381,8 +1427,9 @@ export function TikTokStyleArena({
   }, [contextMenuMsg]);
 
 
-  // Join: mark as "ready to join" — the useEffect above triggers join() when dailyRoomUrl is ready
-  const handleJoin = () => {
+  // Join: enregistre le flux pré-acquis puis lance join() via l’effet ci-dessus
+  const handleJoin = (preAcquired: MediaStream | null) => {
+    setPreJoinMediaStream(preAcquired);
     setHasJoined(true);
   };
 

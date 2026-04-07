@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { updateUserBalance } from '@/lib/updateUserBalance';
+import { normalizeBeefId } from '@/lib/beef-id';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,6 +20,14 @@ async function getAuthUser(request: NextRequest) {
   return user;
 }
 
+function beefIdFromSearchParams(searchParams: URLSearchParams): string | null {
+  for (const key of ['beefId', 'beef_id', 'beefid']) {
+    const v = searchParams.get(key);
+    if (v?.trim()) return v.trim();
+  }
+  return null;
+}
+
 /** Vérité serveur : anti-fraude (rechargement / onglet / manipulation client). */
 export async function GET(request: NextRequest) {
   try {
@@ -27,9 +36,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const beefId = new URL(request.url).searchParams.get('beefId');
+    const rawId = beefIdFromSearchParams(new URL(request.url).searchParams);
+    const beefId = rawId ? normalizeBeefId(rawId) : null;
     if (!beefId) {
-      return NextResponse.json({ error: 'beefId requis' }, { status: 400 });
+      return NextResponse.json({ error: 'beefId invalide ou requis' }, { status: 400 });
     }
 
     const { data: beef, error: beefErr } = await supabaseAdmin
@@ -38,7 +48,13 @@ export async function GET(request: NextRequest) {
       .eq('id', beefId)
       .single();
 
-    if (beefErr || !beef) {
+    if (beefErr) {
+      if (beefErr.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Erreur lecture beef' }, { status: 500 });
+    }
+    if (!beef) {
       return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
     }
 
@@ -159,9 +175,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const { beefId } = await request.json();
+    const body = await request.json();
+    const rawPostId = typeof body?.beefId === 'string' ? body.beefId : '';
+    const beefId = normalizeBeefId(rawPostId);
     if (!beefId) {
-      return NextResponse.json({ error: 'beefId requis' }, { status: 400 });
+      return NextResponse.json({ error: 'beefId invalide ou requis' }, { status: 400 });
     }
 
     const { data: beef, error: beefErr } = await supabaseAdmin
@@ -170,7 +188,13 @@ export async function POST(request: NextRequest) {
       .eq('id', beefId)
       .single();
 
-    if (beefErr || !beef) {
+    if (beefErr) {
+      if (beefErr.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Erreur lecture beef' }, { status: 500 });
+    }
+    if (!beef) {
       return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
     }
 

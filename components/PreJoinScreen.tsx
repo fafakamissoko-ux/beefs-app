@@ -5,12 +5,15 @@ import { Mic, MicOff, Video, VideoOff, ChevronDown } from 'lucide-react';
 
 interface PreJoinScreenProps {
   userName: string;
-  onJoin: () => void;
+  /** Flux déjà autorisé par l’utilisateur — transmis à Daily pour éviter un 2ᵉ getUserMedia sans geste (iOS / Brave). */
+  onJoin: (preAcquiredMedia: MediaStream | null) => void;
   viewerMode?: boolean;
 }
 
 export function PreJoinScreen({ userName, onJoin, viewerMode = false }: PreJoinScreenProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  /** True si le MediaStream a été passé à Daily — ne pas stopper les pistes au démontage. */
+  const mediaHandedOffRef = useRef(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [camEnabled, setCamEnabled] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
@@ -77,8 +80,10 @@ export function PreJoinScreen({ userName, onJoin, viewerMode = false }: PreJoinS
       startPreview();
     }
     return () => {
-      streamRef.current?.getTracks().forEach(t => t.stop());
       cancelAnimationFrame(animFrameRef.current);
+      if (!mediaHandedOffRef.current) {
+        streamRef.current?.getTracks().forEach(t => t.stop());
+      }
     };
   }, [viewerMode]);
 
@@ -103,12 +108,12 @@ export function PreJoinScreen({ userName, onJoin, viewerMode = false }: PreJoinS
   };
 
   const handleJoin = () => {
-    // Stop ALL tracks and release camera BEFORE Daily.co tries to acquire it
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    stream?.getTracks().forEach(t => t.stop());
-    if (videoRef.current) videoRef.current.srcObject = null;
+    mediaHandedOffRef.current = true;
+    const acquired = streamRef.current ?? stream;
     cancelAnimationFrame(animFrameRef.current);
-    onJoin();
+    if (videoRef.current) videoRef.current.srcObject = null;
+    /** Ne pas arrêter les pistes ici : Daily réutilise le même MediaStream (évite getUserMedia après await token). */
+    onJoin(acquired);
   };
 
   if (viewerMode) {
@@ -123,7 +128,8 @@ export function PreJoinScreen({ userName, onJoin, viewerMode = false }: PreJoinS
             <p className="text-gray-400 text-sm mt-2">Tu pourras regarder le beef, commenter, voter et envoyer des reactions</p>
           </div>
           <button
-            onClick={onJoin}
+            type="button"
+            onClick={() => onJoin(null)}
             className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-black text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/30 active:scale-95"
           >
             👁️ Regarder le Beef

@@ -127,9 +127,9 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
     setTimeout(() => setSuggestedTags([]), 150);
   };
 
-  // Handle tag input keydown
-  const handleTagKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+  // Handle tag input keydown — Entrée ou Espace valide le tag courant
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       if (tagInput.trim()) {
         addTag(tagInput);
@@ -424,7 +424,9 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                 )}
 
               <p className="text-gray-500 text-xs mt-2">
-                {beefData.tags.length}/10 tags{suggestedTags[0] && tagInput ? ' · Tab pour accepter' : ''}
+                {beefData.tags.length}/10 tags
+                {suggestedTags[0] && tagInput ? ' · Tab pour l’auto-complétion' : ''}
+                {' · Entrée ou Espace pour valider le mot'}
               </p>
               </div>{/* closes relative */}
             </div>{/* closes tag section */}

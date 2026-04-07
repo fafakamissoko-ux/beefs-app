@@ -69,6 +69,30 @@ export default function PublicProfilePage() {
     loadProfile();
   }, [username]);
 
+  /** Ancres #beefs / #followers / #following depuis l’aperçu profil ou liens directs */
+  useEffect(() => {
+    if (!profile) return;
+
+    const syncFromHash = () => {
+      if (typeof window === 'undefined') return;
+      const raw = window.location.hash.slice(1);
+      if (raw === 'followers') {
+        setShowFollowModal('followers');
+      } else if (raw === 'following') {
+        setShowFollowModal('following');
+      }
+      if (raw === 'beefs' || raw === 'mediations') {
+        requestAnimationFrame(() => {
+          document.getElementById('profile-section-beefs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+    };
+
+    syncFromHash();
+    window.addEventListener('hashchange', syncFromHash);
+    return () => window.removeEventListener('hashchange', syncFromHash);
+  }, [profile?.id]);
+
   const loadProfile = async () => {
     setLoading(true);
     try {
@@ -364,7 +388,10 @@ export default function PublicProfilePage() {
         </div>
 
         {/* Beefs List */}
-        <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl border border-gray-700 p-6">
+        <div
+          id="profile-section-beefs"
+          className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl border border-gray-700 p-6 scroll-mt-24"
+        >
           <h2 className="text-2xl font-black text-white mb-6 flex items-center gap-2">
             <Flame className="w-6 h-6 text-brand-400" />
             Beefs de {profile.display_name}

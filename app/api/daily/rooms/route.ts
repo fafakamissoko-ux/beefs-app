@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { beefDailyRoomName } from '@/lib/beef-daily-room';
 import { userMayActOnBeef } from '@/lib/api/beef-access-context';
+import { normalizeBeefId } from '@/lib/beef-id';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,13 +30,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const beefId = typeof body?.beefId === 'string' ? body.beefId.trim() : '';
+    const beefId = typeof body?.beefId === 'string' ? normalizeBeefId(body.beefId) : null;
     const { privacy, maxParticipants } = body;
     /** Salles beef : private par défaut pour forcer un meeting token (join authentifié). */
     const effectivePrivacy = privacy ?? 'private';
 
     if (!beefId) {
-      return NextResponse.json({ error: 'beefId requis' }, { status: 400 });
+      return NextResponse.json({ error: 'beefId invalide ou requis' }, { status: 400 });
     }
 
     const expectedName = beefDailyRoomName(beefId);
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const roomName = searchParams.get('name');
-    const beefId = searchParams.get('beefId')?.trim() || '';
+    const beefId = normalizeBeefId(searchParams.get('beefId')?.trim() || '');
 
     if (!roomName || !beefId) {
       return NextResponse.json(
@@ -174,7 +175,7 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const roomName = searchParams.get('name');
-    const beefId = searchParams.get('beefId')?.trim() || '';
+    const beefId = normalizeBeefId(searchParams.get('beefId')?.trim() || '');
 
     if (!roomName || !beefId) {
       return NextResponse.json(

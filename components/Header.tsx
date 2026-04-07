@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, Home, Flame, Bell, User, Settings as SettingsIcon, MessageCircle, LogOut, Mail, ChevronDown, Plus, Shield, Coins } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,6 +40,7 @@ export function Header() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const pathname = usePathname();
+  const router = useRouter();
   const { user, userRole, signOut } = useAuth();
   const { toast } = useToast();
 
@@ -47,6 +48,16 @@ export function Header() {
     setUserMenuOpen(false);
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  /** Retire `?from=` de la barre d’adresse (info de navigation interne, pas la page courante). */
+  useEffect(() => {
+    if (typeof window === 'undefined' || !pathname) return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('from')) return;
+    params.delete('from');
+    const q = params.toString();
+    router.replace(`${pathname}${q ? `?${q}` : ''}${window.location.hash}`, { scroll: false });
+  }, [pathname, router]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -146,6 +157,11 @@ export function Header() {
   ];
 
   const isActive = (href: string) => {
+    if (!pathname) return false;
+    /** Sur les pages profil, aucun onglet principal (Accueil, Messages, …) ne doit rester « actif ». */
+    if (pathname === '/profile' || pathname.startsWith('/profile/')) {
+      return false;
+    }
     if (href === '/feed') return pathname === '/feed' || pathname === '/';
     if (href === '/buy-points') return pathname === '/buy-points';
     return pathname.startsWith(href);

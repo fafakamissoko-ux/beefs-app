@@ -87,6 +87,8 @@ export default function ProfileContent() {
   const [uploading, setUploading] = useState(false);
   const [selectedResolutionFilter, setSelectedResolutionFilter] = useState<string | null>(null);
   const [publicPreviewOpen, setPublicPreviewOpen] = useState(false);
+  /** Raccourcis cliquables sur les stats (profil + modale Aperçu) */
+  const [statsLinksEnabled, setStatsLinksEnabled] = useState(true);
 
   // Withdrawal state — amounts stored in EUROS for clarity
   const [withdrawalStep, setWithdrawalStep] = useState<'summary' | 'form' | 'confirm' | 'success'>('summary');
@@ -336,7 +338,57 @@ export default function ProfileContent() {
       .then(({ data }) => setWithdrawalHistory(data || []));
   }, [activeTab, user]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab === 'debates' || tab === 'stats' || tab === 'gains') {
+      setActiveTab(tab);
+    }
+  }, []);
+
   const closePublicPreview = useCallback(() => setPublicPreviewOpen(false), []);
+
+  const goPreviewParticipations = useCallback(() => {
+    closePublicPreview();
+    router.push('/profile?tab=debates');
+  }, [closePublicPreview, router]);
+
+  const goPreviewMediations = useCallback(() => {
+    if (!profile) return;
+    closePublicPreview();
+    router.push(`/profile/${encodeURIComponent(profile.username)}#beefs`);
+  }, [closePublicPreview, profile, router]);
+
+  const goPreviewFollowers = useCallback(() => {
+    if (!profile) return;
+    closePublicPreview();
+    router.push(`/profile/${encodeURIComponent(profile.username)}#followers`);
+  }, [closePublicPreview, profile, router]);
+
+  const goPreviewFollowing = useCallback(() => {
+    if (!profile) return;
+    closePublicPreview();
+    router.push(`/profile/${encodeURIComponent(profile.username)}#following`);
+  }, [closePublicPreview, profile, router]);
+
+  const goStatsParticipations = useCallback(() => {
+    setActiveTab('debates');
+  }, []);
+
+  const goStatsMediations = useCallback(() => {
+    if (!profile) return;
+    router.push(`/profile/${encodeURIComponent(profile.username)}#beefs`);
+  }, [profile, router]);
+
+  const goStatsFollowers = useCallback(() => {
+    if (!profile) return;
+    router.push(`/profile/${encodeURIComponent(profile.username)}#followers`);
+  }, [profile, router]);
+
+  const goStatsFollowing = useCallback(() => {
+    if (!profile) return;
+    router.push(`/profile/${encodeURIComponent(profile.username)}#following`);
+  }, [profile, router]);
 
   useEffect(() => {
     if (!publicPreviewOpen) return;
@@ -647,25 +699,75 @@ export default function ProfileContent() {
               </div>
             </div>
 
-            {/* Stats Row */}
-            <div className="flex gap-6 mb-4 flex-wrap">
-              <div>
-                <span className="text-2xl font-black text-white">{stats.beefs_participated}</span>
-                <span className="text-gray-400 text-sm ml-1">Participations</span>
-              </div>
-              <div>
-                <span className="text-2xl font-black text-white">{stats.beefs_hosted}</span>
-                <span className="text-gray-400 text-sm ml-1">Médiations</span>
-              </div>
-              <div>
-                <span className="text-2xl font-black text-white">{stats.followers}</span>
-                <span className="text-gray-400 text-sm ml-1">Abonnés</span>
-              </div>
-              <div>
-                <span className="text-2xl font-black text-white">{stats.following}</span>
-                <span className="text-gray-400 text-sm ml-1">Abonnements</span>
-              </div>
+            {/* Stats — raccourcis optionnels (case ci‑dessous) */}
+            <div className="flex gap-6 mb-2 flex-wrap">
+              {statsLinksEnabled ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={goStatsParticipations}
+                    className="text-left rounded-xl -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                  >
+                    <span className="text-2xl font-black text-white">{stats.beefs_participated}</span>
+                    <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Participations</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goStatsMediations}
+                    className="text-left rounded-xl -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                  >
+                    <span className="text-2xl font-black text-white">{stats.beefs_hosted}</span>
+                    <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Médiations</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goStatsFollowers}
+                    className="text-left rounded-xl -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                  >
+                    <span className="text-2xl font-black text-white">{stats.followers}</span>
+                    <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Abonnés</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goStatsFollowing}
+                    className="text-left rounded-xl -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                  >
+                    <span className="text-2xl font-black text-white">{stats.following}</span>
+                    <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Abonnements</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <span className="text-2xl font-black text-white">{stats.beefs_participated}</span>
+                    <span className="text-gray-400 text-sm ml-1">Participations</span>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-black text-white">{stats.beefs_hosted}</span>
+                    <span className="text-gray-400 text-sm ml-1">Médiations</span>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-black text-white">{stats.followers}</span>
+                    <span className="text-gray-400 text-sm ml-1">Abonnés</span>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-black text-white">{stats.following}</span>
+                    <span className="text-gray-400 text-sm ml-1">Abonnements</span>
+                  </div>
+                </>
+              )}
             </div>
+            <label className="flex items-start gap-2 text-xs text-gray-500 mb-4 cursor-pointer select-none max-w-md">
+              <input
+                type="checkbox"
+                checked={statsLinksEnabled}
+                onChange={(e) => setStatsLinksEnabled(e.target.checked)}
+                className="mt-0.5 rounded border-white/20 bg-transparent shrink-0"
+              />
+              <span>
+                Activer les raccourcis sur Participations, Médiations, Abonnés et Abonnements (même réglage dans la modale Aperçu).
+              </span>
+            </label>
 
             {/* Beefs récents (participant ou médiateur) */}
             {recentBeefs.length > 0 && (
@@ -1394,16 +1496,27 @@ export default function ProfileContent() {
                 type="button"
                 id="profile-preview-close"
                 onClick={closePublicPreview}
-                className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10"
+                className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 touch-manipulation"
                 aria-label="Fermer l’aperçu"
               >
-                <X className="w-5 h-5" aria-hidden />
+                <X className="w-6 h-6 sm:w-5 sm:h-5" aria-hidden />
               </button>
             </div>
             <div className="flex-1 min-h-0 p-4 overflow-y-auto max-h-[min(78vh,760px)]">
               <p className="text-gray-500 text-xs mb-4">
-                Extrait du profil tel qu&apos;il est vu par les autres (sans boutons d&apos;édition).
+                Extrait du profil tel qu&apos;il est vu par les autres (sans boutons d&apos;édition). Les chiffres ci‑dessous sont des raccourcis vers tes participations, tes médiations et tes abonnés — décoche pour un aperçu statique uniquement.
               </p>
+              <label className="flex items-start gap-2 text-xs text-gray-400 mb-4 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={statsLinksEnabled}
+                  onChange={(e) => setStatsLinksEnabled(e.target.checked)}
+                  className="mt-0.5 rounded border-white/20 bg-transparent"
+                />
+                <span>
+                  Même case que sur le profil : liens cliquables sur les stats (décocher = lecture seule dans cet aperçu).
+                </span>
+              </label>
               <div className="rounded-2xl border border-white/10 overflow-hidden bg-black/50">
                 <div
                   className="h-28 bg-cover bg-center"
@@ -1432,18 +1545,61 @@ export default function ProfileContent() {
                     <p className="text-gray-300 text-sm mt-3 whitespace-pre-wrap line-clamp-6">{profile.bio}</p>
                   ) : null}
                   <div className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-sm">
-                    <span>
-                      <span className="text-white font-black">{stats.beefs_participated}</span>
-                      <span className="text-gray-500 ml-1">Participations</span>
-                    </span>
-                    <span>
-                      <span className="text-white font-black">{stats.beefs_hosted}</span>
-                      <span className="text-gray-500 ml-1">Médiations</span>
-                    </span>
-                    <span>
-                      <span className="text-white font-black">{stats.followers}</span>
-                      <span className="text-gray-500 ml-1">Abonnés</span>
-                    </span>
+                    {statsLinksEnabled ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={goPreviewParticipations}
+                          className="text-left rounded-lg -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                        >
+                          <span className="text-white font-black">{stats.beefs_participated}</span>
+                          <span className="text-brand-400 ml-1 underline-offset-2 hover:underline">Participations</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={goPreviewMediations}
+                          className="text-left rounded-lg -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                        >
+                          <span className="text-white font-black">{stats.beefs_hosted}</span>
+                          <span className="text-brand-400 ml-1 underline-offset-2 hover:underline">Médiations</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={goPreviewFollowers}
+                          className="text-left rounded-lg -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                        >
+                          <span className="text-white font-black">{stats.followers}</span>
+                          <span className="text-brand-400 ml-1 underline-offset-2 hover:underline">Abonnés</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={goPreviewFollowing}
+                          className="text-left rounded-lg -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                        >
+                          <span className="text-white font-black">{stats.following}</span>
+                          <span className="text-brand-400 ml-1 underline-offset-2 hover:underline">Abonnements</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span>
+                          <span className="text-white font-black">{stats.beefs_participated}</span>
+                          <span className="text-gray-500 ml-1">Participations</span>
+                        </span>
+                        <span>
+                          <span className="text-white font-black">{stats.beefs_hosted}</span>
+                          <span className="text-gray-500 ml-1">Médiations</span>
+                        </span>
+                        <span>
+                          <span className="text-white font-black">{stats.followers}</span>
+                          <span className="text-gray-500 ml-1">Abonnés</span>
+                        </span>
+                        <span>
+                          <span className="text-white font-black">{stats.following}</span>
+                          <span className="text-gray-500 ml-1">Abonnements</span>
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

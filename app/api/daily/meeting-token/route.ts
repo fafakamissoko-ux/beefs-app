@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { beefDailyRoomName } from '@/lib/beef-daily-room';
+import { normalizeBeefId } from '@/lib/beef-id';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,9 +34,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const beefId = typeof body?.beefId === 'string' ? body.beefId.trim() : '';
+    const beefId = typeof body?.beefId === 'string' ? normalizeBeefId(body.beefId) : null;
     if (!beefId) {
-      return NextResponse.json({ error: 'beefId requis' }, { status: 400 });
+      return NextResponse.json({ error: 'beefId invalide ou requis' }, { status: 400 });
     }
 
     const roomName = beefDailyRoomName(beefId);
@@ -46,7 +47,13 @@ export async function POST(request: NextRequest) {
       .eq('id', beefId)
       .single();
 
-    if (beefErr || !beef) {
+    if (beefErr) {
+      if (beefErr.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
+      }
+      return NextResponse.json({ error: 'Erreur lecture beef' }, { status: 500 });
+    }
+    if (!beef) {
       return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
     }
 
