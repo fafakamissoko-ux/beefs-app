@@ -19,6 +19,7 @@ import {
 } from '@/lib/profile-stats-shortcuts';
 import { mediationCategoryForBeef } from '@/lib/mediation-resolution';
 import { StatShortcutToggles } from '@/components/StatShortcutToggles';
+import { MediationBeefEditorPanel } from '@/components/MediationBeefEditorPanel';
 
 interface UserProfile {
   id: string;
@@ -58,6 +59,7 @@ interface Beef {
   description?: string;
   status: 'live' | 'ended' | 'replay' | 'scheduled' | string;
   resolution_status?: string;
+  mediation_summary?: string | null;
   tags?: string[];
   scheduled_at?: string;
   created_at: string;
@@ -354,6 +356,25 @@ export default function ProfileContent() {
   }, []);
 
   const closePublicPreview = useCallback(() => setPublicPreviewOpen(false), []);
+
+  const applyMediationBeefPatch = useCallback(
+    (beefId: string, patch: { resolution_status?: string; mediation_summary?: string | null }) => {
+      setBeefs((prev) => prev.map((b) => (b.id === beefId ? { ...b, ...patch } : b)));
+      setRecentBeefs((prev) => prev.map((b) => (b.id === beefId ? { ...b, ...patch } : b)));
+      setMediationBeefs((prev) => {
+        const next = prev.map((b) => (b.id === beefId ? { ...b, ...patch } : b));
+        setStats((s) => ({
+          ...s,
+          beefs_resolved: next.filter((b) => mediationCategoryForBeef(b) === 'resolved').length,
+          beefs_unresolved: next.filter((b) => mediationCategoryForBeef(b) === 'unresolved').length,
+          beefs_in_progress: next.filter((b) => mediationCategoryForBeef(b) === 'in_progress').length,
+          beefs_abandoned: next.filter((b) => mediationCategoryForBeef(b) === 'abandoned').length,
+        }));
+        return next;
+      });
+    },
+    [],
+  );
 
   const persistStatsShortcut = useCallback(
     (key: keyof StatsShortcuts, value: boolean) => {
@@ -1079,21 +1100,30 @@ export default function ProfileContent() {
               {beefs.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
                   {beefs.map((beef, idx) => (
-                    <BeefCard
-                      key={beef.id}
-                      id={beef.id}
-                      index={idx}
-                      title={beef.title}
-                      host_name={beef.card_host_name || profile?.display_name || profile?.username || 'Utilisateur'}
-                      status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
-                      created_at={beef.created_at}
-                      viewer_count={beef.viewer_count || 0}
-                      tags={beef.tags}
-                      scheduled_at={beef.scheduled_at}
-                      is_premium={beef.is_premium}
-                      price={beef.price}
-                      onClick={() => router.push(`/arena/${beef.id}`)}
-                    />
+                    <div key={beef.id} className="space-y-2">
+                      <BeefCard
+                        id={beef.id}
+                        index={idx}
+                        title={beef.title}
+                        host_name={beef.card_host_name || profile?.display_name || profile?.username || 'Utilisateur'}
+                        status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
+                        created_at={beef.created_at}
+                        viewer_count={beef.viewer_count || 0}
+                        tags={beef.tags}
+                        scheduled_at={beef.scheduled_at}
+                        is_premium={beef.is_premium}
+                        price={beef.price}
+                        onClick={() => router.push(`/arena/${beef.id}`)}
+                      />
+                      {user && beef.mediator_id === user.id && (
+                        <MediationBeefEditorPanel
+                          beefId={beef.id}
+                          resolutionStatus={beef.resolution_status}
+                          mediationSummary={beef.mediation_summary ?? ''}
+                          onSaved={(patch) => applyMediationBeefPatch(beef.id, patch)}
+                        />
+                      )}
+                    </div>
                   ))}
                 </div>
               ) : (

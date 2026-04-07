@@ -14,6 +14,8 @@ import { AppBackButton } from '@/components/AppBackButton';
 import { hrefWithFrom } from '@/lib/navigation-return';
 import { useToast } from '@/components/Toast';
 import { type StatsShortcuts, mergeStatsShortcuts } from '@/lib/profile-stats-shortcuts';
+import { MediationSummaryPublic } from '@/components/MediationSummaryPublic';
+import { resolutionStatusLabel } from '@/lib/mediation-outcome-labels';
 
 interface UserProfile {
   id: string;
@@ -38,6 +40,8 @@ interface Beef {
   title: string;
   description?: string;
   status: 'live' | 'ended' | 'replay' | 'scheduled' | string;
+  resolution_status?: string | null;
+  mediation_summary?: string | null;
   tags?: string[];
   scheduled_at?: string;
   created_at: string;
@@ -555,21 +559,35 @@ export default function PublicProfilePage() {
           {beefs.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
               {beefs.map((beef, idx) => (
-                <BeefCard
-                  key={beef.id}
-                  id={beef.id}
-                  index={idx}
-                  title={beef.title}
-                  host_name={beef.host_name}
-                  status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
-                  created_at={beef.created_at}
-                  viewer_count={beef.viewer_count || 0}
-                  tags={beef.tags}
-                  scheduled_at={beef.scheduled_at}
-                  is_premium={beef.is_premium}
-                  price={beef.price}
-                  onClick={() => router.push(`/arena/${beef.id}`)}
-                />
+                <div key={beef.id} className="space-y-2">
+                  <BeefCard
+                    id={beef.id}
+                    index={idx}
+                    title={beef.title}
+                    host_name={beef.host_name}
+                    status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
+                    created_at={beef.created_at}
+                    viewer_count={beef.viewer_count || 0}
+                    tags={beef.tags}
+                    scheduled_at={beef.scheduled_at}
+                    is_premium={beef.is_premium}
+                    price={beef.price}
+                    onClick={() => router.push(`/arena/${beef.id}`)}
+                  />
+                  {(beef.resolution_status && beef.resolution_status !== 'in_progress') || beef.mediation_summary?.trim() ? (
+                    <div className="pl-1 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                      {beef.resolution_status && beef.resolution_status !== 'in_progress' && (
+                        <p className="text-[11px] text-gray-500">
+                          Issue de la médiation :{' '}
+                          <span className="text-gray-400 font-medium">
+                            {resolutionStatusLabel(beef.resolution_status)}
+                          </span>
+                        </p>
+                      )}
+                      <MediationSummaryPublic text={beef.mediation_summary ?? ''} />
+                    </div>
+                  ) : null}
+                </div>
               ))}
             </div>
           ) : (
