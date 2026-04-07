@@ -13,6 +13,7 @@ import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { AppBackButton } from '@/components/AppBackButton';
 import { hrefWithFrom } from '@/lib/navigation-return';
 import { useToast } from '@/components/Toast';
+import { type StatsShortcuts, mergeStatsShortcuts } from '@/lib/profile-stats-shortcuts';
 
 interface UserProfile {
   id: string;
@@ -26,6 +27,7 @@ interface UserProfile {
 }
 
 interface UserStats {
+  beefs_participated: number;
   beefs_hosted: number;
   followers: number;
   following: number;
@@ -54,8 +56,15 @@ export default function PublicProfilePage() {
   const username = params.username as string;
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [stats, setStats] = useState<UserStats>({ beefs_hosted: 0, followers: 0, following: 0 });
+  const [stats, setStats] = useState<UserStats>({
+    beefs_participated: 0,
+    beefs_hosted: 0,
+    followers: 0,
+    following: 0,
+  });
+  const [statsShortcuts, setStatsShortcuts] = useState<StatsShortcuts>(() => mergeStatsShortcuts(undefined));
   const [beefs, setBeefs] = useState<Beef[]>([]);
+  const [participantBeefs, setParticipantBeefs] = useState<Beef[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
@@ -86,6 +95,11 @@ export default function PublicProfilePage() {
           document.getElementById('profile-section-beefs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
       }
+      if (raw === 'participations') {
+        requestAnimationFrame(() => {
+          document.getElementById('profile-section-participations')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
     };
 
     syncFromHash();
@@ -110,6 +124,12 @@ export default function PublicProfilePage() {
 
       setProfile(profileData);
 
+      setStatsShortcuts(
+        mergeStatsShortcuts(
+          (profileData as { premium_settings?: { statsShortcuts?: unknown } }).premium_settings?.statsShortcuts,
+        ),
+      );
+
       // Load stats
       const { data: followersData } = await supabase
         .from('followers')
@@ -126,7 +146,15 @@ export default function PublicProfilePage() {
         .select('id', { count: 'exact' })
         .eq('mediator_id', profileData.id);
 
+      const { data: partRows } = await supabase
+        .from('beef_participants')
+        .select('beef_id')
+        .eq('user_id', profileData.id);
+
+      const beefsParticipated = new Set((partRows || []).map((r: { beef_id: string }) => r.beef_id)).size;
+
       setStats({
+        beefs_participated: beefsParticipated,
         beefs_hosted: beefsData?.length || 0,
         followers: followersData?.length || 0,
         following: followingData?.length || 0,
@@ -146,6 +174,51 @@ export default function PublicProfilePage() {
           host_name: profileData.display_name || profileData.username,
         })));
       }
+
+      const { data: partWithBeefs } = await supabase
+        .from('beef_participants')
+        .select('beef_id, beefs(*)')
+        .eq('user_id', profileData.id);
+
+      const pbRaw: Beef[] = [];
+      const seenPb = new Set<string>();
+      for (const row of partWithBeefs || []) {
+        const raw = row.beefs as Beef | Beef[] | null | undefined;
+        const b = Array.isArray(raw) ? raw[0] : raw;
+        if (!b?.id || seenPb.has(b.id)) continue;
+        seenPb.add(b.id);
+        pbRaw.push(b as Beef);
+      }
+      pbRaw.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const medIds = [
+        ...new Set(
+          pbRaw
+            .map((b) => (b as { mediator_id?: string }).mediator_id)
+            .filter((id): id is string => !!id && id !== profileData.id),
+        ),
+      ];
+      let medNameById: Record<string, string> = {};
+      if (medIds.length > 0) {
+        const { data: mus } = await supabase
+          .from('users')
+          .select('id, display_name, username')
+          .in('id', medIds);
+        medNameById = Object.fromEntries(
+          (mus || []).map((u: { id: string; display_name?: string; username?: string }) => [
+            u.id,
+            u.display_name || u.username || 'Médiateur',
+          ]),
+        );
+      }
+      const selfName = profileData.display_name || profileData.username;
+      setParticipantBeefs(
+        pbRaw.slice(0, 12).map((b) => {
+          const mid = (b as { mediator_id?: string }).mediator_id;
+          const host_name =
+            !mid || mid === profileData.id ? selfName : medNameById[mid] || 'Médiateur';
+          return { ...b, host_name };
+        }),
+      );
 
       // Check if current user follows this profile
       if (user && user.id !== profileData.id) {
@@ -345,28 +418,78 @@ export default function PublicProfilePage() {
               <p className="text-gray-300 mb-4">{profile.bio}</p>
             )}
 
-            {/* Stats Row */}
+            {/* Stats Row — même logique que le profil éditable (premium_settings.statsShortcuts) */}
             <div className="flex gap-6 mb-4 flex-wrap">
-              <div>
-                <span className="text-2xl font-black text-white">{stats.beefs_hosted}</span>
-                <span className="text-gray-400 text-sm ml-1">Beefs</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowFollowModal('followers')}
-                className="hover:opacity-80 transition-opacity"
-              >
-                <span className="text-2xl font-black text-white">{stats.followers}</span>
-                <span className="text-gray-400 text-sm ml-1">Abonnés</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowFollowModal('following')}
-                className="hover:opacity-80 transition-opacity"
-              >
-                <span className="text-2xl font-black text-white">{stats.following}</span>
-                <span className="text-gray-400 text-sm ml-1">Abonnements</span>
-              </button>
+              {statsShortcuts.participations ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    router.push(`/profile/${encodeURIComponent(username)}#participations`);
+                    requestAnimationFrame(() => {
+                      document.getElementById('profile-section-participations')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                  }}
+                  className="text-left hover:opacity-90 transition-opacity"
+                >
+                  <span className="text-2xl font-black text-white">{stats.beefs_participated}</span>
+                  <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Participations</span>
+                </button>
+              ) : (
+                <div>
+                  <span className="text-2xl font-black text-white">{stats.beefs_participated}</span>
+                  <span className="text-gray-400 text-sm ml-1">Participations</span>
+                </div>
+              )}
+              {statsShortcuts.mediations ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    router.push(`/profile/${encodeURIComponent(username)}#beefs`);
+                    requestAnimationFrame(() => {
+                      document.getElementById('profile-section-beefs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+                  }}
+                  className="text-left hover:opacity-90 transition-opacity"
+                >
+                  <span className="text-2xl font-black text-white">{stats.beefs_hosted}</span>
+                  <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Médiations</span>
+                </button>
+              ) : (
+                <div>
+                  <span className="text-2xl font-black text-white">{stats.beefs_hosted}</span>
+                  <span className="text-gray-400 text-sm ml-1">Médiations</span>
+                </div>
+              )}
+              {statsShortcuts.followers ? (
+                <button
+                  type="button"
+                  onClick={() => setShowFollowModal('followers')}
+                  className="hover:opacity-80 transition-opacity"
+                >
+                  <span className="text-2xl font-black text-white">{stats.followers}</span>
+                  <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Abonnés</span>
+                </button>
+              ) : (
+                <div>
+                  <span className="text-2xl font-black text-white">{stats.followers}</span>
+                  <span className="text-gray-400 text-sm ml-1">Abonnés</span>
+                </div>
+              )}
+              {statsShortcuts.following ? (
+                <button
+                  type="button"
+                  onClick={() => setShowFollowModal('following')}
+                  className="hover:opacity-80 transition-opacity"
+                >
+                  <span className="text-2xl font-black text-white">{stats.following}</span>
+                  <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Abonnements</span>
+                </button>
+              ) : (
+                <div>
+                  <span className="text-2xl font-black text-white">{stats.following}</span>
+                  <span className="text-gray-400 text-sm ml-1">Abonnements</span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Flame className="w-5 h-5 text-brand-400" />
                 <span className="text-2xl font-black text-white">{profile.points}</span>
@@ -386,6 +509,38 @@ export default function PublicProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Participations (autres beefs que le profil médié) */}
+        {participantBeefs.length > 0 && (
+          <div
+            id="profile-section-participations"
+            className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl border border-gray-700 p-6 scroll-mt-24 mb-6"
+          >
+            <h2 className="text-2xl font-black text-white mb-6 flex items-center gap-2">
+              <Flame className="w-6 h-6 text-orange-400" />
+              Participations
+            </h2>
+            <div className="grid grid-cols-1 gap-4">
+              {participantBeefs.map((beef, idx) => (
+                <BeefCard
+                  key={beef.id}
+                  id={beef.id}
+                  index={idx}
+                  title={beef.title}
+                  host_name={beef.host_name}
+                  status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
+                  created_at={beef.created_at}
+                  viewer_count={beef.viewer_count || 0}
+                  tags={beef.tags}
+                  scheduled_at={beef.scheduled_at}
+                  is_premium={beef.is_premium}
+                  price={beef.price}
+                  onClick={() => router.push(`/arena/${beef.id}`)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Beefs List */}
         <div

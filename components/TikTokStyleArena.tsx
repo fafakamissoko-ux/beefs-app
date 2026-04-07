@@ -17,6 +17,7 @@ import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
 import { DEFAULT_FREE_PREVIEW_MINUTES, viewerNeedsContinuationPay } from '@/lib/beef-preview';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
+import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import {
   buildParticipantAliasSet,
   isValidArenaUserId,
@@ -793,7 +794,7 @@ export function TikTokStyleArena({
         toast(msg, 'error', {
           action: {
             label: 'Recharger des points',
-            onClick: () => router.push('/buy-points'),
+            onClick: () => openBuyPointsPage(router),
           },
         });
       } else {
@@ -1539,7 +1540,7 @@ export function TikTokStyleArena({
                 <>
                   <button
                     type="button"
-                    onClick={() => router.push('/buy-points')}
+                    onClick={() => openBuyPointsPage(router)}
                     className="w-full py-3.5 rounded-xl brand-gradient text-black font-bold text-sm"
                   >
                     Recharger des points
@@ -2555,7 +2556,7 @@ export function TikTokStyleArena({
                             toast(`Points insuffisants — il te manque ${gift.cost - userPoints} pts (solde ${userPoints})`, 'error', {
                               action: {
                                 label: 'Recharger',
-                                onClick: () => router.push('/buy-points'),
+                                onClick: () => openBuyPointsPage(router),
                               },
                             });
                             return;
@@ -2584,7 +2585,7 @@ export function TikTokStyleArena({
                             const m = err?.message || 'Erreur lors de l\'envoi';
                             if (typeof m === 'string' && m.toLowerCase().includes('insuffisant')) {
                               toast(m, 'error', {
-                                action: { label: 'Recharger', onClick: () => router.push('/buy-points') },
+                                action: { label: 'Recharger', onClick: () => openBuyPointsPage(router) },
                               });
                             } else {
                               toast(m, 'error');
