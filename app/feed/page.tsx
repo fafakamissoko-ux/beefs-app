@@ -322,14 +322,6 @@ export default function FeedPage() {
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
       <div className="mx-auto max-w-6xl px-4 py-6">
-        <div className="mb-6 flex flex-col gap-1 border border-white/[0.08] bg-black/30 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white/45">
-            Station · discovery grid
-          </p>
-          <p className="font-mono text-xs text-cobalt-400/90">
-            Flux opérationnel / filtrage actif
-          </p>
-        </div>
         {/* Active beef banner */}
         {activeBeef && (
           <motion.div

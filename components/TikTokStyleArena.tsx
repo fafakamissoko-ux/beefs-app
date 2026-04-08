@@ -15,8 +15,8 @@ import { InviteParticipantModal } from './InviteParticipantModal';
 import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
 import { DEFAULT_FREE_PREVIEW_MINUTES, viewerNeedsContinuationPay } from '@/lib/beef-preview';
-import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
+import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
 import {
   buildParticipantAliasSet,
   isValidArenaUserId,
@@ -36,7 +36,7 @@ import { useArenaPulseVoicesStore } from '@/lib/stores/arenaPulseVoicesStore';
 import { useArenaVerdictStore } from '@/lib/stores/arenaVerdictStore';
 import { VerdictConfettiBurst, RematchVerdictOverlay } from './VerdictEffects';
 import { playRematchThunderSfx } from '@/lib/playVerdictSfx';
-import { MediatorSidebar } from './MediatorSidebar';
+import { MediatorSidebar, type MediatorRemoteRow } from './MediatorSidebar';
 
 const MAX_BEEF_DURATION = 60 * 60; // 60 minutes in seconds
 
@@ -157,7 +157,8 @@ export function TikTokStyleArena({
   /** MediaStream du pré-joint (médiateur / challenger) — réutilisé par Daily pour éviter un 2ᵉ getUserMedia bloqué sur mobile. */
   const [preJoinMediaStream, setPreJoinMediaStream] = useState<MediaStream | null>(null);
   const [chatInput, setChatInput] = useState('');
-  const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
+  /** Chat en overlay bas-gauche (pas de sidebar) */
+  const [arenaChatOpen, setArenaChatOpen] = useState(true);
   const [mediatorSidebarOpen, setMediatorSidebarOpen] = useState(false);
   const [showGiftPicker, setShowGiftPicker] = useState(false);
   const [showViewerList, setShowViewerList] = useState(false);
@@ -228,15 +229,6 @@ export function TikTokStyleArena({
   const [showMenu, setShowMenu] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mq = window.matchMedia('(max-width: 639px)');
-    const sync = () => setModeratorPanelSlideFromBottom(mq.matches);
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, []);
-
   // Detect network loss for reconnection overlay
   useEffect(() => {
     const goOffline = () => { setIsOffline(true); toast('Connexion perdue — reconnexion...', 'error'); };
@@ -260,9 +252,6 @@ export function TikTokStyleArena({
     openBuyPointsPage(router);
   }, [router]);
 
-  const [showModeratorPanel, setShowModeratorPanel] = useState(false);
-  /** Panneau médiateur : bas sur mobile, tiroir à droite sur sm+ */
-  const [moderatorPanelSlideFromBottom, setModeratorPanelSlideFromBottom] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   
   // Participant roles from DB — maps Daily.co userNames to beef roles
@@ -430,7 +419,13 @@ export function TikTokStyleArena({
     }
   }, [remoteParticipants, timerActive, micEnabled, isHost]);
 
-  const startBeefTimer = async () => {
+  const adjustBeefTime = useCallback((deltaSec: number) => {
+    setBeefTimeRemaining((prev) => Math.max(0, Math.min(MAX_BEEF_DURATION, prev + deltaSec)));
+  }, []);
+
+  const [startingBeef, setStartingBeef] = useState(false);
+
+  const startBeefTimer = useCallback(async () => {
     setBeefTimeRemaining(MAX_BEEF_DURATION);
     beefWarning5Shown.current = false;
     beefWarning1Shown.current = false;
@@ -450,28 +445,7 @@ export function TikTokStyleArena({
       price,
       is_premium: false,
     }).eq('id', roomId);
-  };
-
-  const pauseBeefTimer = () => {
-    setTimerPaused(true);
-    toast('Chronomètre en pause', 'info');
-  };
-
-  const resumeBeefTimer = () => {
-    setTimerPaused(false);
-    toast('Chronomètre repris', 'info');
-  };
-
-  const stopBeefTimer = async () => {
-    setTimerActive(false);
-    setTimerPaused(false);
-    toast('Chronomètre arrêté', 'info');
-  };
-
-  const adjustBeefTime = useCallback((deltaSec: number) => {
-    if (!timerActive) return;
-    setBeefTimeRemaining((prev) => Math.max(0, Math.min(MAX_BEEF_DURATION, prev + deltaSec)));
-  }, [timerActive]);
+  }, [host.id, roomId, toast]);
 
   // Use refs for stats so endBeef captures the latest values without stale closures
   const statsRef = useRef({ beefTimeRemaining: MAX_BEEF_DURATION, liveViewerCount: 0, votesA: 0, votesB: 0, messagesCount: 0 });
@@ -548,17 +522,14 @@ export function TikTokStyleArena({
         setVerdictConfetti(true);
         window.setTimeout(() => setVerdictConfetti(false), 2200);
         window.setTimeout(() => void endBeef('Verdict : résolu'), 1600);
-        setShowModeratorPanel(false);
         return;
       }
       if (kind === 'closed') {
-        setShowModeratorPanel(false);
         void endBeef('Clos par le médiateur');
         return;
       }
       playRematchThunderSfx();
       setRematchSequence(true);
-      setShowModeratorPanel(false);
       await supabase
         .from('beefs')
         .update({ mediation_summary: 'Rematch demandé — Round 2 à planifier avec les challengers.' })
@@ -1075,14 +1046,26 @@ export function TikTokStyleArena({
     activeSpeakerPeerId === mediatorParticipant.sessionId &&
     mediatorParticipant.audioOn;
 
-  const remoteKickTargets = useMemo(() => {
+  const mediatorRemoteRows = useMemo((): MediatorRemoteRow[] => {
     if (!isHost || !dailyRoomUrl) return [];
-    const rows: { sessionId: string; label: string }[] = [];
+    const rows: MediatorRemoteRow[] = [];
     if (leftPanel?.sessionId) {
-      rows.push({ sessionId: leftPanel.sessionId, label: leftPanelName });
+      rows.push({
+        sessionId: leftPanel.sessionId,
+        label: leftPanelName,
+        slot: 'A',
+        debaterId: leftPanel.arenaUserId ?? null,
+        audioOn: leftPanel.audioOn,
+      });
     }
     if (rightPanel?.sessionId) {
-      rows.push({ sessionId: rightPanel.sessionId, label: rightPanelName });
+      rows.push({
+        sessionId: rightPanel.sessionId,
+        label: rightPanelName,
+        slot: 'B',
+        debaterId: rightPanel.arenaUserId ?? null,
+        audioOn: rightPanel.audioOn,
+      });
     }
     return rows;
   }, [isHost, dailyRoomUrl, leftPanel, rightPanel, leftPanelName, rightPanelName]);
@@ -1095,7 +1078,27 @@ export function TikTokStyleArena({
   const [timerRunning, setTimerRunning] = useState(false);
   const [inviteInput, setInviteInput] = useState('');
   const [showDebateTitle, setShowDebateTitle] = useState(true);
-  
+
+  const handleMediatorChallengerMute = useCallback(
+    (sessionId: string, debaterId: string | null, muted: boolean) => {
+      setRemoteParticipantAudio(sessionId, !muted);
+      if (debaterId) {
+        setDebaters((prev) =>
+          prev.map((d) => (d.id === debaterId ? { ...d, isMuted: muted } : d)),
+        );
+        channelRef.current
+          ?.send({
+            type: 'broadcast',
+            event: 'mediator_mute_challenger',
+            payload: { targetUserId: debaterId, muted },
+          })
+          .catch(() => {});
+      }
+      toast(muted ? 'Micro challenger coupé (Daily)' : 'Micro challenger réactivé (Daily)', 'info');
+    },
+    [setRemoteParticipantAudio, toast],
+  );
+
   // User profiles
   const [showProfile, setShowProfile] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
@@ -2604,16 +2607,6 @@ export function TikTokStyleArena({
                 >
                   <span className="text-white text-[11px] font-black">⚖️ {mediatorName}</span>
                 </button>
-                {isHost && (
-                  <button
-                    onClick={() => setShowModeratorPanel(!showModeratorPanel)}
-                    className="w-8 h-8 rounded-full bg-black/70 backdrop-blur-sm border border-white/20
-                      flex items-center justify-center hover:bg-white/10 transition-all text-white shadow"
-                    title="Contrôles du médiateur"
-                  >
-                    <span className="text-sm">🔧</span>
-                  </button>
-                )}
               </div>
               {/* Debate Title */}
               <div className="relative mt-1">
@@ -2844,7 +2837,7 @@ export function TikTokStyleArena({
         <>
           <button
             type="button"
-            className="fixed right-3 top-[calc(env(safe-area-inset-top)+3.75rem)] z-[46] flex h-11 w-11 items-center justify-center rounded-[2px] border border-ember-500/40 bg-[#08080a]/92 text-ember-300 shadow-lg backdrop-blur-md transition-colors hover:bg-ember-500/15 md:top-[calc(env(safe-area-inset-top)+3.5rem)]"
+            className="fixed left-3 top-[calc(env(safe-area-inset-top)+3.75rem)] z-[46] flex h-11 w-11 items-center justify-center rounded-[2px] border border-ember-500/40 bg-[#08080a]/92 text-ember-300 shadow-lg backdrop-blur-md transition-colors hover:bg-ember-500/15 md:top-[calc(env(safe-area-inset-top)+3.5rem)]"
             aria-expanded={mediatorSidebarOpen}
             aria-label={mediatorSidebarOpen ? 'Fermer la commande médiateur' : 'Ouvrir la commande médiateur'}
             onClick={() => setMediatorSidebarOpen((o) => !o)}
@@ -2854,213 +2847,177 @@ export function TikTokStyleArena({
           <MediatorSidebar
             open={mediatorSidebarOpen}
             onClose={() => setMediatorSidebarOpen(false)}
-            micEnabled={micEnabled}
-            camEnabled={camEnabled}
-            onToggleMic={toggleMic}
-            onToggleCam={toggleCam}
-            onOpenFullPanel={() => setShowModeratorPanel(true)}
-            debaters={debaters}
-            onToggleDebaterMute={toggleMute}
-            remoteKickTargets={remoteKickTargets}
+            timerActive={timerActive}
+            startingBeef={startingBeef}
+            onStartBeef={async () => {
+              setStartingBeef(true);
+              try {
+                await startBeefTimer();
+              } finally {
+                setStartingBeef(false);
+              }
+            }}
+            onVerdict={handleMediatorVerdict}
+            remoteRows={mediatorRemoteRows}
+            onSetChallengerMuted={handleMediatorChallengerMute}
             onEjectParticipant={(sid) => {
               ejectRemoteParticipant(sid);
               toast('Participant expulsé', 'info');
             }}
-            onForceMuteDaily={(sid) => {
-              setRemoteParticipantAudio(sid, false);
-              toast('Micro coupé (Daily)', 'info');
-            }}
-            timerActive={timerActive}
             onAdjustTime={adjustBeefTime}
           />
         </>
       )}
 
-      {/* ── Chat — barre latérale Frosted Titanium (escamotable) ── */}
-      <AnimatePresence>
-        {chatSidebarOpen && (
-          <>
-            <motion.button
-              type="button"
-              aria-label="Fermer le chat"
-              className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-[2px] md:bg-black/35"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setChatSidebarOpen(false)}
-            />
-            <motion.aside
-              role="dialog"
-              aria-label="Chat du direct"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 340 }}
-              className={`fixed top-0 z-[60] flex h-[100dvh] w-[min(100vw,20rem)] flex-col border-l border-white/[0.08] shadow-[inset_1px_0_0_rgba(255,255,255,0.08)] frosted-titanium sm:w-80 ${
-                mediatorSidebarOpen && isHost ? 'right-0 sm:right-72' : 'right-0'
-              }`}
-            >
-              <div className="flex shrink-0 items-center justify-between border-b border-white/[0.07] px-3 py-2.5">
-                <span className="font-mono text-[10px] font-black uppercase tracking-[0.2em] text-white/75">
-                  Chat — flux
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setChatSidebarOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-[2px] border border-white/10 bg-black/40 text-white/80 hover:bg-white/10"
-                  aria-label="Fermer"
+      {/* ── Chat — overlay bas-gauche (TikTok), ne couvre pas le dock ── */}
+      {!beefEnded && arenaChatOpen && (
+        <div
+          className="pointer-events-none absolute bottom-[3.75rem] left-2 z-[43] flex w-[min(78vw,19rem)] flex-col gap-0"
+          aria-live="polite"
+        >
+          <div
+            className="max-h-[min(32vh,14rem)] space-y-1 overflow-y-auto overflow-x-hidden pr-0.5 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(8,8,10,0.5)_14%,#08080a_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(8,8,10,0.55)_12%,#08080a_28%)]"
+          >
+            {visibleMessages.map((message) => {
+              const canDelete =
+                isUuid(message.id) && (message.user_name === userName || isHost);
+              const clearLongPress = () => {
+                if (longPressTimerRef.current) {
+                  clearTimeout(longPressTimerRef.current);
+                  longPressTimerRef.current = null;
+                }
+              };
+              return (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="relative flex max-w-full items-start gap-1.5"
                 >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2 hide-scrollbar">
-                <div className="flex flex-col gap-1.5">
-                  {visibleMessages.map((message) => {
-                    const canDelete =
-                      isUuid(message.id) && (message.user_name === userName || isHost);
-                    const clearLongPress = () => {
-                      if (longPressTimerRef.current) {
-                        clearTimeout(longPressTimerRef.current);
-                        longPressTimerRef.current = null;
-                      }
-                    };
-                    return (
-                      <motion.div
-                        key={message.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                        className="relative flex max-w-full items-start gap-2"
-                      >
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt-500 to-ember-500 ring-1 ring-white/15">
-                          <span className="text-[10px] font-bold text-white">{message.initial}</span>
-                        </div>
-                        <div
-                          className={`frosted-titanium min-w-0 rounded-[2px] px-2.5 py-1.5 ${canDelete ? 'cursor-context-menu touch-manipulation' : ''}`}
-                          onContextMenu={
-                            canDelete
-                              ? (e) => {
-                                  e.preventDefault();
-                                  setContextMenuMsg(message.id);
-                                }
-                              : undefined
+                  <div className="pointer-events-none flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt-500/90 to-ember-500/90 ring-1 ring-white/12">
+                    <span className="text-[9px] font-bold text-white">{message.initial}</span>
+                  </div>
+                  <div
+                    className={`pointer-events-auto max-w-[calc(100%-2rem)] rounded-[2px] border border-white/[0.07] bg-[#08080a]/55 px-2 py-1 shadow-sm backdrop-blur-md ${
+                      canDelete ? 'cursor-context-menu touch-manipulation' : ''
+                    }`}
+                    onContextMenu={
+                      canDelete
+                        ? (e) => {
+                            e.preventDefault();
+                            setContextMenuMsg(message.id);
                           }
-                          onTouchStart={
-                            canDelete
-                              ? () => {
-                                  clearLongPress();
-                                  longPressTimerRef.current = setTimeout(() => {
-                                    longPressTimerRef.current = null;
-                                    setContextMenuMsg(message.id);
-                                  }, 550);
-                                }
-                              : undefined
+                        : undefined
+                    }
+                    onTouchStart={
+                      canDelete
+                        ? () => {
+                            clearLongPress();
+                            longPressTimerRef.current = setTimeout(() => {
+                              longPressTimerRef.current = null;
+                              setContextMenuMsg(message.id);
+                            }, 550);
                           }
-                          onTouchEnd={canDelete ? clearLongPress : undefined}
-                          onTouchMove={canDelete ? clearLongPress : undefined}
-                        >
-                          <span className="block font-mono text-[10px] font-bold uppercase tracking-tight text-cobalt-400">
-                            {message.user_name}
-                          </span>
-                          <span className="break-words text-[13px] font-medium leading-snug tracking-tight text-white/95">
-                            {message.content}
-                          </span>
-                          {contextMenuMsg === message.id && (
-                            <div
-                              className="absolute bottom-full left-0 z-50 mb-1 min-w-[8rem] rounded-[2px] border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
-                              onPointerDown={(e) => e.stopPropagation()}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <button
-                                type="button"
-                                className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-white/10"
-                                onClick={() => handleDeleteMessage(message.id)}
-                              >
-                                Supprimer
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <AnimatePresence>
-                {showAllReactions && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="border-t border-white/[0.07] px-2 py-2"
+                        : undefined
+                    }
+                    onTouchEnd={canDelete ? clearLongPress : undefined}
+                    onTouchMove={canDelete ? clearLongPress : undefined}
                   >
-                    <div className="grid grid-cols-8 gap-1">
-                      {POPULAR_REACTIONS.map((emoji) => (
+                    <span className="block font-mono text-[9px] font-bold uppercase tracking-tight text-cobalt-400/95">
+                      {message.user_name}
+                    </span>
+                    <span className="break-words text-[12px] font-medium leading-snug tracking-tight text-white/92">
+                      {message.content}
+                    </span>
+                    {contextMenuMsg === message.id && (
+                      <div
+                        className="absolute bottom-full left-0 z-[50] mb-1 min-w-[8rem] rounded-[2px] border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <button
-                          key={emoji}
                           type="button"
-                          onClick={() => {
-                            handleReaction(emoji);
-                            setShowAllReactions(false);
-                          }}
-                          aria-label={`Réagir avec ${emoji}`}
-                          className="flex h-9 w-9 items-center justify-center rounded-[2px] text-lg hover:bg-white/10 active:scale-90"
+                          className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-white/10"
+                          onClick={() => handleDeleteMessage(message.id)}
                         >
-                          <span aria-hidden>{emoji}</span>
+                          Supprimer
                         </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+          <div className="pointer-events-auto relative min-w-0 border-t border-white/[0.07] bg-gradient-to-t from-[#08080a]/95 to-transparent pt-1.5">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              placeholder="Message..."
+              aria-label="Message dans le chat du direct"
+              autoComplete="off"
+              className="glass-chat w-full rounded-[2px] border border-white/14 bg-[#08080a]/72 py-2 pl-2.5 pr-10 text-[13px] font-medium tracking-tight text-white placeholder-white/35 backdrop-blur-md focus:border-cobalt-500/50 focus:outline-none focus:ring-1 focus:ring-cobalt-500/30"
+            />
+            {chatInput.trim() && (
+              <button
+                type="button"
+                onClick={handleSendMessage}
+                aria-label="Envoyer le message"
+                className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-[2px] bg-ember-500 hover:bg-ember-600"
+              >
+                <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+              </button>
+            )}
+            <FeatureGuide
+              id="arena-chat"
+              title="Chat en direct"
+              description="Envoie des messages visibles par tous les viewers et participants."
+              position="top"
+            />
+          </div>
+        </div>
+      )}
 
-              <div className="shrink-0 border-t border-white/[0.07] p-2.5">
-                <div className="relative min-w-0">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    placeholder="Message..."
-                    aria-label="Message dans le chat du direct"
-                    autoComplete="off"
-                    className="glass-chat w-full rounded-[2px] border border-white/12 py-2.5 pl-3 pr-11 text-sm font-medium tracking-tight text-white placeholder-white/35 focus:border-cobalt-500/50 focus:outline-none focus:ring-1 focus:ring-cobalt-500/30"
-                  />
-                  {chatInput.trim() && (
-                    <button
-                      type="button"
-                      onClick={handleSendMessage}
-                      aria-label="Envoyer le message"
-                      className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[2px] bg-ember-500 hover:bg-ember-600"
-                    >
-                      <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                      </svg>
-                    </button>
-                  )}
-                  <FeatureGuide
-                    id="arena-chat"
-                    title="Chat en direct"
-                    description="Envoie des messages visibles par tous les viewers et participants."
-                    position="top"
-                  />
-                </div>
-              </div>
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* ── Dock bas — contrôles (chat escamotable) ── */}
+      {/* ── Dock bas — contrôles ── */}
       <div className="absolute bottom-0 left-0 right-0 z-40 pointer-events-auto">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#08080a] via-black/90 to-transparent" />
+
+        <AnimatePresence>
+          {showAllReactions && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              className="pointer-events-auto absolute bottom-full left-1/2 z-50 mb-2 w-[min(100vw-1rem,22rem)] -translate-x-1/2 rounded-[2px] border border-white/[0.1] bg-[#0c0c0f]/95 p-2 shadow-2xl backdrop-blur-xl"
+            >
+              <div className="grid grid-cols-8 gap-1">
+                {POPULAR_REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    onClick={() => {
+                      handleReaction(emoji);
+                      setShowAllReactions(false);
+                    }}
+                    aria-label={`Réagir avec ${emoji}`}
+                    className="flex h-9 w-9 items-center justify-center rounded-[2px] text-lg hover:bg-white/10 active:scale-90"
+                  >
+                    <span aria-hidden>{emoji}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {userRole === 'viewer' && (
           <div className="relative mx-2 mb-1 flex justify-center gap-1.5">
@@ -3082,11 +3039,11 @@ export function TikTokStyleArena({
           <motion.button
             type="button"
             whileTap={{ scale: 0.92 }}
-            onClick={() => setChatSidebarOpen((o) => !o)}
-            aria-label={chatSidebarOpen ? 'Fermer le chat' : 'Ouvrir le chat'}
-            aria-expanded={chatSidebarOpen}
+            onClick={() => setArenaChatOpen((o) => !o)}
+            aria-label={arenaChatOpen ? 'Masquer le chat' : 'Afficher le chat'}
+            aria-expanded={arenaChatOpen}
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[2px] border ${
-              chatSidebarOpen
+              arenaChatOpen
                 ? 'border-cobalt-500/50 bg-cobalt-500/20 text-cobalt-300'
                 : 'border-white/12 bg-white/5 text-white/90'
             }`}
@@ -3097,10 +3054,7 @@ export function TikTokStyleArena({
           <motion.button
             type="button"
             whileTap={{ scale: 0.85 }}
-            onClick={() => {
-              if (!chatSidebarOpen) setChatSidebarOpen(true);
-              setShowAllReactions((v) => !v);
-            }}
+            onClick={() => setShowAllReactions((v) => !v)}
             aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
             aria-expanded={showAllReactions}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[2px] border border-white/12 bg-white/5 text-lg touch-manipulation"
@@ -3221,440 +3175,6 @@ export function TikTokStyleArena({
           </motion.button>
         </div>
       </div>
-
-      {/* Moderator Control Panel with Overlay */}
-      <AnimatePresence mode="wait">
-        {isHost && showModeratorPanel && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute inset-0 z-40"
-          >
-            {/* Overlay - Click to close */}
-            <div
-              onClick={() => setShowModeratorPanel(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            
-            {/* Panel — largeur confortable ; mobile = feuille du bas */}
-            <motion.div
-              initial={moderatorPanelSlideFromBottom ? { y: '100%' } : { x: '100%' }}
-              animate={moderatorPanelSlideFromBottom ? { y: 0, x: 0 } : { x: 0, y: 0 }}
-              exit={moderatorPanelSlideFromBottom ? { y: '100%' } : { x: '100%' }}
-              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
-              onClick={(e) => e.stopPropagation()}
-              className={`absolute z-10 overflow-y-auto overscroll-contain border border-white/15 bg-black/95 backdrop-blur-xl shadow-2xl pb-[max(0.75rem,env(safe-area-inset-bottom))] ${
-                moderatorPanelSlideFromBottom
-                  ? 'inset-x-0 bottom-0 top-auto max-h-[88vh] rounded-t-3xl'
-                  : 'top-0 right-0 bottom-0 left-auto h-full max-h-full w-[min(100vw-1rem,28rem)] lg:w-[min(100vw-1rem,34rem)] rounded-none border-l border-t-0'
-              }`}
-            >
-              <div
-                className={`mx-auto mt-2 h-1 w-10 rounded-full bg-white/25 ${moderatorPanelSlideFromBottom ? '' : 'hidden'}`}
-                aria-hidden
-              />
-              {/* Header - Fixed with close button */}
-              <div
-                className={`sticky top-0 bg-gradient-to-r from-yellow-400 to-brand-400 px-4 py-3.5 flex items-center justify-between z-50 shadow-lg ${
-                  moderatorPanelSlideFromBottom ? 'rounded-t-3xl' : ''
-                }`}
-              >
-                <h2 className="text-black font-black text-lg sm:text-xl">Contrôles médiateur</h2>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowModeratorPanel(false);
-                  }} 
-                  className="text-black hover:bg-black/20 rounded-full p-1.5 transition-all hover:rotate-90"
-                >
-                  <X className="w-5 h-5 font-bold" strokeWidth={3} />
-                </button>
-              </div>
-
-            <div className="p-3 space-y-3">
-              {/* Timer Controls — Mediator only */}
-              <div className="bg-white/5 rounded-[2px] p-4 border border-white/10">
-                <h3 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
-                  ⏱️ Chronomètre du beef
-                </h3>
-                
-                {!timerActive ? (
-                  <button
-                    onClick={startBeefTimer}
-                    className="w-full py-3 rounded-[2px] text-sm font-bold text-white brand-gradient hover:shadow-glow transition-all"
-                  >
-                    ▶️ Démarrer le chronomètre
-                  </button>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="text-center py-3 bg-black/40 rounded-[2px]">
-                      <span className={`text-3xl font-black font-mono ${beefTimeRemaining <= 300 ? 'text-red-400' : 'text-white'}`}>
-                        {formatBeefTime(beefTimeRemaining)}
-                      </span>
-                      {timerPaused && (
-                        <p className="text-yellow-400 text-xs font-bold mt-1 animate-pulse">EN PAUSE</p>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      {timerPaused ? (
-                        <button onClick={resumeBeefTimer} className="flex-1 py-2 bg-green-500/20 text-green-400 font-bold rounded-[2px] text-sm hover:bg-green-500/30">
-                          ▶️ Reprendre
-                        </button>
-                      ) : (
-                        <button onClick={pauseBeefTimer} className="flex-1 py-2 bg-yellow-500/20 text-yellow-400 font-bold rounded-[2px] text-sm hover:bg-yellow-500/30">
-                          ⏸ Pause
-                        </button>
-                      )}
-                      <button onClick={stopBeefTimer} className="flex-1 py-2 bg-red-500/20 text-red-400 font-bold rounded-[2px] text-sm hover:bg-red-500/30">
-                        ⏹ Arrêter
-                      </button>
-                    </div>
-                    <p className="text-gray-500 text-xs text-center">
-                      Auto-pause quand vous parlez ou quand les micros sont coupés
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Verdict triple — visible uniquement par le médiateur */}
-              <div className="rounded-[2px] border border-white/12 bg-gradient-to-br from-zinc-900/95 to-black/80 p-4 space-y-3 shadow-prestige-ring">
-                <div>
-                  <h3 className="text-white font-black text-sm tracking-tight">⚖️ Verdict du beef</h3>
-                  <p className="mt-1 text-[11px] leading-relaxed text-white/50">
-                    Choisis l’issue du débat. Tout le monde voit l’effet en direct (confetti, neutre ou rematch).
-                  </p>
-                </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  <button
-                    type="button"
-                    disabled={beefEnded}
-                    onClick={() => void handleMediatorVerdict('resolved')}
-                    className="rounded-[2px] border border-emerald-500/50 bg-emerald-600/25 py-3 text-sm font-black tracking-tight text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.25)] transition-all hover:bg-emerald-500/35 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Résolu
-                  </button>
-                  <button
-                    type="button"
-                    disabled={beefEnded}
-                    onClick={() => void handleMediatorVerdict('closed')}
-                    className="rounded-[2px] border border-white/15 bg-white/5 py-3 text-sm font-black tracking-tight text-white/85 transition-all hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Clos
-                  </button>
-                  <button
-                    type="button"
-                    disabled={beefEnded}
-                    onClick={() => void handleMediatorVerdict('rematch')}
-                    className="rounded-[2px] border border-brand-400/60 bg-gradient-to-br from-brand-500/40 to-orange-600/30 py-3 text-sm font-black tracking-tight text-white shadow-[0_0_28px_rgba(255,107,44,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Rematch
-                  </button>
-                </div>
-              </div>
-
-              {/* Débat structuré : budget challengers, médiateur, toss */}
-              <div className="rounded-[2px] border border-white/15 bg-zinc-950/90 p-4 space-y-3">
-                <div>
-                  <h3 className="text-white font-bold text-sm">Débat structuré</h3>
-                  <p className="text-gray-400 text-[11px] leading-relaxed mt-1">
-                    Chaque challenger a un temps total partagé (budget). Quand tu parles, appuie sur « Je prends la parole » : leur chrono est en pause.
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-300 text-xs font-semibold block mb-1.5">Budget commun (minutes)</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[15, 30, 45, 60].map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => {
-                          setDebateBudgetMinutes(m);
-                          if (!structuredDebateEnabled) return;
-                          setChallengerBudgetRemaining(m * 60);
-                        }}
-                        className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-colors ${
-                          debateBudgetMinutes === m ? 'bg-brand-500 text-white' : 'bg-zinc-800 text-gray-300 hover:bg-zinc-700'
-                        }`}
-                      >
-                        {m} min
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {!structuredDebateEnabled ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const sec = debateBudgetMinutes * 60;
-                      setStructuredDebateEnabled(true);
-                      setChallengerBudgetRemaining(sec);
-                      channelRef.current
-                        ?.send({
-                          type: 'broadcast',
-                          event: 'structured_debate',
-                          payload: { enabled: true, budgetSeconds: sec },
-                        })
-                        .catch(() => {});
-                      toast('Mode structuré activé.', 'success');
-                    }}
-                    className="w-full py-3 rounded-[2px] text-sm font-bold text-black brand-gradient shadow-lg"
-                  >
-                    Activer le mode structuré
-                  </button>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between gap-2 rounded-lg bg-emerald-950/80 border border-emerald-600/50 px-3 py-2">
-                      <span className="text-emerald-100 text-xs font-semibold">Mode structuré actif</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStructuredDebateEnabled(false);
-                          channelRef.current
-                            ?.send({
-                              type: 'broadcast',
-                              event: 'structured_debate',
-                              payload: { enabled: false },
-                            })
-                            .catch(() => {});
-                          toast('Mode structuré désactivé.', 'info');
-                        }}
-                        className="text-xs font-bold text-red-200 hover:text-white underline underline-offset-2"
-                      >
-                        Désactiver
-                      </button>
-                    </div>
-                    <div className="flex justify-between items-center text-xs text-gray-300 pt-1 border-t border-white/10">
-                      <span>Budget restant (challengers)</span>
-                      <span className="font-mono text-white tabular-nums text-sm">
-                        {Math.floor(challengerBudgetRemaining / 60)}:
-                        {(challengerBudgetRemaining % 60).toString().padStart(2, '0')}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={toggleMediatorFloor}
-                      className={`w-full py-3 rounded-[2px] text-sm font-bold border-2 ${
-                        mediatorHoldingFloor
-                          ? 'bg-amber-600 text-black border-amber-400'
-                          : 'bg-zinc-900 text-amber-100 border-amber-500/60 hover:bg-zinc-800'
-                      }`}
-                    >
-                      {mediatorHoldingFloor
-                        ? '▶ Fin de mon intervention'
-                        : '🎤 Je prends la parole (pause leur chrono)'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={runTossForFirstSpeaker}
-                      className="w-full py-3 rounded-[2px] bg-sky-900/90 text-sky-50 text-sm font-bold border border-sky-500/50 hover:bg-sky-800/90"
-                    >
-                      🎲 Tirage au sort — qui commence ?
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* Speaking Turns Control */}
-              <div className="bg-white/5 rounded-[2px] p-4 border border-white/10">
-                <h3 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
-                  🎤 Temps de parole (tour par tour)
-                </h3>
-
-                {/* Duration selector */}
-                <div className="mb-3">
-                  <label className="text-gray-400 text-xs mb-1.5 block">Durée par tour</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[30, 45, 60, 90, 120].map(sec => (
-                      <button
-                        key={sec}
-                        onClick={() => setSpeakingTurnDuration(sec)}
-                        className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                          speakingTurnDuration === sec
-                            ? 'bg-brand-500 text-white'
-                            : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                        }`}
-                      >
-                        {sec}s
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Active speaking turn indicator */}
-                {speakingTurnActive && (
-                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-3 text-center">
-                    <p className="text-green-400 text-xs font-semibold mb-1">En cours</p>
-                    <span className="text-2xl font-black text-green-400 font-mono">
-                      {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                    </span>
-                    <button
-                      onClick={stopTimer}
-                      className="w-full mt-2 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs font-bold hover:bg-red-500/30"
-                    >
-                      Couper la parole
-                    </button>
-                  </div>
-                )}
-
-                {/* Debaters list */}
-                <div className="space-y-2">
-                  {debaters.map((debater) => (
-                    <div key={debater.id} className="bg-black/40 rounded-lg p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <button
-                          type="button"
-                          onClick={() => void openProfile(debater.name, debater.id)}
-                          className="text-white font-semibold text-sm hover:text-brand-400 cursor-pointer text-left"
-                        >
-                          {debater.name}
-                        </button>
-                        <button
-                          onClick={() => removeDebater(debater.id)}
-                          className="text-red-400 hover:text-red-300 text-xs"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => currentSpeaker === debater.id ? stopTimer() : startTimer(debater.id)}
-                          disabled={speakingTurnActive && currentSpeaker !== debater.id}
-                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                            currentSpeaker === debater.id
-                              ? 'bg-green-500 text-white animate-pulse'
-                              : 'bg-white/10 text-white hover:bg-white/20'
-                          } disabled:opacity-30`}
-                        >
-                          {currentSpeaker === debater.id
-                            ? `🎤 ${Math.floor(speakingTurnRemaining / 60)}:${(speakingTurnRemaining % 60).toString().padStart(2, '0')}`
-                            : `▶️ ${speakingTurnDuration}s`
-                          }
-                        </button>
-                        <button
-                          type="button"
-                          title={debater.isMuted ? 'Réactiver le micro du challenger' : 'Couper le micro du challenger'}
-                          onClick={() => toggleMute(debater.id)}
-                          className={`min-w-[5.5rem] px-2 py-2 rounded-lg text-[11px] font-bold border leading-tight ${
-                            debater.isMuted
-                              ? 'bg-red-950 text-red-100 border-red-500/60'
-                              : 'bg-emerald-950 text-emerald-100 border-emerald-500/60'
-                          }`}
-                        >
-                          {debater.isMuted ? 'Réactiver' : 'Couper micro'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {debaters.length === 0 && (
-                    <p className="text-gray-500 text-xs text-center py-3">Aucun débatteur pour le moment</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Invite Debater */}
-              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                <h3 className="text-white font-bold text-sm mb-2 flex items-center gap-2">
-                  <span>➕</span> Inviter un débatteur
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">@</span>
-                      <input
-                        type="text"
-                        value={inviteInput}
-                        onChange={(e) => setInviteInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && inviteDebater()}
-                        placeholder="username"
-                        className="w-full bg-white/10 border border-white/20 rounded-lg pl-8 pr-3 py-2 text-white placeholder-white/40 text-sm focus:outline-none focus:bg-white/15 focus:border-yellow-500/50"
-                      />
-                    </div>
-                    <button
-                      onClick={inviteDebater}
-                      className="bg-gradient-to-r from-yellow-400 to-brand-400 hover:from-yellow-500 hover:to-brand-500 text-black font-bold px-4 py-2 rounded-lg"
-                    >
-                      ➕
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => setShowInviteModal(true)}
-                    className="w-full py-2 bg-white/5 hover:bg-white/10 text-white/70 text-xs font-semibold rounded-lg transition-colors"
-                  >
-                    🔍 Rechercher un utilisateur
-                  </button>
-                </div>
-              </div>
-
-              {/* Participation Requests */}
-              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                <h3 className="text-white font-bold text-sm mb-2 flex items-center gap-2">
-                  <span>✋</span> Demandes ({participationRequests.length})
-                </h3>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {participationRequests.length === 0 ? (
-                    <p className="text-white/50 text-sm text-center py-4">Aucune demande</p>
-                  ) : (
-                    participationRequests.map((request) => (
-                      <div key={request.id} className="bg-black/40 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <button
-                            onClick={() => openProfile(request.user_name)}
-                            className="cursor-pointer text-sm font-semibold text-white hover:text-ember-400"
-                          >
-                            {request.user_name}
-                          </button>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => acceptRequest(request)}
-                            className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-1.5 rounded text-xs"
-                          >
-                            ✓ Accepter
-                          </button>
-                          <button
-                            onClick={() => rejectRequest(request.id)}
-                            className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-1.5 rounded text-xs"
-                          >
-                            ✗ Refuser
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                <h3 className="text-white font-bold text-sm mb-2">⚡ Actions rapides</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setDebaters(debaters.map(d => ({ ...d, isMuted: true })))}
-                    className="w-full bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold py-2 rounded text-sm"
-                  >
-                    🔇 Tout couper
-                  </button>
-                  <button
-                    onClick={() => setDebaters(debaters.map(d => ({ ...d, isMuted: false })))}
-                    className="w-full bg-green-500/20 hover:bg-green-500/30 text-green-400 font-bold py-2 rounded text-sm"
-                  >
-                    🔊 Tout activer
-                  </button>
-                  <button
-                    onClick={() => endBeef('Terminé par le médiateur')}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-[2px] text-sm mt-2"
-                  >
-                    🛑 Terminer le beef
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Invite Participant Modal */}
       <InviteParticipantModal

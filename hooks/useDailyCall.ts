@@ -40,6 +40,21 @@ interface UseDailyCallReturn {
   error: string | null;
 }
 
+/** Clé utilisée par `participants()` — alignée sur `session_id` pour `updateParticipant`. */
+function resolveDailySessionId(co: DailyCall, hint: string): string | null {
+  try {
+    const parts = co.participants();
+    if (parts[hint]) return hint;
+    for (const [key, p] of Object.entries(parts)) {
+      const dp = p as DailyParticipant;
+      if (key === hint || dp.session_id === hint) return key;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 function toCallParticipant(p: DailyParticipant): CallParticipant {
   const videoState = p.tracks?.video?.state;
   const audioState = p.tracks?.audio?.state;
@@ -326,18 +341,30 @@ export function useDailyCall(
   const setRemoteParticipantAudio = useCallback((sessionId: string, enabled: boolean) => {
     if (!callRef.current || viewerModeRef.current) return;
     try {
-      callRef.current.updateParticipant(sessionId, { setAudio: enabled });
-    } catch {
-      /* ignore */
+      const co = callRef.current;
+      const id = resolveDailySessionId(co, sessionId);
+      if (!id) {
+        console.warn('[Daily] setRemoteParticipantAudio: session introuvable', sessionId);
+        return;
+      }
+      co.updateParticipant(id, { setAudio: enabled });
+    } catch (e) {
+      console.warn('[Daily] setRemoteParticipantAudio', e);
     }
   }, []);
 
   const ejectRemoteParticipant = useCallback((sessionId: string) => {
     if (!callRef.current || viewerModeRef.current) return;
     try {
-      callRef.current.updateParticipant(sessionId, { eject: true });
-    } catch {
-      /* ignore */
+      const co = callRef.current;
+      const id = resolveDailySessionId(co, sessionId);
+      if (!id) {
+        console.warn('[Daily] ejectRemoteParticipant: session introuvable', sessionId);
+        return;
+      }
+      co.updateParticipant(id, { eject: true });
+    } catch (e) {
+      console.warn('[Daily] ejectRemoteParticipant', e);
     }
   }, []);
 

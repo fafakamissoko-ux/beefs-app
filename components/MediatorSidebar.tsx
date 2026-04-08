@@ -1,57 +1,54 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, MicOff, Video, VideoOff, PanelRightClose, UserX, Volume2, VolumeX, Clock, Sliders } from 'lucide-react';
+import { PanelRightClose, UserX, Mic, MicOff, Clock, Play } from 'lucide-react';
 
-export type MediatorDebaterRow = {
-  id: string;
-  name: string;
-  isMuted: boolean;
-};
-
-type RemoteKickRow = {
+export type MediatorRemoteRow = {
   sessionId: string;
   label: string;
+  slot: 'A' | 'B';
+  /** UUID arène — sync broadcast + état signal */
+  debaterId: string | null;
+  audioOn: boolean;
 };
 
 type MediatorSidebarProps = {
   open: boolean;
   onClose: () => void;
-  micEnabled: boolean;
-  camEnabled: boolean;
-  onToggleMic: () => void;
-  onToggleCam: () => void;
-  onOpenFullPanel: () => void;
-  debaters: MediatorDebaterRow[];
-  onToggleDebaterMute: (debaterId: string) => void;
-  remoteKickTargets: RemoteKickRow[];
-  onEjectParticipant: (sessionId: string) => void;
-  /** Coupe le micro côté Daily (participant distant). */
-  onForceMuteDaily?: (sessionId: string) => void;
   timerActive: boolean;
+  startingBeef: boolean;
+  onStartBeef: () => void | Promise<void>;
+  onVerdict: (kind: 'resolved' | 'closed' | 'rematch') => void;
+  remoteRows: MediatorRemoteRow[];
+  /** muted = micro coupé (Daily + signal si debaterId) */
+  onSetChallengerMuted: (sessionId: string, debaterId: string | null, muted: boolean) => void;
+  onEjectParticipant: (sessionId: string) => void;
   onAdjustTime: (deltaSec: number) => void;
 };
 
 /**
- * Commande médiateur — Frosted Titanium, accents Ember, JetBrains Mono (variables layout).
- * Visible uniquement côté médiateur (isHost géré par le parent).
+ * Régie médiateur — minimal : start, temps, challengers, clôture + verdicts.
+ * Obsidian / Ember (#FF4D00), JetBrains Mono (layout).
  */
 export function MediatorSidebar({
   open,
   onClose,
-  micEnabled,
-  camEnabled,
-  onToggleMic,
-  onToggleCam,
-  onOpenFullPanel,
-  debaters,
-  onToggleDebaterMute,
-  remoteKickTargets,
-  onEjectParticipant,
-  onForceMuteDaily,
   timerActive,
+  startingBeef,
+  onStartBeef,
+  onVerdict,
+  remoteRows,
+  onSetChallengerMuted,
+  onEjectParticipant,
   onAdjustTime,
 }: MediatorSidebarProps) {
+  const [verdictOpen, setVerdictOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) setVerdictOpen(false);
+  }, [open]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -74,160 +71,186 @@ export function MediatorSidebar({
             transition={{ type: 'spring', damping: 30, stiffness: 340 }}
             className="fixed right-0 top-0 z-[58] flex h-[100dvh] w-[min(100vw,17.5rem)] flex-col border-l border-white/[0.09] frosted-titanium sm:w-72"
           >
-            <div className="flex shrink-0 items-center justify-between border-b border-white/[0.07] px-3 py-2.5">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] px-3 py-2.5">
               <span className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-ember-400">
-                Commande
+                Régie
               </span>
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-[2px] border border-white/10 bg-black/40 text-white/80 hover:bg-white/10"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[2px] border border-white/10 bg-black/40 text-white/80 hover:bg-white/10"
                 aria-label="Fermer"
               >
                 <PanelRightClose className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-3 hide-scrollbar">
-              <section>
-                <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-white/45">
-                  Local — micro / cam
-                </h3>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={onToggleMic}
-                    aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-[2px] border px-2 py-2.5 font-mono text-[11px] font-bold transition-colors ${
-                      micEnabled
-                        ? 'border-white/12 bg-white/5 text-white'
-                        : 'border-ember-500/40 bg-ember-500/15 text-ember-200'
-                    }`}
-                  >
-                    {micEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-                    {micEnabled ? 'Micro' : 'Couper'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onToggleCam}
-                    aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-[2px] border px-2 py-2.5 font-mono text-[11px] font-bold transition-colors ${
-                      camEnabled
-                        ? 'border-white/12 bg-white/5 text-white'
-                        : 'border-ember-500/40 bg-ember-500/15 text-ember-200'
-                    }`}
-                  >
-                    {camEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-                    {camEnabled ? 'Cam' : 'Off'}
-                  </button>
+            {/* Lancer le beef — lueur Ember tant que le chrono n’est pas lancé */}
+            <div className="shrink-0 border-b border-white/[0.06] px-3 py-3">
+              {!timerActive ? (
+                <motion.button
+                  type="button"
+                  disabled={startingBeef}
+                  onClick={() => void onStartBeef()}
+                  className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-[2px] border border-[#FF4D00]/80 bg-[#FF4D00] py-3 font-mono text-[11px] font-black uppercase tracking-[0.18em] text-black shadow-[0_0_28px_rgba(255,77,0,0.55)] disabled:cursor-wait disabled:opacity-70"
+                  animate={
+                    startingBeef
+                      ? {}
+                      : {
+                          boxShadow: [
+                            '0 0 18px rgba(255,77,0,0.45)',
+                            '0 0 32px rgba(255,77,0,0.75)',
+                            '0 0 18px rgba(255,77,0,0.45)',
+                          ],
+                        }
+                  }
+                  transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <Play className="h-4 w-4 shrink-0 text-black" strokeWidth={2.5} aria-hidden />
+                  {startingBeef ? 'Lancement…' : 'Lancer le beef'}
+                </motion.button>
+              ) : (
+                <div className="rounded-[2px] border border-white/10 bg-black/35 py-2.5 text-center font-mono text-[10px] font-bold uppercase tracking-widest text-white/50">
+                  Chrono actif
                 </div>
-              </section>
+              )}
+            </div>
 
-              <section>
-                <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-white/45">
-                  Chrono
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4 hide-scrollbar">
+              <section className="space-y-2">
+                <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/45">
+                  Temps
                 </h3>
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    disabled={!timerActive}
                     onClick={() => onAdjustTime(-30)}
-                    className="flex flex-1 items-center justify-center gap-1 rounded-[2px] border border-cobalt-500/35 bg-cobalt-500/10 py-2 font-mono text-xs font-bold text-cobalt-200 transition-colors hover:bg-cobalt-500/20 disabled:cursor-not-allowed disabled:opacity-35"
+                    className="flex flex-1 items-center justify-center gap-1 rounded-[2px] border border-cobalt-500/35 bg-cobalt-500/10 py-2.5 font-mono text-xs font-bold text-cobalt-200 transition-colors hover:bg-cobalt-500/20"
                   >
                     <Clock className="h-3.5 w-3.5" /> −30s
                   </button>
                   <button
                     type="button"
-                    disabled={!timerActive}
                     onClick={() => onAdjustTime(30)}
-                    className="flex flex-1 items-center justify-center gap-1 rounded-[2px] border border-ember-500/35 bg-ember-500/10 py-2 font-mono text-xs font-bold text-ember-100 transition-colors hover:bg-ember-500/20 disabled:cursor-not-allowed disabled:opacity-35"
+                    className="flex flex-1 items-center justify-center gap-1 rounded-[2px] border border-ember-500/35 bg-ember-500/10 py-2.5 font-mono text-xs font-bold text-ember-100 transition-colors hover:bg-ember-500/20"
                   >
                     <Clock className="h-3.5 w-3.5" /> +30s
                   </button>
                 </div>
               </section>
 
-              {debaters.length > 0 && (
-                <section>
-                  <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-white/45">
-                    Challengers — mute (signal)
+              {remoteRows.length > 0 && (
+                <section className="space-y-2">
+                  <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/45">
+                    Challengers
                   </h3>
-                  <ul className="space-y-1.5">
-                    {debaters.map((d) => (
-                      <li
-                        key={d.id}
-                        className="flex items-center justify-between gap-2 rounded-[2px] border border-white/[0.06] bg-black/30 px-2 py-1.5"
-                      >
-                        <span className="min-w-0 truncate font-mono text-[11px] font-semibold text-white/90">
-                          {d.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => onToggleDebaterMute(d.id)}
-                          className={`flex shrink-0 items-center gap-1 rounded-[2px] px-2 py-1 font-mono text-[10px] font-bold ${
-                            d.isMuted
-                              ? 'bg-cobalt-500/20 text-cobalt-200'
-                              : 'bg-white/10 text-white/85'
-                          }`}
+                  <ul className="space-y-2">
+                    {remoteRows.map((row) => {
+                      const muted = !row.audioOn;
+                      return (
+                        <li
+                          key={row.sessionId}
+                          className="space-y-2 rounded-[2px] border border-white/[0.08] bg-black/35 p-2.5"
                         >
-                          {d.isMuted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
-                          {d.isMuted ? 'Réactiver' : 'Mute'}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-
-              {remoteKickTargets.length > 0 && (
-                <section>
-                  <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-white/45">
-                    Flux vidéo — expulsion
-                  </h3>
-                  <ul className="space-y-1.5">
-                    {remoteKickTargets.map((t) => (
-                      <li
-                        key={t.sessionId}
-                        className="flex items-center justify-between gap-2 rounded-[2px] border border-white/[0.06] bg-black/30 px-2 py-1.5"
-                      >
-                        <span className="min-w-0 truncate font-mono text-[11px] text-white/85">{t.label}</span>
-                        <div className="flex shrink-0 gap-1">
-                          {onForceMuteDaily && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="min-w-0 font-mono text-[11px] font-bold text-white/90">
+                              <span className="text-cobalt-400/90">{row.slot}</span>
+                              <span className="text-white/35"> · </span>
+                              <span className="truncate">{row.label}</span>
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
                             <button
                               type="button"
-                              title="Mute micro (Daily)"
-                              onClick={() => onForceMuteDaily(t.sessionId)}
-                              className="rounded-[2px] border border-cobalt-500/35 bg-cobalt-500/10 p-1.5 text-cobalt-100 hover:bg-cobalt-500/20"
+                              onClick={() =>
+                                onSetChallengerMuted(row.sessionId, row.debaterId, !muted)
+                              }
+                              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[2px] border px-2 py-2 font-mono text-[10px] font-bold ${
+                                muted
+                                  ? 'border-cobalt-500/40 bg-cobalt-500/15 text-cobalt-100'
+                                  : 'border-white/12 bg-white/[0.06] text-white/90'
+                              }`}
                             >
-                              <MicOff className="h-3.5 w-3.5" />
+                              {muted ? (
+                                <Mic className="h-3.5 w-3.5 shrink-0" />
+                              ) : (
+                                <MicOff className="h-3.5 w-3.5 shrink-0" />
+                              )}
+                              {muted ? 'Réactiver micro' : 'Couper micro'}
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => onEjectParticipant(t.sessionId)}
-                            className="flex items-center gap-1 rounded-[2px] border border-ember-500/40 bg-ember-500/15 px-2 py-1 font-mono text-[9px] font-bold text-ember-100 hover:bg-ember-500/25"
-                          >
-                            <UserX className="h-3.5 w-3.5" />
-                            Kick
-                          </button>
-                        </div>
-                      </li>
-                    ))}
+                            <button
+                              type="button"
+                              onClick={() => onEjectParticipant(row.sessionId)}
+                              className="flex shrink-0 items-center gap-1 rounded-[2px] border border-ember-500/40 bg-ember-500/12 px-2.5 py-2 font-mono text-[10px] font-bold text-ember-100 hover:bg-ember-500/22"
+                            >
+                              <UserX className="h-3.5 w-3.5" />
+                              Kick
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </section>
               )}
+            </div>
 
+            {/* Clore le débat + verdicts */}
+            <div className="shrink-0 space-y-2 border-t border-white/[0.08] bg-black/25 px-3 py-3">
               <button
                 type="button"
-                onClick={() => {
-                  onOpenFullPanel();
-                  onClose();
-                }}
-                className="flex w-full items-center justify-center gap-2 rounded-[2px] border border-cobalt-500/35 bg-cobalt-500/10 py-2.5 font-mono text-xs font-bold text-cobalt-100 transition-colors hover:bg-cobalt-500/20"
+                onClick={() => setVerdictOpen((v) => !v)}
+                className="w-full rounded-[2px] border border-white/12 bg-white/[0.06] py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-white/85 transition-colors hover:bg-white/10"
               >
-                <Sliders className="h-4 w-4" />
-                Panneau complet
+                Clore le débat
               </button>
+              <AnimatePresence initial={false}>
+                {verdictOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex flex-col gap-1.5 pt-1 font-mono">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onVerdict('resolved');
+                          setVerdictOpen(false);
+                          onClose();
+                        }}
+                        className="rounded-[2px] border border-emerald-500/45 bg-emerald-600/25 py-2.5 text-[10px] font-black uppercase tracking-widest text-emerald-100 hover:bg-emerald-500/35"
+                      >
+                        Résolu
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onVerdict('closed');
+                          setVerdictOpen(false);
+                          onClose();
+                        }}
+                        className="rounded-[2px] border border-white/15 bg-white/[0.08] py-2.5 text-[10px] font-black uppercase tracking-widest text-white/75 hover:bg-white/12"
+                      >
+                        Clos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onVerdict('rematch');
+                          setVerdictOpen(false);
+                          onClose();
+                        }}
+                        className="rounded-[2px] border border-[#FF4D00]/50 bg-[#FF4D00]/15 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#ffb899] hover:bg-[#FF4D00]/25"
+                      >
+                        Rematch
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.aside>
         </>
