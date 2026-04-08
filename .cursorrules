@@ -1,0 +1,38 @@
+# Beefs — règles Cursor (alignement CI / qualité)
+
+## Langue
+Répondre en français lorsque l’utilisateur communique en français.
+
+## CI/CD dans ce dépôt
+- **Aucun pipeline versionné** (pas de GitHub Actions / GitLab CI / autre dans la racine du projet).
+- **ESLint** : `.eslintrc.json` étend **`next/core-web-vitals`** (preset Strict Next.js). `npm run lint` ne doit plus ouvrir l’assistant interactif.
+- La validation reproductible localement repose sur **`package.json`** :
+  - `npm run lint` → `next lint`
+  - `npm run type-check` → `tsc --noEmit`
+  - `npm run build` → `next build` (inclut compilation + vérifications Next.js)
+  - `npm run test` → `vitest run` (tests unitaires, ex. `lib/*.test.ts`)
+
+## Protocole « Green Light » (validation avant de considérer une tâche terminée)
+Exécuter dans l’ordre, jusqu’à succès complet :
+
+```bash
+npm run lint && npm run type-check && npm run test && npm run build
+```
+
+Pour une itération rapide sur des fichiers précis : `npx vitest run chemin/vers/fichier.test.ts`.
+
+Équivalent acceptable pour le typage : `npx tsc --noEmit` à la place de `npm run type-check`.
+
+- **Lint KO** : corriger erreurs ESLint / imports avant de poursuivre.
+- **Type-check KO** : corriger les erreurs TypeScript (y compris dans les fichiers non modifiés si la chaîne de types est cassée).
+- **Test KO** : corriger la logique ou les attentes du test.
+- **Build KO** : analyser la sortie Next.js (routes, env, types) et corriger avant merge.
+
+## Cohérence avec l’hébergeur (Vercel / équivalent)
+Tant que le dépôt ne définit pas de workflow, considérer que **`next build`** est la barrière minimale de déploiement : une PR qui ne passe pas le build ne doit pas être considérée comme prête.
+
+## Protocole « Architecte » (détail)
+Voir `.cursor/rules/architect-protocol.mdc` : exploration, plan d’impact, attente « GO » avant exécution, pas de `any` sauf exception documentée.
+
+## Priorité
+Intégrité du système et alignement sur les scripts réels du `package.json`.
