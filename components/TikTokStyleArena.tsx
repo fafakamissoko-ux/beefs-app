@@ -33,6 +33,9 @@ import {
 } from './FlyingReactionsLayer';
 import { PointTrigger } from './PointTrigger';
 import { useArenaPulseVoicesStore } from '@/lib/stores/arenaPulseVoicesStore';
+import { useArenaVerdictStore } from '@/lib/stores/arenaVerdictStore';
+import { VerdictConfettiBurst, RematchVerdictOverlay } from './VerdictEffects';
+import { playRematchThunderSfx } from '@/lib/playVerdictSfx';
 
 const MAX_BEEF_DURATION = 60 * 60; // 60 minutes in seconds
 
@@ -300,11 +303,15 @@ export function TikTokStyleArena({
   const pulseVoicesA = useArenaPulseVoicesStore((s) => s.pulseA);
   const pulseVoicesB = useArenaPulseVoicesStore((s) => s.pulseB);
   const resetPulseVoices = useArenaPulseVoicesStore((s) => s.reset);
+  const resetArenaVerdict = useArenaVerdictStore((s) => s.reset);
   const addPulseVoices = useArenaPulseVoicesStore((s) => s.addPulse);
   const pulseBroadcastPending = useRef({ A: 0, B: 0 });
   const pulseBroadcastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [myVote, setMyVote] = useState<'A' | 'B' | null>(null);
   const [voteAnimation, setVoteAnimation] = useState<'A' | 'B' | null>(null);
+  const [verdictConfetti, setVerdictConfetti] = useState(false);
+  const [rematchSequence, setRematchSequence] = useState(false);
+  const rematchVerdictTimerRef = useRef<number | null>(null);
 
   const castVote = useCallback((side: 'A' | 'B') => {
     if (myVote === side) return; // already voted this side
@@ -369,7 +376,8 @@ export function TikTokStyleArena({
       pulseBroadcastTimerRef.current = null;
     }
     resetPulseVoices();
-  }, [roomId, resetPulseVoices]);
+    resetArenaVerdict();
+  }, [roomId, resetPulseVoices, resetArenaVerdict]);
 
   useEffect(() => {
     return () => {
@@ -454,7 +462,10 @@ export function TikTokStyleArena({
       'Le médiateur a mis fin au beef': 'resolved',
       'Temps écoulé': 'resolved',
       'Temps écoulé (60 min)': 'resolved',
+      'Verdict : résolu': 'resolved',
       'Tous les challengers ont quitté': 'unresolved',
+      'Clos par le médiateur': 'unresolved',
+      'Rematch demandé': 'unresolved',
       'Médiateur déconnecté': 'abandoned',
       'Le médiateur a quitté': 'abandoned',
     };
@@ -501,6 +512,58 @@ export function TikTokStyleArena({
       router.replace('/feed');
     }, 12000);
   }, [roomId, leave, router]);
+
+  const handleMediatorVerdict = useCallback(
+    async (kind: 'resolved' | 'closed' | 'rematch') => {
+      if (!isHost || beefEndedRef.current) return;
+      useArenaVerdictStore.getState().setVerdict(kind, roomId);
+      channelRef.current
+        ?.send({ type: 'broadcast', event: 'beef_verdict', payload: { verdict: kind } })
+        .catch(() => {});
+
+      if (kind === 'resolved') {
+        setVerdictConfetti(true);
+        window.setTimeout(() => setVerdictConfetti(false), 2200);
+        window.setTimeout(() => void endBeef('Verdict : résolu'), 1600);
+        setShowModeratorPanel(false);
+        return;
+      }
+      if (kind === 'closed') {
+        setShowModeratorPanel(false);
+        void endBeef('Clos par le médiateur');
+        return;
+      }
+      playRematchThunderSfx();
+      setRematchSequence(true);
+      setShowModeratorPanel(false);
+      await supabase
+        .from('beefs')
+        .update({ mediation_summary: 'Rematch demandé — Round 2 à planifier avec les challengers.' })
+        .eq('id', roomId);
+      if (rematchVerdictTimerRef.current) clearTimeout(rematchVerdictTimerRef.current);
+      rematchVerdictTimerRef.current = window.setTimeout(() => {
+        rematchVerdictTimerRef.current = null;
+        void endBeef('Rematch demandé');
+      }, 10000);
+    },
+    [isHost, roomId, endBeef],
+  );
+
+  useEffect(() => {
+    if (beefEnded) {
+      setRematchSequence(false);
+      if (rematchVerdictTimerRef.current) {
+        clearTimeout(rematchVerdictTimerRef.current);
+        rematchVerdictTimerRef.current = null;
+      }
+    }
+  }, [beefEnded]);
+
+  useEffect(() => {
+    return () => {
+      if (rematchVerdictTimerRef.current) clearTimeout(rematchVerdictTimerRef.current);
+    };
+  }, []);
 
   // Keep refs in sync
   useEffect(() => { endBeefRef.current = endBeef; }, [endBeef]);
@@ -1096,6 +1159,19 @@ export function TikTokStyleArena({
         if (!uid || uid !== userId) return;
         setMicMutedByMediator(!!payload?.muted);
       })
+      .on('broadcast', { event: 'beef_verdict' }, ({ payload }: any) => {
+        const v = payload?.verdict as string | undefined;
+        if (v !== 'resolved' && v !== 'closed' && v !== 'rematch') return;
+        useArenaVerdictStore.getState().setVerdict(v, roomId);
+        if (v === 'resolved') {
+          setVerdictConfetti(true);
+          window.setTimeout(() => setVerdictConfetti(false), 2200);
+        }
+        if (v === 'rematch') {
+          setRematchSequence(true);
+          playRematchThunderSfx();
+        }
+      })
       .subscribe((status: string) => {
         console.log('[Live] Broadcast channel:', status);
         if (status === 'SUBSCRIBED') {
@@ -1112,7 +1188,7 @@ export function TikTokStyleArena({
       setLiveConnected(false);
       supabase.removeChannel(channel);
     };
-  }, [roomId, addRemoteMessage, addRemoteReaction, addPulseVoices, userRole, userId, toast]);
+  }, [roomId, addRemoteMessage, addRemoteReaction, addPulseVoices, userRole, userId, toast, setVerdictConfetti, setRematchSequence]);
 
   // 2) Polling fallback — queries DB for new messages every 3s (guaranteed delivery)
   useEffect(() => {
@@ -1750,6 +1826,9 @@ export function TikTokStyleArena({
         </div>
       )}
 
+      <VerdictConfettiBurst active={verdictConfetti} />
+      <RematchVerdictOverlay visible={rematchSequence && !beefEnded} />
+
       {isViewer && previewPaywall && liveContinuationPrice > 0 && (
         <div
           className="absolute inset-0 z-[2500] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6"
@@ -1987,7 +2066,19 @@ export function TikTokStyleArena({
             <div className="absolute inset-0 flex">
 
               {/* LEFT — Participant A (first challenger, or local user if challenger) */}
-              <div className="relative flex-1 overflow-hidden bg-gradient-to-br from-prestige-void via-[#060d18] to-indigo-950/55">
+              <motion.div
+                className="relative flex-1 overflow-hidden bg-gradient-to-br from-prestige-void via-[#060d18] to-indigo-950/55"
+                animate={
+                  rematchSequence
+                    ? { x: [0, -5, 5, -4, 4, -3, 3, 0], y: [0, 3, -3, 2, -2, 0] }
+                    : { x: 0, y: 0 }
+                }
+                transition={
+                  rematchSequence
+                    ? { duration: 0.35, repeat: 22, ease: 'easeInOut' }
+                    : { duration: 0.2 }
+                }
+              >
                 <AnimatePresence>
                   {leftNeonAudio && (
                     <motion.div
@@ -2135,7 +2226,7 @@ export function TikTokStyleArena({
                     </button>
                   </div>
                 )}
-              </div>
+              </motion.div>
 
               {/* CENTER — Mediator bubble — slightly below center */}
               <div className="absolute left-1/2 top-[55%] -translate-x-1/2 -translate-y-1/2 z-20 flex flex-col items-center gap-1.5 pointer-events-auto">
@@ -2254,7 +2345,19 @@ export function TikTokStyleArena({
               </div>
 
               {/* RIGHT — Participant B (second challenger) */}
-              <div className="relative flex-1 overflow-hidden bg-gradient-to-br from-prestige-void via-[#14060a] to-brand-950/50">
+              <motion.div
+                className="relative flex-1 overflow-hidden bg-gradient-to-br from-prestige-void via-[#14060a] to-brand-950/50"
+                animate={
+                  rematchSequence
+                    ? { x: [0, 5, -5, 4, -4, 3, -3, 0], y: [0, -3, 3, -2, 2, 0] }
+                    : { x: 0, y: 0 }
+                }
+                transition={
+                  rematchSequence
+                    ? { duration: 0.35, repeat: 22, ease: 'easeInOut' }
+                    : { duration: 0.2 }
+                }
+              >
                 <AnimatePresence>
                   {rightNeonAudio && (
                     <motion.div
@@ -2367,7 +2470,7 @@ export function TikTokStyleArena({
                   </span>
                   <div className="h-1.5 w-1.5 rounded-full bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.85)]" />
                 </button>
-              </div>
+              </motion.div>
             </div>
 
             {/* Joining indicator */}
@@ -3116,6 +3219,42 @@ export function TikTokStyleArena({
                     </p>
                   </div>
                 )}
+              </div>
+
+              {/* Verdict triple — visible uniquement par le médiateur */}
+              <div className="rounded-xl border border-white/12 bg-gradient-to-br from-zinc-900/95 to-black/80 p-4 space-y-3 shadow-prestige-ring">
+                <div>
+                  <h3 className="text-white font-black text-sm tracking-tight">⚖️ Verdict du beef</h3>
+                  <p className="mt-1 text-[11px] leading-relaxed text-white/50">
+                    Choisis l’issue du débat. Tout le monde voit l’effet en direct (confetti, neutre ou rematch).
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    disabled={beefEnded}
+                    onClick={() => void handleMediatorVerdict('resolved')}
+                    className="rounded-xl border border-emerald-500/50 bg-emerald-600/25 py-3 text-sm font-black tracking-tight text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.25)] transition-all hover:bg-emerald-500/35 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Résolu
+                  </button>
+                  <button
+                    type="button"
+                    disabled={beefEnded}
+                    onClick={() => void handleMediatorVerdict('closed')}
+                    className="rounded-xl border border-white/15 bg-white/5 py-3 text-sm font-black tracking-tight text-white/85 transition-all hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Clos
+                  </button>
+                  <button
+                    type="button"
+                    disabled={beefEnded}
+                    onClick={() => void handleMediatorVerdict('rematch')}
+                    className="rounded-xl border border-brand-400/60 bg-gradient-to-br from-brand-500/40 to-orange-600/30 py-3 text-sm font-black tracking-tight text-white shadow-[0_0_28px_rgba(255,107,44,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Rematch
+                  </button>
+                </div>
               </div>
 
               {/* Débat structuré : budget challengers, médiateur, toss */}

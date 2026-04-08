@@ -164,6 +164,22 @@
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
+/* Verdict rematch — titre cyber / glitch léger */
+@keyframes verdict-glitch {
+  0%, 100% { transform: translate(0, 0); filter: hue-rotate(0deg); }
+  25% { transform: translate(-1px, 1px); }
+  50% { transform: translate(1px, -1px); }
+  75% { transform: translate(-1px, -1px); }
+}
+.glitch-rematch-title {
+  animation: verdict-glitch 0.35s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .glitch-rematch-title {
+    animation: none;
+  }
+}
+
 /* Thin scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
