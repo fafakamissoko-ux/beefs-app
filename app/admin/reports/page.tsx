@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -77,11 +77,7 @@ export default function AdminReportsPage() {
     }
   }, [user, userRole, authLoading, router]);
 
-  useEffect(() => {
-    if (user && userRole === 'admin') loadReports();
-  }, [user, userRole]);
-
-  const loadReports = async () => {
+  const loadReports = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -96,7 +92,11 @@ export default function AdminReportsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (user && userRole === 'admin') void loadReports();
+  }, [user, userRole, loadReports]);
 
   const filteredReports = useMemo(() => {
     if (statusFilter === 'all') return reports;

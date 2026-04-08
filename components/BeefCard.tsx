@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Eye, Clock, Users, Flame, Play, CheckCircle, Calendar, ArrowUpRight } from 'lucide-react';
 import { hasBeefWatchStarted } from '@/lib/beef-view-local';
@@ -130,7 +131,13 @@ export function BeefCard({
       {/* Thumbnail */}
       <div className="relative h-44 overflow-hidden bg-surface-3">
         {thumbnail ? (
-          <img src={thumbnail} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <Image
+            src={thumbnail}
+            alt={title}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(max-width: 768px) 100vw, 384px"
+          />
         ) : (
           (() => {
             const charSum = title.split('').reduce((a, c) => a + c.charCodeAt(0), 0);

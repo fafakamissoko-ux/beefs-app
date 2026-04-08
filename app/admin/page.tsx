@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Shield, Users, Flame, Coins, Eye, EyeOff, ArrowRight, Settings, RefreshCw, AlertTriangle, Video } from 'lucide-react';
@@ -43,14 +43,7 @@ export default function AdminDashboardPage() {
     }
   }, [user, userRole, authLoading, router]);
 
-  useEffect(() => {
-    if (user && userRole === 'admin') {
-      loadViewMode();
-      loadStats();
-    }
-  }, [user, userRole]);
-
-  const loadViewMode = async () => {
+  const loadViewMode = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
       .from('admin_settings')
@@ -61,9 +54,9 @@ export default function AdminDashboardPage() {
     if (data?.view_mode) {
       setViewMode(data.view_mode as ViewMode);
     }
-  };
+  }, [user]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     setLoadingStats(true);
     try {
       const [usersRes, beefsRes, pointsRes] = await Promise.all([
@@ -82,7 +75,14 @@ export default function AdminDashboardPage() {
     } finally {
       setLoadingStats(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (user && userRole === 'admin') {
+      void loadViewMode();
+      void loadStats();
+    }
+  }, [user, userRole, loadViewMode, loadStats]);
 
   const adminAuthHeaders = async (): Promise<HeadersInit> => {
     const { data: { session } } = await supabase.auth.getSession();

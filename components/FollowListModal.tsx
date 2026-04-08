@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, UserPlus, UserMinus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
@@ -216,13 +217,9 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
                     onClick={() => goToProfile(u.username)}
                     className="flex flex-1 items-center gap-3 min-w-0 text-left"
                   >
-                    <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-black text-white bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 overflow-hidden">
+                    <div className="relative w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-black text-white bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 overflow-hidden">
                       {u.avatar_url ? (
-                        <img
-                          src={u.avatar_url}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
+                        <Image src={u.avatar_url} alt="" fill className="object-cover" sizes="44px" />
                       ) : (
                         (u.display_name || u.username)[0]?.toUpperCase() || '?'
                       )}

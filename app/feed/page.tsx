@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
@@ -53,6 +53,17 @@ const STATUS_FILTERS = [
   { id: 'scheduled', label: 'À venir' },
   { id: 'ended', label: 'Terminés' },
 ];
+
+/** Aligné sur l’admin : mis en avant → feed_position (desc) → date. */
+function compareFeedOrder(a: Record<string, unknown>, b: Record<string, unknown>) {
+  const fa = !!a.is_featured;
+  const fb = !!b.is_featured;
+  if (fa !== fb) return fa ? -1 : 1;
+  const pa = Number(a.feed_position) || 0;
+  const pb = Number(b.feed_position) || 0;
+  if (pa !== pb) return pb - pa;
+  return new Date(String(b.created_at)).getTime() - new Date(String(a.created_at)).getTime();
+}
 
 export default function FeedPage() {
   const router = useRouter();
@@ -187,36 +198,7 @@ export default function FeedPage() {
     }
   }, [beefs]);
 
-  useEffect(() => {
-    if (!user) {
-      const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-      if (hasSeenOnboarding !== 'true') { router.push('/onboarding'); return; }
-      router.push('/login');
-      return;
-    }
-    loadBeefs();
-  }, [user, router]);
-
-  useEffect(() => {
-    if (user) {
-      loadBeefs();
-      const channel = supabase.channel('beefs_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'beefs' }, () => loadBeefs()).subscribe();
-      return () => { channel.unsubscribe(); };
-    }
-  }, [user, feedType, selectedTags, selectedStatus, followingIds, fetchLimit]);
-
-  /** Aligné sur l’admin : mis en avant → feed_position (desc) → date. */
-  const compareFeedOrder = (a: Record<string, unknown>, b: Record<string, unknown>) => {
-    const fa = !!a.is_featured;
-    const fb = !!b.is_featured;
-    if (fa !== fb) return fa ? -1 : 1;
-    const pa = Number(a.feed_position) || 0;
-    const pb = Number(b.feed_position) || 0;
-    if (pa !== pb) return pb - pa;
-    return new Date(String(b.created_at)).getTime() - new Date(String(a.created_at)).getTime();
-  };
-
-  const loadBeefs = async () => {
+  const loadBeefs = useCallback(async () => {
     try {
       setLoading(true);
       let query = supabase
@@ -277,7 +259,25 @@ export default function FeedPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, [fetchLimit, selectedStatus, selectedTags, feedType, followingIds]);
+
+  useEffect(() => {
+    if (!user) {
+      const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+      if (hasSeenOnboarding !== 'true') { router.push('/onboarding'); return; }
+      router.push('/login');
+      return;
+    }
+    void loadBeefs();
+  }, [user, router, loadBeefs]);
+
+  useEffect(() => {
+    if (user) {
+      void loadBeefs();
+      const channel = supabase.channel('beefs_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'beefs' }, () => void loadBeefs()).subscribe();
+      return () => { channel.unsubscribe(); };
+    }
+  }, [user, feedType, selectedTags, selectedStatus, followingIds, fetchLimit, loadBeefs]);
 
   const loadMore = () => {
     if (loadingMore || !hasMore) return;

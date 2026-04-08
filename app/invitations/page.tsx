@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Check, X, Clock, AlertCircle, Users, Flame } from 'lucide-react';
@@ -36,16 +36,7 @@ export default function InvitationsPage() {
   const [loading, setLoading] = useState(true);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
-    loadInvitations();
-  }, [user]);
-
-  const loadInvitations = async () => {
+  const loadInvitations = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -98,7 +89,15 @@ export default function InvitationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    void loadInvitations();
+  }, [user, router, loadInvitations]);
 
   const handleResponse = async (invitationId: string, beefId: string, accept: boolean) => {
     setRespondingTo(invitationId);

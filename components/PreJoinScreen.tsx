@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Video, VideoOff, ChevronDown } from 'lucide-react';
 
 interface PreJoinScreenProps {
@@ -12,6 +12,7 @@ interface PreJoinScreenProps {
 
 export function PreJoinScreen({ userName, onJoin, viewerMode = false }: PreJoinScreenProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   /** True si le MediaStream a été passé à Daily — ne pas stopper les pistes au démontage. */
   const mediaHandedOffRef = useRef(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -25,10 +26,8 @@ export function PreJoinScreen({ userName, onJoin, viewerMode = false }: PreJoinS
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number>(0);
 
-  // Start camera preview
-  const startPreview = async (camId?: string, micId?: string) => {
-    // Stop existing stream
-    stream?.getTracks().forEach(t => t.stop());
+  const startPreview = useCallback(async (camId?: string, micId?: string) => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
     setCamError(null);
 
     try {
@@ -71,13 +70,14 @@ export function PreJoinScreen({ userName, onJoin, viewerMode = false }: PreJoinS
       setCamError('Caméra/micro non disponible. Vérifie les permissions du navigateur.');
       console.error('Camera error:', err);
     }
-  };
+  }, [camEnabled]);
 
-  const streamRef = useRef<MediaStream | null>(null);
+  const startPreviewRef = useRef(startPreview);
+  startPreviewRef.current = startPreview;
 
   useEffect(() => {
     if (!viewerMode) {
-      startPreview();
+      void startPreviewRef.current();
     }
     return () => {
       cancelAnimationFrame(animFrameRef.current);

@@ -15,9 +15,8 @@ type Props = {
  */
 export function MediationSummaryPublic({ text, className = '' }: Props) {
   const trimmed = text.trim();
-  if (!trimmed) return null;
-
   const [open, setOpen] = useState(false);
+  if (!trimmed) return null;
   const lines = trimmed.split(/\r?\n/);
   const isLong = trimmed.length > 180 || lines.length > MAX_PREVIEW_LINES;
 

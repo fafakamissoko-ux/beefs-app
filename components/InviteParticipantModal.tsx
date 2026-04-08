@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, UserPlus, Check } from 'lucide-react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -181,11 +182,9 @@ export function InviteParticipantModal({
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="relative shrink-0">
                         {u.avatar_url ? (
-                          <img
-                            src={u.avatar_url}
-                            alt=""
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
+                          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full">
+                            <Image src={u.avatar_url} alt="" fill className="object-cover" sizes="48px" />
+                          </div>
                         ) : (
                           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg font-bold text-white">
                             {label.slice(0, 1).toUpperCase()}

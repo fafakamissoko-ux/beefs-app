@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Check, X, Clock, Euro, AlertCircle, RefreshCw } from 'lucide-react';
@@ -50,7 +50,7 @@ export default function AdminRetraitsPage() {
     };
   };
 
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     setLoading(true);
     try {
       const params = filter !== 'all' ? `?status=${filter}` : '';
@@ -63,11 +63,11 @@ export default function AdminRetraitsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
   useEffect(() => {
-    if (authenticated) loadRequests();
-  }, [authenticated, filter]);
+    if (authenticated) void loadRequests();
+  }, [authenticated, loadRequests]);
 
   const handleAction = async (requestId: string, action: 'paid' | 'rejected') => {
     setActionLoading(requestId);

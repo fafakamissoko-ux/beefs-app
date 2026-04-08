@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical } from 'lucide-react';
@@ -78,40 +79,7 @@ export default function PublicProfilePage() {
   // Check if it's the current user's profile
   const isOwnProfile = user && profile && user.id === profile.id;
 
-  useEffect(() => {
-    loadProfile();
-  }, [username]);
-
-  /** Ancres #beefs / #followers / #following depuis l’aperçu profil ou liens directs */
-  useEffect(() => {
-    if (!profile) return;
-
-    const syncFromHash = () => {
-      if (typeof window === 'undefined') return;
-      const raw = window.location.hash.slice(1);
-      if (raw === 'followers') {
-        setShowFollowModal('followers');
-      } else if (raw === 'following') {
-        setShowFollowModal('following');
-      }
-      if (raw === 'beefs' || raw === 'mediations') {
-        requestAnimationFrame(() => {
-          document.getElementById('profile-section-beefs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-      }
-      if (raw === 'participations') {
-        requestAnimationFrame(() => {
-          document.getElementById('profile-section-participations')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-      }
-    };
-
-    syncFromHash();
-    window.addEventListener('hashchange', syncFromHash);
-    return () => window.removeEventListener('hashchange', syncFromHash);
-  }, [profile?.id]);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     setLoading(true);
     try {
       // Load user profile
@@ -240,7 +208,40 @@ export default function PublicProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [username, user]);
+
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
+
+  /** Ancres #beefs / #followers / #following depuis l’aperçu profil ou liens directs */
+  useEffect(() => {
+    if (!profile) return;
+
+    const syncFromHash = () => {
+      if (typeof window === 'undefined') return;
+      const raw = window.location.hash.slice(1);
+      if (raw === 'followers') {
+        setShowFollowModal('followers');
+      } else if (raw === 'following') {
+        setShowFollowModal('following');
+      }
+      if (raw === 'beefs' || raw === 'mediations') {
+        requestAnimationFrame(() => {
+          document.getElementById('profile-section-beefs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+      if (raw === 'participations') {
+        requestAnimationFrame(() => {
+          document.getElementById('profile-section-participations')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+    };
+
+    syncFromHash();
+    window.addEventListener('hashchange', syncFromHash);
+    return () => window.removeEventListener('hashchange', syncFromHash);
+  }, [profile]);
 
   const handleFollow = async () => {
     if (!user) {
@@ -345,12 +346,15 @@ export default function PublicProfilePage() {
           <div className="px-6 pb-6 -mt-16 relative">
             {/* Avatar */}
             <div className="flex items-end justify-between mb-4">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-4 border-gray-900 overflow-hidden flex items-center justify-center text-4xl font-black text-white">
+              <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-4 border-gray-900 overflow-hidden flex items-center justify-center text-4xl font-black text-white">
                 {profile.avatar_url ? (
-                  <img
+                  <Image
                     src={profile.avatar_url}
                     alt={profile.display_name}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="128px"
+                    priority
                   />
                 ) : (
                   profile.username[0].toUpperCase()

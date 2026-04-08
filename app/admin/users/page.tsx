@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -60,11 +60,7 @@ export default function AdminUsersPage() {
     }
   }, [user, userRole, authLoading, router]);
 
-  useEffect(() => {
-    if (user && userRole === 'admin') loadUsers();
-  }, [user, userRole]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -87,7 +83,11 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (user && userRole === 'admin') void loadUsers();
+  }, [user, userRole, loadUsers]);
 
   const filteredUsers = useMemo(() => {
     if (!search.trim()) return users;

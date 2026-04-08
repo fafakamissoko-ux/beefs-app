@@ -14,19 +14,20 @@ export function ParticipantVideo({ videoTrack, audioTrack, muted = false, classN
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (!videoRef.current) return;
+    const el = videoRef.current;
+    if (!el) return;
 
     const tracks: MediaStreamTrack[] = [];
     if (videoTrack) tracks.push(videoTrack);
     if (audioTrack && !muted) tracks.push(audioTrack);
 
-    videoRef.current.srcObject = tracks.length > 0 ? new MediaStream(tracks) : null;
+    el.srcObject = tracks.length > 0 ? new MediaStream(tracks) : null;
 
     return () => {
       // Only clear srcObject — DO NOT stop tracks here.
       // Track lifecycle is managed by useDailyCall.leave() which runs
       // the nuclear stop BEFORE this component unmounts.
-      if (videoRef.current) videoRef.current.srcObject = null;
+      el.srcObject = null;
     };
   }, [videoTrack, audioTrack, muted]);
 

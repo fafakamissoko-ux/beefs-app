@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,9 +60,48 @@ export default function MessagesPage() {
     }
   }, [user, loading, router]);
 
-  useEffect(() => {
-    if (user) loadConversations();
+  const loadConversations = useCallback(async () => {
+    if (!user) return;
+    setLoadingConvs(true);
+    try {
+      const { data: convs } = await supabase
+        .from('conversations')
+        .select('*')
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
+        .order('last_message_at', { ascending: false, nullsFirst: false });
+
+      if (!convs) { setConversations([]); return; }
+
+      const otherIds = convs.map(c => c.participant_1 === user.id ? c.participant_2 : c.participant_1);
+      const { data: users } = await supabase.from('users').select('id, username, display_name, avatar_url').in('id', otherIds);
+      const userMap = new Map((users || []).map(u => [u.id, u]));
+
+      // Count unread messages per conversation
+      const enriched: Conversation[] = await Promise.all(convs.map(async c => {
+        const otherId = c.participant_1 === user.id ? c.participant_2 : c.participant_1;
+        const otherUser = userMap.get(otherId) || { id: otherId, username: 'unknown', display_name: 'Utilisateur', avatar_url: null };
+
+        const { count } = await supabase
+          .from('direct_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', c.id)
+          .neq('sender_id', user.id)
+          .eq('is_read', false);
+
+        return { ...c, other_user: otherUser, unread_count: count || 0 };
+      }));
+
+      setConversations(enriched);
+    } catch (err) {
+      console.error('Error loading conversations:', err);
+    } finally {
+      setLoadingConvs(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    if (user) void loadConversations();
+  }, [user, loadConversations]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -102,45 +142,6 @@ export default function MessagesPage() {
 
     return () => { supabase.removeChannel(channel); };
   }, [selectedConv, user]);
-
-  const loadConversations = async () => {
-    if (!user) return;
-    setLoadingConvs(true);
-    try {
-      const { data: convs } = await supabase
-        .from('conversations')
-        .select('*')
-        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
-        .order('last_message_at', { ascending: false, nullsFirst: false });
-
-      if (!convs) { setConversations([]); return; }
-
-      const otherIds = convs.map(c => c.participant_1 === user.id ? c.participant_2 : c.participant_1);
-      const { data: users } = await supabase.from('users').select('id, username, display_name, avatar_url').in('id', otherIds);
-      const userMap = new Map((users || []).map(u => [u.id, u]));
-
-      // Count unread messages per conversation
-      const enriched: Conversation[] = await Promise.all(convs.map(async c => {
-        const otherId = c.participant_1 === user.id ? c.participant_2 : c.participant_1;
-        const otherUser = userMap.get(otherId) || { id: otherId, username: 'unknown', display_name: 'Utilisateur', avatar_url: null };
-
-        const { count } = await supabase
-          .from('direct_messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('conversation_id', c.id)
-          .neq('sender_id', user.id)
-          .eq('is_read', false);
-
-        return { ...c, other_user: otherUser, unread_count: count || 0 };
-      }));
-
-      setConversations(enriched);
-    } catch (err) {
-      console.error('Error loading conversations:', err);
-    } finally {
-      setLoadingConvs(false);
-    }
-  };
 
   const loadMessages = async (conv: Conversation) => {
     setSelectedConv(conv);
@@ -342,9 +343,9 @@ export default function MessagesPage() {
                           onClick={() => startConversation(u)}
                           className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-colors text-left"
                         >
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                          <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex-shrink-0 overflow-hidden">
                             {u.avatar_url ? (
-                              <img src={u.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                              <Image src={u.avatar_url} alt="" fill className="object-cover" sizes="40px" />
                             ) : (
                               <span className="text-white font-bold text-sm">{u.display_name?.[0]?.toUpperCase() || '?'}</span>
                             )}
@@ -383,9 +384,9 @@ export default function MessagesPage() {
                     selectedConv?.id === conv.id ? 'bg-white/5' : ''
                   }`}
                 >
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-500/80 to-brand-600/80 flex items-center justify-center flex-shrink-0">
+                  <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-brand-500/80 to-brand-600/80 flex-shrink-0 overflow-hidden flex items-center justify-center">
                     {conv.other_user.avatar_url ? (
-                      <img src={conv.other_user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                      <Image src={conv.other_user.avatar_url} alt="" fill className="object-cover" sizes="48px" />
                     ) : (
                       <span className="text-white font-bold">{conv.other_user.display_name?.[0]?.toUpperCase() || '?'}</span>
                     )}
@@ -423,9 +424,9 @@ export default function MessagesPage() {
                   className="flex items-center gap-3 flex-1 cursor-pointer"
                   onClick={() => router.push(hrefWithFrom(`/profile/${selectedConv.other_user.username}`, pathname))}
                 >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center flex-shrink-0">
+                  <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex-shrink-0 overflow-hidden flex items-center justify-center">
                     {selectedConv.other_user.avatar_url ? (
-                      <img src={selectedConv.other_user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                      <Image src={selectedConv.other_user.avatar_url} alt="" fill className="object-cover" sizes="40px" />
                     ) : (
                       <span className="text-white font-bold text-sm">{selectedConv.other_user.display_name?.[0]?.toUpperCase() || '?'}</span>
                     )}

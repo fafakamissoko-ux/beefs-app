@@ -99,37 +99,9 @@ export default function SettingsPage() {
   };
   const [pointTx, setPointTx] = useState<PointTx[]>([]);
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/login?redirect=/settings');
-      return;
-    }
-    loadProfile();
-    try {
-      const saved = localStorage.getItem('beefs_notif_prefs');
-      if (saved) setNotifPrefs(JSON.parse(saved));
-    } catch {}
-  }, [user]);
-
-  useEffect(() => {
-    if (!user?.id) {
-      setPointTx([]);
-      return;
-    }
-    void supabase
-      .from('transactions')
-      .select('id, amount, balance_after, type, description, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50)
-      .then(({ data, error }) => {
-        if (!error && data) setPointTx(data as PointTx[]);
-      });
-  }, [user?.id]);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     if (!user) return;
-    
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -152,7 +124,35 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/login?redirect=/settings');
+      return;
+    }
+    void loadProfile();
+    try {
+      const saved = localStorage.getItem('beefs_notif_prefs');
+      if (saved) setNotifPrefs(JSON.parse(saved));
+    } catch {}
+  }, [user, router, loadProfile]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setPointTx([]);
+      return;
+    }
+    void supabase
+      .from('transactions')
+      .select('id, amount, balance_after, type, description, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50)
+      .then(({ data, error }) => {
+        if (!error && data) setPointTx(data as PointTx[]);
+      });
+  }, [user?.id]);
 
   const handleSaveProfile = async () => {
     if (!user) return;

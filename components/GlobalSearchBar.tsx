@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, X, User, Flame, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
@@ -40,21 +40,7 @@ export function GlobalSearchBar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Search with debounce
-  useEffect(() => {
-    if (query.length < 2) {
-      setResults([]);
-      return;
-    }
-
-    const timeoutId = setTimeout(() => {
-      performSearch();
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [query, activeTab]);
-
-  const performSearch = async () => {
+  const performSearch = useCallback(async () => {
     setLoading(true);
     try {
       if (activeTab === 'beefs') {
@@ -76,7 +62,6 @@ export function GlobalSearchBar() {
 
         setResults(beefResults);
       } else {
-        // Search users
         const { data, error } = await supabase
           .from('users')
           .select('id, username, display_name, avatar_url')
@@ -101,7 +86,21 @@ export function GlobalSearchBar() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [query, activeTab]);
+
+  // Search with debounce
+  useEffect(() => {
+    if (query.length < 2) {
+      setResults([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      void performSearch();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [query, activeTab, performSearch]);
 
   const handleResultClick = (result: SearchResult) => {
     if (result.type === 'beef') {

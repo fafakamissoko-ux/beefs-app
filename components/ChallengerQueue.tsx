@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Users, ArrowRight, Crown } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
@@ -24,33 +24,7 @@ export function ChallengerQueue({ roomId, userId, userName, isHost }: Challenger
   const [queue, setQueue] = useState<Challenger[]>([]);
   const [inQueue, setInQueue] = useState(false);
 
-  useEffect(() => {
-    // Load initial queue
-    loadQueue();
-
-    // Subscribe to queue changes
-    const channel = supabase
-      .channel(`room_${roomId}_queue`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'challenger_queue',
-          filter: `room_id=eq.${roomId}`,
-        },
-        () => {
-          loadQueue();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [roomId]);
-
-  const loadQueue = async () => {
+  const loadQueue = useCallback(async () => {
     const { data } = await supabase
       .from('challenger_queue')
       .select('*')
@@ -62,7 +36,31 @@ export function ChallengerQueue({ roomId, userId, userName, isHost }: Challenger
       setQueue(data as Challenger[]);
       setInQueue(data.some((c: Challenger) => c.user_id === userId));
     }
-  };
+  }, [roomId, userId]);
+
+  useEffect(() => {
+    void loadQueue();
+
+    const channel = supabase
+      .channel(`room_${roomId}_queue`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'challenger_queue',
+          filter: `room_id=eq.${roomId}`,
+        },
+        () => {
+          void loadQueue();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [roomId, loadQueue]);
 
   const joinQueue = async () => {
     const maxPosition = queue.length > 0 ? Math.max(...queue.map(c => c.position)) : 0;

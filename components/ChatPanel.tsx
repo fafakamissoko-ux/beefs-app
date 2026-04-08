@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { Send, Pin, Heart } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -275,11 +276,15 @@ function CommentsStyleMessage({ message }: { message: Message }) {
         whileHover={{ scale: 1.05 }}
       >
         {message.avatar_url ? (
-          <img 
-            src={message.avatar_url} 
-            alt={message.display_name || message.username}
-            className="w-full h-full rounded-full object-cover"
-          />
+          <div className="relative w-full h-full rounded-full overflow-hidden">
+            <Image
+              src={message.avatar_url}
+              alt={message.display_name || message.username}
+              fill
+              className="object-cover"
+              sizes="40px"
+            />
+          </div>
         ) : (
           <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
             <span className="text-white font-bold text-sm">

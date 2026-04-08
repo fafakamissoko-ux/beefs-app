@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -80,21 +80,7 @@ export default function LivePage() {
       });
   }, [user?.id]);
 
-  useEffect(() => {
-    loadLiveRooms();
-
-    const channel = supabase
-      .channel('live_beefs_changes')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'beefs' },
-        () => { loadLiveRooms(); }
-      )
-      .subscribe();
-
-    return () => { channel.unsubscribe(); };
-  }, [feedType, followingIds]);
-
-  const loadLiveRooms = async () => {
+  const loadLiveRooms = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('beefs')
@@ -134,7 +120,21 @@ export default function LivePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [feedType, followingIds]);
+
+  useEffect(() => {
+    void loadLiveRooms();
+
+    const channel = supabase
+      .channel('live_beefs_changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'beefs' },
+        () => { void loadLiveRooms(); }
+      )
+      .subscribe();
+
+    return () => { channel.unsubscribe(); };
+  }, [feedType, followingIds, loadLiveRooms]);
 
   const handleCreateBeef = async (beefData: any) => {
     if (!user) {

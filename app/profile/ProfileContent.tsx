@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, Edit, Share2, Settings, TrendingUp, Users, MessageCircle, Trophy, Crown, Flame, Upload, X, Check, ArrowLeft, Clock, Wallet, Euro, ChevronDown, AlertCircle, Eye } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
@@ -334,7 +335,7 @@ export default function ProfileContent() {
     };
 
     loadProfile();
-  }, [user]);
+  }, [user, toast]);
 
   // Load withdrawal history when gains tab is active
   useEffect(() => {
@@ -641,7 +642,7 @@ export default function ProfileContent() {
           {/* Cover Image */}
           <div className="h-48 relative overflow-hidden group">
             {profile.banner_url ? (
-              <img src={profile.banner_url} alt="Banner" className="w-full h-full object-cover" />
+              <Image src={profile.banner_url} alt="Banner" fill className="object-cover" sizes="100vw" priority />
             ) : (
               <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${profile.accent_color || '#E83A14'}33, ${profile.accent_color || '#E83A14'}11)` }} />
             )}
@@ -663,12 +664,15 @@ export default function ProfileContent() {
             {/* Avatar */}
             <div className="flex items-end justify-between mb-4">
               <div className="relative">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-4 overflow-hidden flex items-center justify-center text-4xl font-black text-white" style={{ borderColor: profile.accent_color || '#E83A14' }}>
+                <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-4 overflow-hidden flex items-center justify-center text-4xl font-black text-white" style={{ borderColor: profile.accent_color || '#E83A14' }}>
                   {profile.avatar_url ? (
-                    <img
+                    <Image
                       src={profile.avatar_url}
                       alt={profile.display_name}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      sizes="128px"
+                      priority
                     />
                   ) : (
                     profile.username[0].toUpperCase()
@@ -1592,11 +1596,11 @@ export default function ProfileContent() {
                 />
                 <div className="px-5 pb-5 -mt-12 relative">
                   <div
-                    className="w-24 h-24 rounded-full border-4 border-[#0f0f0f] overflow-hidden bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-3xl font-black text-white"
+                    className="relative w-24 h-24 rounded-full border-4 border-[#0f0f0f] overflow-hidden bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-3xl font-black text-white"
                     style={{ borderColor: profile.accent_color || '#E83A14' }}
                   >
                     {profile.avatar_url ? (
-                      <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                      <Image src={profile.avatar_url} alt="" fill className="object-cover" sizes="96px" />
                     ) : (
                       profile.username[0].toUpperCase()
                     )}

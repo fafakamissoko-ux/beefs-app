@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['api.dicebear.com', 'flagcdn.com'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'api.dicebear.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'flagcdn.com', pathname: '/**' },
+      { protocol: 'https', hostname: '**.supabase.co', pathname: '/storage/**' },
+    ],
     formats: ['image/avif', 'image/webp'],
   },
   compiler: {

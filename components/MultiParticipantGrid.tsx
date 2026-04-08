@@ -1,4 +1,7 @@
+'use client';
+
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { Mic, MicOff, Volume2, VolumeX, UserPlus, Users } from 'lucide-react';
 
 interface Participant {
@@ -92,12 +95,14 @@ export function MultiParticipantGrid({
             {/* Badge TOP - REMOVED - Border is enough to show who's in beef */}
 
             {/* Video placeholder / Avatar */}
-            <div className="w-full h-full flex items-center justify-center bg-black/50">
+            <div className="relative w-full h-full flex items-center justify-center bg-black/50">
               {participant.avatar ? (
-                <img
+                <Image
                   src={participant.avatar}
                   alt={participant.name}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 100vw, 400px"
                 />
               ) : (
                 <div className="text-6xl">
