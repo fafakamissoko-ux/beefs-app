@@ -409,7 +409,8 @@ export function useDailyCall(
     if (!co) return;
 
     const handler = (event: { activeSpeaker?: { peerId?: string } }) => {
-      setActiveSpeakerPeerId(event?.activeSpeaker?.peerId ?? null);
+      const next = event?.activeSpeaker?.peerId ?? null;
+      setActiveSpeakerPeerId((prev) => (prev === next ? prev : next));
     };
     co.on('active-speaker-change', handler);
     return () => {

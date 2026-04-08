@@ -1987,7 +1987,7 @@ export function TikTokStyleArena({
             <div className="absolute inset-0 flex">
 
               {/* LEFT — Participant A (first challenger, or local user if challenger) */}
-              <div className="relative flex-1 overflow-hidden bg-gradient-to-br from-[#0a1628]/95 via-[#0d1f3c]/90 to-indigo-950/40">
+              <div className="relative flex-1 overflow-hidden bg-gradient-to-br from-prestige-void via-[#060d18] to-indigo-950/55">
                 <AnimatePresence>
                   {leftNeonAudio && (
                     <motion.div
@@ -2011,27 +2011,38 @@ export function TikTokStyleArena({
                     </motion.div>
                   )}
                 </AnimatePresence>
-                {leftPanel?.videoTrack ? (
-                  <ParticipantVideo
-                    videoTrack={leftPanel.videoTrack}
-                    audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack}
-                    muted={leftPanelIsLocal ? true : leftRemoteAudioMuted}
-                    mirror={leftPanelIsLocal}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center gap-3 pt-16 sm:pt-20">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-blue-500/30 border-2 border-blue-400/40 flex items-center justify-center text-4xl sm:text-5xl font-black text-white">
-                      {leftPanel ? leftPanelName[0].toUpperCase() : 'A'}
-                    </div>
-                    {!leftPanel && (
-                      <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                        <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                        <span className="text-white/70 text-[11px] font-medium">En attente...</span>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={leftPanel?.sessionId ? `vid-left-${leftPanel.sessionId}` : 'empty-left'}
+                    className="absolute inset-0"
+                    initial={{ opacity: 0.88, scale: 1.02 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0.75 }}
+                    transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    {leftPanel?.videoTrack ? (
+                      <ParticipantVideo
+                        videoTrack={leftPanel.videoTrack}
+                        audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack}
+                        muted={leftPanelIsLocal ? true : leftRemoteAudioMuted}
+                        mirror={leftPanelIsLocal}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center gap-3 pt-16 sm:pt-20">
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-blue-500/30 border-2 border-blue-400/40 flex items-center justify-center text-4xl sm:text-5xl font-black text-white shadow-lg shadow-blue-500/20">
+                          {leftPanel ? leftPanelName[0].toUpperCase() : 'A'}
+                        </div>
+                        {!leftPanel && (
+                          <div className="glass-prestige flex items-center gap-2 rounded-full px-3 py-1.5">
+                            <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
+                            <span className="text-white/85 text-[11px] font-semibold tracking-tight">En attente...</span>
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
-                )}
+                  </motion.div>
+                </AnimatePresence>
                 {/* Vote tap overlay — viewers tap to vote for this challenger */}
                 {!isHost && !leftPanelIsLocal && (
                   <button
@@ -2084,10 +2095,10 @@ export function TikTokStyleArena({
                   animate={voteAnimation === 'A' ? { scale: [1, 1.4, 1] } : {}}
                   transition={{ duration: 0.4 }}
                 >
-                  <div className={`flex h-[22px] min-w-[22px] items-center justify-center rounded-full border border-white/10 px-1 backdrop-blur-md ${
+                  <div className={`glass-prestige flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1.5 ${
                     myVote === 'A'
-                      ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)] ring-1 ring-white/30'
-                      : 'bg-blue-500/55'
+                      ? 'bg-blue-600/90 shadow-[0_0_14px_rgba(59,130,246,0.55)] ring-1 ring-white/25'
+                      : 'bg-blue-600/50'
                   }`}>
                     <span className="text-[9px] font-black tabular-nums text-white">{votesA}</span>
                   </div>
@@ -2142,8 +2153,19 @@ export function TikTokStyleArena({
                           className="pointer-events-none absolute -inset-4 rounded-full sm:-inset-5"
                           aria-hidden
                         >
+                          {/* Ondes sonores discrètes — or / ambre (médiateur) */}
                           <motion.div
-                            className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_40%,rgba(255,220,140,0.35)_0%,rgba(180,120,40,0.12)_45%,transparent_70%)]"
+                            className="absolute inset-0 rounded-full border border-amber-200/25"
+                            animate={{ scale: [1, 1.12, 1], opacity: [0.45, 0, 0.45] }}
+                            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                          />
+                          <motion.div
+                            className="absolute inset-0 rounded-full border border-amber-300/20"
+                            animate={{ scale: [1, 1.2, 1], opacity: [0.35, 0, 0.35] }}
+                            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.35 }}
+                          />
+                          <motion.div
+                            className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_40%,rgba(255,220,140,0.38)_0%,rgba(180,120,40,0.12)_45%,transparent_72%)]"
                             animate={{
                               opacity: [0.55, 0.95, 0.55],
                               scale: [1, 1.04, 1],
@@ -2154,9 +2176,9 @@ export function TikTokStyleArena({
                             className="absolute inset-0 rounded-full"
                             animate={{
                               boxShadow: [
-                                '0 0 20px rgba(255, 200, 100, 0.35)',
-                                '0 0 36px rgba(255, 215, 80, 0.55)',
-                                '0 0 20px rgba(255, 200, 100, 0.35)',
+                                '0 0 20px rgba(255, 200, 100, 0.38)',
+                                '0 0 40px rgba(255, 215, 80, 0.58)',
+                                '0 0 20px rgba(255, 200, 100, 0.38)',
                               ],
                             }}
                             transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
@@ -2232,7 +2254,7 @@ export function TikTokStyleArena({
               </div>
 
               {/* RIGHT — Participant B (second challenger) */}
-              <div className="relative flex-1 overflow-hidden bg-gradient-to-br from-[#280a12]/95 via-red-950/80 to-brand-950/40">
+              <div className="relative flex-1 overflow-hidden bg-gradient-to-br from-prestige-void via-[#14060a] to-brand-950/50">
                 <AnimatePresence>
                   {rightNeonAudio && (
                     <motion.div
@@ -2256,26 +2278,37 @@ export function TikTokStyleArena({
                     </motion.div>
                   )}
                 </AnimatePresence>
-                {rightPanel?.videoTrack ? (
-                  <ParticipantVideo
-                    videoTrack={rightPanel.videoTrack}
-                    audioTrack={rightPanel.audioTrack}
-                    muted={rightRemoteAudioMuted}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center gap-3 pt-16 sm:pt-20">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-red-500/30 border-2 border-red-400/40 flex items-center justify-center text-4xl sm:text-5xl font-black text-white">
-                      {rightPanel ? rightPanelName[0].toUpperCase() : 'B'}
-                    </div>
-                    {!rightPanel && (
-                      <div className="flex items-center gap-2 bg-black/50 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                        <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                        <span className="text-white/70 text-[11px] font-medium">En attente...</span>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={rightPanel?.sessionId ? `vid-right-${rightPanel.sessionId}` : 'empty-right'}
+                    className="absolute inset-0"
+                    initial={{ opacity: 0.88, scale: 1.02 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0.75 }}
+                    transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    {rightPanel?.videoTrack ? (
+                      <ParticipantVideo
+                        videoTrack={rightPanel.videoTrack}
+                        audioTrack={rightPanel.audioTrack}
+                        muted={rightRemoteAudioMuted}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center gap-3 pt-16 sm:pt-20">
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-red-500/30 border-2 border-red-400/40 flex items-center justify-center text-4xl sm:text-5xl font-black text-white shadow-lg shadow-red-500/15">
+                          {rightPanel ? rightPanelName[0].toUpperCase() : 'B'}
+                        </div>
+                        {!rightPanel && (
+                          <div className="glass-prestige flex items-center gap-2 rounded-full px-3 py-1.5">
+                            <div className="h-2 w-2 rounded-full bg-red-400 animate-pulse" />
+                            <span className="text-white/85 text-[11px] font-semibold tracking-tight">En attente...</span>
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
-                )}
+                  </motion.div>
+                </AnimatePresence>
                 {/* Vote tap overlay — viewers tap to vote for this challenger */}
                 {!isHost && (
                   <button
@@ -2303,10 +2336,10 @@ export function TikTokStyleArena({
                   animate={voteAnimation === 'B' ? { scale: [1, 1.4, 1] } : {}}
                   transition={{ duration: 0.4 }}
                 >
-                  <div className={`flex h-[22px] min-w-[22px] items-center justify-center rounded-full border border-white/10 px-1 backdrop-blur-md ${
+                  <div className={`glass-prestige flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1.5 ${
                     myVote === 'B'
-                      ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.45)] ring-1 ring-white/30'
-                      : 'bg-red-500/55'
+                      ? 'bg-red-600/90 shadow-[0_0_14px_rgba(239,68,68,0.5)] ring-1 ring-white/25'
+                      : 'bg-red-600/50'
                   }`}>
                     <span className="text-[9px] font-black tabular-nums text-white">{votesB}</span>
                   </div>
@@ -2705,7 +2738,7 @@ export function TikTokStyleArena({
       {/* ── BOTTOM SECTION — TikTok-style comments + input ── */}
       <div className="absolute bottom-0 left-0 right-0 z-40 pointer-events-auto">
         {/* Gradient background — fades from transparent to semi-black */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/88 to-transparent" />
 
         {/* Comments area — left-aligned, scrollable */}
         <div className="relative px-3 pb-1.5 pr-16" style={{ maxHeight: '40vh' }}>
@@ -2733,7 +2766,7 @@ export function TikTokStyleArena({
                   </div>
                   {/* Message bubble */}
                   <div
-                    className={`min-w-0 rounded-2xl rounded-tl-md border border-white/12 bg-black/35 px-3 py-1.5 backdrop-blur-md ${canDelete ? 'cursor-context-menu touch-manipulation' : ''}`}
+                    className={`glass-prestige min-w-0 rounded-2xl rounded-tl-md px-3 py-1.5 ${canDelete ? 'cursor-context-menu touch-manipulation' : ''}`}
                     onContextMenu={
                       canDelete
                         ? (e) => {
@@ -2756,8 +2789,8 @@ export function TikTokStyleArena({
                     onTouchEnd={canDelete ? clearLongPress : undefined}
                     onTouchMove={canDelete ? clearLongPress : undefined}
                   >
-                    <span className="block text-[11px] font-semibold leading-tight tracking-tight text-accent">{message.user_name}</span>
-                    <span className="break-words text-[13px] font-medium leading-snug text-white/95">{message.content}</span>
+                    <span className="block text-[11px] font-bold leading-tight tracking-tight text-accent">{message.user_name}</span>
+                    <span className="break-words text-[13px] font-medium leading-snug tracking-tight text-white/95">{message.content}</span>
                     {contextMenuMsg === message.id && (
                       <div
                         className="absolute left-0 bottom-full mb-1 z-50 min-w-[8rem] rounded-lg border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
@@ -2787,7 +2820,7 @@ export function TikTokStyleArena({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="relative mx-3 mb-2 p-2 bg-black/80 backdrop-blur-md rounded-2xl border border-white/10"
+              className="glass-prestige relative mx-3 mb-2 rounded-2xl p-2"
             >
               <div className="grid grid-cols-8 gap-1.5">
                 {POPULAR_REACTIONS.map((emoji) => (
@@ -2840,7 +2873,7 @@ export function TikTokStyleArena({
               placeholder="Saisis ton message..."
               aria-label="Message dans le chat du direct"
               autoComplete="off"
-              className="w-full bg-white/10 backdrop-blur-sm border border-white/15 rounded-full pl-3.5 pr-12 py-2 text-white placeholder-white/40 text-sm focus:outline-none focus:border-brand-400/50 transition-colors"
+              className="glass-chat w-full rounded-full border border-white/14 pl-3.5 pr-12 py-2.5 text-sm font-medium tracking-tight text-white placeholder-white/38 shadow-inner focus:outline-none focus:ring-2 focus:ring-brand-500/35 focus:border-brand-400/40 transition-shadow"
             />
             {chatInput.trim() && (
               <button

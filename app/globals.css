@@ -12,8 +12,13 @@
 
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background: #000000;
-    color: #FAFAFA;
+    color: #f4f4f5;
+    letter-spacing: -0.011em;
+    background-color: #000000;
+    background-image:
+      radial-gradient(ellipse 120% 80% at 50% -20%, rgba(145, 70, 255, 0.12) 0%, transparent 55%),
+      radial-gradient(ellipse 90% 60% at 100% 50%, rgba(0, 240, 255, 0.06) 0%, transparent 45%),
+      linear-gradient(180deg, #050508 0%, #000000 45%, #020203 100%);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -38,17 +43,28 @@
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
-  /* Arène / overlays — glassmorphism « prestige » (Twitch / TikTok) */
+  /* Arène / overlays — glassmorphism « prestige » (Twitch / TikTok) — équivalent tailwind backdrop-blur-md */
   .glass-prestige {
     background: linear-gradient(
-      135deg,
-      rgba(10, 10, 15, 0.82) 0%,
-      rgba(5, 5, 8, 0.72) 100%
+      145deg,
+      rgba(8, 8, 12, 0.88) 0%,
+      rgba(4, 4, 8, 0.78) 50%,
+      rgba(6, 6, 10, 0.82) 100%
     );
+    backdrop-filter: blur(12px) saturate(175%);
+    -webkit-backdrop-filter: blur(12px) saturate(175%);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    box-shadow:
+      0 10px 40px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+
+  /* Bulles chat / HUD secondaires */
+  .glass-chat {
+    background: linear-gradient(160deg, rgba(12, 12, 18, 0.82) 0%, rgba(6, 6, 10, 0.72) 100%);
     backdrop-filter: blur(12px) saturate(160%);
     -webkit-backdrop-filter: blur(12px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
   /* Brand gradient — fire */

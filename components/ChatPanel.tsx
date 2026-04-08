@@ -167,25 +167,25 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
   }
 
   return (
-    <div className="flex flex-col h-full bg-arena-gray">
+    <div className="flex h-full flex-col bg-surface-2">
       {/* Pinned Messages */}
       {pinnedMessages.length > 0 && (
-        <div className="border-b border-arena-dark p-3 space-y-2">
-          <div className="text-xs font-bold text-arena-blue flex items-center gap-1">
+        <div className="space-y-2 border-b border-white/10 p-3">
+          <div className="flex items-center gap-1 text-xs font-extrabold tracking-wide text-accent">
             <Pin className="w-3 h-3" />
             MESSAGES ÉPINGLÉS
           </div>
           {pinnedMessages.map((msg) => (
-            <div key={msg.id} className="bg-arena-blue/10 rounded px-2 py-1">
-              <div className="text-xs text-gray-400">{msg.display_name || msg.username}</div>
-              <div className="text-sm text-white">{msg.content}</div>
+            <div key={msg.id} className="glass-prestige rounded-lg px-2 py-1.5">
+              <div className="text-xs font-medium text-white/55">{msg.display_name || msg.username}</div>
+              <div className="text-sm font-medium tracking-tight text-white/95">{msg.content}</div>
             </div>
           ))}
         </div>
       )}
 
       {/* Messages List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 space-y-3 overflow-y-auto p-4">
         <AnimatePresence>
           {regularMessages.map((msg) => (
             <ChatMessage key={msg.id} message={msg} />
@@ -195,7 +195,7 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-arena-dark p-4">
+      <div className="border-t border-white/10 p-4">
         <div className="flex gap-2">
           <input
             type="text"
@@ -204,16 +204,16 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
             onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
             placeholder="Message..."
             disabled={loading}
-            className="flex-1 bg-arena-dark border border-arena-darker rounded-lg px-4 py-2 focus:outline-none focus:border-arena-blue disabled:opacity-50"
+            className="glass-chat flex-1 rounded-xl border border-white/12 px-4 py-2.5 text-sm font-medium tracking-tight text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:opacity-50"
           />
           
           <button
             onClick={sendMessage}
             disabled={loading || !input.trim()}
-            className="bg-arena-blue hover:bg-arena-blue/80 text-arena-dark p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-xl bg-brand-500 p-2 text-white shadow-glow transition-colors hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? (
-              <div className="w-5 h-5 border-2 border-arena-dark border-t-transparent rounded-full animate-spin"></div>
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/90 border-t-transparent" />
             ) : (
               <Send className="w-5 h-5" />
             )}
@@ -231,8 +231,8 @@ function ChatMessage({ message }: { message: Message }) {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-1"
     >
-      <div className="text-xs text-gray-400">{message.display_name || message.username}</div>
-      <div className="text-sm bg-arena-dark rounded-lg px-3 py-2">
+      <div className="text-xs font-semibold text-white/50">{message.display_name || message.username}</div>
+      <div className="glass-prestige rounded-lg px-3 py-2 text-sm font-medium tracking-tight text-white/95">
         {message.content}
       </div>
     </motion.div>
@@ -248,7 +248,7 @@ function TikTokChatMessage({ message }: { message: Message }) {
       transition={{ duration: 0.4, type: 'spring', stiffness: 300, damping: 25 }}
       className="mb-2"
     >
-      <div className="inline-flex max-w-[85%] items-baseline gap-1.5 rounded-2xl border border-white/12 bg-gradient-to-br from-black/75 to-black/45 px-3.5 py-2 shadow-xl backdrop-blur-md">
+      <div className="glass-prestige inline-flex max-w-[85%] items-baseline gap-1.5 rounded-2xl px-3.5 py-2 shadow-xl">
         <span className="bg-gradient-to-r from-fuchsia-400 via-pink-400 to-prestige-twitch bg-clip-text text-xs font-extrabold tracking-tight text-transparent drop-shadow">
           {message.display_name || message.username}
         </span>
