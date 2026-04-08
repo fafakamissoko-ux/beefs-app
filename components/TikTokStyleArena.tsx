@@ -188,6 +188,10 @@ export function TikTokStyleArena({
   // Speaking turn state
   const [speakingTurnActive, setSpeakingTurnActive] = useState(false);
   const [speakingTurnTarget, setSpeakingTurnTarget] = useState<string | null>(null);
+  const speakingTurnTargetRef = useRef<string | null>(null);
+  useEffect(() => {
+    speakingTurnTargetRef.current = speakingTurnTarget;
+  }, [speakingTurnTarget]);
   const [speakingTurnRemaining, setSpeakingTurnRemaining] = useState(0);
   const [speakingTurnDuration, setSpeakingTurnDuration] = useState(60);
   const speakingTurnIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -397,27 +401,7 @@ export function TikTokStyleArena({
 
   const totalVotes = votesA + votesB;
 
-  // Auto-pause timer when mediator's mic is active (they're speaking)
-  useEffect(() => {
-    if (!timerActive) return;
-    if (!micEnabled && isHost) {
-      // Mediator mic is off, timer runs
-    } else if (micEnabled && isHost) {
-      // Mediator is speaking, pause timer
-      setTimerPaused(true);
-    }
-  }, [micEnabled, isHost, timerActive]);
-
-  // Auto-pause when both challengers have no audio
-  useEffect(() => {
-    if (!timerActive) return;
-    const hasAnyRemoteAudio = remoteParticipants.some(p => p.audioTrack);
-    if (!hasAnyRemoteAudio && remoteParticipants.length > 0) {
-      setTimerPaused(true);
-    } else if (!micEnabled || !isHost) {
-      setTimerPaused(false);
-    }
-  }, [remoteParticipants, timerActive, micEnabled, isHost]);
+  /** Le chrono global du beef ne doit pas être figé par la micro du médiateur ou l’état audio des challengers. */
 
   const adjustBeefTime = useCallback((deltaSec: number) => {
     setBeefTimeRemaining((prev) => Math.max(0, Math.min(MAX_BEEF_DURATION, prev + deltaSec)));
@@ -959,18 +943,17 @@ export function TikTokStyleArena({
     }
   };
 
-  // Track viewer count — increment on join, decrement on leave
+  // Spectateurs uniquement (pas médiateur ni challengers)
   useEffect(() => {
-    if (!isJoined) return;
+    if (!isJoined || userRole !== 'viewer') return;
 
-    // Increment viewer count
     supabase.rpc('increment_viewer_count', { beef_id: roomId }).then(() => {});
-    setLiveViewerCount(prev => prev + 1);
+    setLiveViewerCount((prev) => prev + 1);
 
     return () => {
       supabase.rpc('decrement_viewer_count', { beef_id: roomId }).then(() => {});
     };
-  }, [isJoined, roomId]);
+  }, [isJoined, roomId, userRole]);
 
   // Sort remote participants: main challengers first based on roles
   const sortedRemoteParticipants = [...remoteParticipants].sort((a, b) => {
@@ -1069,6 +1052,18 @@ export function TikTokStyleArena({
     }
     return rows;
   }, [isHost, dailyRoomUrl, leftPanel, rightPanel, leftPanelName, rightPanelName]);
+
+  const leftPanelRef = useRef(leftPanel);
+  const rightPanelRef = useRef(rightPanel);
+  leftPanelRef.current = leftPanel;
+  rightPanelRef.current = rightPanel;
+
+  const hotMicSpeakerSlot = useMemo((): 'A' | 'B' | null => {
+    if (!speakingTurnActive || !speakingTurnTarget) return null;
+    if (leftPanel?.arenaUserId && speakingTurnTarget === leftPanel.arenaUserId) return 'A';
+    if (rightPanel?.arenaUserId && speakingTurnTarget === rightPanel.arenaUserId) return 'B';
+    return null;
+  }, [speakingTurnActive, speakingTurnTarget, leftPanel, rightPanel]);
 
   // Multi-participant system
   const [ringParticipants, setRingParticipants] = useState<RingParticipant[]>([]);
@@ -1382,7 +1377,95 @@ export function TikTokStyleArena({
     }
   };
 
+  const startHotMicTurn = useCallback(
+    (slot: 'A' | 'B', durationSec: 30 | 60) => {
+      if (speakingTurnActive) {
+        toast('Un tour de parole est déjà en cours.', 'info');
+        return;
+      }
+      const activePanel = slot === 'A' ? leftPanel : rightPanel;
+      const otherPanel = slot === 'A' ? rightPanel : leftPanel;
+      const debaterId = activePanel?.arenaUserId ?? null;
+      if (!debaterId || !activePanel?.sessionId) {
+        toast('Challenger non connecté pour ce slot.', 'info');
+        return;
+      }
+      setSpeakingTurnDuration(durationSec);
+      setMediatorHoldingFloor(false);
+      if (channelRef.current) {
+        channelRef.current
+          .send({ type: 'broadcast', event: 'mediator_floor', payload: { active: false } })
+          .catch(() => {});
+      }
+      if (otherPanel?.sessionId) setRemoteParticipantAudio(otherPanel.sessionId, false);
+      if (activePanel.sessionId) setRemoteParticipantAudio(activePanel.sessionId, true);
+      if (otherPanel?.arenaUserId) {
+        channelRef.current
+          ?.send({
+            type: 'broadcast',
+            event: 'mediator_mute_challenger',
+            payload: { targetUserId: otherPanel.arenaUserId, muted: true },
+          })
+          .catch(() => {});
+      }
+      channelRef.current
+        ?.send({
+          type: 'broadcast',
+          event: 'mediator_mute_challenger',
+          payload: { targetUserId: debaterId, muted: false },
+        })
+        .catch(() => {});
+
+      setCurrentSpeaker(debaterId);
+      setTimerRunning(true);
+      setSpeakingTurnActive(true);
+      setSpeakingTurnTarget(debaterId);
+      setSpeakingTurnRemaining(durationSec);
+
+      setDebaters((prev) =>
+        prev.map((d) =>
+          d.id === debaterId ? { ...d, isMuted: false } : { ...d, isMuted: true },
+        ),
+      );
+
+      channelRef.current
+        ?.send({
+          type: 'broadcast',
+          event: 'speaking_turn',
+          payload: { debaterId, duration: durationSec, action: 'start' },
+        })
+        .catch(() => {});
+    },
+    [
+      speakingTurnActive,
+      leftPanel,
+      rightPanel,
+      setRemoteParticipantAudio,
+      toast,
+    ],
+  );
+
   const stopTimer = useCallback(() => {
+    const endedSpeakerId = speakingTurnTargetRef.current;
+    if (isHost && endedSpeakerId) {
+      const lp = leftPanelRef.current;
+      const rp = rightPanelRef.current;
+      const sid =
+        endedSpeakerId === lp?.arenaUserId
+          ? lp?.sessionId
+          : endedSpeakerId === rp?.arenaUserId
+            ? rp?.sessionId
+            : null;
+      if (sid) setRemoteParticipantAudio(sid, false);
+      channelRef.current
+        ?.send({
+          type: 'broadcast',
+          event: 'mediator_mute_challenger',
+          payload: { targetUserId: endedSpeakerId, muted: true },
+        })
+        .catch(() => {});
+    }
+
     setTimerRunning(false);
     setCurrentSpeaker(null);
     setSpeakingTurnActive(false);
@@ -1403,7 +1486,7 @@ export function TikTokStyleArena({
         payload: { action: 'stop' },
       }).catch(() => {});
     }
-  }, [isHost, structuredDebateEnabled]);
+  }, [isHost, structuredDebateEnabled, setRemoteParticipantAudio]);
 
   // Compte à rebours du tour (+ budget « temps challengers » si débat structuré, sans grignoter le chrono global du beef)
   useEffect(() => {
@@ -1831,6 +1914,24 @@ export function TikTokStyleArena({
     }
   }, [leave, router, isHost, endBeef]);
 
+  const shareArenaLink = useCallback(() => {
+    const url =
+      typeof window !== 'undefined' ? `${window.location.origin}/arena/${roomId}` : `/arena/${roomId}`;
+    void navigator.clipboard.writeText(url);
+    toast('Lien du direct copié', 'success');
+    setShowMenu(false);
+  }, [roomId, toast]);
+
+  const reportAbuse = useCallback(() => {
+    const url =
+      typeof window !== 'undefined' ? `${window.location.origin}/arena/${roomId}` : '';
+    const subject = encodeURIComponent(`Signalement — arène ${roomId}`);
+    const body = encodeURIComponent(`Lien : ${url}\n\nDescription : `);
+    window.open(`mailto:signalements@beefs.live?subject=${subject}&body=${body}`);
+    toast('Boîte mail ouverte — décris le problème', 'info');
+    setShowMenu(false);
+  }, [roomId, toast]);
+
   // Show pre-join screen before entering
   if (!hasJoined) {
     return (
@@ -2218,21 +2319,7 @@ export function TikTokStyleArena({
                     {leftPanelName}
                   </span>
                 </button>
-                {/* Vote bubble — bottom-right (opposite to pseudo) */}
-                <motion.div
-                  className="absolute bottom-1 right-1 z-10"
-                  animate={voteAnimation === 'A' ? { scale: [1, 1.4, 1] } : {}}
-                  transition={{ duration: 0.4 }}
-                >
-                  <div className={`frosted-titanium flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1.5 ${
-                    myVote === 'A'
-                      ? 'bg-blue-600/90 shadow-[0_0_14px_rgba(59,130,246,0.55)] ring-1 ring-white/25'
-                      : 'bg-blue-600/50'
-                  }`}>
-                    <span className="text-[9px] font-black tabular-nums text-white">{votesA}</span>
-                  </div>
-                </motion.div>
-                {/* Pulse voix — coin bas-droit (au-dessus du bulle vote) */}
+                {/* Pulse voix — scores via Impact Ring uniquement */}
                 <div
                   className={`absolute bottom-12 right-2 z-[28] ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 >
@@ -2437,20 +2524,6 @@ export function TikTokStyleArena({
                     />
                   )}
                 </AnimatePresence>
-                {/* Vote bubble — bottom-left (opposite to pseudo) */}
-                <motion.div
-                  className="absolute bottom-1 left-1 z-10"
-                  animate={voteAnimation === 'B' ? { scale: [1, 1.4, 1] } : {}}
-                  transition={{ duration: 0.4 }}
-                >
-                  <div className={`frosted-titanium flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-1.5 ${
-                    myVote === 'B'
-                      ? 'bg-red-600/90 shadow-[0_0_14px_rgba(239,68,68,0.5)] ring-1 ring-white/25'
-                      : 'bg-red-600/50'
-                  }`}>
-                    <span className="text-[9px] font-black tabular-nums text-white">{votesB}</span>
-                  </div>
-                </motion.div>
                 <div
                   className={`absolute bottom-12 right-2 z-[28] ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
                 >
@@ -2807,13 +2880,49 @@ export function TikTokStyleArena({
               </svg>
               <span className="text-[11px] font-bold tabular-nums text-white">{liveViewerCount || 0}</span>
             </button>
-            {/* Menu / Close */}
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md transition-colors hover:bg-black/55"
-            >
-              <MoreVertical className="w-4 h-4 text-white" />
-            </button>
+            {/* Menu — Partager / Signaler */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowMenu(!showMenu)}
+                aria-expanded={showMenu}
+                aria-haspopup="menu"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md transition-colors hover:bg-black/55"
+              >
+                <MoreVertical className="w-4 h-4 text-white" />
+              </button>
+              {showMenu && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Fermer le menu"
+                    className="fixed inset-0 z-[54]"
+                    onClick={() => setShowMenu(false)}
+                  />
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-full z-[55] mt-1 min-w-[12.5rem] rounded-[2px] border border-white/12 bg-[#08080a]/98 py-1 shadow-xl backdrop-blur-md"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={shareArenaLink}
+                      className="w-full px-3 py-2.5 text-left font-mono text-[11px] font-bold text-white hover:bg-white/10"
+                    >
+                      Partager le lien
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={reportAbuse}
+                      className="w-full px-3 py-2.5 text-left font-mono text-[11px] font-bold text-ember-200/95 hover:bg-white/10"
+                    >
+                      Signaler un abus
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <button
               onClick={handleLeave}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md transition-colors hover:bg-black/55"
@@ -2837,7 +2946,7 @@ export function TikTokStyleArena({
         <>
           <button
             type="button"
-            className="fixed left-3 top-[calc(env(safe-area-inset-top)+3.75rem)] z-[46] flex h-11 w-11 items-center justify-center rounded-[2px] border border-ember-500/40 bg-[#08080a]/92 text-ember-300 shadow-lg backdrop-blur-md transition-colors hover:bg-ember-500/15 md:top-[calc(env(safe-area-inset-top)+3.5rem)]"
+            className="fixed right-3 top-[calc(env(safe-area-inset-top)+4.25rem)] z-[46] flex h-11 w-11 items-center justify-center rounded-[2px] border border-ember-500/40 bg-[#08080a]/92 text-ember-300 shadow-lg backdrop-blur-md transition-colors hover:bg-ember-500/15 md:top-[calc(env(safe-area-inset-top)+4rem)]"
             aria-expanded={mediatorSidebarOpen}
             aria-label={mediatorSidebarOpen ? 'Fermer la commande médiateur' : 'Ouvrir la commande médiateur'}
             onClick={() => setMediatorSidebarOpen((o) => !o)}
@@ -2859,6 +2968,9 @@ export function TikTokStyleArena({
             }}
             onVerdict={handleMediatorVerdict}
             remoteRows={mediatorRemoteRows}
+            speakingTurnActive={speakingTurnActive}
+            hotMicSpeakerSlot={hotMicSpeakerSlot}
+            onHotMic={startHotMicTurn}
             onSetChallengerMuted={handleMediatorChallengerMute}
             onEjectParticipant={(sid) => {
               ejectRemoteParticipant(sid);
@@ -2872,11 +2984,11 @@ export function TikTokStyleArena({
       {/* ── Chat — overlay bas-gauche (TikTok), ne couvre pas le dock ── */}
       {!beefEnded && arenaChatOpen && (
         <div
-          className="pointer-events-none absolute bottom-[3.75rem] left-2 z-[43] flex w-[min(78vw,19rem)] flex-col gap-0"
+          className="pointer-events-none absolute bottom-[3.75rem] left-2 z-[48] flex w-[min(78vw,19rem)] flex-col gap-0"
           aria-live="polite"
         >
           <div
-            className="max-h-[min(32vh,14rem)] space-y-1 overflow-y-auto overflow-x-hidden pr-0.5 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(8,8,10,0.5)_14%,#08080a_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(8,8,10,0.55)_12%,#08080a_28%)]"
+            className="max-h-[min(32vh,14rem)] space-y-1 overflow-y-auto overflow-x-hidden rounded-[2px] bg-black/45 p-2 backdrop-blur-lg hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.55)_18%,#000_100%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_14%,#000_30%)]"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -2997,7 +3109,7 @@ export function TikTokStyleArena({
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
-              className="pointer-events-auto absolute bottom-full left-1/2 z-50 mb-2 w-[min(100vw-1rem,22rem)] -translate-x-1/2 rounded-[2px] border border-white/[0.1] bg-[#0c0c0f]/95 p-2 shadow-2xl backdrop-blur-xl"
+              className="pointer-events-auto absolute bottom-full left-1/2 z-[38] mb-2 w-[min(100vw-1rem,22rem)] -translate-x-1/2 rounded-[2px] border border-white/[0.1] bg-[#0c0c0f]/95 p-2 shadow-2xl backdrop-blur-xl"
             >
               <div className="grid grid-cols-8 gap-1">
                 {POPULAR_REACTIONS.map((emoji) => (
@@ -3096,7 +3208,7 @@ export function TikTokStyleArena({
                   initial={{ opacity: 0, y: 10, scale: 0.9 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                  className="absolute bottom-full right-0 z-50 mb-2 w-[220px] rounded-[2px] border border-white/12 bg-[#0c0c0f]/98 p-3 shadow-2xl backdrop-blur-xl"
+                  className="absolute bottom-full right-0 z-[38] mb-2 w-[220px] rounded-[2px] border border-white/12 bg-[#0c0c0f]/98 p-3 shadow-2xl backdrop-blur-xl"
                 >
                   <p className="mb-2 text-[11px] font-semibold text-white/70">Envoyer au médiateur</p>
                   <div className="grid grid-cols-2 gap-1.5">
