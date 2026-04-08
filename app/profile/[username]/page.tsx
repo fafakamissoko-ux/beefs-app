@@ -318,10 +318,10 @@ export default function PublicProfilePage() {
           <h2 className="text-2xl font-black text-white mb-2">Utilisateur introuvable</h2>
           <p className="text-gray-500 mb-6">@{username} n'existe pas ou a été supprimé.</p>
           <div className="flex gap-3 justify-center flex-wrap">
-            <AppBackButton className="px-5 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl [&_span]:text-white [&_span]:hover:text-white" fallback="/feed" />
+            <AppBackButton className="px-5 py-2.5 bg-white/5 hover:bg-white/10 rounded-[2px] [&_span]:text-white [&_span]:hover:text-white" fallback="/feed" />
             <Link
               href="/feed"
-              className="px-5 py-2.5 brand-gradient text-white font-semibold rounded-xl"
+              className="px-5 py-2.5 brand-gradient text-white font-semibold rounded-[2px]"
             >
               Accueil
             </Link>

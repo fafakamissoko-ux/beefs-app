@@ -1,9 +1,9 @@
 'use client';
 
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-/** Réactions rapides style TikTok / Instagram Live (spectateurs). */
+/** Réactions rapides (spectateurs). */
 export const SPECTATOR_QUICK_REACTIONS = ['🔥', '👏', '🤔', '😮'] as const;
 
 export type FlyingReactionEntry = {
@@ -11,24 +11,22 @@ export type FlyingReactionEntry = {
   emoji: string;
   /** Position horizontale de l’ancre (0–100 %). */
   x: number;
-  /** Dérives horizontales (px) pour la trajectoire pseudo-aléatoire. */
-  driftPx: [number, number, number, number];
+  /** Angle de départ de l’orbite (rad). */
+  orbitStartAngle: number;
+  /** Sens orbital (+1 ou -1). */
+  orbitDir: number;
 };
 
 const MAX_CONCURRENT = 28;
 const ANIM_SEC = 3.15;
-
-function randomDrift(): [number, number, number, number] {
-  const r = () => (Math.random() - 0.5) * 110;
-  return [r(), r(), r(), r()];
-}
 
 export function createFlyingReactionEntry(emoji: string): FlyingReactionEntry {
   return {
     id: `f_${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2)}`}`,
     emoji,
     x: 6 + Math.random() * 88,
-    driftPx: randomDrift(),
+    orbitStartAngle: Math.random() * Math.PI * 2,
+    orbitDir: Math.random() > 0.5 ? 1 : -1,
   };
 }
 
@@ -48,8 +46,7 @@ type FlyingReactionsLayerProps = {
 };
 
 /**
- * Calque d’emojis qui s’élèvent depuis le bas (pointer-events: none).
- * Démonter chaque particule via `onRemove` à la fin de l’animation — pas de setTimeout.
+ * Calque d’emojis en orbite quasi gravitationnelle puis disparition (pointer-events: none).
  */
 export function FlyingReactionsLayer({ reactions, onRemove }: FlyingReactionsLayerProps) {
   return (
@@ -84,7 +81,22 @@ function FlyingEmoji({
   onDone: () => void;
 }) {
   const doneRef = useRef(false);
-  const { emoji, driftPx } = entry;
+  const { emoji, orbitStartAngle: θ0, orbitDir } = entry;
+
+  const { x, y } = useMemo(() => {
+    const steps = 5;
+    const xs: number[] = [];
+    const ys: number[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const sweep = t * Math.PI * 0.85 * orbitDir;
+      const R = 22 + t * 145;
+      const θ = θ0 + sweep;
+      xs.push(Math.cos(θ) * R);
+      ys.push(-Math.sin(θ) * R - t * 110);
+    }
+    return { x: xs, y: ys };
+  }, [θ0, orbitDir]);
 
   const handleComplete = () => {
     if (doneRef.current) return;
@@ -94,18 +106,20 @@ function FlyingEmoji({
 
   return (
     <motion.div
-      initial={{ y: '0vh', opacity: 0, scale: 0.35, x: 0 }}
+      initial={{ opacity: 0, scale: 0.4 }}
       animate={{
-        y: '-42vh',
-        opacity: [0, 1, 1, 0.92, 0],
-        scale: [0.35, 1.28, 1.05, 0.95, 0.42],
-        x: [0, driftPx[0], driftPx[1], driftPx[2], driftPx[3]],
+        opacity: [0, 1, 1, 1, 0.85, 0],
+        scale: [0.4, 1.2, 1.05, 0.98, 0.88, 0.45],
+        x,
+        y,
       }}
       transition={{
         duration: ANIM_SEC,
         ease: [0.22, 0.61, 0.36, 1],
-        opacity: { times: [0, 0.07, 0.32, 0.78, 1], duration: ANIM_SEC },
-        x: { times: [0, 0.22, 0.45, 0.72, 1], duration: ANIM_SEC },
+        opacity: { times: [0, 0.06, 0.2, 0.45, 0.78, 1], duration: ANIM_SEC },
+        scale: { times: [0, 0.08, 0.22, 0.45, 0.72, 1], duration: ANIM_SEC },
+        x: { times: [0, 0.2, 0.42, 0.62, 0.82, 1], duration: ANIM_SEC },
+        y: { times: [0, 0.2, 0.42, 0.62, 0.82, 1], duration: ANIM_SEC },
       }}
       onAnimationComplete={handleComplete}
       className="text-3xl sm:text-4xl will-change-transform"

@@ -310,32 +310,44 @@ export default function FeedPage() {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black">
+      <div className="flex min-h-screen items-center justify-center bg-[#08080A]">
         <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-[#08080A]">
       <Suspense fallback={null}>
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <div className="mb-6 flex flex-col gap-1 border border-white/[0.08] bg-black/30 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:flex-row sm:items-center sm:justify-between">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white/45">
+            Station · discovery grid
+          </p>
+          <p className="font-mono text-xs text-cobalt-400/90">
+            Flux opérationnel / filtrage actif
+          </p>
+        </div>
         {/* Active beef banner */}
         {activeBeef && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-4 rounded-xl overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, rgba(232,58,20,0.15), rgba(255,107,44,0.1))', border: '1px solid rgba(232,58,20,0.3)' }}
+            className="mb-4 overflow-hidden rounded-[2px]"
+            style={{
+              background: 'linear-gradient(135deg, rgba(0,82,255,0.12), rgba(255,77,0,0.08))',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+            }}
           >
             <button
               onClick={() => router.push(`/arena/${activeBeef.id}`)}
               className="w-full flex items-center gap-3 px-4 py-3 text-left"
             >
-              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
-                <Radio className="w-5 h-5 text-red-400 animate-pulse" />
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[2px] border border-ember-500/30 bg-ember-500/15">
+                <Radio className="h-5 w-5 animate-pulse text-ember-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white truncate">{activeBeef.title}</p>
@@ -373,7 +385,7 @@ export default function FeedPage() {
                   <motion.div
                     layoutId="feedTab"
                     className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
-                    style={{ background: 'linear-gradient(90deg, #FF6B2C, #E83A14)' }}
+                    style={{ background: 'linear-gradient(90deg, #0052FF, #FF4D00)' }}
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
                 )}
@@ -384,7 +396,7 @@ export default function FeedPage() {
             href={hrefWithFrom('/buy-points', pathname)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center sm:justify-end gap-2 px-4 py-2.5 mb-2 sm:mb-3 self-stretch sm:self-auto rounded-xl text-sm font-semibold text-brand-400 hover:text-white hover:bg-brand-500/15 transition-colors border border-brand-500/25"
+            className="mb-2 inline-flex items-center justify-center gap-2 self-stretch rounded-[2px] border border-ember-500/30 px-4 py-2.5 font-mono text-sm font-semibold text-ember-400 transition-colors hover:bg-ember-500/10 hover:text-white sm:mb-3 sm:self-auto sm:justify-end"
           >
             <Coins className="w-4 h-4 flex-shrink-0" />
             <span>Acheter des points</span>
@@ -506,7 +518,7 @@ export default function FeedPage() {
                   type="button"
                   onClick={() => void loadMore()}
                   disabled={loadingMore}
-                  className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm font-semibold disabled:opacity-50 transition-colors"
+                  className="rounded-[2px] bg-white/10 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/15 disabled:opacity-50"
                 >
                   {loadingMore ? 'Chargement…' : 'Charger plus'}
                 </button>

@@ -175,7 +175,7 @@ export function Header() {
       {user && !pathname?.startsWith('/admin') && (
         <BeefNotificationToasts userId={user.id} />
       )}
-      <header className="fixed top-0 left-0 right-0 z-[100] bg-black/80 backdrop-blur-xl border-b border-white/[0.06]">
+      <header className="fixed left-0 right-0 top-0 z-[100] border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-14">
             {/* Logo — invités : accueil splash pour éviter préchargement /feed (RSC) sur login, onboarding, etc. */}
@@ -198,7 +198,7 @@ export function Header() {
                       key={item.href}
                       href={hrefWithFrom(item.href, pathname)}
                       prefetch={false}
-                      className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                      className={`relative flex items-center gap-2 rounded-[2px] px-3.5 py-2 text-sm font-medium transition-all duration-200 ${
                         active
                           ? 'text-white bg-white/[0.08]'
                           : 'text-gray-500 hover:text-gray-200 hover:bg-white/[0.04]'
@@ -217,7 +217,7 @@ export function Header() {
                         <motion.div
                           layoutId="nav-indicator"
                           className="absolute -bottom-[13px] left-3 right-3 h-[2px] rounded-full"
-                          style={{ background: 'linear-gradient(90deg, #FF6B2C, #E83A14)' }}
+                          style={{ background: 'linear-gradient(90deg, #0052FF, #FF4D00)' }}
                           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                         />
                       )}
@@ -233,7 +233,7 @@ export function Header() {
                   <Link
                     href="/create"
                     prefetch
-                    className="flex items-center gap-1.5 px-4 py-2 text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.97] shadow-sm hover:shadow-glow brand-gradient"
+                    className="brand-gradient flex items-center gap-1.5 rounded-[2px] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-glow active:scale-[0.97]"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Créer</span>

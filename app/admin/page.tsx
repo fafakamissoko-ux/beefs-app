@@ -197,7 +197,7 @@ export default function AdminDashboardPage() {
                 key={mode.key}
                 onClick={() => switchViewMode(mode.key)}
                 disabled={switchingMode}
-                className={`relative p-4 rounded-xl text-left transition-all duration-200 ${
+                className={`relative p-4 rounded-[2px] text-left transition-all duration-200 ${
                   viewMode === mode.key
                     ? 'bg-orange-500/15 border-2 border-orange-500/50'
                     : 'bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/[0.12]'
@@ -289,7 +289,7 @@ export default function AdminDashboardPage() {
                 className="card-interactive w-full p-5 flex items-center justify-between"
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl ${item.bg} flex items-center justify-center`}>
+                  <div className={`w-10 h-10 rounded-[2px] ${item.bg} flex items-center justify-center`}>
                     <item.icon className={`w-5 h-5 ${item.text}`} />
                   </div>
                   <div className="text-left">
@@ -303,8 +303,8 @@ export default function AdminDashboardPage() {
 
             <div className="card p-5 border border-white/10 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                  <Video className="w-5 h-5 text-violet-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-[2px] bg-cobalt-500/10">
+                  <Video className="h-5 w-5 text-cobalt-400" />
                 </div>
                 <div>
                   <p className="text-white font-bold">Daily — salles beef en private</p>
@@ -318,7 +318,7 @@ export default function AdminDashboardPage() {
                   type="button"
                   disabled={dailyMigrateLoading}
                   onClick={previewDailyBeefRooms}
-                  className="px-4 py-2 rounded-xl bg-white/10 text-white text-sm font-semibold hover:bg-white/15 disabled:opacity-50"
+                  className="px-4 py-2 rounded-[2px] bg-white/10 text-white text-sm font-semibold hover:bg-white/15 disabled:opacity-50"
                 >
                   {dailyMigrateLoading ? '…' : 'Aperçu'}
                 </button>
@@ -326,7 +326,7 @@ export default function AdminDashboardPage() {
                   type="button"
                   disabled={dailyMigrateLoading || !dailyMigratePreview?.count}
                   onClick={runDailyBeefRoomsPrivate}
-                  className="px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-500 disabled:opacity-40"
+                  className="rounded-[2px] bg-cobalt-600 px-4 py-2 text-sm font-semibold text-white hover:bg-cobalt-500 disabled:opacity-40"
                 >
                   Migrer
                 </button>

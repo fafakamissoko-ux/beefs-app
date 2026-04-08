@@ -176,7 +176,7 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
             MESSAGES ÉPINGLÉS
           </div>
           {pinnedMessages.map((msg) => (
-            <div key={msg.id} className="glass-prestige rounded-lg px-2 py-1.5">
+            <div key={msg.id} className="frosted-titanium rounded-lg px-2 py-1.5">
               <div className="text-xs font-medium text-white/55">{msg.display_name || msg.username}</div>
               <div className="text-sm font-medium tracking-tight text-white/95">{msg.content}</div>
             </div>
@@ -204,13 +204,13 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
             onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
             placeholder="Message..."
             disabled={loading}
-            className="glass-chat flex-1 rounded-xl border border-white/12 px-4 py-2.5 text-sm font-medium tracking-tight text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:opacity-50"
+            className="glass-chat flex-1 rounded-[2px] border border-white/12 px-4 py-2.5 text-sm font-medium tracking-tight text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:opacity-50"
           />
           
           <button
             onClick={sendMessage}
             disabled={loading || !input.trim()}
-            className="rounded-xl bg-brand-500 p-2 text-white shadow-glow transition-colors hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[2px] bg-brand-500 p-2 text-white shadow-glow transition-colors hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? (
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/90 border-t-transparent" />
@@ -232,7 +232,7 @@ function ChatMessage({ message }: { message: Message }) {
       className="space-y-1"
     >
       <div className="text-xs font-semibold text-white/50">{message.display_name || message.username}</div>
-      <div className="glass-prestige rounded-lg px-3 py-2 text-sm font-medium tracking-tight text-white/95">
+      <div className="frosted-titanium rounded-lg px-3 py-2 text-sm font-medium tracking-tight text-white/95">
         {message.content}
       </div>
     </motion.div>
@@ -248,8 +248,8 @@ function TikTokChatMessage({ message }: { message: Message }) {
       transition={{ duration: 0.4, type: 'spring', stiffness: 300, damping: 25 }}
       className="mb-2"
     >
-      <div className="glass-prestige inline-flex max-w-[85%] items-baseline gap-1.5 rounded-2xl px-3.5 py-2 shadow-xl">
-        <span className="bg-gradient-to-r from-fuchsia-400 via-pink-400 to-prestige-twitch bg-clip-text text-xs font-extrabold tracking-tight text-transparent drop-shadow">
+      <div className="frosted-titanium inline-flex max-w-[85%] items-baseline gap-1.5 rounded-2xl px-3.5 py-2 shadow-xl">
+        <span className="bg-gradient-to-r from-ember-400 via-ember-500 to-cobalt-400 bg-clip-text text-xs font-extrabold tracking-tight text-transparent drop-shadow">
           {message.display_name || message.username}
         </span>
         <span className="text-sm font-medium leading-snug text-white/95">{message.content}</span>
@@ -272,7 +272,7 @@ function CommentsStyleMessage({ message }: { message: Message }) {
     >
       {/* Avatar with gradient border */}
       <motion.div 
-        className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-blue-500 p-0.5 flex-shrink-0 shadow-lg"
+        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt-500 to-ember-500 p-0.5 shadow-lg"
         whileHover={{ scale: 1.05 }}
       >
         {message.avatar_url ? (
@@ -314,11 +314,11 @@ function CommentsStyleMessage({ message }: { message: Message }) {
               setLiked(!liked);
               setLikes(prev => liked ? prev - 1 : prev + 1);
             }}
-            className="flex items-center gap-1.5 text-white/60 hover:text-pink-400 transition-colors touch-manipulation group"
+            className="group flex touch-manipulation items-center gap-1.5 text-white/60 transition-colors hover:text-ember-400"
           >
-            <Heart className={`w-4 h-4 transition-all ${liked ? 'fill-pink-500 text-pink-500' : ''}`} />
+            <Heart className={`h-4 w-4 transition-all ${liked ? 'fill-ember-500 text-ember-500' : ''}`} />
             {likes > 0 && (
-              <span className={`text-xs font-medium ${liked ? 'text-pink-400' : ''}`}>{likes}</span>
+              <span className={`text-xs font-medium ${liked ? 'text-ember-400' : ''}`}>{likes}</span>
             )}
           </motion.button>
           <button className="text-white/60 hover:text-white transition-colors text-xs font-medium touch-manipulation">

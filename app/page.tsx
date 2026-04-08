@@ -61,7 +61,7 @@ export default function SplashScreen() {
   }, [router]);
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col items-center justify-center overflow-hidden">
+    <div className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden bg-[#08080A]">
       {/* Background animated gradient */}
       <div className="absolute inset-0 opacity-30">
         <motion.div
@@ -134,7 +134,7 @@ export default function SplashScreen() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.9 }}
-          className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden mt-12"
+          className="mt-12 h-2 w-64 overflow-hidden rounded-[2px] bg-white/10"
         >
           <motion.div
             className="h-full brand-gradient"

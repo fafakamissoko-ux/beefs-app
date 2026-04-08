@@ -25,6 +25,10 @@ interface UseDailyCallReturn {
   toggleCam: () => void;
   /** Force le micro local (hors mode viewer) — ex. tours de parole imposés par le médiateur */
   setLocalAudioEnabled: (enabled: boolean) => void;
+  /** Médiateur / owner Daily : coupe ou réactive le micro d’un participant distant. */
+  setRemoteParticipantAudio: (sessionId: string, enabled: boolean) => void;
+  /** Expulsion de la salle (owner token). */
+  ejectRemoteParticipant: (sessionId: string) => void;
   isJoined: boolean;
   isJoining: boolean;
   micEnabled: boolean;
@@ -319,6 +323,24 @@ export function useDailyCall(
     }
   }, []);
 
+  const setRemoteParticipantAudio = useCallback((sessionId: string, enabled: boolean) => {
+    if (!callRef.current || viewerModeRef.current) return;
+    try {
+      callRef.current.updateParticipant(sessionId, { setAudio: enabled });
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const ejectRemoteParticipant = useCallback((sessionId: string) => {
+    if (!callRef.current || viewerModeRef.current) return;
+    try {
+      callRef.current.updateParticipant(sessionId, { eject: true });
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   // ── AUTO-RECONNECT on network loss ──
   useEffect(() => {
     if (!isJoined) return;
@@ -461,6 +483,8 @@ export function useDailyCall(
     toggleMic,
     toggleCam,
     setLocalAudioEnabled,
+    setRemoteParticipantAudio,
+    ejectRemoteParticipant,
     isJoined,
     isJoining,
     micEnabled,

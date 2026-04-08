@@ -605,12 +605,12 @@ export default function ProfileContent() {
           <div className="card p-6">
             <div className="flex gap-4 mb-6">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="skeleton h-10 w-28 rounded-xl" />
+                <div key={i} className="skeleton h-10 w-28 rounded-[2px]" />
               ))}
             </div>
             <div className="space-y-4">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="skeleton h-24 rounded-xl" />
+                <div key={i} className="skeleton h-24 rounded-[2px]" />
               ))}
             </div>
           </div>
@@ -647,7 +647,7 @@ export default function ProfileContent() {
               <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${profile.accent_color || '#E83A14'}33, ${profile.accent_color || '#E83A14'}11)` }} />
             )}
             <label className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-all cursor-pointer opacity-0 group-hover:opacity-100">
-              <div className="flex items-center gap-2 px-4 py-2 bg-black/60 backdrop-blur-sm rounded-xl text-white text-sm font-medium">
+              <div className="flex items-center gap-2 px-4 py-2 bg-black/60 backdrop-blur-sm rounded-[2px] text-white text-sm font-medium">
                 <Camera className="w-4 h-4" />
                 <span>Changer la bannière</span>
               </div>
@@ -695,7 +695,7 @@ export default function ProfileContent() {
                 <button
                   type="button"
                   onClick={() => setPublicPreviewOpen(true)}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-white/10 rounded-xl text-white font-semibold transition-colors flex items-center gap-2 text-sm"
+                  className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-white/10 rounded-[2px] text-white font-semibold transition-colors flex items-center gap-2 text-sm"
                   title="Voir ton profil public tel qu’il apparaît pour les autres"
                 >
                   <Eye className="w-4 h-4" aria-hidden />
@@ -716,7 +716,7 @@ export default function ProfileContent() {
                       toast('Lien copié !', 'success');
                     }
                   }}
-                  className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-white font-semibold transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-[2px] text-white font-semibold transition-colors flex items-center gap-2"
                 >
                   <Share2 className="w-4 h-4" />
                   Partager
@@ -763,7 +763,7 @@ export default function ProfileContent() {
                 <button
                   type="button"
                   onClick={goStatsParticipations}
-                  className="text-left rounded-xl -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                  className="text-left rounded-[2px] -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
                 >
                   <span className="text-2xl font-black text-white">{stats.beefs_participated}</span>
                   <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Participations</span>
@@ -778,7 +778,7 @@ export default function ProfileContent() {
                 <button
                   type="button"
                   onClick={goStatsMediations}
-                  className="text-left rounded-xl -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                  className="text-left rounded-[2px] -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
                 >
                   <span className="text-2xl font-black text-white">{stats.beefs_hosted}</span>
                   <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Médiations</span>
@@ -793,7 +793,7 @@ export default function ProfileContent() {
                 <button
                   type="button"
                   onClick={goStatsFollowers}
-                  className="text-left rounded-xl -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                  className="text-left rounded-[2px] -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
                 >
                   <span className="text-2xl font-black text-white">{stats.followers}</span>
                   <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Abonnés</span>
@@ -808,7 +808,7 @@ export default function ProfileContent() {
                 <button
                   type="button"
                   onClick={goStatsFollowing}
-                  className="text-left rounded-xl -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                  className="text-left rounded-[2px] -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
                 >
                   <span className="text-2xl font-black text-white">{stats.following}</span>
                   <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Abonnements</span>
@@ -912,7 +912,7 @@ export default function ProfileContent() {
                 {/* Resolved */}
                 <button
                   onClick={() => setSelectedResolutionFilter(selectedResolutionFilter === 'resolved' ? null : 'resolved')}
-                  className={`bg-gradient-to-br from-green-500/10 to-green-600/5 border rounded-xl p-4 text-left transition-all hover:scale-105 ${
+                  className={`bg-gradient-to-br from-green-500/10 to-green-600/5 border rounded-[2px] p-4 text-left transition-all hover:scale-105 ${
                     selectedResolutionFilter === 'resolved' 
                       ? 'border-green-500 ring-2 ring-green-500/50' 
                       : 'border-green-500/30'
@@ -936,7 +936,7 @@ export default function ProfileContent() {
                 {/* In Progress */}
                 <button
                   onClick={() => setSelectedResolutionFilter(selectedResolutionFilter === 'in_progress' ? null : 'in_progress')}
-                  className={`bg-gradient-to-br from-blue-500/10 to-blue-600/5 border rounded-xl p-4 text-left transition-all hover:scale-105 ${
+                  className={`bg-gradient-to-br from-blue-500/10 to-blue-600/5 border rounded-[2px] p-4 text-left transition-all hover:scale-105 ${
                     selectedResolutionFilter === 'in_progress' 
                       ? 'border-blue-500 ring-2 ring-blue-500/50' 
                       : 'border-blue-500/30'
@@ -960,7 +960,7 @@ export default function ProfileContent() {
                 {/* Unresolved */}
                 <button
                   onClick={() => setSelectedResolutionFilter(selectedResolutionFilter === 'unresolved' ? null : 'unresolved')}
-                  className={`bg-gradient-to-br from-brand-500/10 to-brand-600/5 border rounded-xl p-4 text-left transition-all hover:scale-105 ${
+                  className={`bg-gradient-to-br from-brand-500/10 to-brand-600/5 border rounded-[2px] p-4 text-left transition-all hover:scale-105 ${
                     selectedResolutionFilter === 'unresolved' 
                       ? 'border-brand-500 ring-2 ring-brand-500/50' 
                       : 'border-brand-500/30'
@@ -984,7 +984,7 @@ export default function ProfileContent() {
                 {/* Abandoned */}
                 <button
                   onClick={() => setSelectedResolutionFilter(selectedResolutionFilter === 'abandoned' ? null : 'abandoned')}
-                  className={`bg-gradient-to-br from-gray-500/10 to-gray-600/5 border rounded-xl p-4 text-left transition-all hover:scale-105 ${
+                  className={`bg-gradient-to-br from-gray-500/10 to-gray-600/5 border rounded-[2px] p-4 text-left transition-all hover:scale-105 ${
                     selectedResolutionFilter === 'abandoned' 
                       ? 'border-gray-400 ring-2 ring-gray-400/50' 
                       : 'border-gray-500/30'
@@ -1049,7 +1049,7 @@ export default function ProfileContent() {
                       ))}
                     {mediationBeefs.filter((beef) => mediationCategoryForBeef(beef) === selectedResolutionFilter)
                       .length === 0 && (
-                      <div className="text-center py-12 bg-white/5 rounded-xl">
+                      <div className="text-center py-12 bg-white/5 rounded-[2px]">
                         <Flame className="w-16 h-16 text-gray-600 mx-auto mb-4" />
                         <p className="text-gray-400">Aucun beef dans cette catégorie</p>
                       </div>
@@ -1059,7 +1059,7 @@ export default function ProfileContent() {
               )}
 
               {/* Success Rate */}
-              <div className="bg-white/5 rounded-xl p-6 mb-6">
+              <div className="bg-white/5 rounded-[2px] p-6 mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-xl font-bold text-white mb-1">Taux de réussite</h3>
@@ -1083,13 +1083,13 @@ export default function ProfileContent() {
               {/* Other Stats */}
               <h3 className="text-white font-bold text-lg mb-4">📈 Autres statistiques</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white/5 rounded-xl p-6">
+                <div className="bg-white/5 rounded-[2px] p-6">
                   <Trophy className="w-8 h-8 text-yellow-500 mb-3" />
                   <h3 className="text-xl font-bold text-white mb-2">Beefs Hébergés</h3>
                   <p className="text-3xl font-black text-white">{stats.beefs_hosted}</p>
                   <p className="text-gray-400 text-sm mt-1">Total de médiations effectuées</p>
                 </div>
-                <div className="bg-white/5 rounded-xl p-6">
+                <div className="bg-white/5 rounded-[2px] p-6">
                   <Users className="w-8 h-8 text-blue-500 mb-3" />
                   <h3 className="text-xl font-bold text-white mb-2">Vues Totales</h3>
                   <p className="text-3xl font-black text-white">{stats.total_views.toLocaleString()}</p>
@@ -1136,7 +1136,7 @@ export default function ProfileContent() {
                   <p className="text-gray-400 mb-4">Aucun beef pour le moment</p>
                   <Link
                     href={hrefWithFrom('/create', pathname)}
-                    className="inline-block px-6 py-3 brand-gradient hover:opacity-90 text-black font-bold rounded-xl transition-all"
+                    className="inline-block px-6 py-3 brand-gradient hover:opacity-90 text-black font-bold rounded-[2px] transition-all"
                   >
                     Créer un beef
                   </Link>
@@ -1162,14 +1162,14 @@ export default function ProfileContent() {
                     <Euro className="w-8 h-8 text-green-400" />
                   </div>
                 </div>
-                <div className="mt-4 p-3 bg-green-500/10 rounded-xl">
+                <div className="mt-4 p-3 bg-green-500/10 rounded-[2px]">
                   <p className="text-green-400 text-xs font-semibold">✅ Vous recevez exactement le montant demandé — aucuns frais déduits</p>
                 </div>
               </div>
 
               {/* Solde insuffisant */}
               {(profile?.points || 0) < 2000 && (
-                <div className="bg-brand-500/10 border border-brand-500/30 rounded-xl p-4 mb-6 flex items-start gap-3">
+                <div className="bg-brand-500/10 border border-brand-500/30 rounded-[2px] p-4 mb-6 flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-brand-400 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-brand-300 font-semibold text-sm">Minimum non atteint</p>
@@ -1187,7 +1187,7 @@ export default function ProfileContent() {
                   <h3 className="text-white font-bold text-lg mb-4">Retirer mes gains</h3>
 
                   {/* Montant en EUROS */}
-                  <div className="bg-white/5 rounded-xl p-5 mb-4">
+                  <div className="bg-white/5 rounded-[2px] p-5 mb-4">
                     <label className="text-gray-300 text-sm font-semibold block mb-3">Combien voulez-vous retirer ?</label>
                     <div className="flex items-center gap-3 bg-white/10 border border-white/20 rounded-lg px-4 py-3 focus-within:border-green-500 transition-colors">
                       <span className="text-gray-400 font-bold text-lg">€</span>
@@ -1211,7 +1211,7 @@ export default function ProfileContent() {
                   </div>
 
                   {/* Méthode */}
-                  <div className="bg-white/5 rounded-xl p-5 mb-2">
+                  <div className="bg-white/5 rounded-[2px] p-5 mb-2">
                     <label className="text-gray-300 text-sm font-semibold block mb-3">
                       Méthode de retrait
                       {!withdrawalMethod && <span className="text-brand-400 ml-2 text-xs">← Sélectionnez une méthode</span>}
@@ -1226,7 +1226,7 @@ export default function ProfileContent() {
                         <button
                           key={m.id}
                           onClick={() => setWithdrawalMethod(m.id)}
-                          className={`flex items-center justify-between px-4 py-3 rounded-xl text-left transition-all border ${
+                          className={`flex items-center justify-between px-4 py-3 rounded-[2px] text-left transition-all border ${
                             withdrawalMethod === m.id
                               ? 'border-green-500 bg-green-500/10 text-white'
                               : 'border-white/10 bg-white/5 text-gray-300 hover:border-white/30'
@@ -1245,7 +1245,7 @@ export default function ProfileContent() {
                   <button
                     disabled={!withdrawalMethod || withdrawalAmountEuros < 20}
                     onClick={() => setWithdrawalStep('form')}
-                    className="w-full py-4 mt-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all"
+                    className="w-full py-4 mt-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-[2px] transition-all"
                   >
                     {!withdrawalMethod ? 'Sélectionnez une méthode pour continuer' : `Continuer — Retirer ${withdrawalAmountEuros}€ →`}
                   </button>
@@ -1262,7 +1262,7 @@ export default function ProfileContent() {
                     Coordonnées pour {withdrawalAmountEuros}€
                   </h3>
 
-                  <div className="bg-white/5 rounded-xl p-5 mb-6 space-y-4">
+                  <div className="bg-white/5 rounded-[2px] p-5 mb-6 space-y-4">
                     {withdrawalMethod === 'iban' && (
                       <>
                         <div>
@@ -1305,7 +1305,7 @@ export default function ProfileContent() {
                         />
                         {/* Autocomplete suggestions */}
                         {showEmailSuggestions && getEmailSuggestions(withdrawalFields.paypalEmail || '').length > 0 && (
-                          <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl z-50 py-1 overflow-hidden">
+                          <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-[2px] shadow-2xl z-50 py-1 overflow-hidden">
                             {getEmailSuggestions(withdrawalFields.paypalEmail || '').map((suggestion, i) => (
                               <button
                                 key={i}
@@ -1346,7 +1346,7 @@ export default function ProfileContent() {
                               <ChevronDown className="w-3 h-3 text-gray-400" />
                             </button>
                             {showCountryDropdown && (
-                              <div className="absolute left-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl z-50 w-56 py-1 max-h-72 overflow-y-auto">
+                              <div className="absolute left-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-[2px] shadow-2xl z-50 w-56 py-1 max-h-72 overflow-y-auto">
                                 {COUNTRY_CODES.map((c, i) => (
                                   <button
                                     key={i}
@@ -1396,7 +1396,7 @@ export default function ProfileContent() {
                   </div>
 
                   {withdrawalError && (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4 flex items-center gap-3">
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-[2px] p-4 mb-4 flex items-center gap-3">
                       <AlertCircle className="w-5 h-5 text-red-400" />
                       <p className="text-red-300 text-sm">{withdrawalError}</p>
                     </div>
@@ -1429,7 +1429,7 @@ export default function ProfileContent() {
                       }
                       setWithdrawalStep('confirm');
                     }}
-                    className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold rounded-xl transition-all"
+                    className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold rounded-[2px] transition-all"
                   >
                     Vérifier ma demande →
                   </button>
@@ -1444,7 +1444,7 @@ export default function ProfileContent() {
                   </button>
                   <h3 className="text-white font-bold text-lg mb-4">Confirmer le retrait</h3>
 
-                  <div className="bg-white/5 rounded-xl p-5 mb-6 space-y-3">
+                  <div className="bg-white/5 rounded-[2px] p-5 mb-6 space-y-3">
                     <div className="flex justify-between">
                       <span className="text-gray-400 text-sm">Montant demandé</span>
                       <span className="text-white font-bold">{withdrawalAmountEuros}€</span>
@@ -1483,7 +1483,7 @@ export default function ProfileContent() {
                   </div>
 
                   {withdrawalError && (
-                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4 flex items-center gap-3">
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-[2px] p-4 mb-4 flex items-center gap-3">
                       <AlertCircle className="w-5 h-5 text-red-400" />
                       <p className="text-red-300 text-sm">{withdrawalError}</p>
                     </div>
@@ -1492,7 +1492,7 @@ export default function ProfileContent() {
                   <button
                     onClick={handleWithdrawalSubmit}
                     disabled={withdrawalLoading}
-                    className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                    className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 text-white font-bold rounded-[2px] transition-all flex items-center justify-center gap-2"
                   >
                     {withdrawalLoading
                       ? <><span className="animate-spin inline-block">⏳</span> Envoi en cours...</>
@@ -1515,7 +1515,7 @@ export default function ProfileContent() {
                   <p className="text-gray-500 text-sm mb-6">Un email de confirmation vous sera envoyé une fois le virement effectué (5-7 jours ouvrés).</p>
                   <button
                     onClick={() => { setWithdrawalStep('summary'); setWithdrawalError(''); setWithdrawalFields({}); setWithdrawalMethod(''); setWithdrawalAmountEuros(20); }}
-                    className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-white font-semibold transition-all"
+                    className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-[2px] text-white font-semibold transition-all"
                   >
                     Retour au profil
                   </button>
@@ -1528,7 +1528,7 @@ export default function ProfileContent() {
                   <h3 className="text-white font-bold text-lg mb-4">Historique des retraits</h3>
                   <div className="space-y-3">
                     {withdrawalHistory.map((r) => (
-                      <div key={r.id} className="bg-white/5 rounded-xl p-4 flex items-center justify-between">
+                      <div key={r.id} className="bg-white/5 rounded-[2px] p-4 flex items-center justify-between">
                         <div>
                           <p className="text-white font-semibold">{parseFloat(r.amount_euros).toFixed(2)}€</p>
                           <p className="text-gray-400 text-xs">{r.method.replace('_', ' ')} · {new Date(r.created_at).toLocaleDateString('fr-FR')}</p>

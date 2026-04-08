@@ -62,15 +62,15 @@ export function MultiParticipantGrid({
           className="relative flex flex-col items-center pointer-events-auto"
         >
           {/* Mediator Avatar Bubble */}
-          <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-1 shadow-2xl">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-cobalt-500 via-ember-500 to-obsidian p-1 shadow-2xl">
             <div className="w-full h-full rounded-full bg-black flex items-center justify-center text-2xl sm:text-3xl lg:text-4xl">
               🎭
             </div>
           </div>
           
           {/* Mediator Badge */}
-          <div className="mt-2 bg-gradient-to-r from-yellow-400 to-orange-500 px-3 py-1 rounded-full shadow-lg">
-            <span className="text-black text-[10px] sm:text-xs font-black">MÉDIATEUR</span>
+          <div className="mt-2 bg-gradient-to-r from-cobalt-600 to-ember-500 px-3 py-1 rounded-[2px] shadow-lg">
+            <span className="text-[10px] font-black text-white sm:text-xs">MÉDIATEUR</span>
           </div>
         </motion.div>
       </div>
@@ -91,11 +91,11 @@ export function MultiParticipantGrid({
                 damping: 28,
                 delay: index * 0.05,
               }}
-              className={`relative bg-gradient-to-br from-prestige-ink via-gray-900 to-black rounded-xl overflow-hidden border min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] shadow-prestige-ring ${
+              className={`relative min-h-[200px] overflow-hidden rounded-[2px] border bg-gradient-to-br from-obsidian-900 via-[#0c0c0f] to-black shadow-chrome sm:min-h-[250px] lg:min-h-[300px] ${
                 participant.isSpeaking
-                  ? 'border-cyan-400/60'
+                  ? 'border-cobalt-400/55'
                   : participant.isMainParticipant
-                    ? 'border-brand-500/70'
+                    ? 'border-ember-500/65'
                     : 'border-white/10'
               }`}
             >
@@ -121,7 +121,7 @@ export function MultiParticipantGrid({
             {participant.isSpeaking && (
               <motion.div
                 aria-hidden
-                className="pointer-events-none absolute inset-0 z-[6] rounded-xl animate-neon-pulse"
+                className="pointer-events-none absolute inset-0 z-[6] rounded-[2px] animate-neon-pulse"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -130,10 +130,10 @@ export function MultiParticipantGrid({
 
             {/* Participant Info Overlay - More space */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/70 to-transparent p-2 sm:p-3">
-              <div className="glass-prestige rounded-lg px-2 py-1.5 sm:px-2.5 sm:py-2">
+              <div className="frosted-titanium rounded-[2px] px-2 py-1.5 sm:px-2.5 sm:py-2">
                 <div className="flex flex-col gap-0.5">
                   <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-xs font-semibold tracking-tight text-white sm:text-sm">
+                  <span className="truncate font-mono text-xs font-semibold tracking-tight text-white sm:text-sm">
                     {participant.name}
                   </span>
 
@@ -156,7 +156,7 @@ export function MultiParticipantGrid({
                 initial={{ opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-                className="glass-prestige absolute right-2 top-2 z-[8] flex items-center gap-1.5 rounded-full px-2.5 py-1"
+                className="frosted-titanium absolute right-2 top-2 z-[8] flex items-center gap-1.5 rounded-full px-2.5 py-1"
               >
                 <motion.span
                   className="h-2 w-2 rounded-full bg-accent"
@@ -200,7 +200,7 @@ export function MultiParticipantGrid({
       </div>
 
       {/* Participant count indicator */}
-      <div className="glass-prestige absolute left-4 top-4 z-10 rounded-full px-3 py-1.5">
+      <div className="frosted-titanium absolute left-4 top-4 z-10 rounded-full px-3 py-1.5">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-brand-400" />
           <span className="text-sm font-semibold tracking-tight text-white">

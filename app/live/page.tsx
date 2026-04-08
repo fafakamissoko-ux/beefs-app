@@ -485,7 +485,7 @@ export default function LivePage() {
                 Ce beef demande des points pour la suite du visionnage (après la prévisualisation gratuite côté arène).
               </p>
 
-              <div className="bg-black/50 rounded-xl p-4 mb-5 border border-white/10">
+              <div className="bg-black/50 rounded-[2px] p-4 mb-5 border border-white/10">
                 <h3 className="text-base font-bold text-white mb-2 line-clamp-2">{selectedRoom.title}</h3>
                 <div className="flex items-center justify-between text-xs text-gray-400">
                   <span>Par {selectedRoom.host_name}</span>
@@ -528,7 +528,7 @@ export default function LivePage() {
                 <button
                   type="button"
                   onClick={() => setShowPaymentModal(false)}
-                  className="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-xl transition-colors"
+                  className="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-[2px] transition-colors"
                 >
                   Annuler
                 </button>
@@ -537,7 +537,7 @@ export default function LivePage() {
                     type="button"
                     onClick={purchaseAccess}
                     disabled={purchaseLoading}
-                    className="w-full brand-gradient text-black font-bold py-3.5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full brand-gradient text-black font-bold py-3.5 rounded-[2px] disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {purchaseLoading ? (
                       <span>Traitement…</span>
@@ -552,7 +552,7 @@ export default function LivePage() {
                   <button
                     type="button"
                     onClick={() => openBuyPointsPage(router)}
-                    className="w-full brand-gradient text-black font-bold py-3.5 rounded-xl flex items-center justify-center gap-2"
+                    className="w-full brand-gradient text-black font-bold py-3.5 rounded-[2px] flex items-center justify-center gap-2"
                   >
                     <Flame className="w-5 h-5" />
                     Recharger des points

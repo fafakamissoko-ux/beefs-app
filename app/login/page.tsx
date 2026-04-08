@@ -98,10 +98,10 @@ function LoginPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden>
-        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-[120px]" style={{ background: 'rgba(232, 58, 20, 0.06)' }} />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full blur-[120px]" style={{ background: 'rgba(0, 229, 255, 0.04)' }} />
+    <div className="flex min-h-screen items-center justify-center bg-[#08080A] p-4">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
+        <div className="absolute -right-40 -top-40 h-96 w-96 rounded-full blur-[120px]" style={{ background: 'rgba(255, 77, 0, 0.07)' }} />
+        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full blur-[120px]" style={{ background: 'rgba(0, 82, 255, 0.06)' }} />
       </div>
 
       <motion.div
@@ -143,7 +143,7 @@ function LoginPageContent() {
             disabled={googleLoading}
             aria-busy={googleLoading}
             aria-label="Continuer avec Google"
-            className="w-full flex items-center justify-center gap-3 py-3 bg-white hover:bg-gray-100 text-gray-800 font-semibold rounded-xl border border-white/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+            className="mb-4 flex w-full items-center justify-center gap-3 rounded-[2px] border border-white/20 bg-white py-3 font-semibold text-gray-800 transition-all hover:bg-gray-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {googleLoading ? (
               <div className="w-5 h-5 border-2 border-gray-400 border-t-gray-800 rounded-full animate-spin" />
@@ -269,7 +269,7 @@ function LoginPageContent() {
               type="submit"
               disabled={loading}
               aria-busy={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98] brand-gradient hover:shadow-glow"
+              className="brand-gradient flex w-full items-center justify-center gap-2 rounded-[2px] py-3 font-semibold text-white transition-all hover:shadow-glow active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
