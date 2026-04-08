@@ -1,8 +1,8 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { Mic, MicOff, Volume2, VolumeX, UserPlus, Users } from 'lucide-react';
+import { Mic, MicOff, Volume2, Users } from 'lucide-react';
 
 interface Participant {
   id: string;
@@ -77,21 +77,28 @@ export function MultiParticipantGrid({
 
       {/* Participants Grid - Only participants, no mediator */}
       <div className={`grid ${getGridClasses()} gap-2 sm:gap-4 h-full p-2 sm:p-4 auto-rows-fr`}>
-        {participants.map((participant, index) => (
-          <motion.div
-            key={participant.id}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ delay: index * 0.1 }}
-            className={`relative bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl overflow-hidden border-2 min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] ${
-              participant.isSpeaking
-                ? 'border-red-500 shadow-lg shadow-red-500/50'
-                : participant.isMainParticipant
-                ? 'border-orange-500'
-                : 'border-gray-700'
-            }`}
-          >
+        <AnimatePresence mode="popLayout">
+          {participants.map((participant, index) => (
+            <motion.div
+              key={participant.id}
+              layout
+              initial={{ opacity: 0, scale: 0.92, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -12 }}
+              transition={{
+                type: 'spring',
+                stiffness: 380,
+                damping: 28,
+                delay: index * 0.05,
+              }}
+              className={`relative bg-gradient-to-br from-prestige-ink via-gray-900 to-black rounded-xl overflow-hidden border min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] shadow-prestige-ring ${
+                participant.isSpeaking
+                  ? 'border-cyan-400/60'
+                  : participant.isMainParticipant
+                    ? 'border-brand-500/70'
+                    : 'border-white/10'
+              }`}
+            >
             {/* Badge TOP - REMOVED - Border is enough to show who's in beef */}
 
             {/* Video placeholder / Avatar */}
@@ -111,11 +118,22 @@ export function MultiParticipantGrid({
               )}
             </div>
 
+            {participant.isSpeaking && (
+              <motion.div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 z-[6] rounded-xl animate-neon-pulse"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
+            )}
+
             {/* Participant Info Overlay - More space */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2 sm:p-3">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-white font-bold text-xs sm:text-sm truncate">
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/70 to-transparent p-2 sm:p-3">
+              <div className="glass-prestige rounded-lg px-2 py-1.5 sm:px-2.5 sm:py-2">
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-xs font-semibold tracking-tight text-white sm:text-sm">
                     {participant.name}
                   </span>
 
@@ -130,30 +148,34 @@ export function MultiParticipantGrid({
                 </div>
               </div>
             </div>
+            </div>
 
             {/* Speaking indicator */}
             {participant.isSpeaking && (
               <motion.div
-                animate={{
-                  opacity: [0.5, 1, 0.5],
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                }}
-                className="absolute top-2 right-2 flex items-center gap-1 bg-red-500 px-2 py-1 rounded-full"
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 22 }}
+                className="glass-prestige absolute right-2 top-2 z-[8] flex items-center gap-1.5 rounded-full px-2.5 py-1"
               >
-                <Volume2 className="w-3 h-3 text-white" />
-                <span className="text-white text-xs font-bold">PARLE</span>
+                <motion.span
+                  className="h-2 w-2 rounded-full bg-accent"
+                  animate={{ scale: [1, 1.35, 1], opacity: [1, 0.65, 1] }}
+                  transition={{ duration: 1.2, repeat: Infinity }}
+                />
+                <Volume2 className="h-3 w-3 text-accent" />
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-white">
+                  Live
+                </span>
               </motion.div>
             )}
 
             {/* Mediator controls */}
             {isMediator && (
-              <div className="absolute top-2 left-2 flex gap-1">
+              <div className="absolute left-2 top-2 z-[8] flex gap-1">
                 <button
                   onClick={() => onToggleMute?.(participant.id)}
-                  className="p-1.5 bg-black/70 hover:bg-black/90 rounded-lg transition-all"
+                  className="rounded-lg bg-black/60 p-1.5 backdrop-blur-md transition-all hover:bg-black/85"
                 >
                   {participant.isMuted ? (
                     <Mic className="w-3 h-3 text-white" />
@@ -164,23 +186,24 @@ export function MultiParticipantGrid({
                 {/* Allow removing ANY participant now */}
                 <button
                   onClick={() => onRemoveParticipant?.(participant.id)}
-                  className="p-1.5 bg-red-500/70 hover:bg-red-500/90 rounded-lg transition-all"
+                  className="rounded-lg bg-red-500/75 p-1.5 backdrop-blur-md transition-all hover:bg-red-500"
                 >
                   <span className="text-white text-xs font-bold">✕</span>
                 </button>
               </div>
             )}
           </motion.div>
-        ))}
+          ))}
+        </AnimatePresence>
 
         {/* Add participant button (for mediator) - REMOVED - Already in bottom bar */}
       </div>
 
       {/* Participant count indicator */}
-      <div className="absolute top-4 left-4 z-10 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-700">
+      <div className="glass-prestige absolute left-4 top-4 z-10 rounded-full px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-orange-400" />
-          <span className="text-white font-bold text-sm">
+          <Users className="h-4 w-4 text-brand-400" />
+          <span className="text-sm font-semibold tracking-tight text-white">
             {participantCount}/6 sur le ring
           </span>
         </div>

@@ -11,7 +11,6 @@ import { FeatureGuide } from './FeatureGuide';
 import { ViewerListModal } from './ViewerListModal';
 import { useDailyCall } from '@/hooks/useDailyCall';
 import { supabase } from '@/lib/supabase/client';
-import { MultiParticipantGrid } from './MultiParticipantGrid';
 import { InviteParticipantModal } from './InviteParticipantModal';
 import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
@@ -25,6 +24,15 @@ import {
   remoteMatchesMediator,
   type BeefParticipantRowMeta,
 } from '@/lib/participant-identity';
+import {
+  FlyingReactionsLayer,
+  createFlyingReactionEntry,
+  pushFlyingReaction,
+  SPECTATOR_QUICK_REACTIONS,
+  type FlyingReactionEntry,
+} from './FlyingReactionsLayer';
+import { PointTrigger } from './PointTrigger';
+import { useArenaPulseVoicesStore } from '@/lib/stores/arenaPulseVoicesStore';
 
 const MAX_BEEF_DURATION = 60 * 60; // 60 minutes in seconds
 
@@ -187,7 +195,7 @@ export function TikTokStyleArena({
   const [micMutedByMediator, setMicMutedByMediator] = useState(false);
 
   const { join, leave, toggleMic, toggleCam, setLocalAudioEnabled, isJoined, isJoining, micEnabled, camEnabled,
-    localParticipant, remoteParticipants, error: callError } = useDailyCall(dailyRoomUrl ?? null, userName, isViewer, userId, roomId);
+    localParticipant, remoteParticipants, activeSpeakerPeerId, error: callError } = useDailyCall(dailyRoomUrl ?? null, userName, isViewer, userId, roomId);
 
   // Auto-join when user clicked "Rejoindre" AND dailyRoomUrl becomes available
   useEffect(() => {
@@ -195,7 +203,7 @@ export function TikTokStyleArena({
       void join(preJoinMediaStream);
     }
   }, [hasJoined, dailyRoomUrl, isJoined, isJoining, join, preJoinMediaStream]);
-  const [flyingReactions, setFlyingReactions] = useState<Array<{ id: string; emoji: string; x: number }>>([]);
+  const [flyingReactions, setFlyingReactions] = useState<FlyingReactionEntry[]>([]);
   const [showMenu, setShowMenu] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
 
@@ -289,6 +297,12 @@ export function TikTokStyleArena({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const [votesA, setVotesA] = useState(0);
   const [votesB, setVotesB] = useState(0);
+  const pulseVoicesA = useArenaPulseVoicesStore((s) => s.pulseA);
+  const pulseVoicesB = useArenaPulseVoicesStore((s) => s.pulseB);
+  const resetPulseVoices = useArenaPulseVoicesStore((s) => s.reset);
+  const addPulseVoices = useArenaPulseVoicesStore((s) => s.addPulse);
+  const pulseBroadcastPending = useRef({ A: 0, B: 0 });
+  const pulseBroadcastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [myVote, setMyVote] = useState<'A' | 'B' | null>(null);
   const [voteAnimation, setVoteAnimation] = useState<'A' | 'B' | null>(null);
 
@@ -316,6 +330,55 @@ export function TikTokStyleArena({
       }).catch(() => {});
     }
   }, [myVote, userId]);
+
+  const flushPulseBroadcast = useCallback(() => {
+    pulseBroadcastTimerRef.current = null;
+    const p = pulseBroadcastPending.current;
+    const dA = p.A;
+    const dB = p.B;
+    p.A = 0;
+    p.B = 0;
+    if (dA === 0 && dB === 0) return;
+    channelRef.current
+      ?.send({ type: 'broadcast', event: 'pulse_voice', payload: { dA, dB } })
+      .catch(() => {});
+  }, []);
+
+  const queuePulseBroadcast = useCallback(
+    (side: 'A' | 'B') => {
+      if (side === 'A') pulseBroadcastPending.current.A += 1;
+      else pulseBroadcastPending.current.B += 1;
+      if (pulseBroadcastTimerRef.current) return;
+      pulseBroadcastTimerRef.current = setTimeout(flushPulseBroadcast, 140);
+    },
+    [flushPulseBroadcast],
+  );
+
+  const handlePulseVoice = useCallback(
+    (side: 'A' | 'B') => {
+      addPulseVoices(side, 1);
+      queuePulseBroadcast(side);
+    },
+    [addPulseVoices, queuePulseBroadcast],
+  );
+
+  useEffect(() => {
+    pulseBroadcastPending.current = { A: 0, B: 0 };
+    if (pulseBroadcastTimerRef.current) {
+      clearTimeout(pulseBroadcastTimerRef.current);
+      pulseBroadcastTimerRef.current = null;
+    }
+    resetPulseVoices();
+  }, [roomId, resetPulseVoices]);
+
+  useEffect(() => {
+    return () => {
+      if (pulseBroadcastTimerRef.current) {
+        clearTimeout(pulseBroadcastTimerRef.current);
+        pulseBroadcastTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const totalVotes = votesA + votesB;
 
@@ -904,6 +967,28 @@ export function TikTokStyleArena({
   const mediatorIsLocal = isHost;
   const mediatorName = isHost ? userName : host.name;
 
+  /** Halos néon (Phase 2) : parole réelle Daily + micro ouvert sur la piste audio. */
+  const leftNeonAudio =
+    !!dailyRoomUrl &&
+    !!leftPanel &&
+    !!activeSpeakerPeerId &&
+    activeSpeakerPeerId === leftPanel.sessionId &&
+    leftPanel.audioOn;
+
+  const rightNeonAudio =
+    !!dailyRoomUrl &&
+    !!rightPanel &&
+    !!activeSpeakerPeerId &&
+    activeSpeakerPeerId === rightPanel.sessionId &&
+    rightPanel.audioOn;
+
+  const mediatorNeonAudio =
+    !!dailyRoomUrl &&
+    !!mediatorParticipant &&
+    !!activeSpeakerPeerId &&
+    activeSpeakerPeerId === mediatorParticipant.sessionId &&
+    mediatorParticipant.audioOn;
+
   // Multi-participant system
   const [ringParticipants, setRingParticipants] = useState<RingParticipant[]>([]);
   const [participationRequests, setParticipationRequests] = useState<ParticipationRequest[]>([]);
@@ -955,10 +1040,8 @@ export function TikTokStyleArena({
   }, []);
 
   const addRemoteReaction = useCallback((emoji: string) => {
-    const id = `r_${Date.now()}_${Math.random()}`;
-    const x = Math.random() * 55 + 10;
-    setFlyingReactions(prev => [...prev, { id, emoji, x }]);
-    setTimeout(() => setFlyingReactions(prev => prev.filter(r => r.id !== id)), 3000);
+    const entry = createFlyingReactionEntry(emoji);
+    setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
   }, []);
 
   // 1) Broadcast channel — instant P2P delivery
@@ -980,6 +1063,12 @@ export function TikTokStyleArena({
         if (payload.prev === 'B') setVotesB(v => Math.max(0, v - 1));
         if (payload.side === 'A') setVotesA(v => v + 1);
         if (payload.side === 'B') setVotesB(v => v + 1);
+      })
+      .on('broadcast', { event: 'pulse_voice' }, ({ payload }: any) => {
+        const dA = Math.max(0, Math.floor(Number(payload?.dA) || 0));
+        const dB = Math.max(0, Math.floor(Number(payload?.dB) || 0));
+        if (dA) addPulseVoices('A', dA);
+        if (dB) addPulseVoices('B', dB);
       })
       .on('broadcast', { event: 'mediator_floor' }, ({ payload }: any) => {
         if (typeof payload?.active === 'boolean') setMediatorHoldingFloor(payload.active);
@@ -1023,7 +1112,7 @@ export function TikTokStyleArena({
       setLiveConnected(false);
       supabase.removeChannel(channel);
     };
-  }, [roomId, addRemoteMessage, addRemoteReaction, userRole, userId, toast]);
+  }, [roomId, addRemoteMessage, addRemoteReaction, addPulseVoices, userRole, userId, toast]);
 
   // 2) Polling fallback — queries DB for new messages every 3s (guaranteed delivery)
   useEffect(() => {
@@ -1085,10 +1174,8 @@ export function TikTokStyleArena({
   const handleReaction = (emoji: string) => {
     onReaction(emoji);
 
-    const id = Date.now().toString();
-    const x = Math.random() * 55 + 10;
-    setFlyingReactions(prev => [...prev, { id, emoji, x }]);
-    setTimeout(() => setFlyingReactions(prev => prev.filter(r => r.id !== id)), 3500);
+    const entry = createFlyingReactionEntry(emoji);
+    setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
 
     if (channelRef.current) {
       channelRef.current.send({ type: 'broadcast', event: 'reaction', payload: { emoji } })
@@ -1848,13 +1935,17 @@ export function TikTokStyleArena({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute bottom-36 sm:bottom-44 left-1/2 -translate-x-1/2 z-[120] flex items-center gap-2 px-5 py-2.5 rounded-2xl shadow-xl border border-white/20"
-          style={{ background: 'rgba(22,101,52,0.95)', backdropFilter: 'blur(10px)' }}
+          transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+          className="glass-prestige absolute bottom-36 left-1/2 z-[120] flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-prestige-twitch/30 px-5 py-2.5 shadow-neon-purple sm:bottom-44"
         >
-          <div className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" />
-          <span className="text-white text-sm font-black tracking-tight">
+          <motion.div
+            className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent"
+            animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
+          />
+          <span className="text-sm font-black tracking-tight text-white">
             🎤 {debaters.find(d => d.id === speakingTurnTarget)?.name || 'Challenger'}{' '}
-            <span className="tabular-nums">
+            <span className="tabular-nums text-accent">
               {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
             </span>
           </span>
@@ -1896,7 +1987,30 @@ export function TikTokStyleArena({
             <div className="absolute inset-0 flex">
 
               {/* LEFT — Participant A (first challenger, or local user if challenger) */}
-              <div className="flex-1 relative bg-gradient-to-br from-blue-900/30 to-indigo-900/20 overflow-hidden">
+              <div className="relative flex-1 overflow-hidden bg-gradient-to-br from-[#0a1628]/95 via-[#0d1f3c]/90 to-indigo-950/40">
+                <AnimatePresence>
+                  {leftNeonAudio && (
+                    <motion.div
+                      key="left-speaking"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="pointer-events-none absolute inset-0 z-[4]"
+                    >
+                      <motion.div
+                        className="absolute inset-0"
+                        animate={{
+                          boxShadow: [
+                            'inset 0 0 32px rgba(0, 240, 255, 0.25)',
+                            'inset 0 0 56px rgba(145, 70, 255, 0.35)',
+                            'inset 0 0 32px rgba(0, 240, 255, 0.25)',
+                          ],
+                        }}
+                        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 {leftPanel?.videoTrack ? (
                   <ParticipantVideo
                     videoTrack={leftPanel.videoTrack}
@@ -1957,10 +2071,10 @@ export function TikTokStyleArena({
                     e.stopPropagation();
                     void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null);
                   }}
-                  className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 z-20 pointer-events-auto hover:bg-black/80 transition-colors"
+                  className="glass-prestige absolute bottom-1 left-1 z-20 flex items-center gap-1 rounded-full px-2 py-0.5 pointer-events-auto transition-colors hover:border-white/20"
                 >
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                  <span className="text-white text-[10px] font-bold drop-shadow-md underline-offset-2 hover:underline">
+                  <div className="h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]" />
+                  <span className="text-[10px] font-semibold tracking-tight text-white underline-offset-2 drop-shadow-md hover:underline">
                     {leftPanelName}
                   </span>
                 </button>
@@ -1970,14 +2084,25 @@ export function TikTokStyleArena({
                   animate={voteAnimation === 'A' ? { scale: [1, 1.4, 1] } : {}}
                   transition={{ duration: 0.4 }}
                 >
-                  <div className={`min-w-[22px] h-[22px] rounded-full flex items-center justify-center px-1 ${
+                  <div className={`flex h-[22px] min-w-[22px] items-center justify-center rounded-full border border-white/10 px-1 backdrop-blur-md ${
                     myVote === 'A'
-                      ? 'bg-blue-500 ring-1 ring-white/40'
-                      : 'bg-blue-500/60 backdrop-blur-sm'
+                      ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)] ring-1 ring-white/30'
+                      : 'bg-blue-500/55'
                   }`}>
-                    <span className="text-white text-[9px] font-black">{votesA}</span>
+                    <span className="text-[9px] font-black tabular-nums text-white">{votesA}</span>
                   </div>
                 </motion.div>
+                {/* Pulse voix — coin bas-droit (au-dessus du bulle vote) */}
+                <div
+                  className={`absolute bottom-12 right-2 z-[28] ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                >
+                  <PointTrigger
+                    count={pulseVoicesA}
+                    onPulse={() => handlePulseVoice('A')}
+                    interactive={userRole === 'viewer'}
+                    aria-label="Envoyer une voix pour ce challenger"
+                  />
+                </div>
                 {/* Mic/Cam controls when this panel shows local video (challengers only) */}
                 {leftPanelIsLocal && !isViewer && (
                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
@@ -1985,7 +2110,7 @@ export function TikTokStyleArena({
                       type="button"
                       onClick={toggleMic}
                       aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center text-base transition-all shadow ${micEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white shadow-red-500/50'}`}
+                      className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-base shadow transition-all backdrop-blur-md ${micEnabled ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-red-500 text-white shadow-red-500/50'}`}
                     >
                       {micEnabled ? '🎤' : '🔇'}
                     </button>
@@ -1993,19 +2118,10 @@ export function TikTokStyleArena({
                       type="button"
                       onClick={toggleCam}
                       aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center text-base transition-all shadow ${camEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white shadow-red-500/50'}`}
+                      className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-base shadow transition-all backdrop-blur-md ${camEnabled ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-red-500 text-white shadow-red-500/50'}`}
                     >
                       {camEnabled ? '📹' : '🚫'}
                     </button>
-                  </div>
-                )}
-                {leftIsSpeaking && (
-                  <div className="absolute bottom-7 left-2 flex gap-0.5 z-10">
-                    {[...Array(4)].map((_, i) => (
-                      <motion.div key={i} animate={{ height: [3, 10, 3] }}
-                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
-                        className="w-1 bg-green-400 rounded-full" style={{ minHeight: 3 }} />
-                    ))}
                   </div>
                 )}
               </div>
@@ -2016,7 +2132,39 @@ export function TikTokStyleArena({
                   className="flex flex-col items-center gap-1.5">
                   {/* Circle with mediator VIDEO */}
                   <div className="relative">
-                    <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden
+                    <AnimatePresence>
+                      {mediatorNeonAudio && (
+                        <motion.div
+                          key="mediator-gold-aura"
+                          initial={{ opacity: 0, scale: 0.92 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="pointer-events-none absolute -inset-4 rounded-full sm:-inset-5"
+                          aria-hidden
+                        >
+                          <motion.div
+                            className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_40%,rgba(255,220,140,0.35)_0%,rgba(180,120,40,0.12)_45%,transparent_70%)]"
+                            animate={{
+                              opacity: [0.55, 0.95, 0.55],
+                              scale: [1, 1.04, 1],
+                            }}
+                            transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                          />
+                          <motion.div
+                            className="absolute inset-0 rounded-full"
+                            animate={{
+                              boxShadow: [
+                                '0 0 20px rgba(255, 200, 100, 0.35)',
+                                '0 0 36px rgba(255, 215, 80, 0.55)',
+                                '0 0 20px rgba(255, 200, 100, 0.35)',
+                              ],
+                            }}
+                            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden
                       bg-gradient-to-br from-brand-400 to-brand-600 p-[3px] shadow-2xl shadow-brand-500/60"
                       style={{ filter: 'drop-shadow(0 0 16px rgba(255,107,44,0.4))' }}>
                       <div className="w-full h-full rounded-full overflow-hidden bg-gray-900">
@@ -2084,7 +2232,30 @@ export function TikTokStyleArena({
               </div>
 
               {/* RIGHT — Participant B (second challenger) */}
-              <div className="flex-1 relative bg-gradient-to-br from-red-900/30 to-brand-900/20 overflow-hidden">
+              <div className="relative flex-1 overflow-hidden bg-gradient-to-br from-[#280a12]/95 via-red-950/80 to-brand-950/40">
+                <AnimatePresence>
+                  {rightNeonAudio && (
+                    <motion.div
+                      key="right-speaking"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="pointer-events-none absolute inset-0 z-[4]"
+                    >
+                      <motion.div
+                        className="absolute inset-0"
+                        animate={{
+                          boxShadow: [
+                            'inset 0 0 32px rgba(255, 0, 80, 0.22)',
+                            'inset 0 0 56px rgba(0, 240, 255, 0.28)',
+                            'inset 0 0 32px rgba(255, 0, 80, 0.22)',
+                          ],
+                        }}
+                        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 {rightPanel?.videoTrack ? (
                   <ParticipantVideo
                     videoTrack={rightPanel.videoTrack}
@@ -2132,36 +2303,37 @@ export function TikTokStyleArena({
                   animate={voteAnimation === 'B' ? { scale: [1, 1.4, 1] } : {}}
                   transition={{ duration: 0.4 }}
                 >
-                  <div className={`min-w-[22px] h-[22px] rounded-full flex items-center justify-center px-1 ${
+                  <div className={`flex h-[22px] min-w-[22px] items-center justify-center rounded-full border border-white/10 px-1 backdrop-blur-md ${
                     myVote === 'B'
-                      ? 'bg-red-500 ring-1 ring-white/40'
-                      : 'bg-red-500/60 backdrop-blur-sm'
+                      ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.45)] ring-1 ring-white/30'
+                      : 'bg-red-500/55'
                   }`}>
-                    <span className="text-white text-[9px] font-black">{votesB}</span>
+                    <span className="text-[9px] font-black tabular-nums text-white">{votesB}</span>
                   </div>
                 </motion.div>
+                <div
+                  className={`absolute bottom-12 right-2 z-[28] ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                >
+                  <PointTrigger
+                    count={pulseVoicesB}
+                    onPulse={() => handlePulseVoice('B')}
+                    interactive={userRole === 'viewer'}
+                    aria-label="Envoyer une voix pour ce challenger"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
                   }}
-                  className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 z-20 pointer-events-auto hover:bg-black/80 transition-colors"
+                  className="glass-prestige absolute bottom-1 right-1 z-20 flex items-center gap-1 rounded-full px-2 py-0.5 pointer-events-auto transition-colors hover:border-white/20"
                 >
-                  <span className="text-white text-[10px] font-bold drop-shadow-md underline-offset-2 hover:underline">
+                  <span className="text-[10px] font-semibold tracking-tight text-white underline-offset-2 drop-shadow-md hover:underline">
                     {rightPanelName}
                   </span>
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.85)]" />
                 </button>
-                {rightIsSpeaking && (
-                  <div className="absolute bottom-7 right-2 flex gap-0.5 z-10">
-                    {[...Array(4)].map((_, i) => (
-                      <motion.div key={i} animate={{ height: [3, 10, 3] }}
-                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
-                        className="w-1 bg-green-400 rounded-full" style={{ minHeight: 3 }} />
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
 
@@ -2241,6 +2413,16 @@ export function TikTokStyleArena({
                   </motion.div>
                 )}
               </AnimatePresence>
+              <div
+                className={`absolute bottom-3 right-2 z-[28] ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
+              >
+                <PointTrigger
+                  count={pulseVoicesA}
+                  onPulse={() => handlePulseVoice('A')}
+                  interactive={userRole === 'viewer'}
+                  aria-label="Envoyer une voix pour ce challenger"
+                />
+              </div>
             </div>
           ) : (
             <div className="flex-1 relative bg-gradient-to-br from-gray-900/20 to-gray-800/20">
@@ -2377,6 +2559,16 @@ export function TikTokStyleArena({
                   </motion.div>
                 )}
               </AnimatePresence>
+              <div
+                className={`absolute bottom-3 right-2 z-[28] ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
+              >
+                <PointTrigger
+                  count={pulseVoicesB}
+                  onPulse={() => handlePulseVoice('B')}
+                  interactive={userRole === 'viewer'}
+                  aria-label="Envoyer une voix pour ce challenger"
+                />
+              </div>
             </div>
           ) : (
             <div className="flex-1 relative bg-gradient-to-br from-gray-900/20 to-gray-800/20">
@@ -2404,9 +2596,9 @@ export function TikTokStyleArena({
       </div>
 
       {/* ── Top Overlay — TikTok-style header ── */}
-      <div className="absolute top-0 left-0 right-0 z-30 p-2 sm:p-3">
+      <div className="absolute left-0 right-0 top-0 z-30 p-2 sm:p-3">
         {/* Subtle top gradient for readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-transparent pointer-events-none" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/75 via-black/35 to-transparent" />
 
         <div className="relative flex items-center justify-between">
           {/* Left: médiateur du beef (pas « toi » si tu es challenger — évite Suivre sur soi-même) */}
@@ -2414,14 +2606,14 @@ export function TikTokStyleArena({
             <button
               type="button"
               onClick={() => void openProfile(host.name, host.id)}
-              className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md rounded-full pl-0.5 pr-3 py-0.5 hover:bg-black/55 transition-colors pointer-events-auto"
+              className="glass-prestige pointer-events-auto flex items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-3 transition-colors hover:border-white/18"
             >
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-brand-500 p-[2px]">
                 <div className="w-full h-full rounded-full bg-black flex items-center justify-center">
                   <span className="text-white font-bold text-[11px]">{host.name ? host.name[0].toUpperCase() : 'M'}</span>
                 </div>
               </div>
-              <span className="text-white font-semibold text-xs drop-shadow-lg max-w-[80px] truncate">{host.name}</span>
+              <span className="max-w-[80px] truncate text-xs font-semibold tracking-tight text-white drop-shadow-lg">{host.name}</span>
               {userId === host.id && (
                 <span className="text-[9px] font-black text-brand-400 uppercase tracking-wide">Médiateur</span>
               )}
@@ -2442,12 +2634,12 @@ export function TikTokStyleArena({
           {/* Center: Timer OR Live badge */}
           <div className="flex items-center gap-1.5">
             {isJoined && timerActive ? (
-              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full backdrop-blur-md border transition-all ${
+              <div className={`flex items-center gap-1.5 rounded-full border px-3 py-1 backdrop-blur-md transition-all shadow-lg shadow-black/40 ${
                 timerPaused
-                  ? 'bg-yellow-500/30 border-yellow-500/50'
+                  ? 'border-yellow-500/50 bg-yellow-500/25'
                   : beefTimeRemaining <= 5 * 60
-                    ? 'bg-red-500/30 border-red-500/50 animate-pulse'
-                    : 'bg-black/40 border-white/10'
+                    ? 'animate-pulse border-red-500/50 bg-red-500/25'
+                    : 'border-white/12 bg-black/45'
               }`}>
                 <span className="text-sm">{timerPaused ? '⏸' : '⏱'}</span>
                 <span className={`text-sm font-bold tabular-nums ${
@@ -2462,8 +2654,8 @@ export function TikTokStyleArena({
                 )}
               </div>
             ) : isJoined && !timerActive && isHost ? (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full backdrop-blur-md border border-white/10 bg-black/40">
-                <span className="text-white/50 text-xs font-medium">Pas de chrono</span>
+              <div className="flex items-center gap-1.5 rounded-full border border-white/12 bg-black/45 px-3 py-1 backdrop-blur-md shadow-lg shadow-black/30">
+                <span className="text-xs font-medium text-white/55">Pas de chrono</span>
               </div>
             ) : null}
           </div>
@@ -2478,23 +2670,23 @@ export function TikTokStyleArena({
             {/* Viewer count — clickable to show viewer list */}
             <button
               onClick={() => setShowViewerList(true)}
-              className="flex items-center bg-black/40 backdrop-blur-md rounded-full px-2.5 py-1 gap-1 hover:bg-black/60 transition-colors"
+              className="glass-prestige flex items-center gap-1 rounded-full px-2.5 py-1 transition-colors hover:border-white/20"
             >
               <svg className="w-3.5 h-3.5 text-white/80" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
               </svg>
-              <span className="text-white text-[11px] font-bold">{liveViewerCount || 0}</span>
+              <span className="text-[11px] font-bold tabular-nums text-white">{liveViewerCount || 0}</span>
             </button>
             {/* Menu / Close */}
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md transition-colors hover:bg-black/55"
             >
               <MoreVertical className="w-4 h-4 text-white" />
             </button>
             <button
               onClick={handleLeave}
-              className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md transition-colors hover:bg-black/55"
             >
               <X className="w-4 h-4 text-white" />
             </button>
@@ -2502,33 +2694,12 @@ export function TikTokStyleArena({
         </div>
       </div>
 
-      {/* ── Flying Reactions — centered over video area, float up high ── */}
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-56 z-50 pointer-events-none" style={{ width: '60%' }}>
-        <AnimatePresence>
-          {flyingReactions.map((reaction) => (
-            <motion.div
-              key={reaction.id}
-              initial={{ y: 0, opacity: 0, scale: 0.3 }}
-              animate={{
-                y: -400,
-                opacity: [0, 1, 1, 0.8, 0],
-                scale: [0.3, 1.4, 1.1, 0.9, 0.4],
-                x: [0, -20, 25, -15, 20],
-              }}
-              exit={{ opacity: 0 }}
-              transition={{
-                duration: 3.5,
-                ease: 'easeOut',
-                opacity: { times: [0, 0.05, 0.4, 0.75, 1] },
-                x: { duration: 3.5, ease: 'easeInOut' },
-              }}
-              className="absolute bottom-0 text-3xl sm:text-4xl drop-shadow-lg"
-              style={{ left: `${reaction.x}%` }}
-            >
-              {reaction.emoji}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+      {/* ── Flying Reactions — zone vidéo, float & fade (démontage fin d’anim, pas de setTimeout) ── */}
+      <div className="pointer-events-none absolute inset-0 bottom-48 z-[45] sm:bottom-56">
+        <FlyingReactionsLayer
+          reactions={flyingReactions}
+          onRemove={(id) => setFlyingReactions((prev) => prev.filter((r) => r.id !== id))}
+        />
       </div>
 
       {/* ── BOTTOM SECTION — TikTok-style comments + input ── */}
@@ -2562,7 +2733,7 @@ export function TikTokStyleArena({
                   </div>
                   {/* Message bubble */}
                   <div
-                    className={`bg-white/10 backdrop-blur-sm rounded-2xl rounded-tl-md px-3 py-1.5 min-w-0 ${canDelete ? 'cursor-context-menu touch-manipulation' : ''}`}
+                    className={`min-w-0 rounded-2xl rounded-tl-md border border-white/12 bg-black/35 px-3 py-1.5 backdrop-blur-md ${canDelete ? 'cursor-context-menu touch-manipulation' : ''}`}
                     onContextMenu={
                       canDelete
                         ? (e) => {
@@ -2585,8 +2756,8 @@ export function TikTokStyleArena({
                     onTouchEnd={canDelete ? clearLongPress : undefined}
                     onTouchMove={canDelete ? clearLongPress : undefined}
                   >
-                    <span className="text-brand-400 text-[11px] font-bold block leading-tight">{message.user_name}</span>
-                    <span className="text-white text-[13px] leading-snug break-words">{message.content}</span>
+                    <span className="block text-[11px] font-semibold leading-tight tracking-tight text-accent">{message.user_name}</span>
+                    <span className="break-words text-[13px] font-medium leading-snug text-white/95">{message.content}</span>
                     {contextMenuMsg === message.id && (
                       <div
                         className="absolute left-0 bottom-full mb-1 z-50 min-w-[8rem] rounded-lg border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
@@ -2634,6 +2805,23 @@ export function TikTokStyleArena({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Raccourcis réactions fly-up (spectateurs) */}
+        {userRole === 'viewer' && (
+          <div className="relative mx-2.5 mb-1 flex justify-center gap-1.5 pointer-events-auto">
+            {SPECTATOR_QUICK_REACTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => handleReaction(emoji)}
+                aria-label={`Réaction ${emoji}`}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/45 text-lg backdrop-blur-md transition-transform active:scale-90 hover:bg-white/10 touch-manipulation"
+              >
+                <span aria-hidden>{emoji}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Bottom bar — input + action buttons (TikTok-style) */}
         <div className="relative px-2.5 pb-3 pt-1.5 flex items-center gap-1.5">

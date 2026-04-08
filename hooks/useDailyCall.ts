@@ -31,6 +31,8 @@ interface UseDailyCallReturn {
   camEnabled: boolean;
   localParticipant: CallParticipant | null;
   remoteParticipants: CallParticipant[];
+  /** `session_id` Daily du participant actuellement détecté comme parlant (active-speaker-change). */
+  activeSpeakerPeerId: string | null;
   error: string | null;
 }
 
@@ -64,6 +66,9 @@ export function useDailyCall(
   const [camEnabled, setCamEnabled] = useState(!viewerMode);
   const [localParticipant, setLocalParticipant] = useState<CallParticipant | null>(null);
   const [remoteParticipants, setRemoteParticipants] = useState<CallParticipant[]>([]);
+  const [activeSpeakerPeerId, setActiveSpeakerPeerId] = useState<string | null>(null);
+  /** Incrémenté à chaque `joined-meeting` pour rattacher les listeners au bon `DailyCall`. */
+  const [dailyAttachKey, setDailyAttachKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const reconnectingRef = useRef(false);
   const joinWatchdogRef = useRef<number | null>(null);
@@ -160,6 +165,7 @@ export function useDailyCall(
         setIsJoined(true);
         setIsJoining(false);
         refreshParticipants(co);
+        setDailyAttachKey((k) => k + 1);
       });
       co.on('participant-joined', () => refreshParticipants(co));
       co.on('participant-updated', () => refreshParticipants(co));
@@ -174,6 +180,8 @@ export function useDailyCall(
         setIsJoined(false);
         setLocalParticipant(null);
         setRemoteParticipants([]);
+        setActiveSpeakerPeerId(null);
+        setDailyAttachKey(0);
       });
       co.on('error', (e: any) => {
         clearJoinWatchdog();
@@ -270,6 +278,8 @@ export function useDailyCall(
     setIsJoined(false);
     setLocalParticipant(null);
     setRemoteParticipants([]);
+    setActiveSpeakerPeerId(null);
+    setDailyAttachKey(0);
   }, []);
 
   // Expose a stopCamera helper for external use
@@ -346,6 +356,7 @@ export function useDailyCall(
           setIsJoining(false);
           reconnectingRef.current = false;
           refreshParticipants(newCo);
+          setDailyAttachKey((k) => k + 1);
         });
         newCo.on('participant-joined', () => refreshParticipants(newCo));
         newCo.on('participant-updated', () => refreshParticipants(newCo));
@@ -356,6 +367,8 @@ export function useDailyCall(
           setIsJoined(false);
           setLocalParticipant(null);
           setRemoteParticipants([]);
+          setActiveSpeakerPeerId(null);
+          setDailyAttachKey(0);
         });
         newCo.on('error', (e: any) => {
           setError(e?.errorMsg || 'Erreur de reconnexion');
@@ -388,6 +401,25 @@ export function useDailyCall(
       window.removeEventListener('online', handleOnline);
     };
   }, [isJoined, refreshParticipants, fetchMeetingToken]);
+
+  /** Daily.co — qui parle maintenant (pour halos UI). Un seul listener par instance, retiré au cleanup. */
+  useEffect(() => {
+    if (!dailyAttachKey) return;
+    const co = callRef.current;
+    if (!co) return;
+
+    const handler = (event: { activeSpeaker?: { peerId?: string } }) => {
+      setActiveSpeakerPeerId(event?.activeSpeaker?.peerId ?? null);
+    };
+    co.on('active-speaker-change', handler);
+    return () => {
+      try {
+        co.off('active-speaker-change', handler);
+      } catch {
+        /* call déjà détruit */
+      }
+    };
+  }, [dailyAttachKey]);
 
   // Cleanup on unmount — same order: media elements first, then Daily.co
   useEffect(() => {
@@ -434,6 +466,7 @@ export function useDailyCall(
     camEnabled,
     localParticipant,
     remoteParticipants,
+    activeSpeakerPeerId,
     error,
   };
 }

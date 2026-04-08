@@ -47,6 +47,15 @@ const config: Config = {
         'arena-dark': '#0A0A0F',
         'arena-darker': '#050508',
         'arena-gray': '#1A1A24',
+        /** Palette « prestige » live (Twitch / TikTok) */
+        prestige: {
+          void: '#050508',
+          ink: '#0A0A0F',
+          twitch: '#9146FF',
+          'twitch-dim': '#772CE8',
+          neon: '#00F0FF',
+          magenta: '#FF0050',
+        },
       },
       borderRadius: {
         'sm': '6px',
@@ -72,6 +81,9 @@ const config: Config = {
         'glow': '0 0 20px rgba(232, 58, 20, 0.3)',
         'glow-lg': '0 0 40px rgba(232, 58, 20, 0.4)',
         'glow-cyan': '0 0 20px rgba(0, 229, 255, 0.25)',
+        'neon-cyan': '0 0 24px rgba(0, 240, 255, 0.45), inset 0 0 32px rgba(0, 240, 255, 0.12)',
+        'neon-purple': '0 0 28px rgba(145, 70, 255, 0.5), inset 0 0 28px rgba(145, 70, 255, 0.1)',
+        'prestige-ring': '0 0 0 1px rgba(255,255,255,0.08), 0 12px 40px rgba(0,0,0,0.55)',
         'card': '0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3)',
         'card-hover': '0 10px 40px rgba(0, 0, 0, 0.5)',
         'modal': '0 25px 50px rgba(0, 0, 0, 0.5)',
@@ -83,6 +95,7 @@ const config: Config = {
         'gift-float': 'gift-float 2s ease-out forwards',
         'fade-in': 'fade-in 0.2s ease-out',
         'slide-up': 'slide-up 0.3s ease-out',
+        'neon-pulse': 'neon-pulse 2.2s ease-in-out infinite',
       },
       keyframes: {
         shake: {
@@ -108,6 +121,16 @@ const config: Config = {
         'slide-up': {
           '0%': { transform: 'translateY(8px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'neon-pulse': {
+          '0%, 100%': {
+            boxShadow:
+              'inset 0 0 0 2px rgba(0, 240, 255, 0.45), 0 0 24px rgba(145, 70, 255, 0.35)',
+          },
+          '50%': {
+            boxShadow:
+              'inset 0 0 0 2px rgba(168, 85, 247, 0.75), 0 0 42px rgba(0, 240, 255, 0.5)',
+          },
         },
       },
       backgroundImage: {

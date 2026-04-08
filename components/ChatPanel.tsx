@@ -248,11 +248,11 @@ function TikTokChatMessage({ message }: { message: Message }) {
       transition={{ duration: 0.4, type: 'spring', stiffness: 300, damping: 25 }}
       className="mb-2"
     >
-      <div className="inline-flex items-baseline gap-1.5 bg-gradient-to-br from-black/70 to-black/50 backdrop-blur-xl rounded-2xl px-3.5 py-2 max-w-[85%] border border-white/15 shadow-xl">
-        <span className="text-xs font-extrabold bg-gradient-to-r from-pink-400 via-rose-400 to-purple-400 bg-clip-text text-transparent drop-shadow">
+      <div className="inline-flex max-w-[85%] items-baseline gap-1.5 rounded-2xl border border-white/12 bg-gradient-to-br from-black/75 to-black/45 px-3.5 py-2 shadow-xl backdrop-blur-md">
+        <span className="bg-gradient-to-r from-fuchsia-400 via-pink-400 to-prestige-twitch bg-clip-text text-xs font-extrabold tracking-tight text-transparent drop-shadow">
           {message.display_name || message.username}
         </span>
-        <span className="text-sm text-white/95 leading-snug font-medium">{message.content}</span>
+        <span className="text-sm font-medium leading-snug text-white/95">{message.content}</span>
       </div>
     </motion.div>
   );
