@@ -108,7 +108,7 @@ export function MediatorSidebar({
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[2px] border border-white/10 bg-black/40 text-white hover:bg-white/10"
                 aria-label="Fermer"
               >
-                <PanelRightClose className="h-4 w-4" strokeWidth={1.2} />
+                <PanelRightClose className="h-4 w-4" strokeWidth={1} />
               </button>
             </div>
 
@@ -132,7 +132,7 @@ export function MediatorSidebar({
                   }
                   transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  <Play className="h-4 w-4 shrink-0 text-black" strokeWidth={1.2} aria-hidden />
+                  <Play className="h-4 w-4 shrink-0 text-black" strokeWidth={1} aria-hidden />
                   {startingBeef ? 'Lancement…' : 'Lancer le beef'}
                 </motion.button>
               ) : (
@@ -159,9 +159,9 @@ export function MediatorSidebar({
                       }`}
                     >
                       {mediatorMicEnabled ? (
-                        <Mic className="h-3.5 w-3.5" strokeWidth={1.2} />
+                        <Mic className="h-3.5 w-3.5" strokeWidth={1} />
                       ) : (
-                        <MicOff className="h-3.5 w-3.5" strokeWidth={1.2} />
+                        <MicOff className="h-3.5 w-3.5" strokeWidth={1} />
                       )}
                       Micro
                     </button>
@@ -175,9 +175,9 @@ export function MediatorSidebar({
                       }`}
                     >
                       {mediatorCamEnabled ? (
-                        <Video className="h-3.5 w-3.5" strokeWidth={1.2} />
+                        <Video className="h-3.5 w-3.5" strokeWidth={1} />
                       ) : (
-                        <VideoOff className="h-3.5 w-3.5" strokeWidth={1.2} />
+                        <VideoOff className="h-3.5 w-3.5" strokeWidth={1} />
                       )}
                       Cam
                     </button>
@@ -212,7 +212,6 @@ export function MediatorSidebar({
                 </div>
                 <TimeJogDial
                   display={beefTimeFormatted}
-                  subtitle="Temps restant"
                   stepSec={jogStepSec}
                   onDelta={onAdjustTime}
                   quickJumps={[
@@ -293,17 +292,17 @@ export function MediatorSidebar({
                             >
                               {lockedOut ? (
                                 <>
-                                  <MicOff className="h-3.5 w-3.5 shrink-0 opacity-60" strokeWidth={1.2} />
+                                  <MicOff className="h-3.5 w-3.5 shrink-0 opacity-60" strokeWidth={1} />
                                   Attendez votre tour
                                 </>
                               ) : muted ? (
                                 <>
-                                  <Mic className="h-3.5 w-3.5 shrink-0" strokeWidth={1.2} />
+                                  <Mic className="h-3.5 w-3.5 shrink-0" strokeWidth={1} />
                                   Réactiver micro
                                 </>
                               ) : (
                                 <>
-                                  <MicOff className="h-3.5 w-3.5 shrink-0" strokeWidth={1.2} />
+                                  <MicOff className="h-3.5 w-3.5 shrink-0" strokeWidth={1} />
                                   Couper micro
                                 </>
                               )}
@@ -313,7 +312,7 @@ export function MediatorSidebar({
                               onClick={() => onEjectParticipant(row.sessionId)}
                               className="flex shrink-0 items-center gap-1 rounded-[2px] border border-ember-500/50 bg-ember-500/25 px-2.5 py-2 font-mono text-[10px] font-bold text-white hover:bg-ember-500/40"
                             >
-                              <UserX className="h-3.5 w-3.5" strokeWidth={1.2} />
+                              <UserX className="h-3.5 w-3.5" strokeWidth={1} />
                               Kick
                             </button>
                           </div>

@@ -340,16 +340,27 @@ export function useDailyCall(
 
   const setRemoteParticipantAudio = useCallback((sessionId: string, enabled: boolean) => {
     if (!callRef.current || viewerModeRef.current) return;
-    try {
-      const co = callRef.current;
-      const id = resolveDailySessionId(co, sessionId);
-      if (!id) {
-        console.warn('[Daily] setRemoteParticipantAudio: session introuvable', sessionId);
-        return;
+    const run = () => {
+      try {
+        const co = callRef.current;
+        if (!co) return;
+        const id = resolveDailySessionId(co, sessionId);
+        if (!id) {
+          console.warn('[Daily] setRemoteParticipantAudio: session introuvable', sessionId);
+          return;
+        }
+        co.updateParticipant(id, { setAudio: enabled });
+      } catch (e) {
+        console.warn('[Daily] setRemoteParticipantAudio', e);
       }
-      co.updateParticipant(id, { setAudio: enabled });
-    } catch (e) {
-      console.warn('[Daily] setRemoteParticipantAudio', e);
+    };
+    // Double rAF : meilleure prise en charge après gestes tactiles (iOS / WebView).
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(run);
+      });
+    } else {
+      run();
     }
   }, []);
 

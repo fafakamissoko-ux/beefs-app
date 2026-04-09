@@ -21,7 +21,7 @@ type TimeJogDialProps = {
  */
 export function TimeJogDial({
   display,
-  subtitle = 'Glisser pour ajuster',
+  subtitle = '',
   stepSec,
   onDelta,
   quickJumps = [],
@@ -88,7 +88,9 @@ export function TimeJogDial({
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-white/90">{subtitle}</p>
+      {subtitle ? (
+        <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-white/90">{subtitle}</p>
+      ) : null}
       <div
         ref={wrapRef}
         role="group"

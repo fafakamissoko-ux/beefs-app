@@ -43,19 +43,33 @@ export function pushFlyingReaction(
 type FlyingReactionsLayerProps = {
   reactions: FlyingReactionEntry[];
   onRemove: (id: string) => void;
+  /** `strip` = bandeau sociale (overflow contenu) ; `video` = ancien calque plein écran haut */
+  variant?: 'video' | 'strip';
 };
 
 /**
  * Calque d’emojis en orbite quasi gravitationnelle puis disparition (pointer-events: none).
  */
-export function FlyingReactionsLayer({ reactions, onRemove }: FlyingReactionsLayerProps) {
+export function FlyingReactionsLayer({
+  reactions,
+  onRemove,
+  variant = 'video',
+}: FlyingReactionsLayerProps) {
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-50 overflow-hidden"
-      style={{
-        top: 'clamp(5rem, 18vh, 12rem)',
-        contain: 'strict',
-      }}
+      className={`pointer-events-none z-50 overflow-hidden ${
+        variant === 'strip'
+          ? 'absolute inset-0 contain-strict'
+          : 'absolute inset-x-0 bottom-0'
+      }`}
+      style={
+        variant === 'strip'
+          ? { contain: 'strict' }
+          : {
+              top: 'clamp(5rem, 18vh, 12rem)',
+              contain: 'strict',
+            }
+      }
       aria-hidden
     >
       <AnimatePresence initial={false}>

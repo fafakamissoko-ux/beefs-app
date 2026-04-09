@@ -11,6 +11,8 @@ export type ToastOptions = {
   action?: { label: string; onClick: () => void };
   /** Durée avant fermeture auto (défaut 4 s, 10 s si `action`). */
   durationMs?: number;
+  /** Accent visuel (ex. notifications tour de parole). */
+  tone?: 'default' | 'ember';
 };
 
 interface Toast {
@@ -19,6 +21,7 @@ interface Toast {
   message: string;
   action?: ToastOptions['action'];
   durationMs: number;
+  tone?: 'default' | 'ember';
 }
 
 interface ToastContextType {
@@ -39,7 +42,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     const durationMs =
       options?.durationMs ??
       (options?.action ? 10_000 : 4000);
-    setToasts(prev => [...prev, { id, type, message, action: options?.action, durationMs }]);
+    setToasts(prev => [
+      ...prev,
+      {
+        id,
+        type,
+        message,
+        action: options?.action,
+        durationMs,
+        tone: options?.tone === 'ember' ? 'ember' : 'default',
+      },
+    ]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, durationMs);
@@ -50,15 +63,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const icons = {
-    success: <Check className="w-4 h-4" />,
-    error: <AlertCircle className="w-4 h-4" />,
-    info: <Info className="w-4 h-4" />,
+    success: <Check className="w-4 h-4" strokeWidth={1} />,
+    error: <AlertCircle className="w-4 h-4" strokeWidth={1} />,
+    info: <Info className="w-4 h-4" strokeWidth={1} />,
   };
 
   const styles = {
     success: { bg: 'rgba(34, 197, 94, 0.12)', border: 'rgba(34, 197, 94, 0.25)', color: '#4ade80' },
     error: { bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.25)', color: '#f87171' },
     info: { bg: 'rgba(0, 229, 255, 0.1)', border: 'rgba(0, 229, 255, 0.2)', color: '#67e8f9' },
+  };
+  const emberOverlay = {
+    bg: 'rgba(255, 77, 0, 0.12)',
+    border: 'rgba(255, 77, 0, 0.35)',
+    color: '#fdba74',
   };
 
   return (
@@ -74,11 +92,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               exit={{ opacity: 0, x: 40, scale: 0.95 }}
               transition={{ duration: 0.2 }}
               className="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl backdrop-blur-xl shadow-modal"
-              style={{ background: styles[t.type].bg, border: `1px solid ${styles[t.type].border}` }}
+              style={{
+                background: t.tone === 'ember' ? emberOverlay.bg : styles[t.type].bg,
+                border: `1px solid ${t.tone === 'ember' ? emberOverlay.border : styles[t.type].border}`,
+              }}
             >
-              <span style={{ color: styles[t.type].color }}>{icons[t.type]}</span>
+              <span style={{ color: t.tone === 'ember' ? emberOverlay.color : styles[t.type].color }}>
+                {icons[t.type]}
+              </span>
               <div className="flex-1 min-w-0 flex flex-col gap-2">
-                <p className="text-sm font-medium text-white">{t.message}</p>
+                <p
+                  className={`text-sm font-medium ${t.tone === 'ember' ? 'text-amber-50/95' : 'text-white'}`}
+                >
+                  {t.message}
+                </p>
                 {t.action && (
                   <button
                     type="button"
@@ -93,7 +120,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 )}
               </div>
               <button type="button" onClick={() => removeToast(t.id)} className="text-gray-500 hover:text-white transition-colors shrink-0">
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3.5 h-3.5" strokeWidth={1} />
               </button>
             </motion.div>
           ))}
