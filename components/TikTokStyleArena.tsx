@@ -55,7 +55,8 @@ import { VerdictConfettiBurst, RematchVerdictOverlay } from './VerdictEffects';
 import { playRematchThunderSfx } from '@/lib/playVerdictSfx';
 import { MediatorSidebar, type MediatorRemoteRow } from './MediatorSidebar';
 
-const MAX_BEEF_DURATION = 60 * 60; // 60 minutes in seconds
+/** Plafond du chrono global (régie : +15 / +30 min, reset, pause). */
+const MAX_BEEF_DURATION = 4 * 60 * 60; // 4 h
 
 interface RingParticipant {
   id: string;
@@ -288,7 +289,7 @@ export function TikTokStyleArena({
   const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});
   const [liveViewerCount, setLiveViewerCount] = useState(viewerCount);
 
-  // Beef duration limit (60 min countdown)
+  // Chrono global (plafond MAX_BEEF_DURATION)
   const [beefTimeRemaining, setBeefTimeRemaining] = useState(MAX_BEEF_DURATION);
   const beefWarning5Shown = useRef(false);
   const beefWarning1Shown = useRef(false);
@@ -321,7 +322,7 @@ export function TikTokStyleArena({
         }
         if (next <= 0) {
           setTimerActive(false);
-          endBeefRef.current?.('Temps écoulé (60 min)');
+          endBeefRef.current?.('Temps écoulé');
           return 0;
         }
         return next;
@@ -431,8 +432,13 @@ export function TikTokStyleArena({
   /** Le chrono global du beef ne doit pas être figé par la micro du médiateur ou l’état audio des challengers. */
 
   const adjustBeefTime = useCallback((deltaSec: number) => {
-    setTimerPaused(false);
     setBeefTimeRemaining((prev) => Math.max(0, Math.min(MAX_BEEF_DURATION, prev + deltaSec)));
+  }, []);
+
+  const resetBeefTimerToFull = useCallback(() => {
+    setBeefTimeRemaining(MAX_BEEF_DURATION);
+    beefWarning5Shown.current = false;
+    beefWarning1Shown.current = false;
   }, []);
 
   const [startingBeef, setStartingBeef] = useState(false);
@@ -2434,16 +2440,16 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                {/* Bas du panneau — nom + score (clic = profil) */}
+                {/* Bas du panneau — nom + score (même grille que l’écran droit) */}
                 <div className="absolute bottom-2 left-2 right-2 z-20 flex flex-col items-stretch gap-1.5">
-                  <div className="flex max-w-full items-center gap-2 self-start">
+                  <div className="flex min-h-11 w-full max-w-full items-center justify-start gap-2">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null);
                       }}
-                      className="frosted-titanium pointer-events-auto flex min-w-0 max-w-[min(70%,12rem)] items-center gap-1 rounded-full px-2 py-0.5 transition-colors hover:border-white/20"
+                      className="frosted-titanium pointer-events-auto flex h-11 min-w-0 max-w-[min(65%,11rem)] shrink items-center gap-2 rounded-full px-3 transition-colors hover:border-white/20"
                     >
                       <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]" />
                       <span className="truncate font-mono text-[10px] font-semibold tracking-tight text-white underline-offset-2 drop-shadow-md hover:underline">
@@ -2451,7 +2457,7 @@ export function TikTokStyleArena({
                       </span>
                     </button>
                     <div
-                      className={`shrink-0 ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                      className={`flex shrink-0 items-center ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
                     >
                       <PointTrigger
                         count={pulseVoicesA}
@@ -2462,12 +2468,12 @@ export function TikTokStyleArena({
                     </div>
                   </div>
                   {leftPanelIsLocal && !isViewer && (
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex h-11 items-center justify-center gap-2">
                       <button
                         type="button"
                         onClick={toggleMic}
                         aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
-                        className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/10 shadow transition-all backdrop-blur-md ${micEnabled ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-red-500 text-white shadow-red-500/50'}`}
+                        className={`flex h-11 w-11 items-center justify-center rounded-full border border-white/10 shadow transition-all backdrop-blur-md ${micEnabled ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-red-500 text-white shadow-red-500/50'}`}
                       >
                         {micEnabled ? (
                           <Mic className="h-[18px] w-[18px]" strokeWidth={1} aria-hidden />
@@ -2479,7 +2485,7 @@ export function TikTokStyleArena({
                         type="button"
                         onClick={toggleCam}
                         aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
-                        className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/10 shadow transition-all backdrop-blur-md ${camEnabled ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-red-500 text-white shadow-red-500/50'}`}
+                        className={`flex h-11 w-11 items-center justify-center rounded-full border border-white/10 shadow transition-all backdrop-blur-md ${camEnabled ? 'bg-white/15 text-white hover:bg-white/25' : 'bg-red-500 text-white shadow-red-500/50'}`}
                       >
                         {camEnabled ? (
                           <Video className="h-[18px] w-[18px]" strokeWidth={1} aria-hidden />
@@ -2675,23 +2681,10 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                <div className="absolute bottom-2 right-2 left-2 z-20 flex max-w-full justify-end">
-                  <div className="flex max-w-[min(92%,14rem)] flex-row-reverse items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
-                      }}
-                      className="frosted-titanium pointer-events-auto flex min-w-0 items-center gap-1 rounded-full px-2 py-0.5 transition-colors hover:border-white/20"
-                    >
-                      <span className="truncate font-mono text-[10px] font-semibold tracking-tight text-white underline-offset-2 drop-shadow-md hover:underline">
-                        {rightPanelName}
-                      </span>
-                      <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember-500 shadow-[0_0_8px_rgba(255,77,0,0.75)]" />
-                    </button>
+                <div className="absolute bottom-2 left-2 right-2 z-20 flex flex-col items-stretch gap-1.5">
+                  <div className="flex min-h-11 w-full items-center justify-end gap-2">
                     <div
-                      className={`shrink-0 ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                      className={`flex shrink-0 items-center ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
                     >
                       <PointTrigger
                         count={pulseVoicesB}
@@ -2700,6 +2693,19 @@ export function TikTokStyleArena({
                         aria-label="Envoyer une voix pour ce challenger"
                       />
                     </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
+                      }}
+                      className="frosted-titanium pointer-events-auto flex h-11 min-w-0 max-w-[min(65%,11rem)] shrink items-center gap-2 rounded-full px-3 transition-colors hover:border-white/20"
+                    >
+                      <span className="min-w-0 truncate font-mono text-[10px] font-semibold tracking-tight text-white underline-offset-2 drop-shadow-md hover:underline">
+                        {rightPanelName}
+                      </span>
+                      <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember-500 shadow-[0_0_8px_rgba(255,77,0,0.75)]" />
+                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -3040,16 +3046,28 @@ export function TikTokStyleArena({
           role="status"
           aria-live="polite"
         >
-          <div className="flex max-w-[min(100%,26rem)] items-center gap-3 rounded-[2px] border border-white/[0.1] bg-[#060608]/92 px-4 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-md">
-            <span className="whitespace-nowrap font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-white/45">
-              Tour de parole
+          <div
+            className={`flex max-w-[min(100%,26rem)] items-center gap-2.5 rounded-[2px] border px-3.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)] ${
+              floorAnnouncement.slot === 'A'
+                ? 'border-sky-500/25 bg-[#050508] text-white'
+                : 'border-ember-500/25 bg-[#050508] text-white'
+            }`}
+          >
+            <span className="whitespace-nowrap font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-white/40">
+              À la parole
             </span>
-            <span className="h-3 w-px shrink-0 bg-white/12" aria-hidden />
-            <span className="min-w-0 truncate font-mono text-[13px] font-medium tracking-tight text-white">
+            <span className="h-3 w-px shrink-0 bg-white/10" aria-hidden />
+            <span className="min-w-0 truncate font-mono text-[13px] font-semibold tracking-tight text-white">
               {floorAnnouncement.name}
             </span>
-            <span className="shrink-0 rounded-[2px] border border-ember-500/30 bg-ember-500/[0.12] px-2 py-0.5 font-mono text-[10px] font-semibold text-ember-200/95">
-              {floorAnnouncement.slot === 'A' ? 'Côté A' : 'Côté B'}
+            <span
+              className={`shrink-0 rounded-[2px] border px-2 py-0.5 font-mono text-[10px] font-semibold ${
+                floorAnnouncement.slot === 'A'
+                  ? 'border-sky-500/35 bg-sky-500/15 text-sky-100'
+                  : 'border-ember-500/35 bg-ember-500/15 text-ember-100'
+              }`}
+            >
+              {floorAnnouncement.slot === 'A' ? 'Gauche' : 'Droite'}
             </span>
           </div>
         </div>
@@ -3071,6 +3089,11 @@ export function TikTokStyleArena({
             open={mediatorSidebarOpen}
             onClose={() => setMediatorSidebarOpen(false)}
             timerActive={timerActive}
+            beefTimerPaused={timerPaused}
+            onPauseBeefTimer={() => setTimerPaused(true)}
+            onResumeBeefTimer={() => setTimerPaused(false)}
+            onResetBeefTimer={resetBeefTimerToFull}
+            onEndBeefByMediator={() => void endBeef('Terminé par le médiateur')}
             startingBeef={startingBeef}
             onStartBeef={async () => {
               setStartingBeef(true);
@@ -3092,9 +3115,15 @@ export function TikTokStyleArena({
             onRestartSpeakingTurn={restartSpeakingTurn}
             beefTimeFormatted={formatBeefTime(beefTimeRemaining)}
             onSetChallengerMuted={handleMediatorChallengerMute}
-            onEjectParticipant={(sid) => {
-              ejectRemoteParticipant(sid);
-              toast('Participant expulsé', 'info');
+            onEjectParticipant={async (sid) => {
+              const ok = await ejectRemoteParticipant(sid);
+              if (ok) toast('Participant expulsé', 'success');
+              else {
+                toast(
+                  'Expulsion impossible (participant introuvable ou droits Daily insuffisants).',
+                  'error',
+                );
+              }
             }}
             onAdjustTime={adjustBeefTime}
             mediatorMicEnabled={micEnabled}

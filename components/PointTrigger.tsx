@@ -74,7 +74,7 @@ export function PointTrigger({
   const stroke = ringColor(intensity);
 
   return (
-    <div className={`relative flex flex-col items-end ${className}`}>
+    <div className={`relative flex flex-col items-center justify-center ${className}`}>
       <div className="relative h-11 w-11 shrink-0">
         <AnimatePresence>
           {floatKeys.map((k) => (

@@ -18,6 +18,13 @@ type MediatorSidebarProps = {
   open: boolean;
   onClose: () => void;
   timerActive: boolean;
+  /** Chrono global du beef (pas le tour de parole). */
+  beefTimerPaused: boolean;
+  onPauseBeefTimer: () => void;
+  onResumeBeefTimer: () => void;
+  /** Remet le compte à rebours au plafond (ex. 4 h). */
+  onResetBeefTimer: () => void;
+  onEndBeefByMediator: () => void | Promise<void>;
   startingBeef: boolean;
   onStartBeef: () => void | Promise<void>;
   onVerdict: (kind: 'resolved' | 'closed' | 'rematch') => void;
@@ -34,7 +41,7 @@ type MediatorSidebarProps = {
   beefTimeFormatted: string;
   /** muted = micro coupé (Daily + signal si debaterId) */
   onSetChallengerMuted: (sessionId: string, debaterId: string | null, muted: boolean) => void;
-  onEjectParticipant: (sessionId: string) => void;
+  onEjectParticipant: (sessionId: string) => void | Promise<void>;
   onAdjustTime: (deltaSec: number) => void;
   /** Contrôles perso médiateur (récupération cam/micro) */
   mediatorMicEnabled?: boolean;
@@ -50,6 +57,11 @@ export function MediatorSidebar({
   open,
   onClose,
   timerActive,
+  beefTimerPaused,
+  onPauseBeefTimer,
+  onResumeBeefTimer,
+  onResetBeefTimer,
+  onEndBeefByMediator,
   startingBeef,
   onStartBeef,
   onVerdict,
@@ -146,8 +158,53 @@ export function MediatorSidebar({
                   {startingBeef ? 'Lancement…' : 'Lancer le beef'}
                 </motion.button>
               ) : (
-                <div className="rounded-[2px] border border-white/10 bg-black/35 py-2.5 text-center font-mono text-[10px] font-bold uppercase tracking-widest text-white">
-                  Chrono actif
+                <div className="space-y-2">
+                  <div className="rounded-[2px] border border-white/10 bg-black/35 py-2 text-center font-mono text-[10px] font-bold uppercase tracking-widest text-white/90">
+                    Chrono actif
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={beefTimerPaused ? onResumeBeefTimer : onPauseBeefTimer}
+                      className={`rounded-[2px] border py-2 font-mono text-[9px] font-black uppercase tracking-wide ${
+                        beefTimerPaused
+                          ? 'border-emerald-500/45 bg-emerald-600/20 text-emerald-100 hover:bg-emerald-500/30'
+                          : 'border-amber-500/45 bg-amber-500/15 text-amber-100 hover:bg-amber-500/28'
+                      }`}
+                    >
+                      {beefTimerPaused ? 'Reprendre' : 'Pause'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onResetBeefTimer}
+                      className="rounded-[2px] border border-white/18 bg-white/10 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-white/16"
+                    >
+                      Reset chrono
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onAdjustTime(15 * 60)}
+                      className="rounded-[2px] border border-cobalt-500/40 bg-cobalt-600/20 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-cobalt-500/35"
+                    >
+                      +15 min
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onAdjustTime(30 * 60)}
+                      className="rounded-[2px] border border-cobalt-500/40 bg-cobalt-600/20 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-cobalt-500/35"
+                    >
+                      +30 min
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void onEndBeefByMediator()}
+                    className="w-full rounded-[2px] border border-red-500/45 bg-red-600/25 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-red-100 hover:bg-red-500/40"
+                  >
+                    Terminer le direct
+                  </button>
                 </div>
               )}
             </div>
@@ -347,7 +404,7 @@ export function MediatorSidebar({
                             </button>
                             <button
                               type="button"
-                              onClick={() => onEjectParticipant(row.sessionId)}
+                              onClick={() => void onEjectParticipant(row.sessionId)}
                               className="flex shrink-0 items-center gap-1 rounded-[2px] border border-ember-500/50 bg-ember-500/25 px-2.5 py-2 font-mono text-[10px] font-bold text-white hover:bg-ember-500/40"
                             >
                               <UserX className="h-3.5 w-3.5" strokeWidth={1} />

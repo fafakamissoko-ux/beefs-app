@@ -27,8 +27,8 @@ interface UseDailyCallReturn {
   setLocalAudioEnabled: (enabled: boolean) => void;
   /** Médiateur / owner Daily : coupe ou réactive le micro d’un participant distant. */
   setRemoteParticipantAudio: (sessionId: string, enabled: boolean) => void;
-  /** Expulsion de la salle (owner token). */
-  ejectRemoteParticipant: (sessionId: string) => void;
+  /** Expulsion de la salle (`is_owner` sur le token Daily). Résout `true` si l’appel a été émis. */
+  ejectRemoteParticipant: (sessionId: string) => Promise<boolean>;
   isJoined: boolean;
   isJoining: boolean;
   micEnabled: boolean;
@@ -48,6 +48,8 @@ function resolveDailySessionId(co: DailyCall, hint: string): string | null {
     for (const [key, p] of Object.entries(parts)) {
       const dp = p as DailyParticipant;
       if (key === hint || dp.session_id === hint) return key;
+      const uid = typeof dp.user_id === 'string' ? dp.user_id : '';
+      if (uid && uid === hint) return key;
     }
   } catch {
     /* ignore */
@@ -364,18 +366,23 @@ export function useDailyCall(
     }
   }, []);
 
-  const ejectRemoteParticipant = useCallback((sessionId: string) => {
-    if (!callRef.current || viewerModeRef.current) return;
+  const ejectRemoteParticipant = useCallback(async (sessionId: string): Promise<boolean> => {
+    if (!callRef.current || viewerModeRef.current) return false;
     try {
       const co = callRef.current;
       const id = resolveDailySessionId(co, sessionId);
       if (!id) {
         console.warn('[Daily] ejectRemoteParticipant: session introuvable', sessionId);
-        return;
+        return false;
       }
-      co.updateParticipant(id, { eject: true });
+      const out = co.updateParticipant(id, { eject: true }) as unknown;
+      if (out != null && typeof (out as Promise<unknown>).then === 'function') {
+        await (out as Promise<unknown>);
+      }
+      return true;
     } catch (e) {
       console.warn('[Daily] ejectRemoteParticipant', e);
+      return false;
     }
   }, []);
 
