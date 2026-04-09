@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -2504,6 +2505,50 @@ export function TikTokStyleArena({
                     </motion.div>
                   )}
                 </AnimatePresence>
+                <AnimatePresence>
+                  {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
+                    <motion.div
+                      key="left-hotmic-ember"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="pointer-events-none absolute inset-0 z-[5] hidden lg:block"
+                    >
+                      <motion.div
+                        className="absolute inset-0"
+                        animate={{
+                          boxShadow: speakingTurnPaused
+                            ? [
+                                'inset 0 0 44px rgba(255,77,0,0.16)',
+                                'inset 0 0 58px rgba(255,120,0,0.24)',
+                                'inset 0 0 44px rgba(255,77,0,0.16)',
+                              ]
+                            : [
+                                'inset 0 0 38px rgba(255,77,0,0.42)',
+                                'inset 0 0 76px rgba(255,85,0,0.62)',
+                                'inset 0 0 38px rgba(255,77,0,0.42)',
+                              ],
+                        }}
+                        transition={{
+                          duration: speakingTurnPaused ? 3 : 2,
+                          repeat: Infinity,
+                          ease: 'easeInOut',
+                        }}
+                      />
+                      <motion.div
+                        className="absolute inset-0"
+                        animate={{
+                          opacity: speakingTurnPaused ? [0.18, 0.32, 0.18] : [0.38, 0.62, 0.38],
+                        }}
+                        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{
+                          background:
+                            'radial-gradient(circle at 50% 42%, rgba(255,95,0,0.28) 0%, rgba(255,55,0,0.1) 45%, transparent 70%)',
+                        }}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={leftPanel?.sessionId ? `vid-left-${leftPanel.sessionId}` : 'empty-left'}
@@ -2571,7 +2616,7 @@ export function TikTokStyleArena({
                 </AnimatePresence>
                 {/* Timer parole — centre haut du demi-écran A */}
                 {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
-                  <div className="pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/18 bg-black/55 px-2.5 py-1 font-mono text-[11px] font-black tabular-nums text-white shadow-lg backdrop-blur-md">
+                  <div className="pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/18 bg-black/55 px-2.5 py-1 font-mono text-[11px] font-black tabular-nums text-white shadow-lg backdrop-blur-md lg:top-4 lg:border-white/22 lg:bg-black/50">
                     {speakingTurnPaused && (
                       <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
                     )}
@@ -2589,7 +2634,15 @@ export function TikTokStyleArena({
                     }}
                     className="pointer-events-auto flex h-11 min-w-0 max-w-[min(52%,9.5rem)] shrink-[2] items-center gap-2 rounded-full border border-white/15 bg-black/70 px-3 shadow-lg backdrop-blur-sm transition-colors hover:border-white/25"
                   >
-                    <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.85)]" />
+                    {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? (
+                      <span className="relative hidden h-2 w-2 shrink-0 lg:inline-flex" aria-hidden>
+                        <span className="absolute inset-0 animate-ping rounded-full bg-orange-500/80" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_12px_rgba(255,77,0,0.95)]" />
+                      </span>
+                    ) : null}
+                    <div
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.85)] ${speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 'lg:hidden' : ''}`}
+                    />
                     <span className="truncate font-mono text-[11px] font-semibold tracking-tight text-white underline-offset-2 hover:underline">
                       {leftPanelName}
                     </span>
@@ -2757,6 +2810,50 @@ export function TikTokStyleArena({
                     </motion.div>
                   )}
                 </AnimatePresence>
+                <AnimatePresence>
+                  {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
+                    <motion.div
+                      key="right-hotmic-ember"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="pointer-events-none absolute inset-0 z-[5] hidden lg:block"
+                    >
+                      <motion.div
+                        className="absolute inset-0"
+                        animate={{
+                          boxShadow: speakingTurnPaused
+                            ? [
+                                'inset 0 0 44px rgba(255,77,0,0.16)',
+                                'inset 0 0 58px rgba(255,120,0,0.24)',
+                                'inset 0 0 44px rgba(255,77,0,0.16)',
+                              ]
+                            : [
+                                'inset 0 0 38px rgba(255,77,0,0.42)',
+                                'inset 0 0 76px rgba(255,85,0,0.62)',
+                                'inset 0 0 38px rgba(255,77,0,0.42)',
+                              ],
+                        }}
+                        transition={{
+                          duration: speakingTurnPaused ? 3 : 2,
+                          repeat: Infinity,
+                          ease: 'easeInOut',
+                        }}
+                      />
+                      <motion.div
+                        className="absolute inset-0"
+                        animate={{
+                          opacity: speakingTurnPaused ? [0.18, 0.32, 0.18] : [0.38, 0.62, 0.38],
+                        }}
+                        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{
+                          background:
+                            'radial-gradient(circle at 50% 42%, rgba(255,95,0,0.28) 0%, rgba(255,55,0,0.1) 45%, transparent 70%)',
+                        }}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={rightPanel?.sessionId ? `vid-right-${rightPanel.sessionId}` : 'empty-right'}
@@ -2810,7 +2907,7 @@ export function TikTokStyleArena({
                   )}
                 </AnimatePresence>
                 {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
-                  <div className="pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/18 bg-black/55 px-2.5 py-1 font-mono text-[11px] font-black tabular-nums text-white shadow-lg backdrop-blur-md">
+                  <div className="pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/18 bg-black/55 px-2.5 py-1 font-mono text-[11px] font-black tabular-nums text-white shadow-lg backdrop-blur-md lg:top-4 lg:border-white/22 lg:bg-black/50">
                     {speakingTurnPaused && (
                       <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
                     )}
@@ -2846,7 +2943,15 @@ export function TikTokStyleArena({
                     <span className="min-w-0 truncate font-mono text-[11px] font-semibold tracking-tight text-white underline-offset-2 hover:underline">
                       {rightPanelName}
                     </span>
-                    <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember-400 shadow-[0_0_8px_rgba(251,113,133,0.85)]" />
+                    {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? (
+                      <span className="relative hidden h-2 w-2 shrink-0 lg:inline-flex" aria-hidden>
+                        <span className="absolute inset-0 animate-ping rounded-full bg-orange-500/80" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_12px_rgba(255,77,0,0.95)]" />
+                      </span>
+                    ) : null}
+                    <div
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full bg-ember-400 shadow-[0_0_8px_rgba(251,113,133,0.85)] ${speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 'lg:hidden' : ''}`}
+                    />
                   </button>
                 </div>
               </motion.div>
@@ -3109,18 +3214,30 @@ export function TikTokStyleArena({
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/75 via-black/35 to-transparent" />
 
         <div className="relative grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-0.5">
-          <span className="min-w-0" aria-hidden="true" />
+          <div className="flex min-w-0 items-center justify-start pl-0.5">
+            <Link
+              href="/feed"
+              className="hidden rounded-[2px] border border-white/[0.08] bg-[#0a0a0c] px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] lg:inline-flex lg:transition-all lg:duration-200 lg:hover:border-cobalt-500/35 lg:hover:shadow-[0_0_20px_rgba(59,130,246,0.22)]"
+              aria-label="Beefs — retour au feed"
+            >
+              <span className="bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 bg-clip-text font-mono text-[11px] font-black tracking-tight text-transparent">
+                Beefs
+              </span>
+            </Link>
+          </div>
 
           {/* Centre : chrono ou badge */}
           <div className="flex items-center justify-center gap-1.5">
             {isJoined && timerActive ? (
-              <div className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 shadow-lg shadow-black/50 ${
+              <div
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 shadow-lg shadow-black/50 transition-colors duration-200 max-lg:backdrop-blur-md lg:bg-transparent lg:shadow-none lg:backdrop-blur-none lg:hover:border-cobalt-400/50 lg:hover:shadow-[0_0_24px_rgba(59,130,246,0.38)] ${
                 timerPaused
-                  ? 'border-amber-400/50 bg-amber-950/90 backdrop-blur-md'
+                  ? 'border-amber-400/50 bg-amber-950/90 lg:border-amber-400/40 lg:bg-transparent'
                   : beefTimeRemaining <= 5 * 60
-                    ? 'animate-pulse border-red-400/55 bg-red-950/90 backdrop-blur-md'
-                    : 'border-white/20 bg-zinc-950/95 backdrop-blur-md'
-              }`}>
+                    ? 'animate-pulse border-red-400/55 bg-red-950/90 lg:border-red-400/45 lg:bg-transparent max-lg:animate-pulse'
+                    : 'border-white/20 bg-zinc-950/95 lg:border-white/25 lg:bg-transparent'
+              }`}
+              >
                 {timerPaused ? (
                   <Pause className="h-3.5 w-3.5 text-amber-300" strokeWidth={1} aria-hidden />
                 ) : (
@@ -3138,7 +3255,7 @@ export function TikTokStyleArena({
                 )}
               </div>
             ) : isJoined && !timerActive && isHost ? (
-              <div className="flex items-center gap-1.5 rounded-full border border-white/12 bg-black/45 px-3 py-1 backdrop-blur-md shadow-lg shadow-black/30">
+              <div className="flex items-center gap-1.5 rounded-full border border-white/12 bg-black/45 px-3 py-1 shadow-lg shadow-black/30 max-lg:backdrop-blur-md lg:border-white/20 lg:bg-transparent lg:shadow-none lg:backdrop-blur-none lg:transition-colors lg:hover:border-cobalt-400/45 lg:hover:shadow-[0_0_20px_rgba(59,130,246,0.32)]">
                 <span className="text-xs font-medium text-white/55">Pas de chrono</span>
               </div>
             ) : null}
@@ -3147,14 +3264,14 @@ export function TikTokStyleArena({
           {/* Droite : LIVE, spectateurs, régie (médiateur) ou quitter */}
           <div className="flex min-w-0 items-center justify-end gap-1.5">
             {/* LIVE badge */}
-            <div className="flex items-center bg-red-600 rounded-md px-2 py-0.5">
-              <div className={`w-1.5 h-1.5 rounded-full mr-1 ${liveConnected ? 'bg-white animate-pulse' : 'bg-yellow-300'}`} />
-              <span className="text-white text-[10px] font-black tracking-wider">LIVE</span>
+            <div className="flex items-center rounded-md bg-red-600 px-2 py-0.5 lg:border lg:border-red-500/55 lg:bg-transparent lg:transition-colors lg:hover:border-cobalt-400/50 lg:hover:shadow-[0_0_18px_rgba(59,130,246,0.35)]">
+              <div className={`mr-1 h-1.5 w-1.5 rounded-full ${liveConnected ? 'animate-pulse bg-white' : 'bg-yellow-300'}`} />
+              <span className="text-[10px] font-black tracking-wider text-white">LIVE</span>
             </div>
             {/* Viewer count — clickable to show viewer list */}
             <button
               onClick={() => setShowViewerList(true)}
-              className="frosted-titanium flex items-center gap-1 rounded-full px-2.5 py-1 transition-colors hover:border-white/20"
+              className="flex items-center gap-1 rounded-full px-2.5 py-1 transition-colors max-lg:frosted-titanium max-lg:hover:border-white/20 lg:border lg:border-white/20 lg:bg-transparent lg:backdrop-blur-none lg:hover:border-cobalt-400/55 lg:hover:shadow-[0_0_22px_rgba(59,130,246,0.45)]"
             >
               <Eye className="w-3.5 h-3.5 text-white" strokeWidth={1} aria-hidden />
               {liveViewerCount > 0 && (
@@ -3169,7 +3286,7 @@ export function TikTokStyleArena({
                 aria-label={
                   mediatorSidebarOpen ? 'Fermer la commande médiateur' : 'Ouvrir la commande médiateur'
                 }
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[2px] border border-ember-500/40 bg-[#08080a]/95 text-ember-300 shadow-lg backdrop-blur-md transition-colors hover:bg-ember-500/15"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[2px] border border-ember-500/40 bg-[#08080a]/95 text-ember-300 shadow-lg backdrop-blur-md transition-colors hover:bg-ember-500/15 lg:border-white/20 lg:bg-transparent lg:text-white lg:shadow-none lg:backdrop-blur-none lg:hover:border-cobalt-400/55 lg:hover:text-cobalt-100 lg:hover:shadow-[0_0_24px_rgba(59,130,246,0.42)]"
               >
                 <PanelRight className="h-5 w-5" strokeWidth={1} aria-hidden />
               </button>
@@ -3177,9 +3294,9 @@ export function TikTokStyleArena({
               <button
                 type="button"
                 onClick={handleLeave}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md transition-colors hover:bg-black/55"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md transition-colors hover:bg-black/55 lg:bg-transparent lg:backdrop-blur-none lg:hover:border-cobalt-400/50 lg:hover:shadow-[0_0_20px_rgba(59,130,246,0.35)] lg:hover:bg-transparent"
               >
-                <X className="w-4 h-4 text-white" strokeWidth={1} aria-hidden />
+                <X className="h-4 w-4 text-white" strokeWidth={1} aria-hidden />
               </button>
             )}
           </div>
@@ -3189,7 +3306,7 @@ export function TikTokStyleArena({
       {/* Bandeau tour de parole — au-dessus de la ligne nom/score/micro (z plus bas que les docks) */}
       {floorAnnouncement && !beefEnded && (
         <div
-          className="pointer-events-none absolute inset-x-0 z-[18] flex justify-center px-2 max-md:bottom-[calc(env(safe-area-inset-bottom,0px)+7rem)] sm:bottom-[6.25rem]"
+          className="pointer-events-none absolute inset-x-0 z-[18] flex justify-center px-2 max-md:bottom-[calc(env(safe-area-inset-bottom,0px)+7rem)] sm:bottom-[6.25rem] lg:hidden"
           role="status"
           aria-live="polite"
         >
@@ -3280,9 +3397,9 @@ export function TikTokStyleArena({
 
       {/* ── Socle social ~30 % — chat + dock à droite ── */}
       {!beefEnded && (
-        <div className="relative z-40 flex min-h-0 flex-[3] flex-row border-t border-white/10 bg-[#08080A]">
+        <div className="relative z-40 flex min-h-0 flex-[3] flex-row border-t border-white/10 bg-[#08080A] lg:mx-4 lg:mb-4 lg:mt-2 lg:overflow-hidden lg:rounded-md lg:border lg:border-white/[0.1] lg:bg-[#070708]/78 lg:shadow-[0_16px_56px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,255,255,0.07)] lg:backdrop-blur-2xl lg:[backdrop-filter:blur(32px)_saturate(200%)]">
           <div
-            className="pointer-events-auto flex min-h-0 min-w-0 flex-1 flex-col border-r border-white/[0.08]"
+            className="pointer-events-auto flex min-h-0 min-w-0 flex-1 flex-col border-r border-white/[0.08] lg:border-white/[0.06]"
             aria-live="polite"
           >
           <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -3399,7 +3516,7 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative flex w-[min(11rem,34vw)] shrink-0 flex-col items-center justify-center gap-2 border-l border-white/[0.06] bg-[#060607] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+            className="relative flex w-[min(11rem,34vw)] shrink-0 flex-col items-center justify-center gap-2 border-l border-white/[0.06] bg-[#060607] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:border-l lg:border-white/[0.08] lg:bg-gradient-to-b lg:from-[#0e0e12]/92 lg:to-[#060607]/95 lg:backdrop-blur-2xl lg:[backdrop-filter:blur(28px)_saturate(190%)]"
           >
             <AnimatePresence>
               {showAllReactions && (

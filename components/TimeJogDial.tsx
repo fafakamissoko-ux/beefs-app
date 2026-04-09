@@ -14,6 +14,9 @@ type TimeJogDialProps = {
   quickJumps?: { label: string; delta: number }[];
   /** id pour a11y */
   ariaLabel?: string;
+  className?: string;
+  dialClassName?: string;
+  displayClassName?: string;
 };
 
 /**
@@ -26,6 +29,9 @@ export function TimeJogDial({
   onDelta,
   quickJumps = [],
   ariaLabel = 'Réglage du temps',
+  className = '',
+  dialClassName = '',
+  displayClassName = '',
 }: TimeJogDialProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const lastAngleRef = useRef<number | null>(null);
@@ -87,9 +93,11 @@ export function TimeJogDial({
   const indicatorDeg = emberDeg;
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className={`flex flex-col items-center gap-2 ${className}`.trim()}>
       {subtitle ? (
-        <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-white">{subtitle}</p>
+        <p className="max-lg:block font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-white lg:hidden">
+          {subtitle}
+        </p>
       ) : null}
       <div
         ref={wrapRef}
@@ -99,7 +107,7 @@ export function TimeJogDial({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className="relative flex h-[7.25rem] w-[7.25rem] cursor-grab touch-none select-none items-center justify-center rounded-full border border-white/[0.18] bg-white/[0.10] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md active:cursor-grabbing"
+        className={`relative flex h-[7.25rem] w-[7.25rem] cursor-grab touch-none select-none items-center justify-center rounded-full border border-white/[0.18] bg-white/[0.10] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md active:cursor-grabbing lg:border-white/12 lg:bg-white/[0.07] ${dialClassName}`.trim()}
         style={{
           boxShadow: dragging
             ? 'inset 0 0 24px rgba(255,77,0,0.15), 0 0 20px rgba(255,77,0,0.12)'
@@ -115,11 +123,13 @@ export function TimeJogDial({
             transition: dragging ? 'none' : 'transform 0.35s ease-out',
           }}
         >
-          <div className="absolute inset-[5px] rounded-full border border-[#FF4D00]/40" />
-          <div className="absolute left-1/2 top-[10px] h-2 w-2 -translate-x-1/2 rounded-full bg-[#FF4D00] shadow-[0_0_14px_rgba(255,77,0,0.95)]" />
+          <div className="absolute inset-[5px] rounded-full border border-[#FF4D00]/40 lg:inset-[6px] lg:border-[#FF4D00]/32" />
+          <div className="absolute left-1/2 top-[10px] h-2 w-2 -translate-x-1/2 rounded-full bg-[#FF4D00] shadow-[0_0_14px_rgba(255,77,0,0.95)] lg:top-[9px] lg:h-[7px] lg:w-[7px]" />
         </div>
         <div className="pointer-events-none flex flex-col items-center px-1 text-center">
-          <span className="font-mono text-[1.35rem] font-black tabular-nums leading-none tracking-tight text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_12px_rgba(0,0,0,0.45)] sm:text-[1.5rem]">
+          <span
+            className={`font-mono text-[1.35rem] font-black tabular-nums leading-none tracking-tight text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_12px_rgba(0,0,0,0.45)] sm:text-[1.5rem] lg:text-[1.28rem] ${displayClassName}`.trim()}
+          >
             {display}
           </span>
         </div>
@@ -131,7 +141,7 @@ export function TimeJogDial({
               key={q.label}
               type="button"
               onClick={() => onDelta(q.delta)}
-              className="rounded-[2px] border border-ember-500/40 bg-ember-500/15 px-2 py-1 font-mono text-[9px] font-black uppercase tracking-wider text-ember-100 transition-colors hover:bg-ember-500/30"
+              className="rounded-[2px] border border-ember-500/40 bg-ember-500/15 px-2 py-1 font-mono text-[9px] font-black uppercase tracking-wider text-ember-100 transition-colors hover:bg-ember-500/30 lg:px-1.5 lg:py-0.5 lg:text-[8px]"
             >
               {q.label}
             </button>
