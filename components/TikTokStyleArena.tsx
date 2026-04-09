@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -3247,17 +3246,7 @@ export function TikTokStyleArena({
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-transparent lg:from-transparent" />
 
         <div className="relative grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-0.5">
-          <div className="flex min-w-0 items-center justify-start pl-0.5">
-            <Link
-              href="/feed"
-              className="hidden rounded-xl bg-transparent px-2.5 py-1 shadow-none backdrop-blur-none lg:inline-flex lg:transition-all lg:duration-200 lg:hover:shadow-[0_0_28px_rgba(59,130,246,0.35)]"
-              aria-label="Beefs — retour au feed"
-            >
-              <span className="bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 bg-clip-text font-mono text-[11px] font-black tracking-tight text-transparent">
-                Beefs
-              </span>
-            </Link>
-          </div>
+          <div className="min-w-0 pl-0.5" aria-hidden />
 
           {/* Centre : chrono ou badge */}
           <div className="flex items-center justify-center gap-1.5">
@@ -3441,9 +3430,9 @@ export function TikTokStyleArena({
 
       {/* ── Socle social ~30 % — chat + dock à droite ── */}
       {!beefEnded && (
-        <div className="relative z-40 flex min-h-0 flex-[3] flex-row bg-[#08080A] shadow-[0_-12px_48px_rgba(0,0,0,0.55)] max-lg:rounded-none lg:mx-4 lg:mb-4 lg:mt-2 lg:overflow-hidden lg:rounded-3xl lg:bg-[#070708]/72 lg:shadow-[0_20px_64px_rgba(0,0,0,0.65),0_-8px_40px_rgba(0,0,0,0.4)] lg:backdrop-blur-2xl lg:[backdrop-filter:blur(32px)_saturate(200%)]">
+        <div className="relative z-[60] flex min-h-0 flex-[3] flex-row bg-[#08080A] shadow-[0_-12px_48px_rgba(0,0,0,0.55)] max-lg:rounded-none lg:mx-4 lg:mb-4 lg:mt-2 lg:rounded-3xl lg:bg-[#070708]/72 lg:shadow-[0_20px_64px_rgba(0,0,0,0.65),0_-8px_40px_rgba(0,0,0,0.4)] lg:backdrop-blur-2xl lg:[backdrop-filter:blur(32px)_saturate(200%)]">
           <div
-            className="pointer-events-auto flex min-h-0 min-w-0 flex-1 flex-col shadow-[4px_0_32px_rgba(0,0,0,0.25)] lg:shadow-[6px_0_40px_rgba(0,0,0,0.2)]"
+            className="pointer-events-auto flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden shadow-[4px_0_32px_rgba(0,0,0,0.25)] lg:rounded-l-3xl lg:shadow-[6px_0_40px_rgba(0,0,0,0.2)]"
             aria-live="polite"
           >
           <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -3568,7 +3557,7 @@ export function TikTokStyleArena({
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
-                  className="pointer-events-auto absolute bottom-full right-0 z-[50] mb-2 max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] origin-bottom-right overflow-y-auto overscroll-contain rounded-[2px] border border-white/[0.1] bg-[#0c0c0f]/98 p-2 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-0 sm:translate-x-0"
+                  className="pointer-events-auto absolute bottom-full right-0 z-[110] mb-2 max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] origin-bottom-right overflow-y-auto overscroll-contain rounded-[2px] border border-white/[0.1] bg-[#0c0c0f]/98 p-2 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-0 sm:translate-x-0"
                 >
                   <div className="grid grid-cols-6 gap-1 sm:grid-cols-8">
                     {POPULAR_REACTIONS.map((emoji) => (
@@ -3662,7 +3651,7 @@ export function TikTokStyleArena({
                       initial={{ opacity: 0, y: 10, scale: 0.9 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                      className="absolute bottom-full right-0 z-[50] mb-2 w-[220px] rounded-[2px] border border-white/12 bg-[#0c0c0f]/98 p-3 shadow-2xl backdrop-blur-xl"
+                      className="absolute bottom-full right-0 z-[110] mb-2 w-[220px] rounded-[2px] border border-white/12 bg-[#0c0c0f]/98 p-3 shadow-2xl backdrop-blur-xl"
                     >
                       <p className="mb-2 text-[11px] font-semibold text-white/70">Envoyer au médiateur</p>
                       <div className="grid grid-cols-2 gap-1.5">
