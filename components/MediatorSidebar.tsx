@@ -116,7 +116,7 @@ export function MediatorSidebar({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 340 }}
-            className="fixed right-0 top-0 z-[58] flex h-[100dvh] w-[min(100vw,17.5rem)] flex-col border-l border-white/[0.09] frosted-titanium sm:w-72"
+            className="fixed right-0 top-0 z-[58] flex h-[100dvh] w-[min(100vw,17.5rem)] flex-col border-l border-white/[0.12] bg-[#16161a] shadow-[inset_1px_0_0_rgba(255,255,255,0.07)] sm:w-72"
           >
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] px-3 py-2.5">
               <span className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-ember-400">
@@ -252,7 +252,7 @@ export function MediatorSidebar({
                       type="button"
                       onClick={() => setJogStepSec(5)}
                       className={`rounded-[2px] px-1.5 py-0.5 font-mono text-[8px] font-black uppercase ${
-                        jogStepSec === 5 ? 'bg-ember-500/35 text-ember-100' : 'bg-white/10 text-white/55'
+                        jogStepSec === 5 ? 'bg-ember-500/35 text-ember-100' : 'border border-white/12 bg-white/12 text-white/85'
                       }`}
                     >
                       5s
@@ -261,7 +261,7 @@ export function MediatorSidebar({
                       type="button"
                       onClick={() => setJogStepSec(10)}
                       className={`rounded-[2px] px-1.5 py-0.5 font-mono text-[8px] font-black uppercase ${
-                        jogStepSec === 10 ? 'bg-ember-500/35 text-ember-100' : 'bg-white/10 text-white/55'
+                        jogStepSec === 10 ? 'bg-ember-500/35 text-ember-100' : 'border border-white/12 bg-white/12 text-white/85'
                       }`}
                     >
                       10s
@@ -411,7 +411,7 @@ export function MediatorSidebar({
             </div>
 
             <div className="shrink-0 space-y-2 border-t border-white/[0.12] bg-black/35 px-3 py-3">
-              <p className="px-0.5 font-mono text-[8px] font-semibold uppercase tracking-wider text-white/40">
+              <p className="px-0.5 font-mono text-[8px] font-semibold uppercase tracking-wider text-white/75">
                 Fin du beef — choisis un verdict
               </p>
               <button

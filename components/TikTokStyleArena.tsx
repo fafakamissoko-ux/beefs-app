@@ -1130,6 +1130,12 @@ export function TikTokStyleArena({
     return null;
   }, [speakingTurnActive, speakingTurnTarget, leftPanel, rightPanel]);
 
+  /** Slot affiché sur les panneaux (spectateurs : parfois pas de match arenaUserId → fallback bannière). */
+  const effectiveHotMicSpeakerSlot = useMemo((): 'A' | 'B' | null => {
+    if (!speakingTurnActive) return null;
+    return hotMicSpeakerSlot ?? floorAnnouncement?.slot ?? null;
+  }, [speakingTurnActive, hotMicSpeakerSlot, floorAnnouncement]);
+
   // Multi-participant system
   const [ringParticipants, setRingParticipants] = useState<RingParticipant[]>([]);
   const [participationRequests, setParticipationRequests] = useState<ParticipationRequest[]>([]);
@@ -1251,6 +1257,42 @@ export function TikTokStyleArena({
           beefEndsAtMsRef.current = endsAtMs;
         } else {
           beefEndsAtMsRef.current = null;
+        }
+      })
+      .on('broadcast', { event: 'speaking_turn' }, ({ payload }: any) => {
+        if (isHostRef.current) return;
+        if (payload?.action === 'start') {
+          setSpeakingTurnPaused(false);
+          setSpeakingTurnActive(true);
+          setSpeakingTurnTarget(payload.debaterId);
+          const dur = Math.max(0, Math.floor(Number(payload?.duration) || 0));
+          if (dur > 0) {
+            setSpeakingTurnRemaining(dur);
+            setSpeakingTurnDuration(Math.max(15, Math.min(600, dur)));
+          }
+          setTimerRunning(true);
+          setCurrentSpeaker(payload.debaterId);
+          const sl = payload?.slot as 'A' | 'B' | undefined;
+          const nm = (payload?.speakerName as string) || (sl ? `Challenger ${sl}` : '');
+          if (sl && nm) {
+            setFloorAnnouncement({ name: nm, slot: sl });
+          }
+        } else if (payload?.action === 'pause') {
+          setSpeakingTurnPaused(true);
+        } else if (payload?.action === 'resume') {
+          setSpeakingTurnPaused(false);
+        } else if (payload?.action === 'stop') {
+          setFloorAnnouncement(null);
+          setSpeakingTurnPaused(false);
+          setSpeakingTurnActive(false);
+          setSpeakingTurnTarget(null);
+          setSpeakingTurnRemaining(0);
+          setTimerRunning(false);
+          setCurrentSpeaker(null);
+          if (speakingTurnIntervalRef.current) {
+            clearInterval(speakingTurnIntervalRef.current);
+            speakingTurnIntervalRef.current = null;
+          }
         }
       })
       .on('broadcast', { event: 'mediator_floor' }, ({ payload }: any) => {
@@ -1793,43 +1835,6 @@ export function TikTokStyleArena({
     stopTimer,
     isHost,
   ]);
-
-  // Listen for speaking turn broadcasts (for non-hosts)
-  useEffect(() => {
-    if (!channelRef.current || isHost) return;
-    const handler = ({ payload }: any) => {
-      if (payload?.action === 'start') {
-        setSpeakingTurnPaused(false);
-        setSpeakingTurnActive(true);
-        setSpeakingTurnTarget(payload.debaterId);
-        setSpeakingTurnRemaining(payload.duration);
-        setTimerRunning(true);
-        setCurrentSpeaker(payload.debaterId);
-        const sl = payload?.slot as 'A' | 'B' | undefined;
-        const nm = (payload?.speakerName as string) || (sl ? `Challenger ${sl}` : '');
-        if (sl && nm) {
-          setFloorAnnouncement({ name: nm, slot: sl });
-        }
-      } else if (payload?.action === 'pause') {
-        setSpeakingTurnPaused(true);
-      } else if (payload?.action === 'resume') {
-        setSpeakingTurnPaused(false);
-      } else if (payload?.action === 'stop') {
-        setFloorAnnouncement(null);
-        setSpeakingTurnPaused(false);
-        setSpeakingTurnActive(false);
-        setSpeakingTurnTarget(null);
-        setSpeakingTurnRemaining(0);
-        setTimerRunning(false);
-        setCurrentSpeaker(null);
-        if (speakingTurnIntervalRef.current) {
-          clearInterval(speakingTurnIntervalRef.current);
-          speakingTurnIntervalRef.current = null;
-        }
-      }
-    };
-    channelRef.current.on('broadcast', { event: 'speaking_turn' }, handler);
-  }, [isHost, toast]);
 
   /** Micro challengers : coupé hors tour (débat structuré) ou quand le médiateur prend la parole */
   useEffect(() => {
@@ -2565,7 +2570,7 @@ export function TikTokStyleArena({
                   )}
                 </AnimatePresence>
                 {/* Timer parole — centre haut du demi-écran A */}
-                {speakingTurnActive && hotMicSpeakerSlot === 'A' && (
+                {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
                   <div className="pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/18 bg-black/55 px-2.5 py-1 font-mono text-[11px] font-black tabular-nums text-white shadow-lg backdrop-blur-md">
                     {speakingTurnPaused && (
                       <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
@@ -2804,7 +2809,7 @@ export function TikTokStyleArena({
                     />
                   )}
                 </AnimatePresence>
-                {speakingTurnActive && hotMicSpeakerSlot === 'B' && (
+                {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
                   <div className="pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/18 bg-black/55 px-2.5 py-1 font-mono text-[11px] font-black tabular-nums text-white shadow-lg backdrop-blur-md">
                     {speakingTurnPaused && (
                       <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>

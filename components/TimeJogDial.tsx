@@ -89,7 +89,7 @@ export function TimeJogDial({
   return (
     <div className="flex flex-col items-center gap-2">
       {subtitle ? (
-        <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-white/90">{subtitle}</p>
+        <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-white">{subtitle}</p>
       ) : null}
       <div
         ref={wrapRef}
@@ -99,7 +99,7 @@ export function TimeJogDial({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        className="relative flex h-[7.25rem] w-[7.25rem] cursor-grab touch-none select-none items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.06] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md active:cursor-grabbing"
+        className="relative flex h-[7.25rem] w-[7.25rem] cursor-grab touch-none select-none items-center justify-center rounded-full border border-white/[0.18] bg-white/[0.10] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md active:cursor-grabbing"
         style={{
           boxShadow: dragging
             ? 'inset 0 0 24px rgba(255,77,0,0.15), 0 0 20px rgba(255,77,0,0.12)'
@@ -119,7 +119,7 @@ export function TimeJogDial({
           <div className="absolute left-1/2 top-[10px] h-2 w-2 -translate-x-1/2 rounded-full bg-[#FF4D00] shadow-[0_0_14px_rgba(255,77,0,0.95)]" />
         </div>
         <div className="pointer-events-none flex flex-col items-center px-1 text-center">
-          <span className="font-mono text-[1.35rem] font-black tabular-nums leading-none tracking-tight text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.65)] sm:text-[1.5rem]">
+          <span className="font-mono text-[1.35rem] font-black tabular-nums leading-none tracking-tight text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_12px_rgba(0,0,0,0.45)] sm:text-[1.5rem]">
             {display}
           </span>
         </div>
