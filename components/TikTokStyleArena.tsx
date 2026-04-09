@@ -208,8 +208,10 @@ export function TikTokStyleArena({
     speakingTurnTargetRef.current = speakingTurnTarget;
   }, [speakingTurnTarget]);
   const [speakingTurnRemaining, setSpeakingTurnRemaining] = useState(0);
+  const [speakingTurnPaused, setSpeakingTurnPaused] = useState(false);
   const [speakingTurnDuration, setSpeakingTurnDuration] = useState(60);
   const speakingTurnIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const stopTimerRef = useRef<() => void>(() => {});
 
   /** Débat structuré (budget challengers, tours imposés, micros) */
   const [structuredDebateEnabled, setStructuredDebateEnabled] = useState(false);
@@ -1081,6 +1083,11 @@ export function TikTokStyleArena({
             payload: { targetUserId: debaterId, muted },
           })
           .catch(() => {});
+        /** Couper le micro du locuteur actif = fin du tour de parole (chrono arrêté) */
+        if (muted && debaterId === speakingTurnTargetRef.current) {
+          setSpeakingTurnPaused(false);
+          stopTimerRef.current();
+        }
       }
     },
     [setRemoteParticipantAudio],
@@ -1335,6 +1342,7 @@ export function TikTokStyleArena({
   };
 
   const startTimer = (debaterId: string) => {
+    setSpeakingTurnPaused(false);
     setMediatorHoldingFloor(false);
     if (channelRef.current) {
       channelRef.current
@@ -1383,11 +1391,15 @@ export function TikTokStyleArena({
   };
 
   const startHotMicTurn = useCallback(
-    (slot: 'A' | 'B', durationSec: number) => {
-      if (speakingTurnActive) {
+    (slot: 'A' | 'B', durationSec: number, opts?: { force?: boolean }) => {
+      if (speakingTurnActive && !opts?.force) {
         toast('Un tour de parole est déjà en cours.', 'info');
         return;
       }
+      if (opts?.force && speakingTurnActive) {
+        stopTimerRef.current();
+      }
+      setSpeakingTurnPaused(false);
       const duration = Math.max(15, Math.min(600, Math.round(durationSec / 5) * 5));
       const activePanel = slot === 'A' ? leftPanel : rightPanel;
       const otherPanel = slot === 'A' ? rightPanel : leftPanel;
@@ -1460,6 +1472,7 @@ export function TikTokStyleArena({
   );
 
   const stopTimer = useCallback(() => {
+    setSpeakingTurnPaused(false);
     const endedSpeakerId = speakingTurnTargetRef.current;
     if (isHost && endedSpeakerId) {
       const lp = leftPanelRef.current;
@@ -1502,12 +1515,47 @@ export function TikTokStyleArena({
     }
   }, [isHost, structuredDebateEnabled, setRemoteParticipantAudio]);
 
+  const pauseSpeakingTurn = useCallback(() => {
+    if (!speakingTurnActive) return;
+    setSpeakingTurnPaused(true);
+    channelRef.current
+      ?.send({ type: 'broadcast', event: 'speaking_turn', payload: { action: 'pause' } })
+      .catch(() => {});
+  }, [speakingTurnActive]);
+
+  const resumeSpeakingTurn = useCallback(() => {
+    if (!speakingTurnActive) return;
+    setSpeakingTurnPaused(false);
+    channelRef.current
+      ?.send({ type: 'broadcast', event: 'speaking_turn', payload: { action: 'resume' } })
+      .catch(() => {});
+  }, [speakingTurnActive]);
+
+  const restartSpeakingTurn = useCallback(() => {
+    if (!hotMicSpeakerSlot) return;
+    const slot = hotMicSpeakerSlot;
+    const dur = speakingTurnDuration;
+    stopTimer();
+    window.setTimeout(() => {
+      startHotMicTurn(slot, dur, { force: true });
+    }, 0);
+  }, [hotMicSpeakerSlot, speakingTurnDuration, stopTimer, startHotMicTurn]);
+
+  useEffect(() => {
+    stopTimerRef.current = stopTimer;
+  }, [stopTimer]);
+
+  const speakingTurnPausedRef = useRef(false);
+  useEffect(() => {
+    speakingTurnPausedRef.current = speakingTurnPaused;
+  }, [speakingTurnPaused]);
+
   // Compte à rebours du tour (+ budget « temps challengers » si débat structuré, sans grignoter le chrono global du beef)
   useEffect(() => {
     if (!speakingTurnActive || !speakingTurnTarget) return;
 
     speakingTurnIntervalRef.current = setInterval(() => {
-      if (mediatorHoldingFloor) return;
+      if (mediatorHoldingFloor || speakingTurnPausedRef.current) return;
 
       setSpeakingTurnRemaining((prev) => {
         if (prev <= 1) {
@@ -1520,7 +1568,7 @@ export function TikTokStyleArena({
         return prev - 1;
       });
 
-      if (structuredDebateEnabled && isHost) {
+      if (structuredDebateEnabled && isHost && !speakingTurnPausedRef.current) {
         setChallengerBudgetRemaining((prev) => Math.max(0, prev - 1));
       }
     }, 1000);
@@ -1543,6 +1591,7 @@ export function TikTokStyleArena({
     if (!channelRef.current || isHost) return;
     const handler = ({ payload }: any) => {
       if (payload?.action === 'start') {
+        setSpeakingTurnPaused(false);
         setSpeakingTurnActive(true);
         setSpeakingTurnTarget(payload.debaterId);
         setSpeakingTurnRemaining(payload.duration);
@@ -1552,7 +1601,12 @@ export function TikTokStyleArena({
         if (sl) {
           toast(`[Challenger ${sl}] a la parole`, 'info', { tone: 'ember', durationMs: 3800 });
         }
+      } else if (payload?.action === 'pause') {
+        setSpeakingTurnPaused(true);
+      } else if (payload?.action === 'resume') {
+        setSpeakingTurnPaused(false);
       } else if (payload?.action === 'stop') {
+        setSpeakingTurnPaused(false);
         setSpeakingTurnActive(false);
         setSpeakingTurnTarget(null);
         setSpeakingTurnRemaining(0);
@@ -2293,7 +2347,10 @@ export function TikTokStyleArena({
                 </AnimatePresence>
                 {/* Timer parole — centre haut du demi-écran A */}
                 {speakingTurnActive && hotMicSpeakerSlot === 'A' && (
-                  <div className="pointer-events-none absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-full border border-white/18 bg-black/55 px-2.5 py-1 font-mono text-[11px] font-black tabular-nums text-white shadow-lg backdrop-blur-md">
+                  <div className="pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/18 bg-black/55 px-2.5 py-1 font-mono text-[11px] font-black tabular-nums text-white shadow-lg backdrop-blur-md">
+                    {speakingTurnPaused && (
+                      <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
+                    )}
                     {Math.floor(speakingTurnRemaining / 60)}:
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
@@ -2531,7 +2588,10 @@ export function TikTokStyleArena({
                   )}
                 </AnimatePresence>
                 {speakingTurnActive && hotMicSpeakerSlot === 'B' && (
-                  <div className="pointer-events-none absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-full border border-white/18 bg-black/55 px-2.5 py-1 font-mono text-[11px] font-black tabular-nums text-white shadow-lg backdrop-blur-md">
+                  <div className="pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/18 bg-black/55 px-2.5 py-1 font-mono text-[11px] font-black tabular-nums text-white shadow-lg backdrop-blur-md">
+                    {speakingTurnPaused && (
+                      <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
+                    )}
                     {Math.floor(speakingTurnRemaining / 60)}:
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
@@ -2921,8 +2981,13 @@ export function TikTokStyleArena({
             onVerdict={handleMediatorVerdict}
             remoteRows={mediatorRemoteRows}
             speakingTurnActive={speakingTurnActive}
+            speakingTurnPaused={speakingTurnPaused}
             hotMicSpeakerSlot={hotMicSpeakerSlot}
             onHotMic={startHotMicTurn}
+            onStopSpeakingTurn={stopTimer}
+            onPauseSpeakingTurn={pauseSpeakingTurn}
+            onResumeSpeakingTurn={resumeSpeakingTurn}
+            onRestartSpeakingTurn={restartSpeakingTurn}
             beefTimeFormatted={formatBeefTime(beefTimeRemaining)}
             onSetChallengerMuted={handleMediatorChallengerMute}
             onEjectParticipant={(sid) => {
@@ -3074,9 +3139,9 @@ export function TikTokStyleArena({
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
-                  className="pointer-events-auto absolute bottom-full left-1/2 z-[38] mb-2 w-[min(100vw-1rem,18rem)] -translate-x-1/2 rounded-[2px] border border-white/[0.1] bg-[#0c0c0f]/98 p-2 shadow-2xl backdrop-blur-xl"
+                  className="pointer-events-auto absolute bottom-full right-0 z-[38] mb-2 max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] origin-bottom-right overflow-y-auto overscroll-contain rounded-[2px] border border-white/[0.1] bg-[#0c0c0f]/98 p-2 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-0 sm:translate-x-0"
                 >
-                  <div className="grid grid-cols-8 gap-1">
+                  <div className="grid grid-cols-6 gap-1 sm:grid-cols-8">
                     {POPULAR_REACTIONS.map((emoji) => (
                       <button
                         key={emoji}

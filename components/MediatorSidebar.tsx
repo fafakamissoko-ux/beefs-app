@@ -23,8 +23,13 @@ type MediatorSidebarProps = {
   onVerdict: (kind: 'resolved' | 'closed' | 'rematch') => void;
   remoteRows: MediatorRemoteRow[];
   speakingTurnActive: boolean;
+  speakingTurnPaused: boolean;
   hotMicSpeakerSlot: 'A' | 'B' | null;
-  onHotMic: (slot: 'A' | 'B', durationSec: number) => void;
+  onHotMic: (slot: 'A' | 'B', durationSec: number, opts?: { force?: boolean }) => void;
+  onStopSpeakingTurn: () => void;
+  onPauseSpeakingTurn: () => void;
+  onResumeSpeakingTurn: () => void;
+  onRestartSpeakingTurn: () => void;
   /** Temps restant du chrono global (affichage molette) */
   beefTimeFormatted: string;
   /** muted = micro coupé (Daily + signal si debaterId) */
@@ -50,8 +55,13 @@ export function MediatorSidebar({
   onVerdict,
   remoteRows,
   speakingTurnActive,
+  speakingTurnPaused,
   hotMicSpeakerSlot,
   onHotMic,
+  onStopSpeakingTurn,
+  onPauseSpeakingTurn,
+  onResumeSpeakingTurn,
+  onRestartSpeakingTurn,
   beefTimeFormatted,
   onSetChallengerMuted,
   onEjectParticipant,
@@ -266,14 +276,42 @@ export function MediatorSidebar({
                               Parole
                             </span>
                           </div>
-                          <button
-                            type="button"
-                            disabled={speakingTurnActive}
-                            onClick={() => onHotMic(row.slot, paroleDurationSec)}
-                            className="flex w-full items-center justify-center rounded-[2px] border border-ember-500/40 bg-ember-500/15 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-ember-50 transition-colors hover:bg-ember-500/28 disabled:cursor-not-allowed disabled:opacity-35"
-                          >
-                            Lancer parole · {formatParole(paroleDurationSec)}
-                          </button>
+                          {speakingTurnActive && hotMicSpeakerSlot === row.slot ? (
+                            <div className="space-y-1.5">
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={onStopSpeakingTurn}
+                                  className="rounded-[2px] border border-white/20 bg-white/10 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white transition-colors hover:bg-white/18"
+                                >
+                                  Arrêter
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={speakingTurnPaused ? onResumeSpeakingTurn : onPauseSpeakingTurn}
+                                  className="rounded-[2px] border border-amber-500/45 bg-amber-500/15 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-amber-100 transition-colors hover:bg-amber-500/28"
+                                >
+                                  {speakingTurnPaused ? 'Reprendre' : 'Pause'}
+                                </button>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={onRestartSpeakingTurn}
+                                className="w-full rounded-[2px] border border-cobalt-500/45 bg-cobalt-600/20 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white transition-colors hover:bg-cobalt-500/35"
+                              >
+                                Relancer le tour
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={speakingTurnActive}
+                              onClick={() => onHotMic(row.slot, paroleDurationSec)}
+                              className="flex w-full items-center justify-center rounded-[2px] border border-ember-500/40 bg-ember-500/15 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-ember-50 transition-colors hover:bg-ember-500/28 disabled:cursor-not-allowed disabled:opacity-35"
+                            >
+                              Lancer parole · {formatParole(paroleDurationSec)}
+                            </button>
+                          )}
 
                           <div className="flex flex-wrap gap-1.5">
                             <button

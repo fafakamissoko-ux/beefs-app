@@ -74,6 +74,11 @@ export function useBeefNotifications({ userId, onNotification }: UseBeefNotifica
           notifiedBeefs.current.add(dedupeKey);
 
           if (newStatus === 'live' && oldStatus !== 'live') {
+            const mediatorId = beef.mediator_id as string | undefined;
+            // Ne pas notifier celui qui passe son propre beef en live (toast + navigateur)
+            if (mediatorId && mediatorId === userId) {
+              return;
+            }
             onNotification({ beefId: beef.id as string, title: beef.title as string, type: 'live_now' });
             showBrowserNotification(`🔴 LIVE maintenant!`, `"${beef.title}" est en direct. Rejoins maintenant!`);
           }
