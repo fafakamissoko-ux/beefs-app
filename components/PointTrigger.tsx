@@ -99,12 +99,11 @@ export function PointTrigger({
           onClick={handleClick}
           aria-label={ariaLabel}
           style={{
-            borderColor: stroke,
-            boxShadow: `0 0 0 1px ${stroke}33, inset 0 1px 0 rgba(255,255,255,0.06)`,
+            boxShadow: `0 0 0 2px ${stroke}55, 0 10px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05)`,
           }}
           className={[
             'relative flex h-11 w-11 items-center justify-center overflow-visible rounded-full',
-            'border-2 bg-black/40 backdrop-blur-sm',
+            'border-0 bg-black/40 backdrop-blur-md',
             interactive ? 'cursor-pointer touch-manipulation hover:bg-black/50' : 'cursor-default',
           ].join(' ')}
         >
@@ -116,8 +115,10 @@ export function PointTrigger({
                 animate={{ scale: 2.75, opacity: 0 }}
                 transition={{ duration: 0.68, ease: 'easeOut' }}
                 onAnimationComplete={() => removeRing(r.key)}
-                className="pointer-events-none absolute inset-0 rounded-full border-2"
-                style={{ borderColor: ringColor(r.intensity) }}
+                className="pointer-events-none absolute inset-0 rounded-full border-0"
+                style={{
+                  boxShadow: `0 0 0 2px ${ringColor(r.intensity)}aa, 0 0 20px ${ringColor(r.intensity)}44`,
+                }}
                 aria-hidden
               />
             ))}
