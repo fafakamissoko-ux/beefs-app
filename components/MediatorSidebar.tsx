@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PanelRightClose, UserX, Mic, MicOff, Clock, Play } from 'lucide-react';
+import { PanelRightClose, UserX, Mic, MicOff, Play } from 'lucide-react';
+import { TimeJogDial } from '@/components/TimeJogDial';
 
 export type MediatorRemoteRow = {
   sessionId: string;
@@ -23,7 +24,9 @@ type MediatorSidebarProps = {
   remoteRows: MediatorRemoteRow[];
   speakingTurnActive: boolean;
   hotMicSpeakerSlot: 'A' | 'B' | null;
-  onHotMic: (slot: 'A' | 'B', durationSec: 30 | 60) => void;
+  onHotMic: (slot: 'A' | 'B', durationSec: number) => void;
+  /** Temps restant du chrono global (affichage molette) */
+  beefTimeFormatted: string;
   /** muted = micro coupé (Daily + signal si debaterId) */
   onSetChallengerMuted: (sessionId: string, debaterId: string | null, muted: boolean) => void;
   onEjectParticipant: (sessionId: string) => void;
@@ -44,11 +47,21 @@ export function MediatorSidebar({
   speakingTurnActive,
   hotMicSpeakerSlot,
   onHotMic,
+  beefTimeFormatted,
   onSetChallengerMuted,
   onEjectParticipant,
   onAdjustTime,
 }: MediatorSidebarProps) {
   const [verdictOpen, setVerdictOpen] = useState(false);
+  const [jogStepSec, setJogStepSec] = useState<5 | 10>(5);
+  const [paroleDurationSec, setParoleDurationSec] = useState(60);
+
+  const clampParole = (n: number) => Math.max(30, Math.min(300, n));
+  const formatParole = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     if (!open) setVerdictOpen(false);
@@ -86,7 +99,7 @@ export function MediatorSidebar({
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[2px] border border-white/10 bg-black/40 text-white hover:bg-white/10"
                 aria-label="Fermer"
               >
-                <PanelRightClose className="h-4 w-4" />
+                <PanelRightClose className="h-4 w-4" strokeWidth={1.2} />
               </button>
             </div>
 
@@ -110,7 +123,7 @@ export function MediatorSidebar({
                   }
                   transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  <Play className="h-4 w-4 shrink-0 text-black" strokeWidth={2.5} aria-hidden />
+                  <Play className="h-4 w-4 shrink-0 text-black" strokeWidth={1.2} aria-hidden />
                   {startingBeef ? 'Lancement…' : 'Lancer le beef'}
                 </motion.button>
               ) : (
@@ -122,24 +135,71 @@ export function MediatorSidebar({
 
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4 hide-scrollbar">
               <section className="space-y-2">
-                <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/80">
-                  Temps
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white">
+                    Chrono global
+                  </h3>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setJogStepSec(5)}
+                      className={`rounded-[2px] px-1.5 py-0.5 font-mono text-[8px] font-black uppercase ${
+                        jogStepSec === 5 ? 'bg-ember-500/35 text-ember-100' : 'bg-white/10 text-white/55'
+                      }`}
+                    >
+                      5s
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setJogStepSec(10)}
+                      className={`rounded-[2px] px-1.5 py-0.5 font-mono text-[8px] font-black uppercase ${
+                        jogStepSec === 10 ? 'bg-ember-500/35 text-ember-100' : 'bg-white/10 text-white/55'
+                      }`}
+                    >
+                      10s
+                    </button>
+                  </div>
+                </div>
+                <TimeJogDial
+                  display={beefTimeFormatted}
+                  subtitle="Temps restant"
+                  stepSec={jogStepSec}
+                  onDelta={onAdjustTime}
+                  quickJumps={[
+                    { label: '−30s', delta: -30 },
+                    { label: '+30s', delta: 30 },
+                    { label: '+60s', delta: 60 },
+                  ]}
+                  ariaLabel="Ajuster le temps restant du débat"
+                />
+              </section>
+
+              <section className="space-y-2 border-t border-white/[0.06] pt-4">
+                <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white">
+                  Durée parole (tour suivant)
                 </h3>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onAdjustTime(-30)}
-                    className="flex flex-1 items-center justify-center gap-1 rounded-[2px] border border-cobalt-500/45 bg-cobalt-500/20 py-2.5 font-mono text-xs font-bold text-white shadow-sm transition-colors hover:bg-cobalt-500/30"
-                  >
-                    <Clock className="h-3.5 w-3.5 text-cobalt-200" /> −30s
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onAdjustTime(30)}
-                    className="flex flex-1 items-center justify-center gap-1 rounded-[2px] border border-ember-500/45 bg-ember-500/20 py-2.5 font-mono text-xs font-bold text-white shadow-sm transition-colors hover:bg-ember-500/30"
-                  >
-                    <Clock className="h-3.5 w-3.5 text-ember-200" /> +30s
-                  </button>
+                <TimeJogDial
+                  display={formatParole(paroleDurationSec)}
+                  subtitle="Glisser · même pas"
+                  stepSec={jogStepSec}
+                  onDelta={(d) => setParoleDurationSec((p) => clampParole(p + d))}
+                  ariaLabel="Durée du prochain tour de parole"
+                />
+                <div className="flex flex-wrap justify-center gap-1.5">
+                  {[30, 60, 90].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setParoleDurationSec(s)}
+                      className={`rounded-[2px] border px-2 py-1 font-mono text-[9px] font-black uppercase tracking-wider transition-colors ${
+                        paroleDurationSec === s
+                          ? 'border-ember-400/60 bg-ember-500/30 text-ember-50'
+                          : 'border-white/15 bg-white/8 text-white/85 hover:bg-white/12'
+                      }`}
+                    >
+                      {s}s
+                    </button>
+                  ))}
                 </div>
               </section>
 
@@ -173,24 +233,14 @@ export function MediatorSidebar({
                               Parole
                             </span>
                           </div>
-                          <div className="flex gap-1.5">
-                            <button
-                              type="button"
-                              disabled={speakingTurnActive}
-                              onClick={() => onHotMic(row.slot, 30)}
-                              className="flex flex-1 items-center justify-center rounded-[2px] border border-white/15 bg-white/10 py-1.5 font-mono text-[10px] font-black text-white transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-35"
-                            >
-                              30s
-                            </button>
-                            <button
-                              type="button"
-                              disabled={speakingTurnActive}
-                              onClick={() => onHotMic(row.slot, 60)}
-                              className="flex flex-1 items-center justify-center rounded-[2px] border border-white/15 bg-white/10 py-1.5 font-mono text-[10px] font-black text-white transition-colors hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-35"
-                            >
-                              60s
-                            </button>
-                          </div>
+                          <button
+                            type="button"
+                            disabled={speakingTurnActive}
+                            onClick={() => onHotMic(row.slot, paroleDurationSec)}
+                            className="flex w-full items-center justify-center rounded-[2px] border border-ember-500/40 bg-ember-500/15 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-ember-50 transition-colors hover:bg-ember-500/28 disabled:cursor-not-allowed disabled:opacity-35"
+                          >
+                            Lancer parole · {formatParole(paroleDurationSec)}
+                          </button>
 
                           <div className="flex flex-wrap gap-1.5">
                             <button
@@ -209,17 +259,17 @@ export function MediatorSidebar({
                             >
                               {lockedOut ? (
                                 <>
-                                  <MicOff className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                                  <MicOff className="h-3.5 w-3.5 shrink-0 opacity-60" strokeWidth={1.2} />
                                   Attendez votre tour
                                 </>
                               ) : muted ? (
                                 <>
-                                  <Mic className="h-3.5 w-3.5 shrink-0" />
+                                  <Mic className="h-3.5 w-3.5 shrink-0" strokeWidth={1.2} />
                                   Réactiver micro
                                 </>
                               ) : (
                                 <>
-                                  <MicOff className="h-3.5 w-3.5 shrink-0" />
+                                  <MicOff className="h-3.5 w-3.5 shrink-0" strokeWidth={1.2} />
                                   Couper micro
                                 </>
                               )}
@@ -229,7 +279,7 @@ export function MediatorSidebar({
                               onClick={() => onEjectParticipant(row.sessionId)}
                               className="flex shrink-0 items-center gap-1 rounded-[2px] border border-ember-500/50 bg-ember-500/25 px-2.5 py-2 font-mono text-[10px] font-bold text-white hover:bg-ember-500/40"
                             >
-                              <UserX className="h-3.5 w-3.5" />
+                              <UserX className="h-3.5 w-3.5" strokeWidth={1.2} />
                               Kick
                             </button>
                           </div>
@@ -241,11 +291,11 @@ export function MediatorSidebar({
               )}
             </div>
 
-            <div className="shrink-0 space-y-2 border-t border-white/[0.08] bg-black/30 px-3 py-3">
+            <div className="shrink-0 space-y-2 border-t border-white/[0.12] bg-black/35 px-3 py-3">
               <button
                 type="button"
                 onClick={() => setVerdictOpen((v) => !v)}
-                className="w-full rounded-[2px] border border-white/18 bg-white/10 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-white transition-colors hover:bg-white/15"
+                className="w-full rounded-[2px] border border-white/22 bg-white/12 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-white transition-colors hover:bg-white/18"
               >
                 Clore le débat
               </button>
@@ -266,7 +316,7 @@ export function MediatorSidebar({
                           setVerdictOpen(false);
                           onClose();
                         }}
-                        className="rounded-[2px] border border-emerald-500/50 bg-emerald-600/30 py-2.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-500/45"
+                        className="rounded-[2px] border border-emerald-400/55 bg-emerald-600/35 py-2.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-500/50"
                       >
                         Résolu
                       </button>
@@ -277,7 +327,7 @@ export function MediatorSidebar({
                           setVerdictOpen(false);
                           onClose();
                         }}
-                        className="rounded-[2px] border border-white/20 bg-white/12 py-2.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/18"
+                        className="rounded-[2px] border border-white/25 bg-white/14 py-2.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/22"
                       >
                         Clos
                       </button>
@@ -288,7 +338,7 @@ export function MediatorSidebar({
                           setVerdictOpen(false);
                           onClose();
                         }}
-                        className="rounded-[2px] border border-[#FF4D00]/55 bg-[#FF4D00]/25 py-2.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#FF4D00]/40"
+                        className="rounded-[2px] border border-ember-500/60 bg-ember-600/30 py-2.5 text-[10px] font-black uppercase tracking-widest text-ember-100 hover:bg-ember-500/45"
                       >
                         Rematch
                       </button>

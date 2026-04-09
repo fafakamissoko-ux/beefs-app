@@ -12,6 +12,8 @@ interface FeatureGuideProps {
   /** Horizontal align for top/bottom, vertical align for left/right */
   align?: 'start' | 'center' | 'end';
   variant?: 'dark' | 'light';
+  /** Masque la bulle (ex. participant déjà dans la salle avec d’autres pairs) */
+  suppress?: boolean;
 }
 
 function getArrowPosition(position: string, align: string): string {
@@ -63,8 +65,10 @@ export function FeatureGuide({
   position = 'bottom',
   align = 'center',
   variant = 'dark',
+  suppress = false,
 }: FeatureGuideProps) {
   const { visible, dismiss } = useFeatureGuide(id);
+  const show = visible && !suppress;
 
   const bgClass = variant === 'dark'
     ? 'bg-[#1a1a2e] border-brand-500/30'
@@ -74,7 +78,7 @@ export function FeatureGuide({
 
   return (
     <AnimatePresence>
-      {visible && (
+      {show && (
         <motion.div
           initial={{
             opacity: 0,
@@ -97,7 +101,7 @@ export function FeatureGuide({
               className={`absolute top-0.5 right-0.5 sm:top-1.5 sm:right-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center rounded-lg ${subtextClass} hover:text-white transition-colors touch-manipulation`}
               aria-label="Fermer"
             >
-              <X className="w-6 h-6 sm:w-4 sm:h-4" aria-hidden />
+              <X className="w-6 h-6 sm:w-4 sm:h-4" strokeWidth={1.2} aria-hidden />
             </button>
 
             <p className={`text-[12px] font-bold ${textClass} pr-4`}>{title}</p>
