@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PanelRightClose, UserX, Mic, MicOff, Play } from 'lucide-react';
+import { PanelRightClose, UserX, Mic, MicOff, Play, Video, VideoOff } from 'lucide-react';
 import { TimeJogDial } from '@/components/TimeJogDial';
 
 export type MediatorRemoteRow = {
@@ -31,6 +31,11 @@ type MediatorSidebarProps = {
   onSetChallengerMuted: (sessionId: string, debaterId: string | null, muted: boolean) => void;
   onEjectParticipant: (sessionId: string) => void;
   onAdjustTime: (deltaSec: number) => void;
+  /** Contrôles perso médiateur (récupération cam/micro) */
+  mediatorMicEnabled?: boolean;
+  mediatorCamEnabled?: boolean;
+  onMediatorToggleMic?: () => void | Promise<void>;
+  onMediatorToggleCam?: () => void | Promise<void>;
 };
 
 /**
@@ -51,12 +56,16 @@ export function MediatorSidebar({
   onSetChallengerMuted,
   onEjectParticipant,
   onAdjustTime,
+  mediatorMicEnabled,
+  mediatorCamEnabled,
+  onMediatorToggleMic,
+  onMediatorToggleCam,
 }: MediatorSidebarProps) {
   const [verdictOpen, setVerdictOpen] = useState(false);
   const [jogStepSec, setJogStepSec] = useState<5 | 10>(5);
   const [paroleDurationSec, setParoleDurationSec] = useState(60);
 
-  const clampParole = (n: number) => Math.max(30, Math.min(300, n));
+  const clampParole = (n: number) => Math.max(15, Math.min(600, n));
   const formatParole = (sec: number) => {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
@@ -134,6 +143,47 @@ export function MediatorSidebar({
             </div>
 
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4 hide-scrollbar">
+              {onMediatorToggleMic && onMediatorToggleCam && (
+                <section className="space-y-2 border-b border-white/[0.07] pb-4">
+                  <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white">
+                    Ta régie (cam / micro)
+                  </h3>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={onMediatorToggleMic}
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-[2px] border py-2.5 font-mono text-[10px] font-bold ${
+                        mediatorMicEnabled
+                          ? 'border-white/20 bg-white/12 text-white'
+                          : 'border-red-500/45 bg-red-500/20 text-red-100'
+                      }`}
+                    >
+                      {mediatorMicEnabled ? (
+                        <Mic className="h-3.5 w-3.5" strokeWidth={1.2} />
+                      ) : (
+                        <MicOff className="h-3.5 w-3.5" strokeWidth={1.2} />
+                      )}
+                      Micro
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onMediatorToggleCam}
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-[2px] border py-2.5 font-mono text-[10px] font-bold ${
+                        mediatorCamEnabled
+                          ? 'border-white/20 bg-white/12 text-white'
+                          : 'border-red-500/45 bg-red-500/20 text-red-100'
+                      }`}
+                    >
+                      {mediatorCamEnabled ? (
+                        <Video className="h-3.5 w-3.5" strokeWidth={1.2} />
+                      ) : (
+                        <VideoOff className="h-3.5 w-3.5" strokeWidth={1.2} />
+                      )}
+                      Cam
+                    </button>
+                  </div>
+                </section>
+              )}
               <section className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white">
@@ -180,27 +230,11 @@ export function MediatorSidebar({
                 </h3>
                 <TimeJogDial
                   display={formatParole(paroleDurationSec)}
-                  subtitle="Glisser · même pas"
+                  subtitle="Durée parole (molette · pas libre)"
                   stepSec={jogStepSec}
                   onDelta={(d) => setParoleDurationSec((p) => clampParole(p + d))}
                   ariaLabel="Durée du prochain tour de parole"
                 />
-                <div className="flex flex-wrap justify-center gap-1.5">
-                  {[30, 60, 90].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setParoleDurationSec(s)}
-                      className={`rounded-[2px] border px-2 py-1 font-mono text-[9px] font-black uppercase tracking-wider transition-colors ${
-                        paroleDurationSec === s
-                          ? 'border-ember-400/60 bg-ember-500/30 text-ember-50'
-                          : 'border-white/15 bg-white/8 text-white/85 hover:bg-white/12'
-                      }`}
-                    >
-                      {s}s
-                    </button>
-                  ))}
-                </div>
               </section>
 
               {remoteRows.length > 0 && (
