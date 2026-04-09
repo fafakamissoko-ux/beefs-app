@@ -3139,7 +3139,7 @@ export function TikTokStyleArena({
             ) : null}
           </div>
 
-          {/* Droite : LIVE, spectateurs, quitter (partage = dock uniquement) */}
+          {/* Droite : LIVE, spectateurs, régie (médiateur) ou quitter */}
           <div className="flex min-w-0 items-center justify-end gap-1.5">
             {/* LIVE badge */}
             <div className="flex items-center bg-red-600 rounded-md px-2 py-0.5">
@@ -3156,37 +3156,51 @@ export function TikTokStyleArena({
                 <span className="text-[11px] font-bold tabular-nums text-white">{liveViewerCount}</span>
               )}
             </button>
-            <button
-              onClick={handleLeave}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md transition-colors hover:bg-black/55"
-            >
-              <X className="w-4 h-4 text-white" strokeWidth={1} aria-hidden />
-            </button>
+            {isHost ? (
+              <button
+                type="button"
+                onClick={() => setMediatorSidebarOpen((o) => !o)}
+                aria-expanded={mediatorSidebarOpen}
+                aria-label={
+                  mediatorSidebarOpen ? 'Fermer la commande médiateur' : 'Ouvrir la commande médiateur'
+                }
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[2px] border border-ember-500/40 bg-[#08080a]/95 text-ember-300 shadow-lg backdrop-blur-md transition-colors hover:bg-ember-500/15"
+              >
+                <PanelRight className="h-5 w-5" strokeWidth={1} aria-hidden />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleLeave}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md transition-colors hover:bg-black/55"
+              >
+                <X className="w-4 h-4 text-white" strokeWidth={1} aria-hidden />
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Bandeau tour de parole — au-dessus des docks nom/score (pas de chevauchement) */}
+      {/* Bandeau tour de parole — au-dessus de la ligne nom/score/micro (z plus bas que les docks) */}
       {floorAnnouncement && !beefEnded && (
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-[5.75rem] z-[31] flex justify-center px-3 sm:bottom-[6.25rem]"
-          style={{ paddingBottom: 'max(0.25rem, env(safe-area-inset-bottom))' }}
+          className="pointer-events-none absolute inset-x-0 z-[18] flex justify-center px-2 max-md:bottom-[calc(env(safe-area-inset-bottom,0px)+7rem)] sm:bottom-[6.25rem]"
           role="status"
           aria-live="polite"
         >
           <div
-            className={`flex max-w-[min(82vw,20rem)] items-center gap-2 rounded-[2px] border px-3 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.55)] ${
+            className={`flex max-w-[min(62vw,12rem)] items-center gap-1.5 rounded-[2px] border px-2 py-1 shadow-[0_8px_28px_rgba(0,0,0,0.45)] sm:max-w-[min(78vw,18rem)] sm:gap-2 sm:px-2.5 sm:py-1.5 ${
               floorAnnouncement.slot === 'A'
-                ? 'border-sky-500/30 bg-[#050508]'
-                : 'border-ember-500/30 bg-[#050508]'
+                ? 'border-sky-500/30 bg-[#050508]/98'
+                : 'border-ember-500/30 bg-[#050508]/98'
             }`}
           >
-            <span className="whitespace-nowrap font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-white/40">
+            <span className="whitespace-nowrap font-mono text-[7px] font-semibold uppercase tracking-[0.18em] text-white/45 sm:text-[9px] sm:tracking-[0.2em]">
               À la parole
             </span>
-            <span className="h-3 w-px shrink-0 bg-white/10" aria-hidden />
+            <span className="h-2.5 w-px shrink-0 bg-white/10 sm:h-3" aria-hidden />
             <span
-              className={`min-w-0 truncate font-mono text-[13px] font-semibold tracking-tight ${
+              className={`min-w-0 max-w-[9rem] truncate font-mono text-[10px] font-semibold tracking-tight sm:max-w-none sm:text-[13px] ${
                 floorAnnouncement.slot === 'A'
                   ? 'text-sky-300 drop-shadow-[0_0_12px_rgba(56,189,248,0.35)]'
                   : 'text-ember-300 drop-shadow-[0_0_12px_rgba(251,146,60,0.35)]'
@@ -3198,18 +3212,9 @@ export function TikTokStyleArena({
         </div>
       )}
 
-      {/* ── Médiateur — barre de commande (privée) ── */}
+      {/* ── Médiateur — barre de commande (privée) — ouverture via bouton header (plus de FAB) ── */}
       {isHost && isJoined && !beefEnded && dailyRoomUrl && (
         <>
-          <button
-            type="button"
-            className="fixed left-3 z-[46] flex h-11 w-11 items-center justify-center rounded-[2px] border border-ember-500/40 bg-[#08080a]/95 text-ember-300 shadow-[0_8px_32px_rgba(0,0,0,0.55)] backdrop-blur-md transition-colors hover:bg-ember-500/15 max-md:bottom-[max(7.25rem,calc(28vh+env(safe-area-inset-bottom)))] max-md:top-auto md:right-3 md:left-auto md:top-[calc(env(safe-area-inset-top)+4.5rem)] md:bottom-auto"
-            aria-expanded={mediatorSidebarOpen}
-            aria-label={mediatorSidebarOpen ? 'Fermer la commande médiateur' : 'Ouvrir la commande médiateur'}
-            onClick={() => setMediatorSidebarOpen((o) => !o)}
-          >
-            <PanelRight className="h-5 w-5" strokeWidth={1} aria-hidden />
-          </button>
           <MediatorSidebar
             open={mediatorSidebarOpen}
             onClose={() => setMediatorSidebarOpen(false)}
@@ -3218,7 +3223,6 @@ export function TikTokStyleArena({
             onPauseBeefTimer={pauseBeefTimer}
             onResumeBeefTimer={resumeBeefTimer}
             onResetBeefTimer={resetBeefTimerToFull}
-            onEndBeefByMediator={() => void endBeef('Terminé par le médiateur')}
             startingBeef={startingBeef}
             onStartBeef={async () => {
               setStartingBeef(true);

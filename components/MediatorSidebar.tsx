@@ -24,7 +24,6 @@ type MediatorSidebarProps = {
   onResumeBeefTimer: () => void;
   /** Remet le compte à rebours au plafond (ex. 4 h). */
   onResetBeefTimer: () => void;
-  onEndBeefByMediator: () => void | Promise<void>;
   startingBeef: boolean;
   onStartBeef: () => void | Promise<void>;
   onVerdict: (kind: 'resolved' | 'closed' | 'rematch') => void;
@@ -61,7 +60,6 @@ export function MediatorSidebar({
   onPauseBeefTimer,
   onResumeBeefTimer,
   onResetBeefTimer,
-  onEndBeefByMediator,
   startingBeef,
   onStartBeef,
   onVerdict,
@@ -198,13 +196,6 @@ export function MediatorSidebar({
                       +30 min
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void onEndBeefByMediator()}
-                    className="w-full rounded-[2px] border border-red-500/45 bg-red-600/25 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-red-100 hover:bg-red-500/40"
-                  >
-                    Terminer le direct
-                  </button>
                 </div>
               )}
             </div>
@@ -420,12 +411,15 @@ export function MediatorSidebar({
             </div>
 
             <div className="shrink-0 space-y-2 border-t border-white/[0.12] bg-black/35 px-3 py-3">
+              <p className="px-0.5 font-mono text-[8px] font-semibold uppercase tracking-wider text-white/40">
+                Fin du beef — choisis un verdict
+              </p>
               <button
                 type="button"
                 onClick={() => setVerdictOpen((v) => !v)}
-                className="w-full rounded-[2px] border border-white/22 bg-white/12 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.2em] text-white transition-colors hover:bg-white/18"
+                className="w-full rounded-[2px] border border-white/22 bg-white/12 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-white transition-colors hover:bg-white/18"
               >
-                Clore le débat
+                Terminer le beef
               </button>
               <AnimatePresence initial={false}>
                 {verdictOpen && (
