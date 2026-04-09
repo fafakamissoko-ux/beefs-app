@@ -2,8 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePathname } from 'next/navigation';
 import { useBeefNotifications } from '@/hooks/useBeefNotifications';
 import Link from 'next/link';
+
+function getNotifPrefs(): Record<string, boolean> {
+  try {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('beefs_notif_prefs') : null;
+    return saved ? JSON.parse(saved) : {};
+  } catch {
+    return {};
+  }
+}
 
 interface Toast {
   id: string;
@@ -18,13 +28,22 @@ interface BeefNotificationToastsProps {
 
 export function BeefNotificationToasts({ userId }: BeefNotificationToastsProps) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const pathname = usePathname();
+  const arenaIdInUrl = pathname?.match(/^\/arena\/([^/]+)/)?.[1] ?? null;
 
-  const handleNotification = useCallback((n: { beefId: string; title: string; type: Toast['type'] }) => {
-    const id = `${n.beefId}_${n.type}_${Date.now()}`;
-    setToasts(prev => [...prev.slice(-2), { id, ...n }]); // Max 3 toasts
-    // Auto-dismiss
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 8000);
-  }, []);
+  const handleNotification = useCallback(
+    (n: { beefId: string; title: string; type: Toast['type'] }) => {
+      const prefs = getNotifPrefs();
+      if (n.type === 'live_now') {
+        if (prefs.beefs_live === false) return;
+        if (arenaIdInUrl && n.beefId === arenaIdInUrl) return;
+      }
+      const id = `${n.beefId}_${n.type}_${Date.now()}`;
+      setToasts((prev) => [...prev.slice(-2), { id, ...n }]);
+      setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 8000);
+    },
+    [arenaIdInUrl],
+  );
 
   useBeefNotifications({ userId, onNotification: handleNotification });
 

@@ -75,11 +75,18 @@ export function useBeefNotifications({ userId, onNotification }: UseBeefNotifica
 
           if (newStatus === 'live' && oldStatus !== 'live') {
             const mediatorId = beef.mediator_id as string | undefined;
-            // Ne pas notifier celui qui passe son propre beef en live (toast + navigateur)
             if (mediatorId && mediatorId === userId) {
               return;
             }
-            onNotification({ beefId: beef.id as string, title: beef.title as string, type: 'live_now' });
+            const bid = beef.id as string;
+            // Déjà dans la salle : pas de toast / notif navigateur
+            if (typeof window !== 'undefined') {
+              const m = window.location.pathname.match(/^\/arena\/([^/]+)/);
+              if (m?.[1] === bid) {
+                return;
+              }
+            }
+            onNotification({ beefId: bid, title: beef.title as string, type: 'live_now' });
             showBrowserNotification(`🔴 LIVE maintenant!`, `"${beef.title}" est en direct. Rejoins maintenant!`);
           }
           if (newStatus === 'ended' && oldStatus !== 'ended') {

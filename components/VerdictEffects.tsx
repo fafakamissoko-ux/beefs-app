@@ -72,7 +72,7 @@ export function RematchVerdictOverlay({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.35 }}
-          onClick={onDismiss}
+          onClick={() => onDismiss?.()}
         >
           <motion.div
             className="max-w-lg text-center"

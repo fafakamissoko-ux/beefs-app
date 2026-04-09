@@ -212,6 +212,11 @@ export function TikTokStyleArena({
   const [speakingTurnDuration, setSpeakingTurnDuration] = useState(60);
   const speakingTurnIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const stopTimerRef = useRef<() => void>(() => {});
+  /** Bannière partagée « tour de parole » (remplace le toast pour tous les participants) */
+  const [floorAnnouncement, setFloorAnnouncement] = useState<{
+    name: string;
+    slot: 'A' | 'B';
+  } | null>(null);
 
   /** Débat structuré (budget challengers, tours imposés, micros) */
   const [structuredDebateEnabled, setStructuredDebateEnabled] = useState(false);
@@ -344,6 +349,7 @@ export function TikTokStyleArena({
   const [verdictConfetti, setVerdictConfetti] = useState(false);
   const [rematchSequence, setRematchSequence] = useState(false);
   const rematchVerdictTimerRef = useRef<number | null>(null);
+  const rematchExitTimerRef = useRef<number | null>(null);
 
   const castVote = useCallback((side: 'A' | 'B') => {
     if (myVote === side) return; // already voted this side
@@ -674,47 +680,6 @@ export function TikTokStyleArena({
       return () => clearTimeout(timeout);
     }
   }, [remoteParticipants, isJoined, isHost, host.id, host.name, participantRoles, mediatorGraceActive, toast]);
-
-  // Listen for beef_ended broadcast from mediator (for viewers/challengers)
-  const beefEndedHandlerRef = useRef(false);
-  useEffect(() => {
-    if (!channelRef.current || beefEndedHandlerRef.current) return;
-    beefEndedHandlerRef.current = true;
-
-    const handler = ({ payload }: any) => {
-      if (!beefEndedRef.current) {
-        beefEndedRef.current = true;
-
-        // Use summary from broadcast if available, otherwise use local stats
-        if (payload?.summary) {
-          setEndSummary(payload.summary);
-        } else {
-          const s = statsRef.current;
-          const elapsed = MAX_BEEF_DURATION - s.beefTimeRemaining;
-          const mins = Math.floor(elapsed / 60);
-          const secs = elapsed % 60;
-          setEndSummary({
-            duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
-            viewers: s.liveViewerCount,
-            votesA: s.votesA,
-            votesB: s.votesB,
-            messages: s.messagesCount,
-            endReason: payload?.reason || 'Beef terminé',
-          });
-        }
-        setBeefEnded(true);
-        leave();
-        endSummaryTimerRef.current = setTimeout(() => router.replace('/feed'), 12000);
-      }
-    };
-
-    channelRef.current.on('broadcast', { event: 'beef_ended' }, handler);
-
-    return () => {
-      if (endSummaryTimerRef.current) clearTimeout(endSummaryTimerRef.current);
-      if (mediatorGraceRef.current) clearInterval(mediatorGraceRef.current);
-    };
-  }, [leave, router]);
 
   // Mediator leaving triggers endBeef
   const handleLeaveAsMediator = useCallback(async () => {
@@ -1202,7 +1167,47 @@ export function TikTokStyleArena({
         if (v === 'rematch') {
           setRematchSequence(true);
           playRematchThunderSfx();
+          if (rematchExitTimerRef.current) {
+            window.clearTimeout(rematchExitTimerRef.current);
+            rematchExitTimerRef.current = null;
+          }
+          rematchExitTimerRef.current = window.setTimeout(() => {
+            rematchExitTimerRef.current = null;
+            setRematchSequence(false);
+            if (!beefEndedRef.current) {
+              router.replace(`/beef/${roomId}/summary`);
+            }
+          }, 12000);
         }
+      })
+      .on('broadcast', { event: 'beef_ended' }, ({ payload }: any) => {
+        if (beefEndedRef.current) return;
+        beefEndedRef.current = true;
+        if (payload?.summary) {
+          setEndSummary(payload.summary);
+        } else {
+          const s = statsRef.current;
+          const elapsed = MAX_BEEF_DURATION - s.beefTimeRemaining;
+          const mins = Math.floor(elapsed / 60);
+          const secs = elapsed % 60;
+          setEndSummary({
+            duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
+            viewers: s.liveViewerCount,
+            votesA: s.votesA,
+            votesB: s.votesB,
+            messages: s.messagesCount,
+            endReason: payload?.reason || 'Beef terminé',
+          });
+        }
+        setRematchSequence(false);
+        if (rematchExitTimerRef.current) {
+          window.clearTimeout(rematchExitTimerRef.current);
+          rematchExitTimerRef.current = null;
+        }
+        setBeefEnded(true);
+        void leave();
+        if (endSummaryTimerRef.current) clearTimeout(endSummaryTimerRef.current);
+        endSummaryTimerRef.current = setTimeout(() => router.replace('/feed'), 12000);
       })
       .subscribe((status: string) => {
         console.log('[Live] Broadcast channel:', status);
@@ -1216,11 +1221,27 @@ export function TikTokStyleArena({
       });
 
     return () => {
+      if (rematchExitTimerRef.current) {
+        window.clearTimeout(rematchExitTimerRef.current);
+        rematchExitTimerRef.current = null;
+      }
       channelRef.current = null;
       setLiveConnected(false);
       supabase.removeChannel(channel);
     };
-  }, [roomId, addRemoteMessage, addRemoteReaction, addPulseVoices, userRole, userId, toast, setVerdictConfetti, setRematchSequence]);
+  }, [
+    roomId,
+    addRemoteMessage,
+    addRemoteReaction,
+    addPulseVoices,
+    userRole,
+    userId,
+    toast,
+    setVerdictConfetti,
+    setRematchSequence,
+    router,
+    leave,
+  ]);
 
   // 2) Polling fallback — queries DB for new messages every 3s (guaranteed delivery)
   useEffect(() => {
@@ -1363,11 +1384,23 @@ export function TikTokStyleArena({
 
     const slot: 'A' | 'B' | undefined =
       debaterId === leftPanel?.arenaUserId ? 'A' : debaterId === rightPanel?.arenaUserId ? 'B' : undefined;
+    const speakerLabel =
+      debaters.find((d) => d.id === debaterId)?.name ??
+      (slot === 'A' ? leftPanelName : slot === 'B' ? rightPanelName : 'Intervenant');
+    if (slot) {
+      setFloorAnnouncement({ name: speakerLabel, slot });
+    }
     if (channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
         event: 'speaking_turn',
-        payload: { debaterId, duration: speakingTurnDuration, action: 'start', slot },
+        payload: {
+          debaterId,
+          duration: speakingTurnDuration,
+          action: 'start',
+          slot,
+          speakerName: speakerLabel,
+        },
       }).catch(() => {});
       channelRef.current
         .send({
@@ -1378,16 +1411,6 @@ export function TikTokStyleArena({
         .catch(() => {});
     }
 
-    const speakerName = debaters.find((d) => d.id === debaterId)?.name;
-    toast(
-      speakerName
-        ? `[${speakerName}] a la parole`
-        : slot
-          ? `[Challenger ${slot}] a la parole`
-          : 'Tour de parole',
-      'info',
-      { tone: 'ember', durationMs: 3800 },
-    );
   };
 
   const startHotMicTurn = useCallback(
@@ -1446,20 +1469,17 @@ export function TikTokStyleArena({
         ),
       );
 
+      const speakerLabel =
+        debaters.find((d) => d.id === debaterId)?.name ?? (slot === 'A' ? leftPanelName : rightPanelName);
+      setFloorAnnouncement({ name: speakerLabel, slot });
+
       channelRef.current
         ?.send({
           type: 'broadcast',
           event: 'speaking_turn',
-          payload: { debaterId, duration, action: 'start', slot },
+          payload: { debaterId, duration, action: 'start', slot, speakerName: speakerLabel },
         })
         .catch(() => {});
-
-      const speakerName = debaters.find((d) => d.id === debaterId)?.name;
-      toast(
-        speakerName ? `[${speakerName}] a la parole` : `[Challenger ${slot}] a la parole`,
-        'info',
-        { tone: 'ember', durationMs: 3800 },
-      );
     },
     [
       speakingTurnActive,
@@ -1468,11 +1488,14 @@ export function TikTokStyleArena({
       setRemoteParticipantAudio,
       toast,
       debaters,
+      leftPanelName,
+      rightPanelName,
     ],
   );
 
   const stopTimer = useCallback(() => {
     setSpeakingTurnPaused(false);
+    setFloorAnnouncement(null);
     const endedSpeakerId = speakingTurnTargetRef.current;
     if (isHost && endedSpeakerId) {
       const lp = leftPanelRef.current;
@@ -1518,18 +1541,62 @@ export function TikTokStyleArena({
   const pauseSpeakingTurn = useCallback(() => {
     if (!speakingTurnActive) return;
     setSpeakingTurnPaused(true);
+    if (isHost && hotMicSpeakerSlot) {
+      const panel = hotMicSpeakerSlot === 'A' ? leftPanel : rightPanel;
+      const sid = panel?.sessionId;
+      const uid = panel?.arenaUserId ?? null;
+      if (sid && uid) {
+        setRemoteParticipantAudio(sid, false);
+        channelRef.current
+          ?.send({
+            type: 'broadcast',
+            event: 'mediator_mute_challenger',
+            payload: { targetUserId: uid, muted: true },
+          })
+          .catch(() => {});
+      }
+    }
     channelRef.current
       ?.send({ type: 'broadcast', event: 'speaking_turn', payload: { action: 'pause' } })
       .catch(() => {});
-  }, [speakingTurnActive]);
+  }, [
+    speakingTurnActive,
+    isHost,
+    hotMicSpeakerSlot,
+    leftPanel,
+    rightPanel,
+    setRemoteParticipantAudio,
+  ]);
 
   const resumeSpeakingTurn = useCallback(() => {
     if (!speakingTurnActive) return;
     setSpeakingTurnPaused(false);
+    if (isHost && hotMicSpeakerSlot) {
+      const panel = hotMicSpeakerSlot === 'A' ? leftPanel : rightPanel;
+      const sid = panel?.sessionId;
+      const uid = panel?.arenaUserId ?? null;
+      if (sid && uid) {
+        setRemoteParticipantAudio(sid, true);
+        channelRef.current
+          ?.send({
+            type: 'broadcast',
+            event: 'mediator_mute_challenger',
+            payload: { targetUserId: uid, muted: false },
+          })
+          .catch(() => {});
+      }
+    }
     channelRef.current
       ?.send({ type: 'broadcast', event: 'speaking_turn', payload: { action: 'resume' } })
       .catch(() => {});
-  }, [speakingTurnActive]);
+  }, [
+    speakingTurnActive,
+    isHost,
+    hotMicSpeakerSlot,
+    leftPanel,
+    rightPanel,
+    setRemoteParticipantAudio,
+  ]);
 
   const restartSpeakingTurn = useCallback(() => {
     if (!hotMicSpeakerSlot) return;
@@ -1598,14 +1665,16 @@ export function TikTokStyleArena({
         setTimerRunning(true);
         setCurrentSpeaker(payload.debaterId);
         const sl = payload?.slot as 'A' | 'B' | undefined;
-        if (sl) {
-          toast(`[Challenger ${sl}] a la parole`, 'info', { tone: 'ember', durationMs: 3800 });
+        const nm = (payload?.speakerName as string) || (sl ? `Challenger ${sl}` : '');
+        if (sl && nm) {
+          setFloorAnnouncement({ name: nm, slot: sl });
         }
       } else if (payload?.action === 'pause') {
         setSpeakingTurnPaused(true);
       } else if (payload?.action === 'resume') {
         setSpeakingTurnPaused(false);
       } else if (payload?.action === 'stop') {
+        setFloorAnnouncement(null);
         setSpeakingTurnPaused(false);
         setSpeakingTurnActive(false);
         setSpeakingTurnTarget(null);
@@ -2026,7 +2095,17 @@ export function TikTokStyleArena({
       )}
 
       <VerdictConfettiBurst active={verdictConfetti} />
-      <RematchVerdictOverlay visible={rematchSequence && !beefEnded} />
+      <RematchVerdictOverlay
+        visible={rematchSequence && !beefEnded}
+        onDismiss={() => {
+          setRematchSequence(false);
+          if (rematchExitTimerRef.current) {
+            window.clearTimeout(rematchExitTimerRef.current);
+            rematchExitTimerRef.current = null;
+          }
+          router.push(`/beef/${roomId}/summary`);
+        }}
+      />
 
       {isViewer && previewPaywall && liveContinuationPrice > 0 && (
         <div
@@ -2952,6 +3031,29 @@ export function TikTokStyleArena({
           </div>
         </div>
       </div>
+
+      {/* Bandeau tour de parole — visible par tous, sous le header, au-dessus du socle */}
+      {floorAnnouncement && !beefEnded && (
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-3 z-[32] flex justify-center px-3 sm:bottom-4"
+          style={{ paddingBottom: 'max(0.25rem, env(safe-area-inset-bottom))' }}
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex max-w-[min(100%,26rem)] items-center gap-3 rounded-[2px] border border-white/[0.1] bg-[#060608]/92 px-4 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-md">
+            <span className="whitespace-nowrap font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-white/45">
+              Tour de parole
+            </span>
+            <span className="h-3 w-px shrink-0 bg-white/12" aria-hidden />
+            <span className="min-w-0 truncate font-mono text-[13px] font-medium tracking-tight text-white">
+              {floorAnnouncement.name}
+            </span>
+            <span className="shrink-0 rounded-[2px] border border-ember-500/30 bg-ember-500/[0.12] px-2 py-0.5 font-mono text-[10px] font-semibold text-ember-200/95">
+              {floorAnnouncement.slot === 'A' ? 'Côté A' : 'Côté B'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* ── Médiateur — barre de commande (privée) ── */}
       {isHost && isJoined && !beefEnded && dailyRoomUrl && (
