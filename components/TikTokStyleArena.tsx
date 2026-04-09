@@ -277,7 +277,20 @@ export function TikTokStyleArena({
   const [contextMenuMsg, setContextMenuMsg] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showAllReactions, setShowAllReactions] = useState(false); // NEW: Toggle pour afficher toutes les réactions
-  
+  /** Colonne emoji / cadeaux / partage — fermeture au tap extérieur */
+  const reactionDockRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showAllReactions && !showGiftPicker) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const root = reactionDockRef.current;
+      if (root?.contains(e.target as Node)) return;
+      setShowAllReactions(false);
+      setShowGiftPicker(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [showAllReactions, showGiftPicker]);
+
   // Moderator controls — check if current user is the beef creator
   const isHost = userId === host.id;
 
@@ -2173,6 +2186,12 @@ export function TikTokStyleArena({
       router.replace('/feed');
       return;
     }
+    if (isHost) {
+      const ok = window.confirm(
+        'Mettre fin au beef pour tous les participants ? Cette action est définitive.',
+      );
+      if (!ok) return;
+    }
     setIsLeaving(true);
     if (isHost) {
       await endBeef('Le médiateur a mis fin au beef');
@@ -2181,13 +2200,6 @@ export function TikTokStyleArena({
       router.replace('/feed');
     }
   }, [leave, router, isHost, endBeef]);
-
-  const shareArenaLink = useCallback(() => {
-    const url =
-      typeof window !== 'undefined' ? `${window.location.origin}/arena/${roomId}` : `/arena/${roomId}`;
-    void navigator.clipboard.writeText(url);
-    toast('Lien du direct copié', 'success');
-  }, [roomId, toast]);
 
   // Show pre-join screen before entering
   if (!hasJoined) {
@@ -3127,7 +3139,7 @@ export function TikTokStyleArena({
             ) : null}
           </div>
 
-          {/* Droite : LIVE, spectateurs, partage, quitter */}
+          {/* Droite : LIVE, spectateurs, quitter (partage = dock uniquement) */}
           <div className="flex min-w-0 items-center justify-end gap-1.5">
             {/* LIVE badge */}
             <div className="flex items-center bg-red-600 rounded-md px-2 py-0.5">
@@ -3145,14 +3157,6 @@ export function TikTokStyleArena({
               )}
             </button>
             <button
-              type="button"
-              onClick={shareArenaLink}
-              aria-label="Copier le lien du direct"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md transition-colors hover:bg-black/55"
-            >
-              <Share2 className="w-4 h-4 text-white" strokeWidth={1} aria-hidden />
-            </button>
-            <button
               onClick={handleLeave}
               className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md transition-colors hover:bg-black/55"
             >
@@ -3162,16 +3166,16 @@ export function TikTokStyleArena({
         </div>
       </div>
 
-      {/* Bandeau tour de parole — visible par tous, sous le header, au-dessus du socle */}
+      {/* Bandeau tour de parole — au-dessus des docks nom/score (pas de chevauchement) */}
       {floorAnnouncement && !beefEnded && (
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-3 z-[32] flex justify-center px-3 sm:bottom-4"
+          className="pointer-events-none absolute inset-x-0 bottom-[5.75rem] z-[31] flex justify-center px-3 sm:bottom-[6.25rem]"
           style={{ paddingBottom: 'max(0.25rem, env(safe-area-inset-bottom))' }}
           role="status"
           aria-live="polite"
         >
           <div
-            className={`flex max-w-[min(100%,26rem)] items-center gap-2.5 rounded-[2px] border px-3.5 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)] ${
+            className={`flex max-w-[min(82vw,20rem)] items-center gap-2 rounded-[2px] border px-3 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.55)] ${
               floorAnnouncement.slot === 'A'
                 ? 'border-sky-500/30 bg-[#050508]'
                 : 'border-ember-500/30 bg-[#050508]'
@@ -3384,14 +3388,17 @@ export function TikTokStyleArena({
           </div>
           </div>
 
-          <div className="relative flex w-[min(11rem,34vw)] shrink-0 flex-col items-center justify-center gap-2 border-l border-white/[0.06] bg-[#060607] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <div
+            ref={reactionDockRef}
+            className="relative flex w-[min(11rem,34vw)] shrink-0 flex-col items-center justify-center gap-2 border-l border-white/[0.06] bg-[#060607] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+          >
             <AnimatePresence>
               {showAllReactions && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
-                  className="pointer-events-auto absolute bottom-full right-0 z-[38] mb-2 max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] origin-bottom-right overflow-y-auto overscroll-contain rounded-[2px] border border-white/[0.1] bg-[#0c0c0f]/98 p-2 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-0 sm:translate-x-0"
+                  className="pointer-events-auto absolute bottom-full right-0 z-[50] mb-2 max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] origin-bottom-right overflow-y-auto overscroll-contain rounded-[2px] border border-white/[0.1] bg-[#0c0c0f]/98 p-2 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-0 sm:translate-x-0"
                 >
                   <div className="grid grid-cols-6 gap-1 sm:grid-cols-8">
                     {POPULAR_REACTIONS.map((emoji) => (
@@ -3433,7 +3440,10 @@ export function TikTokStyleArena({
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.92 }}
-                onClick={() => setShowAllReactions((v) => !v)}
+                onClick={() => {
+                  setShowGiftPicker(false);
+                  setShowAllReactions((v) => !v);
+                }}
                 aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
                 aria-expanded={showAllReactions}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[2px] border border-white/12 bg-white/5 text-lg touch-manipulation"
@@ -3455,7 +3465,10 @@ export function TikTokStyleArena({
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.85 }}
-                  onClick={() => setShowGiftPicker(!showGiftPicker)}
+                  onClick={() => {
+                    setShowAllReactions(false);
+                    setShowGiftPicker((v) => !v);
+                  }}
                   aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
                   aria-expanded={showGiftPicker}
                   className="flex h-10 w-10 items-center justify-center rounded-[2px] border border-ember-500/35 bg-gradient-to-br from-ember-600/90 to-cobalt-700/80"
@@ -3476,7 +3489,7 @@ export function TikTokStyleArena({
                       initial={{ opacity: 0, y: 10, scale: 0.9 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                      className="absolute bottom-full right-0 z-[38] mb-2 w-[220px] rounded-[2px] border border-white/12 bg-[#0c0c0f]/98 p-3 shadow-2xl backdrop-blur-xl"
+                      className="absolute bottom-full right-0 z-[50] mb-2 w-[220px] rounded-[2px] border border-white/12 bg-[#0c0c0f]/98 p-3 shadow-2xl backdrop-blur-xl"
                     >
                       <p className="mb-2 text-[11px] font-semibold text-white/70">Envoyer au médiateur</p>
                       <div className="grid grid-cols-2 gap-1.5">
