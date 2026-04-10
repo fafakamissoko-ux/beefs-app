@@ -16,6 +16,8 @@ type PointTriggerProps = {
   count: number;
   onPulse: () => void;
   interactive: boolean;
+  /** Masque le nombre cumulé au centre (tap / anneaux inchangés). */
+  hideImpactCount?: boolean;
   'aria-label'?: string;
   className?: string;
 };
@@ -29,6 +31,7 @@ export function PointTrigger({
   count,
   onPulse,
   interactive,
+  hideImpactCount = false,
   'aria-label': ariaLabel = 'Envoyer une voix pour ce challenger',
   className = '',
 }: PointTriggerProps) {
@@ -131,9 +134,11 @@ export function PointTrigger({
             transition={{ duration: 0.38, ease: [0.34, 1.56, 0.64, 1] }}
             className="relative z-[1] flex h-full w-full items-center justify-center rounded-full"
           >
-            <span className="font-mono text-[11px] font-black tabular-nums leading-none tracking-tight text-white/95">
-              {count > 0 ? count : ''}
-            </span>
+            {!hideImpactCount && (
+              <span className="font-mono text-[11px] font-black tabular-nums leading-none tracking-tight text-white/95">
+                {count > 0 ? count : ''}
+              </span>
+            )}
           </motion.span>
         </motion.button>
       </div>

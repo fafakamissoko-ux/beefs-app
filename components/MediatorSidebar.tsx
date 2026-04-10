@@ -103,7 +103,7 @@ export function MediatorSidebar({
           <motion.button
             type="button"
             aria-label="Fermer la barre de commande"
-            className="fixed inset-0 z-[57] bg-black/45 backdrop-blur-[1px] md:bg-black/25"
+            className="fixed inset-0 z-[130] bg-black/45 backdrop-blur-[1px] md:bg-black/25"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -116,7 +116,7 @@ export function MediatorSidebar({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 340 }}
-            className="fixed right-0 top-0 z-[58] flex h-[100dvh] w-[min(100vw,17.5rem)] flex-col overflow-hidden rounded-tl-3xl rounded-bl-3xl bg-[#121214]/92 shadow-[-24px_0_64px_rgba(0,0,0,0.5)] backdrop-blur-2xl sm:w-72 lg:w-64"
+            className="fixed right-0 top-0 z-[131] flex h-[100dvh] w-[min(100vw,17.5rem)] flex-col overflow-hidden rounded-tl-3xl rounded-bl-3xl bg-[#121214]/92 shadow-[-24px_0_64px_rgba(0,0,0,0.5)] backdrop-blur-2xl sm:w-72 lg:w-64"
           >
             <div className="flex shrink-0 items-center justify-between gap-3 px-3 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
               <span className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-ember-400 lg:text-[8px] lg:tracking-[0.26em]">

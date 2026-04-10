@@ -292,9 +292,28 @@ export function TikTokStyleArena({
       setShowAllReactions(false);
       setShowGiftPicker(false);
     };
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => document.removeEventListener('pointerdown', onPointerDown, true);
   }, [showAllReactions, showGiftPicker]);
+
+  useEffect(() => {
+    if (!showAllReactions && !showGiftPicker) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowAllReactions(false);
+        setShowGiftPicker(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showAllReactions, showGiftPicker]);
+
+  useEffect(() => {
+    if (mediatorSidebarOpen) {
+      setShowAllReactions(false);
+      setShowGiftPicker(false);
+    }
+  }, [mediatorSidebarOpen]);
 
   // Moderator controls — check if current user is the beef creator
   const isHost = userId === host.id;
@@ -1534,13 +1553,13 @@ export function TikTokStyleArena({
     onReaction(emoji);
 
     const integrated = INTEGRATED_SUPPORT_REACTIONS.has(emoji);
+    const slotAB = (myVote ?? lastPulseSideRef.current ?? 'A') as 'A' | 'B';
     const heartTarget: 'A' | 'B' | 'M' =
       emoji === '❤️' && speakingTurnActive && effectiveHotMicSpeakerSlot
         ? effectiveHotMicSpeakerSlot
         : emoji === '❤️'
           ? 'M'
-          : (myVote ?? lastPulseSideRef.current ?? 'A');
-    const slotAB = (myVote ?? lastPulseSideRef.current ?? 'A') as 'A' | 'B';
+          : slotAB;
 
     if (integrated && emoji === '❤️') {
       if (heartTarget === 'M') {
@@ -1562,7 +1581,7 @@ export function TikTokStyleArena({
       setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
     } else if (integrated) {
       setSupportBurst((prev) => ({ ...prev, [slotAB]: prev[slotAB] + 1 }));
-      const entry = createFlyingReactionEntry(emoji, { opacityMul: 0.55, scaleMul: 0.88 });
+      const entry = createFlyingReactionEntry(emoji);
       setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
     } else {
       const entry = createFlyingReactionEntry(emoji);
@@ -2556,6 +2575,19 @@ export function TikTokStyleArena({
           <>
             {/* 3-Panel layout: real video for each participant */}
             <div className="absolute inset-0 flex">
+              {/* Aura unifiée — cadre sur tout le duo + zone médiateur (au-dessus des fonds, sous les HUD) */}
+              <div
+                className="pointer-events-none absolute inset-0 z-[6]"
+                aria-hidden
+                style={{
+                  boxShadow:
+                    impactLeader === 'A'
+                      ? 'inset 0 0 0 1px rgba(56,189,248,0.22), inset 0 0 88px rgba(56,189,248,0.14), inset 0 0 140px rgba(56,189,248,0.08), 0 0 48px rgba(56,189,248,0.06)'
+                      : impactLeader === 'B'
+                        ? 'inset 0 0 0 1px rgba(251,146,60,0.22), inset 0 0 88px rgba(251,146,60,0.14), inset 0 0 140px rgba(251,146,60,0.08), 0 0 48px rgba(251,146,60,0.06)'
+                        : 'inset 0 0 0 1px rgba(255,255,255,0.08), inset 0 0 80px rgba(59,130,246,0.1), inset 0 0 120px rgba(251,146,60,0.07), 0 0 40px rgba(99,102,241,0.05)',
+                }}
+              />
 
               {/* LEFT — Participant A (first challenger, or local user if challenger) */}
               <motion.div
@@ -2727,43 +2759,38 @@ export function TikTokStyleArena({
                     />
                   )}
                 </AnimatePresence>
-                {/* Haut : identité + impact + chrono parole */}
-                <div className="pointer-events-none absolute left-2 right-2 top-2 z-30 flex flex-wrap items-start justify-between gap-2">
+                {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
+                  <div className="pointer-events-none absolute left-1/2 top-2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-3xl bg-black/50 px-2.5 py-1.5 font-mono text-[11px] font-black tabular-nums text-white shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+                    {speakingTurnPaused && (
+                      <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
+                    )}
+                    {Math.floor(speakingTurnRemaining / 60)}:
+                    {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                  </div>
+                )}
+                <div className="absolute bottom-2 left-2 right-2 z-20 flex min-h-11 items-center gap-1.5">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null);
                     }}
-                    className="pointer-events-auto flex max-w-[min(78%,15rem)] items-center gap-2 rounded-3xl bg-black/55 px-3 py-2 shadow-[0_20px_56px_rgba(0,0,0,0.48)] backdrop-blur-2xl"
+                    className="pointer-events-auto flex h-11 min-w-0 max-w-[min(52%,9.5rem)] shrink-[2] items-center gap-2 rounded-3xl bg-black/55 px-3 shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-opacity hover:opacity-95"
                   >
                     <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.85)]" />
-                    <span className="min-w-0 truncate font-mono text-[11px] font-semibold tracking-tight text-white">
+                    <span className="min-w-0 truncate font-mono text-[11px] font-semibold tracking-tight text-white underline-offset-2 hover:underline">
                       {leftPanelName}
                     </span>
-                    <span className="shrink-0 font-mono text-[10px] font-black tabular-nums text-sky-200/95">
-                      {pulseVoicesA}
-                    </span>
                   </button>
-                  {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
-                    <div className="pointer-events-none flex items-center gap-1.5 rounded-3xl bg-black/50 px-2.5 py-1.5 font-mono text-[11px] font-black tabular-nums text-white shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
-                      {speakingTurnPaused && (
-                        <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
-                      )}
-                      {Math.floor(speakingTurnRemaining / 60)}:
-                      {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                    </div>
-                  )}
-                </div>
-                <div className="absolute bottom-2 left-2 right-2 z-20 flex min-h-11 items-center justify-end gap-1.5">
                   <div
-                    className={`relative flex shrink-0 items-center justify-center ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
+                    className={`relative ml-auto flex shrink-0 items-center justify-center ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
                   >
                     <ChallengerSupportHalo side="A" burstKey={supportBurst.A} leader={impactLeader === 'A'} />
                     <PointTrigger
                       count={pulseVoicesA}
                       onPulse={() => handlePulseVoice('A')}
                       interactive={userRole === 'viewer'}
+                      hideImpactCount
                       aria-label="Envoyer une voix pour ce challenger"
                     />
                   </div>
@@ -3053,34 +3080,16 @@ export function TikTokStyleArena({
                     />
                   )}
                 </AnimatePresence>
-                <div className="pointer-events-none absolute left-2 right-2 top-2 z-30 flex flex-wrap items-start justify-between gap-2">
-                  {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
-                    <div className="pointer-events-none order-1 flex items-center gap-1.5 rounded-3xl bg-black/50 px-2.5 py-1.5 font-mono text-[11px] font-black tabular-nums text-white shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:order-none">
-                      {speakingTurnPaused && (
-                        <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
-                      )}
-                      {Math.floor(speakingTurnRemaining / 60)}:
-                      {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
-                    }}
-                    className="pointer-events-auto order-2 ml-auto flex max-w-[min(78%,15rem)] items-center gap-2 rounded-3xl bg-black/55 px-3 py-2 shadow-[0_20px_56px_rgba(0,0,0,0.48)] backdrop-blur-2xl sm:order-none"
-                  >
-                    <span className="min-w-0 truncate font-mono text-[11px] font-semibold tracking-tight text-white">
-                      {rightPanelName}
-                    </span>
-                    <span className="shrink-0 font-mono text-[10px] font-black tabular-nums text-ember-200/95">
-                      {pulseVoicesB}
-                    </span>
-                    <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember-400 shadow-[0_0_10px_rgba(251,146,60,0.85)]" />
-                  </button>
-                </div>
-                <div className="absolute bottom-2 left-2 right-2 z-20 flex min-h-11 items-center justify-start gap-1.5">
+                {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
+                  <div className="pointer-events-none absolute left-1/2 top-2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-3xl bg-black/50 px-2.5 py-1.5 font-mono text-[11px] font-black tabular-nums text-white shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+                    {speakingTurnPaused && (
+                      <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
+                    )}
+                    {Math.floor(speakingTurnRemaining / 60)}:
+                    {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                  </div>
+                )}
+                <div className="absolute bottom-2 left-2 right-2 z-20 flex min-h-11 items-center justify-between gap-1.5">
                   <div
                     className={`relative flex shrink-0 items-center justify-center ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
                   >
@@ -3089,9 +3098,23 @@ export function TikTokStyleArena({
                       count={pulseVoicesB}
                       onPulse={() => handlePulseVoice('B')}
                       interactive={userRole === 'viewer'}
+                      hideImpactCount
                       aria-label="Envoyer une voix pour ce challenger"
                     />
                   </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
+                    }}
+                    className="pointer-events-auto flex h-11 min-w-0 max-w-[min(52%,9.5rem)] shrink-[2] items-center gap-2 rounded-3xl bg-black/55 px-3 shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-opacity hover:opacity-95"
+                  >
+                    <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember-400 shadow-[0_0_10px_rgba(251,146,60,0.85)]" />
+                    <span className="min-w-0 truncate font-mono text-[11px] font-semibold tracking-tight text-white underline-offset-2 hover:underline">
+                      {rightPanelName}
+                    </span>
+                  </button>
                 </div>
               </motion.div>
             </div>
@@ -3181,6 +3204,7 @@ export function TikTokStyleArena({
                     count={pulseVoicesA}
                     onPulse={() => handlePulseVoice('A')}
                     interactive={userRole === 'viewer'}
+                    hideImpactCount
                     aria-label="Envoyer une voix pour ce challenger"
                   />
                 </div>
@@ -3321,6 +3345,7 @@ export function TikTokStyleArena({
                     count={pulseVoicesB}
                     onPulse={() => handlePulseVoice('B')}
                     interactive={userRole === 'viewer'}
+                    hideImpactCount
                     aria-label="Envoyer une voix pour ce challenger"
                   />
                 </div>
@@ -3638,34 +3663,6 @@ export function TikTokStyleArena({
             ref={reactionDockRef}
             className="relative flex w-[min(11rem,34vw)] shrink-0 flex-col items-center justify-center gap-2 bg-[#060607] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[-8px_0_40px_rgba(0,0,0,0.35)] lg:bg-gradient-to-b lg:from-[#0e0e12]/92 lg:to-[#060607]/95 lg:backdrop-blur-2xl lg:[backdrop-filter:blur(28px)_saturate(190%)] lg:rounded-r-3xl"
           >
-            <AnimatePresence>
-              {showAllReactions && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 8 }}
-                  className="pointer-events-auto absolute bottom-full right-0 z-[110] mb-2 max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] origin-bottom-right overflow-y-auto overscroll-contain rounded-[2px] border border-white/[0.1] bg-[#0c0c0f]/98 p-2 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-0 sm:translate-x-0"
-                >
-                  <div className="grid grid-cols-6 gap-1 sm:grid-cols-8">
-                    {POPULAR_REACTIONS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => {
-                          handleReaction(emoji);
-                          setShowAllReactions(false);
-                        }}
-                        aria-label={`Réagir avec ${emoji}`}
-                        className="flex h-9 w-9 items-center justify-center rounded-[2px] text-lg hover:bg-white/10 active:scale-90"
-                      >
-                        <span aria-hidden>{emoji}</span>
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {userRole === 'viewer' && (
               <div className="flex flex-wrap justify-center gap-1">
                 {SPECTATOR_QUICK_REACTIONS.map((emoji) => (
@@ -3682,7 +3679,133 @@ export function TikTokStyleArena({
               </div>
             )}
 
-            <div className="flex flex-wrap items-center justify-center gap-1.5">
+            <div className="relative flex flex-wrap items-center justify-center gap-1.5">
+              <AnimatePresence>
+                {showAllReactions && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    className="pointer-events-auto absolute bottom-full right-0 z-[110] mb-2 max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] origin-bottom-right overflow-y-auto overscroll-contain rounded-[2px] border border-white/[0.1] bg-[#0c0c0f]/98 p-2 pt-1.5 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-0 sm:translate-x-0"
+                  >
+                    <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2">
+                      <span className="pl-0.5 text-[11px] font-semibold text-white/75">Réactions</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAllReactions(false)}
+                        aria-label="Fermer le panneau de réactions"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[2px] text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                      >
+                        <X className="h-4 w-4" strokeWidth={1.5} aria-hidden />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-6 gap-1 sm:grid-cols-8">
+                      {POPULAR_REACTIONS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => {
+                            handleReaction(emoji);
+                            setShowAllReactions(false);
+                          }}
+                          aria-label={`Réagir avec ${emoji}`}
+                          className="flex h-9 w-9 items-center justify-center rounded-[2px] text-lg hover:bg-white/10 active:scale-90"
+                        >
+                          <span aria-hidden>{emoji}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {showGiftPicker && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                    className="pointer-events-auto absolute bottom-full right-0 z-[110] mb-2 w-[220px] rounded-[2px] border border-white/12 bg-[#0c0c0f]/98 p-3 pt-2 shadow-2xl backdrop-blur-xl"
+                  >
+                    <div className="mb-2 flex items-start justify-between gap-2 border-b border-white/[0.08] pb-2">
+                      <p className="min-w-0 flex-1 pl-0.5 text-[11px] font-semibold leading-snug text-white/75">
+                        Envoyer au médiateur
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowGiftPicker(false)}
+                        aria-label="Fermer les cadeaux"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[2px] text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                      >
+                        <X className="h-4 w-4" strokeWidth={1.5} aria-hidden />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        { emoji: '🌹', label: 'Rose', id: 'rose', cost: 10 },
+                        { emoji: '🔥', label: 'Fire', id: 'fire', cost: 25 },
+                        { emoji: '👑', label: 'Couronne', id: 'crown', cost: 100 },
+                        { emoji: '💎', label: 'Diamant', id: 'diamond', cost: 50 },
+                      ].map((gift) => (
+                        <button
+                          key={gift.label}
+                          onClick={async () => {
+                            if (userPoints < gift.cost) {
+                              toast(`Points insuffisants — il te manque ${gift.cost - userPoints} pts (solde ${userPoints})`, 'error', {
+                                action: {
+                                  label: 'Recharger',
+                                  onClick: () => goBuyPoints(),
+                                },
+                              });
+                              return;
+                            }
+
+                            try {
+                              const {
+                                data: { session },
+                              } = await supabase.auth.getSession();
+                              const res = await fetch('/api/gifts/send', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  Authorization: `Bearer ${session?.access_token || ''}`,
+                                },
+                                body: JSON.stringify({
+                                  beef_id: roomId,
+                                  recipient_id: host.id,
+                                  gift_type_id: gift.id,
+                                  points_amount: gift.cost,
+                                }),
+                              });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.error);
+                              setUserPoints(data.newBalance);
+                              if (gift.cost >= 50) {
+                                setGiftPrestigeFlash((k) => k + 1);
+                              }
+                              toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
+                            } catch (err: any) {
+                              const m = err?.message || "Erreur lors de l'envoi";
+                              if (typeof m === 'string' && m.toLowerCase().includes('insuffisant')) {
+                                toast(m, 'error', {
+                                  action: { label: 'Recharger', onClick: () => goBuyPoints() },
+                                });
+                              } else {
+                                toast(m, 'error');
+                              }
+                            }
+                            setShowGiftPicker(false);
+                          }}
+                          className="flex flex-col items-center gap-1 rounded-[2px] bg-white/5 p-2 hover:bg-white/12"
+                        >
+                          <span className="text-2xl">{gift.emoji}</span>
+                          <span className="text-[10px] font-bold text-white">{gift.label}</span>
+                          <span className="text-[9px] font-semibold text-ember-400">{gift.cost} pts</span>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.92 }}
@@ -3732,82 +3855,6 @@ export function TikTokStyleArena({
                   align="end"
                   suppress={featureGuideSuppress}
                 />
-                <AnimatePresence>
-                  {showGiftPicker && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                      className="absolute bottom-full right-0 z-[110] mb-2 w-[220px] rounded-[2px] border border-white/12 bg-[#0c0c0f]/98 p-3 shadow-2xl backdrop-blur-xl"
-                    >
-                      <p className="mb-2 text-[11px] font-semibold text-white/70">Envoyer au médiateur</p>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {[
-                          { emoji: '🌹', label: 'Rose', id: 'rose', cost: 10 },
-                          { emoji: '🔥', label: 'Fire', id: 'fire', cost: 25 },
-                          { emoji: '👑', label: 'Couronne', id: 'crown', cost: 100 },
-                          { emoji: '💎', label: 'Diamant', id: 'diamond', cost: 50 },
-                        ].map((gift) => (
-                          <button
-                            key={gift.label}
-                            onClick={async () => {
-                              if (userPoints < gift.cost) {
-                                toast(`Points insuffisants — il te manque ${gift.cost - userPoints} pts (solde ${userPoints})`, 'error', {
-                                  action: {
-                                    label: 'Recharger',
-                                    onClick: () => goBuyPoints(),
-                                  },
-                                });
-                                return;
-                              }
-
-                              try {
-                                const {
-                                  data: { session },
-                                } = await supabase.auth.getSession();
-                                const res = await fetch('/api/gifts/send', {
-                                  method: 'POST',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                    Authorization: `Bearer ${session?.access_token || ''}`,
-                                  },
-                                  body: JSON.stringify({
-                                    beef_id: roomId,
-                                    recipient_id: host.id,
-                                    gift_type_id: gift.id,
-                                    points_amount: gift.cost,
-                                  }),
-                                });
-                                const data = await res.json();
-                                if (!res.ok) throw new Error(data.error);
-                                setUserPoints(data.newBalance);
-                                if (gift.cost >= 50) {
-                                  setGiftPrestigeFlash((k) => k + 1);
-                                }
-                                toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
-                              } catch (err: any) {
-                                const m = err?.message || "Erreur lors de l'envoi";
-                                if (typeof m === 'string' && m.toLowerCase().includes('insuffisant')) {
-                                  toast(m, 'error', {
-                                    action: { label: 'Recharger', onClick: () => goBuyPoints() },
-                                  });
-                                } else {
-                                  toast(m, 'error');
-                                }
-                              }
-                              setShowGiftPicker(false);
-                            }}
-                            className="flex flex-col items-center gap-1 rounded-[2px] bg-white/5 p-2 hover:bg-white/12"
-                          >
-                            <span className="text-2xl">{gift.emoji}</span>
-                            <span className="text-[10px] font-bold text-white">{gift.label}</span>
-                            <span className="text-[9px] font-semibold text-ember-400">{gift.cost} pts</span>
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
 
             </div>
