@@ -310,7 +310,7 @@ export default function ArenaPage() {
   }
 
   return (
-    <div className="fixed inset-0 top-16 overflow-hidden">
+    <div className="fixed inset-0 top-16">
       <TikTokStyleArena
         host={host}
         roomId={roomId}

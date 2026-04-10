@@ -2337,7 +2337,7 @@ export function TikTokStyleArena({
   }
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#08080A]">
+    <div className="relative flex h-full min-h-0 w-full max-w-full flex-col bg-[#08080A]">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -2569,7 +2569,7 @@ export function TikTokStyleArena({
       )}
 
       {/* TikTok Live : vidéo zone haute + chat pleine largeur en dessous (sans chevauchement) */}
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#08080A]">
+      <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
         {dailyRoomUrl ? (
           <div
             className="relative z-[1] min-h-0 w-full flex-1 overflow-hidden"
@@ -3431,8 +3431,8 @@ export function TikTokStyleArena({
 
       {/* ── Dock social — pleine largeur, collé au bas, sans chevauchement vidéo ── */}
       {!beefEnded && (
-        <div className="relative z-[2] flex h-[23%] min-h-[104px] w-full shrink-0 flex-col">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-black/40 shadow-2xl backdrop-blur-3xl lg:flex-row lg:items-stretch lg:gap-6 lg:rounded-t-[2rem] lg:px-4 lg:pt-3 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="relative z-[40] flex h-[28%] min-h-[118px] w-full shrink-0 flex-col overflow-visible">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible rounded-t-3xl border-x border-t border-white/10 bg-black/40 shadow-2xl backdrop-blur-3xl lg:flex-row lg:items-stretch lg:gap-6 lg:rounded-t-[2rem] lg:px-4 lg:pt-3 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             aria-live="polite"
@@ -3551,7 +3551,7 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative flex w-[min(11rem,34vw)] shrink-0 flex-col items-center justify-center gap-2 border-gray-800 px-2 py-2 lg:w-auto lg:min-w-[10.5rem] lg:border-l lg:pl-6"
+            className="relative z-[120] flex w-[min(11rem,34vw)] shrink-0 flex-col items-center justify-center gap-2 overflow-visible border-gray-800 px-2 py-2 lg:w-auto lg:min-w-[10.5rem] lg:border-l lg:pl-6"
           >
             {userRole === 'viewer' && (
               <div className="flex flex-wrap justify-center gap-1">
@@ -3569,14 +3569,14 @@ export function TikTokStyleArena({
               </div>
             )}
 
-            <div className="relative flex flex-wrap items-center justify-center gap-1.5">
+            <div className="relative flex flex-wrap items-center justify-center gap-1.5 overflow-visible">
               <AnimatePresence>
                 {showAllReactions && (
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 8 }}
-                    className="pointer-events-auto absolute bottom-full right-0 z-[110] mb-2 max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] origin-bottom-right overflow-y-auto overscroll-contain rounded-xl border border-white/[0.1] bg-[#0c0c0f]/98 p-2 pt-1.5 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-0 sm:translate-x-0"
+                    className="pointer-events-auto absolute bottom-full right-0 z-[200] mb-2 max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] origin-bottom-right overflow-y-auto overscroll-contain rounded-xl border border-white/[0.1] bg-[#0c0c0f]/98 p-2 pt-1.5 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-0 sm:translate-x-0"
                   >
                     <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2">
                       <span className="pl-0.5 text-[11px] font-semibold text-white/75">Réactions</span>
@@ -3614,7 +3614,7 @@ export function TikTokStyleArena({
                     initial={{ opacity: 0, y: 10, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                    className="pointer-events-auto absolute bottom-full right-0 z-[110] mb-2 w-[220px] rounded-xl border border-white/12 bg-[#0c0c0f]/98 p-3 pt-2 shadow-2xl backdrop-blur-xl"
+                    className="pointer-events-auto absolute bottom-full right-0 z-[200] mb-2 w-[220px] rounded-xl border border-white/12 bg-[#0c0c0f]/98 p-3 pt-2 shadow-2xl backdrop-blur-xl"
                   >
                     <div className="mb-2 flex items-start justify-between gap-2 border-b border-white/[0.08] pb-2">
                       <p className="min-w-0 flex-1 pl-0.5 text-[11px] font-semibold leading-snug text-white/75">
