@@ -116,9 +116,9 @@ export function MediatorSidebar({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 340 }}
-            className="fixed right-0 top-0 z-[58] flex h-[100dvh] w-[min(100vw,17.5rem)] flex-col overflow-hidden rounded-tl-3xl bg-[#16161a] shadow-[-16px_0_48px_rgba(0,0,0,0.55)] sm:w-72 lg:w-64"
+            className="fixed right-0 top-0 z-[58] flex h-[100dvh] w-[min(100vw,17.5rem)] flex-col overflow-hidden rounded-tl-3xl rounded-bl-3xl bg-[#121214]/92 shadow-[-24px_0_64px_rgba(0,0,0,0.5)] backdrop-blur-2xl sm:w-72 lg:w-64"
           >
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.07] px-3 py-2.5">
+            <div className="flex shrink-0 items-center justify-between gap-3 px-3 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
               <span className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-ember-400 lg:text-[8px] lg:tracking-[0.26em]">
                 Régie
               </span>
@@ -132,7 +132,7 @@ export function MediatorSidebar({
               </button>
             </div>
 
-            <div className="shrink-0 border-b border-white/[0.06] px-3 py-3">
+            <div className="shrink-0 px-3 py-3">
               {!timerActive ? (
                 <motion.button
                   type="button"
@@ -201,50 +201,48 @@ export function MediatorSidebar({
             </div>
 
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4 hide-scrollbar">
-              {onMediatorToggleMic && onMediatorToggleCam && (
-                <section className="space-y-2 border-b border-white/[0.07] pb-4">
-                  <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white lg:text-[8px] lg:tracking-[0.22em]">
-                    <span className="lg:hidden">Ta régie (cam / micro)</span>
-                    <span className="hidden lg:inline">Régie</span>
-                  </h3>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      title="Micro médiateur"
-                      onClick={onMediatorToggleMic}
-                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-[2px] border py-2.5 font-mono text-[10px] font-bold lg:py-2 ${
-                        mediatorMicEnabled
-                          ? 'border-white/20 bg-white/12 text-white'
-                          : 'border-red-500/45 bg-red-500/20 text-red-100'
-                      }`}
-                    >
-                      {mediatorMicEnabled ? (
-                        <Mic className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1} />
-                      ) : (
-                        <MicOff className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1} />
-                      )}
-                      <span className="lg:sr-only">Micro</span>
-                    </button>
-                    <button
-                      type="button"
-                      title="Caméra médiateur"
-                      onClick={onMediatorToggleCam}
-                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-[2px] border py-2.5 font-mono text-[10px] font-bold lg:py-2 ${
-                        mediatorCamEnabled
-                          ? 'border-white/20 bg-white/12 text-white'
-                          : 'border-red-500/45 bg-red-500/20 text-red-100'
-                      }`}
-                    >
-                      {mediatorCamEnabled ? (
-                        <Video className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1} />
-                      ) : (
-                        <VideoOff className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1} />
-                      )}
-                      <span className="lg:sr-only">Cam</span>
-                    </button>
-                  </div>
-                </section>
-              )}
+              <section className="space-y-2 pb-4">
+                <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white lg:text-[8px] lg:tracking-[0.22em]">
+                  <span className="lg:hidden">Ta régie (cam / micro)</span>
+                  <span className="hidden lg:inline">Régie</span>
+                </h3>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    title="Micro médiateur"
+                    onClick={() => void onMediatorToggleMic?.()}
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-2.5 font-mono text-[10px] font-bold shadow-[0_12px_32px_rgba(0,0,0,0.35)] backdrop-blur-md lg:py-2 ${
+                      mediatorMicEnabled
+                        ? 'bg-white/10 text-white'
+                        : 'bg-red-500/25 text-red-100'
+                    }`}
+                  >
+                    {mediatorMicEnabled ? (
+                      <Mic className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1.2} />
+                    ) : (
+                      <MicOff className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1.2} />
+                    )}
+                    <span className="lg:sr-only">Micro</span>
+                  </button>
+                  <button
+                    type="button"
+                    title="Caméra médiateur"
+                    onClick={() => void onMediatorToggleCam?.()}
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-2.5 font-mono text-[10px] font-bold shadow-[0_12px_32px_rgba(0,0,0,0.35)] backdrop-blur-md lg:py-2 ${
+                      mediatorCamEnabled
+                        ? 'bg-white/10 text-white'
+                        : 'bg-red-500/25 text-red-100'
+                    }`}
+                  >
+                    {mediatorCamEnabled ? (
+                      <Video className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1.2} />
+                    ) : (
+                      <VideoOff className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1.2} />
+                    )}
+                    <span className="lg:sr-only">Cam</span>
+                  </button>
+                </div>
+              </section>
               <section className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white lg:text-[8px] lg:tracking-[0.22em]">

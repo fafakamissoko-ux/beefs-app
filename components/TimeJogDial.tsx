@@ -140,8 +140,11 @@ export function TimeJogDial({
             <button
               key={q.label}
               type="button"
-              onClick={() => onDelta(q.delta)}
-              className="rounded-[2px] border border-ember-500/40 bg-ember-500/15 px-2 py-1 font-mono text-[9px] font-black uppercase tracking-wider text-ember-100 transition-colors hover:bg-ember-500/30 lg:px-1.5 lg:py-0.5 lg:text-[8px]"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelta(q.delta);
+              }}
+              className="rounded-2xl bg-ember-500/18 px-2 py-1 font-mono text-[9px] font-black uppercase tracking-wider text-ember-100 shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-ember-500/30 lg:px-1.5 lg:py-0.5 lg:text-[8px]"
             >
               {q.label}
             </button>

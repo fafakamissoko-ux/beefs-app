@@ -132,7 +132,7 @@ export function PointTrigger({
             className="relative z-[1] flex h-full w-full items-center justify-center rounded-full"
           >
             <span className="font-mono text-[11px] font-black tabular-nums leading-none tracking-tight text-white/95">
-              {count}
+              {count > 0 ? count : ''}
             </span>
           </motion.span>
         </motion.button>

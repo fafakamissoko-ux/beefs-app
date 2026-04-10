@@ -18,6 +18,7 @@ import {
   Award,
   Timer,
   Pause,
+  Share2,
 } from 'lucide-react';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { ChatPanel } from './ChatPanel';
@@ -49,6 +50,7 @@ import {
 } from './FlyingReactionsLayer';
 import { PointTrigger } from './PointTrigger';
 import { ChallengerSupportHalo } from './ChallengerSupportHalo';
+import { MediatorSupportHalo } from './MediatorSupportHalo';
 import { useArenaPulseVoicesStore } from '@/lib/stores/arenaPulseVoicesStore';
 import { useArenaVerdictStore } from '@/lib/stores/arenaVerdictStore';
 import { VerdictConfettiBurst, RematchVerdictOverlay } from './VerdictEffects';
@@ -166,14 +168,13 @@ export function TikTokStyleArena({
   debateTitle = 'Débat en direct',
   dailyRoomUrl,
   onReaction,
-  onShare: _onShare,
+  onShare,
   previewStartedAt = null,
   freePreviewMinutes = DEFAULT_FREE_PREVIEW_MINUTES,
   continuationPricePoints = 0,
   hasPaidContinuation = false,
   onContinuationPaid,
 }: TikTokStyleArenaProps) {
-  void _onShare;
   const router = useRouter();
   const { toast } = useToast();
   const isViewer = userRole === 'viewer';
@@ -397,11 +398,17 @@ export function TikTokStyleArena({
   const resetArenaVerdict = useArenaVerdictStore((s) => s.reset);
   const addPulseVoices = useArenaPulseVoicesStore((s) => s.addPulse);
   const pulseBroadcastPending = useRef({ A: 0, B: 0 });
+
+  const impactLeader = useMemo((): 'A' | 'B' | null => {
+    if (pulseVoicesA > pulseVoicesB) return 'A';
+    if (pulseVoicesB > pulseVoicesA) return 'B';
+    return null;
+  }, [pulseVoicesA, pulseVoicesB]);
   const pulseBroadcastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [myVote, setMyVote] = useState<'A' | 'B' | null>(null);
   const [voteAnimation, setVoteAnimation] = useState<'A' | 'B' | null>(null);
   const lastPulseSideRef = useRef<'A' | 'B' | null>(null);
-  const [supportBurst, setSupportBurst] = useState({ A: 0, B: 0 });
+  const [supportBurst, setSupportBurst] = useState({ A: 0, B: 0, M: 0 });
   const [giftPrestigeFlash, setGiftPrestigeFlash] = useState(0);
   const [verdictConfetti, setVerdictConfetti] = useState(false);
   const [rematchSequence, setRematchSequence] = useState(false);
@@ -492,6 +499,7 @@ export function TikTokStyleArena({
     (deltaSec: number) => {
       setBeefTimeRemaining((prev) => {
         const next = Math.max(0, Math.min(MAX_BEEF_DURATION, prev + deltaSec));
+        beefTimeRemainingRef.current = next;
         if (timerActiveRef.current && !timerPausedRef.current) {
           beefEndsAtMsRef.current = Date.now() + next * 1000;
         }
@@ -1218,16 +1226,40 @@ export function TikTokStyleArena({
     setVisibleMessages(prev => [...prev, newMsg].slice(-80));
   }, []);
 
-  const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | null) => {
-    if (
-      INTEGRATED_SUPPORT_REACTIONS.has(emoji) &&
-      (supportSlot === 'A' || supportSlot === 'B')
-    ) {
+  const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | 'M' | null) => {
+    if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && (supportSlot === 'A' || supportSlot === 'B')) {
       setSupportBurst((prev) => ({ ...prev, [supportSlot]: prev[supportSlot] + 1 }));
+      return;
+    }
+    if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && supportSlot === 'M') {
+      setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
       return;
     }
     const entry = createFlyingReactionEntry(emoji);
     setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
+  }, []);
+
+  const emitTapSupport = useCallback((target: 'A' | 'B' | 'M') => {
+    if (target === 'M') {
+      setSupportBurst((p) => ({ ...p, M: p.M + 1 }));
+    } else {
+      setSupportBurst((p) => ({ ...p, [target]: p[target] + 1 }));
+    }
+    const xPercent =
+      target === 'A' ? 14 + Math.random() * 16 : target === 'B' ? 70 + Math.random() * 16 : 44 + Math.random() * 12;
+    const entry = createFlyingReactionEntry('❤️', {
+      x: xPercent,
+      opacityMul: 0.5,
+      scaleMul: 0.82,
+    });
+    setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
+    channelRef.current
+      ?.send({
+        type: 'broadcast',
+        event: 'reaction',
+        payload: { emoji: '❤️', supportSlot: target },
+      })
+      .catch(() => {});
   }, []);
 
   // 1) Broadcast channel — instant P2P delivery
@@ -1502,9 +1534,36 @@ export function TikTokStyleArena({
     onReaction(emoji);
 
     const integrated = INTEGRATED_SUPPORT_REACTIONS.has(emoji);
-    const slot = (myVote ?? lastPulseSideRef.current ?? 'A') as 'A' | 'B';
-    if (integrated) {
-      setSupportBurst((prev) => ({ ...prev, [slot]: prev[slot] + 1 }));
+    const heartTarget: 'A' | 'B' | 'M' =
+      emoji === '❤️' && speakingTurnActive && effectiveHotMicSpeakerSlot
+        ? effectiveHotMicSpeakerSlot
+        : emoji === '❤️'
+          ? 'M'
+          : (myVote ?? lastPulseSideRef.current ?? 'A');
+    const slotAB = (myVote ?? lastPulseSideRef.current ?? 'A') as 'A' | 'B';
+
+    if (integrated && emoji === '❤️') {
+      if (heartTarget === 'M') {
+        setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
+      } else {
+        setSupportBurst((prev) => ({ ...prev, [heartTarget]: prev[heartTarget] + 1 }));
+      }
+      const xPercent =
+        heartTarget === 'A'
+          ? 14 + Math.random() * 16
+          : heartTarget === 'B'
+            ? 70 + Math.random() * 16
+            : 44 + Math.random() * 12;
+      const entry = createFlyingReactionEntry(emoji, {
+        x: xPercent,
+        opacityMul: 0.5,
+        scaleMul: 0.82,
+      });
+      setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
+    } else if (integrated) {
+      setSupportBurst((prev) => ({ ...prev, [slotAB]: prev[slotAB] + 1 }));
+      const entry = createFlyingReactionEntry(emoji, { opacityMul: 0.55, scaleMul: 0.88 });
+      setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
     } else {
       const entry = createFlyingReactionEntry(emoji);
       setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
@@ -1515,7 +1574,12 @@ export function TikTokStyleArena({
         .send({
           type: 'broadcast',
           event: 'reaction',
-          payload: integrated ? { emoji, supportSlot: slot } : { emoji },
+          payload:
+            integrated && emoji === '❤️'
+              ? { emoji, supportSlot: heartTarget }
+              : integrated
+                ? { emoji, supportSlot: slotAB }
+                : { emoji },
         })
         .catch(() => console.warn('[Live] Reaction broadcast failed'));
     }
@@ -1862,7 +1926,7 @@ export function TikTokStyleArena({
     isHost,
   ]);
 
-  /** Micro challengers : coupé hors tour (débat structuré) ou quand le médiateur prend la parole */
+  /** Micro challengers : hot mic (tour actif) même hors débat structuré ; sinon règles structurées. */
   useEffect(() => {
     if (isViewer || isHost || !isJoined) return;
     if (micMutedByMediator) {
@@ -1873,19 +1937,19 @@ export function TikTokStyleArena({
       setLocalAudioEnabled(false);
       return;
     }
+    const floorHotMic =
+      speakingTurnActive &&
+      speakingTurnTarget &&
+      (speakingTurnTarget === userId || speakingTurnTarget === localParticipant?.arenaUserId);
+    if (speakingTurnActive && speakingTurnTarget) {
+      setLocalAudioEnabled(!!floorHotMic);
+      return;
+    }
     if (!structuredDebateEnabled) {
       setLocalAudioEnabled(true);
       return;
     }
-    const myTurn =
-      speakingTurnActive &&
-      speakingTurnTarget &&
-      (speakingTurnTarget === userId || speakingTurnTarget === localParticipant?.arenaUserId);
-    if (myTurn) {
-      setLocalAudioEnabled(true);
-    } else {
-      setLocalAudioEnabled(false);
-    }
+    setLocalAudioEnabled(false);
   }, [
     isViewer,
     isHost,
@@ -2507,6 +2571,19 @@ export function TikTokStyleArena({
                     : { duration: 0.2 }
                 }
               >
+                {impactLeader === 'A' && (
+                  <motion.div
+                    className="pointer-events-none absolute inset-0 z-[3]"
+                    aria-hidden
+                    animate={{ opacity: [0.2, 0.36, 0.2] }}
+                    transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+                    style={{
+                      background:
+                        'radial-gradient(ellipse 90% 78% at 32% 42%, rgba(56,189,248,0.16) 0%, transparent 60%), radial-gradient(ellipse 75% 55% at 50% 100%, rgba(56,189,248,0.09) 0%, transparent 58%)',
+                      boxShadow: 'inset 0 0 72px rgba(56,189,248,0.07)',
+                    }}
+                  />
+                )}
                 <AnimatePresence>
                   {leftNeonAudio && (
                     <motion.div
@@ -2537,7 +2614,7 @@ export function TikTokStyleArena({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[5] hidden lg:block"
+                      className="pointer-events-none absolute inset-0 z-[5] block"
                     >
                       <motion.div
                         className="absolute inset-0"
@@ -2593,8 +2670,8 @@ export function TikTokStyleArena({
                       />
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-end gap-3 px-2 pb-[min(42%,11rem)] pt-[min(30%,7.5rem)]">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-full bg-blue-500/30 border-2 border-blue-400/40 flex items-center justify-center text-4xl sm:text-5xl font-black text-white shadow-lg shadow-blue-500/20">
-                          {leftPanel ? leftPanelName[0].toUpperCase() : 'A'}
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-3xl shadow-[0_20px_56px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:h-24 sm:w-24 sm:text-4xl">
+                          {leftPanel ? leftPanelName[0].toUpperCase() : '👤'}
                         </div>
                         {!leftPanel && (
                           <div className="frosted-titanium flex items-center gap-2 rounded-full px-3 py-1.5">
@@ -2607,16 +2684,27 @@ export function TikTokStyleArena({
                   </motion.div>
                 </AnimatePresence>
                 {/* Vote tap overlay — viewers tap to vote for this challenger */}
-                {!isHost && !leftPanelIsLocal && (
+                {userRole === 'viewer' && (
                   <button
                     type="button"
-                    onClick={() => castVote('A')}
+                    onClick={() => {
+                      emitTapSupport('A');
+                      castVote('A');
+                    }}
                     className="absolute inset-0 z-[5] touch-manipulation"
                     aria-label={`Voter pour ${leftPanelName}`}
                   />
                 )}
+                {!beefEnded && dailyRoomUrl && (isHost || userRole === 'challenger') && (
+                  <button
+                    type="button"
+                    onClick={() => emitTapSupport('A')}
+                    className="absolute inset-0 z-[4] touch-manipulation bg-transparent"
+                    aria-label="Envoyer du soutien au challenger A"
+                  />
+                )}
                 {/* Vote guide — first time only */}
-                {!isHost && !leftPanelIsLocal && (
+                {userRole === 'viewer' && (
                   <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[8] pointer-events-auto">
                     <FeatureGuide
                       id="arena-vote"
@@ -2639,43 +2727,39 @@ export function TikTokStyleArena({
                     />
                   )}
                 </AnimatePresence>
-                {/* Timer parole — centre haut du demi-écran A */}
-                {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
-                  <div className="pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/18 bg-black/55 px-2.5 py-1 font-mono text-[11px] font-black tabular-nums text-white shadow-lg backdrop-blur-md lg:top-4 lg:border-white/22 lg:bg-black/50">
-                    {speakingTurnPaused && (
-                      <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
-                    )}
-                    {Math.floor(speakingTurnRemaining / 60)}:
-                    {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                  </div>
-                )}
-                {/* Bas du panneau — une ligne : nom · score · (micro/cam si local ou trous miroir) */}
-                <div className="absolute bottom-2 left-2 right-2 z-20 flex min-h-11 items-center gap-1.5">
+                {/* Haut : identité + impact + chrono parole */}
+                <div className="pointer-events-none absolute left-2 right-2 top-2 z-30 flex flex-wrap items-start justify-between gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null);
                     }}
-                    className="pointer-events-auto flex h-11 min-w-0 max-w-[min(52%,9.5rem)] shrink-[2] items-center gap-2 rounded-full border border-white/15 bg-black/70 px-3 shadow-lg backdrop-blur-sm transition-colors hover:border-white/25"
+                    className="pointer-events-auto flex max-w-[min(78%,15rem)] items-center gap-2 rounded-3xl bg-black/55 px-3 py-2 shadow-[0_20px_56px_rgba(0,0,0,0.48)] backdrop-blur-2xl"
                   >
-                    {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? (
-                      <span className="relative hidden h-2 w-2 shrink-0 lg:inline-flex" aria-hidden>
-                        <span className="absolute inset-0 animate-ping rounded-full bg-orange-500/80" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_12px_rgba(255,77,0,0.95)]" />
-                      </span>
-                    ) : null}
-                    <div
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.85)] ${speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 'lg:hidden' : ''}`}
-                    />
-                    <span className="truncate font-mono text-[11px] font-semibold tracking-tight text-white underline-offset-2 hover:underline">
+                    <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.85)]" />
+                    <span className="min-w-0 truncate font-mono text-[11px] font-semibold tracking-tight text-white">
                       {leftPanelName}
                     </span>
+                    <span className="shrink-0 font-mono text-[10px] font-black tabular-nums text-sky-200/95">
+                      {pulseVoicesA}
+                    </span>
                   </button>
+                  {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
+                    <div className="pointer-events-none flex items-center gap-1.5 rounded-3xl bg-black/50 px-2.5 py-1.5 font-mono text-[11px] font-black tabular-nums text-white shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+                      {speakingTurnPaused && (
+                        <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
+                      )}
+                      {Math.floor(speakingTurnRemaining / 60)}:
+                      {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                    </div>
+                  )}
+                </div>
+                <div className="absolute bottom-2 left-2 right-2 z-20 flex min-h-11 items-center justify-end gap-1.5">
                   <div
                     className={`relative flex shrink-0 items-center justify-center ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
                   >
-                    <ChallengerSupportHalo side="A" burstKey={supportBurst.A} />
+                    <ChallengerSupportHalo side="A" burstKey={supportBurst.A} leader={impactLeader === 'A'} />
                     <PointTrigger
                       count={pulseVoicesA}
                       onPulse={() => handlePulseVoice('A')}
@@ -2689,24 +2773,24 @@ export function TikTokStyleArena({
                         type="button"
                         onClick={toggleMic}
                         aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/70 shadow-lg backdrop-blur-sm transition-all ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600 text-white'}`}
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
                       >
                         {micEnabled ? (
-                          <Mic className="h-[18px] w-[18px]" strokeWidth={1} aria-hidden />
+                          <Mic className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
                         ) : (
-                          <MicOff className="h-[18px] w-[18px]" strokeWidth={1} aria-hidden />
+                          <MicOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
                         )}
                       </button>
                       <button
                         type="button"
                         onClick={toggleCam}
                         aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/70 shadow-lg backdrop-blur-sm transition-all ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600 text-white'}`}
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
                       >
                         {camEnabled ? (
-                          <Video className="h-[18px] w-[18px]" strokeWidth={1} aria-hidden />
+                          <Video className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
                         ) : (
-                          <VideoOff className="h-[18px] w-[18px]" strokeWidth={1} aria-hidden />
+                          <VideoOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
                         )}
                       </button>
                     </>
@@ -2765,11 +2849,19 @@ export function TikTokStyleArena({
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    <div
-                      className="relative h-[min(92vw,170px)] w-[min(92vw,170px)] rounded-full bg-gradient-to-br from-cobalt-500 to-ember-500 p-[3px] shadow-2xl shadow-cobalt-500/30 md:h-[170px] md:w-[170px]"
-                      style={{ filter: 'drop-shadow(0 0 14px rgba(0,82,255,0.22))' }}
+                    <MediatorSupportHalo burstKey={supportBurst.M} />
+                    <button
+                      type="button"
+                      onClick={() => emitTapSupport('M')}
+                      aria-label="Envoyer du soutien au médiateur"
+                      className="relative block rounded-full shadow-[0_24px_64px_rgba(0,0,0,0.55),0_0_48px_rgba(59,130,246,0.12)] transition-transform active:scale-[0.98]"
+                      style={{
+                        background:
+                          'linear-gradient(135deg, rgba(59,130,246,0.55), rgba(251,146,60,0.45))',
+                        padding: 2,
+                      }}
                     >
-                      <div className="h-full w-full overflow-hidden rounded-full bg-gray-900">
+                      <div className="h-[min(92vw,170px)] w-[min(92vw,170px)] overflow-hidden rounded-full bg-gray-900 md:h-[166px] md:w-[166px]">
                         {mediatorParticipant?.videoTrack ? (
                           <ParticipantVideo
                             videoTrack={mediatorParticipant.videoTrack}
@@ -2781,17 +2873,20 @@ export function TikTokStyleArena({
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
                             <span className="font-mono text-3xl font-black text-white md:text-4xl">
-                              {mediatorName?.[0]?.toUpperCase() || 'M'}
+                              {mediatorName?.[0]?.toUpperCase() || '·'}
                             </span>
                           </div>
                         )}
                       </div>
-                    </div>
+                    </button>
                   </div>
                   <button
                     type="button"
-                    onClick={() => void openProfile(mediatorName, host.id)}
-                    className="mt-2 flex max-w-[min(42vw,14rem)] flex-col items-center gap-1 rounded-2xl bg-black/30 px-3 py-2 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-opacity hover:opacity-95"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void openProfile(mediatorName, host.id);
+                    }}
+                    className="mt-2 flex max-w-[min(42vw,14rem)] flex-col items-center gap-1 rounded-3xl bg-black/45 px-3 py-2 shadow-[0_20px_56px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-opacity hover:opacity-95"
                   >
                     <Award className="h-4 w-4 shrink-0 text-amber-200/90" strokeWidth={1.2} aria-hidden />
                     <span className="max-w-full truncate text-center font-mono text-[11px] font-bold leading-tight text-white">
@@ -2815,6 +2910,19 @@ export function TikTokStyleArena({
                     : { duration: 0.2 }
                 }
               >
+                {impactLeader === 'B' && (
+                  <motion.div
+                    className="pointer-events-none absolute inset-0 z-[3]"
+                    aria-hidden
+                    animate={{ opacity: [0.2, 0.36, 0.2] }}
+                    transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+                    style={{
+                      background:
+                        'radial-gradient(ellipse 90% 78% at 68% 42%, rgba(251,146,60,0.16) 0%, transparent 60%), radial-gradient(ellipse 75% 55% at 50% 100%, rgba(251,113,133,0.09) 0%, transparent 58%)',
+                      boxShadow: 'inset 0 0 72px rgba(251,146,60,0.07)',
+                    }}
+                  />
+                )}
                 <AnimatePresence>
                   {rightNeonAudio && (
                     <motion.div
@@ -2845,7 +2953,7 @@ export function TikTokStyleArena({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[5] hidden lg:block"
+                      className="pointer-events-none absolute inset-0 z-[5] block"
                     >
                       <motion.div
                         className="absolute inset-0"
@@ -2900,8 +3008,8 @@ export function TikTokStyleArena({
                       />
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-end gap-3 px-2 pb-[min(42%,11rem)] pt-[min(30%,7.5rem)]">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-full bg-red-500/30 border-2 border-red-400/40 flex items-center justify-center text-4xl sm:text-5xl font-black text-white shadow-lg shadow-red-500/15">
-                          {rightPanel ? rightPanelName[0].toUpperCase() : 'B'}
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-ember-500/20 text-3xl shadow-[0_20px_56px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:h-24 sm:w-24 sm:text-4xl">
+                          {rightPanel ? rightPanelName[0].toUpperCase() : '👤'}
                         </div>
                         {!rightPanel && (
                           <div className="frosted-titanium flex items-center gap-2 rounded-full px-3 py-1.5">
@@ -2914,12 +3022,23 @@ export function TikTokStyleArena({
                   </motion.div>
                 </AnimatePresence>
                 {/* Vote tap overlay — viewers tap to vote for this challenger */}
-                {!isHost && (
+                {userRole === 'viewer' && (
                   <button
                     type="button"
-                    onClick={() => castVote('B')}
+                    onClick={() => {
+                      emitTapSupport('B');
+                      castVote('B');
+                    }}
                     className="absolute inset-0 z-[5] touch-manipulation"
                     aria-label={`Voter pour ${rightPanelName}`}
+                  />
+                )}
+                {!beefEnded && dailyRoomUrl && (isHost || userRole === 'challenger') && (
+                  <button
+                    type="button"
+                    onClick={() => emitTapSupport('B')}
+                    className="absolute inset-0 z-[4] touch-manipulation bg-transparent"
+                    aria-label="Envoyer du soutien au challenger B"
                   />
                 )}
                 {/* Vote flash animation */}
@@ -2934,26 +3053,38 @@ export function TikTokStyleArena({
                     />
                   )}
                 </AnimatePresence>
-                {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
-                  <div className="pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/18 bg-black/55 px-2.5 py-1 font-mono text-[11px] font-black tabular-nums text-white shadow-lg backdrop-blur-md lg:top-4 lg:border-white/22 lg:bg-black/50">
-                    {speakingTurnPaused && (
-                      <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
-                    )}
-                    {Math.floor(speakingTurnRemaining / 60)}:
-                    {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                  </div>
-                )}
-                <div className="absolute bottom-2 left-2 right-2 z-20 flex min-h-11 items-center justify-end gap-1.5">
-                  {!isHost && !isViewer && (
-                    <div className="flex shrink-0 gap-2" aria-hidden>
-                      <div className="h-11 w-11 shrink-0 rounded-full border border-white/5 bg-black/20 opacity-40" />
-                      <div className="h-11 w-11 shrink-0 rounded-full border border-white/5 bg-black/20 opacity-40" />
+                <div className="pointer-events-none absolute left-2 right-2 top-2 z-30 flex flex-wrap items-start justify-between gap-2">
+                  {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
+                    <div className="pointer-events-none order-1 flex items-center gap-1.5 rounded-3xl bg-black/50 px-2.5 py-1.5 font-mono text-[11px] font-black tabular-nums text-white shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:order-none">
+                      {speakingTurnPaused && (
+                        <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
+                      )}
+                      {Math.floor(speakingTurnRemaining / 60)}:
+                      {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                     </div>
                   )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
+                    }}
+                    className="pointer-events-auto order-2 ml-auto flex max-w-[min(78%,15rem)] items-center gap-2 rounded-3xl bg-black/55 px-3 py-2 shadow-[0_20px_56px_rgba(0,0,0,0.48)] backdrop-blur-2xl sm:order-none"
+                  >
+                    <span className="min-w-0 truncate font-mono text-[11px] font-semibold tracking-tight text-white">
+                      {rightPanelName}
+                    </span>
+                    <span className="shrink-0 font-mono text-[10px] font-black tabular-nums text-ember-200/95">
+                      {pulseVoicesB}
+                    </span>
+                    <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember-400 shadow-[0_0_10px_rgba(251,146,60,0.85)]" />
+                  </button>
+                </div>
+                <div className="absolute bottom-2 left-2 right-2 z-20 flex min-h-11 items-center justify-start gap-1.5">
                   <div
                     className={`relative flex shrink-0 items-center justify-center ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
                   >
-                    <ChallengerSupportHalo side="B" burstKey={supportBurst.B} />
+                    <ChallengerSupportHalo side="B" burstKey={supportBurst.B} leader={impactLeader === 'B'} />
                     <PointTrigger
                       count={pulseVoicesB}
                       onPulse={() => handlePulseVoice('B')}
@@ -2961,27 +3092,6 @@ export function TikTokStyleArena({
                       aria-label="Envoyer une voix pour ce challenger"
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
-                    }}
-                    className="pointer-events-auto flex h-11 min-w-0 max-w-[min(52%,9.5rem)] shrink-[2] items-center gap-2 rounded-full border border-white/15 bg-black/70 px-3 shadow-lg backdrop-blur-sm transition-colors hover:border-white/25"
-                  >
-                    <span className="min-w-0 truncate font-mono text-[11px] font-semibold tracking-tight text-white underline-offset-2 hover:underline">
-                      {rightPanelName}
-                    </span>
-                    {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? (
-                      <span className="relative hidden h-2 w-2 shrink-0 lg:inline-flex" aria-hidden>
-                        <span className="absolute inset-0 animate-ping rounded-full bg-orange-500/80" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_12px_rgba(255,77,0,0.95)]" />
-                      </span>
-                    ) : null}
-                    <div
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full bg-ember-400 shadow-[0_0_8px_rgba(251,113,133,0.85)] ${speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 'lg:hidden' : ''}`}
-                    />
-                  </button>
                 </div>
               </motion.div>
             </div>
@@ -3066,7 +3176,7 @@ export function TikTokStyleArena({
                 className={`absolute bottom-3 right-2 z-[28] ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
               >
                 <div className="relative flex items-center justify-center">
-                  <ChallengerSupportHalo side="A" burstKey={supportBurst.A} />
+                  <ChallengerSupportHalo side="A" burstKey={supportBurst.A} leader={impactLeader === 'A'} />
                   <PointTrigger
                     count={pulseVoicesA}
                     onPulse={() => handlePulseVoice('A')}
@@ -3206,7 +3316,7 @@ export function TikTokStyleArena({
                 className={`absolute bottom-3 right-2 z-[28] ${userRole === 'viewer' ? 'pointer-events-auto' : 'pointer-events-none'}`}
               >
                 <div className="relative flex items-center justify-center">
-                  <ChallengerSupportHalo side="B" burstKey={supportBurst.B} />
+                  <ChallengerSupportHalo side="B" burstKey={supportBurst.B} leader={impactLeader === 'B'} />
                   <PointTrigger
                     count={pulseVoicesB}
                     onPulse={() => handlePulseVoice('B')}
@@ -3283,8 +3393,16 @@ export function TikTokStyleArena({
             ) : null}
           </div>
 
-          {/* Droite : LIVE, spectateurs, régie (médiateur) ou quitter */}
+          {/* Droite : partage, LIVE, spectateurs, régie ou quitter */}
           <div className="flex min-w-0 items-center justify-end gap-1.5">
+            <button
+              type="button"
+              onClick={onShare}
+              aria-label="Partager le direct"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors max-lg:bg-white/[0.06] max-lg:shadow-[0_8px_28px_rgba(0,0,0,0.35)] max-lg:backdrop-blur-2xl lg:bg-transparent lg:hover:shadow-[0_0_22px_rgba(59,130,246,0.35)]"
+            >
+              <Share2 className="h-[18px] w-[18px] text-white" strokeWidth={1.2} aria-hidden />
+            </button>
             {/* LIVE badge */}
             <div className="flex items-center rounded-full bg-red-600/95 px-2 py-0.5 shadow-[0_6px_24px_rgba(220,38,38,0.35)] lg:bg-transparent lg:shadow-[0_0_24px_rgba(239,68,68,0.25)] lg:transition-all lg:hover:shadow-[0_0_28px_rgba(59,130,246,0.38)]">
               <div className={`mr-1 h-1.5 w-1.5 rounded-full ${liveConnected ? 'animate-pulse bg-white' : 'bg-yellow-300'}`} />
@@ -3324,37 +3442,6 @@ export function TikTokStyleArena({
           </div>
         </div>
       </div>
-
-      {/* Bandeau tour de parole — au-dessus de la ligne nom/score/micro (z plus bas que les docks) */}
-      {floorAnnouncement && !beefEnded && (
-        <div
-          className="pointer-events-none absolute inset-x-0 z-[18] flex justify-center px-2 max-md:bottom-[calc(env(safe-area-inset-bottom,0px)+7rem)] sm:bottom-[6.25rem] lg:hidden"
-          role="status"
-          aria-live="polite"
-        >
-          <div
-            className={`flex max-w-[min(62vw,12rem)] items-center gap-1.5 rounded-[2px] border px-2 py-1 shadow-[0_8px_28px_rgba(0,0,0,0.45)] sm:max-w-[min(78vw,18rem)] sm:gap-2 sm:px-2.5 sm:py-1.5 ${
-              floorAnnouncement.slot === 'A'
-                ? 'border-sky-500/30 bg-[#050508]/98'
-                : 'border-ember-500/30 bg-[#050508]/98'
-            }`}
-          >
-            <span className="whitespace-nowrap font-mono text-[7px] font-semibold uppercase tracking-[0.18em] text-white/45 sm:text-[9px] sm:tracking-[0.2em]">
-              À la parole
-            </span>
-            <span className="h-2.5 w-px shrink-0 bg-white/10 sm:h-3" aria-hidden />
-            <span
-              className={`min-w-0 max-w-[9rem] truncate font-mono text-[10px] font-semibold tracking-tight sm:max-w-none sm:text-[13px] ${
-                floorAnnouncement.slot === 'A'
-                  ? 'text-sky-300 drop-shadow-[0_0_12px_rgba(56,189,248,0.35)]'
-                  : 'text-ember-300 drop-shadow-[0_0_12px_rgba(251,146,60,0.35)]'
-              }`}
-            >
-              {floorAnnouncement.name}
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* ── Médiateur — barre de commande (privée) — ouverture via bouton header (plus de FAB) ── */}
       {isHost && isJoined && !beefEnded && dailyRoomUrl && (
@@ -3430,7 +3517,7 @@ export function TikTokStyleArena({
 
       {/* ── Socle social ~30 % — chat + dock à droite ── */}
       {!beefEnded && (
-        <div className="relative z-[60] flex min-h-0 flex-[3] flex-row bg-[#08080A] shadow-[0_-12px_48px_rgba(0,0,0,0.55)] max-lg:rounded-none lg:mx-4 lg:mb-4 lg:mt-2 lg:rounded-3xl lg:bg-[#070708]/72 lg:shadow-[0_20px_64px_rgba(0,0,0,0.65),0_-8px_40px_rgba(0,0,0,0.4)] lg:backdrop-blur-2xl lg:[backdrop-filter:blur(32px)_saturate(200%)]">
+        <div className="relative z-[60] flex min-h-0 flex-[3] flex-row bg-[#08080A] shadow-[0_-12px_48px_rgba(0,0,0,0.55)] max-lg:rounded-none lg:m-6 lg:rounded-3xl lg:bg-black/60 lg:p-6 lg:shadow-[0_32px_80px_rgba(0,0,0,0.55),0_12px_48px_rgba(0,0,0,0.35)] lg:backdrop-blur-2xl lg:[backdrop-filter:blur(32px)_saturate(200%)]">
           <div
             className="pointer-events-auto flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden shadow-[4px_0_32px_rgba(0,0,0,0.25)] lg:rounded-l-3xl lg:shadow-[6px_0_40px_rgba(0,0,0,0.2)]"
             aria-live="polite"

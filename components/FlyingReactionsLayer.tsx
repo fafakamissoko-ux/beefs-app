@@ -15,18 +15,27 @@ export type FlyingReactionEntry = {
   orbitStartAngle: number;
   /** Sens orbital (+1 ou -1). */
   orbitDir: number;
+  /** Opacité max de l’animation (ex. cœurs discrets). */
+  opacityMul?: number;
+  /** Facteur de taille sur la base (1 = défaut). */
+  scaleMul?: number;
 };
 
 const MAX_CONCURRENT = 28;
 const ANIM_SEC = 3.15;
 
-export function createFlyingReactionEntry(emoji: string): FlyingReactionEntry {
+export function createFlyingReactionEntry(
+  emoji: string,
+  opts?: { x?: number; opacityMul?: number; scaleMul?: number },
+): FlyingReactionEntry {
   return {
     id: `f_${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2)}`}`,
     emoji,
-    x: 6 + Math.random() * 88,
+    x: opts?.x ?? 6 + Math.random() * 88,
     orbitStartAngle: Math.random() * Math.PI * 2,
     orbitDir: Math.random() > 0.5 ? 1 : -1,
+    opacityMul: opts?.opacityMul,
+    scaleMul: opts?.scaleMul,
   };
 }
 
@@ -95,7 +104,7 @@ function FlyingEmoji({
   onDone: () => void;
 }) {
   const doneRef = useRef(false);
-  const { emoji, orbitStartAngle: θ0, orbitDir } = entry;
+  const { emoji, orbitStartAngle: θ0, orbitDir, opacityMul = 1, scaleMul = 1 } = entry;
 
   const { x, y } = useMemo(() => {
     const steps = 5;
@@ -118,12 +127,15 @@ function FlyingEmoji({
     onDone();
   };
 
+  const op = (v: number) => v * opacityMul;
+  const sc = (v: number) => v * scaleMul;
+
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.4 }}
+      initial={{ opacity: 0, scale: sc(0.4) }}
       animate={{
-        opacity: [0, 1, 1, 1, 0.85, 0],
-        scale: [0.4, 1.2, 1.05, 0.98, 0.88, 0.45],
+        opacity: [0, op(1), op(1), op(1), op(0.85), 0],
+        scale: [sc(0.4), sc(1.05), sc(0.92), sc(0.86), sc(0.78), sc(0.4)],
         x,
         y,
       }}
@@ -136,9 +148,9 @@ function FlyingEmoji({
         y: { times: [0, 0.2, 0.42, 0.62, 0.82, 1], duration: ANIM_SEC },
       }}
       onAnimationComplete={handleComplete}
-      className="text-3xl sm:text-4xl will-change-transform"
+      className="text-xl sm:text-2xl will-change-transform"
     >
-      <span className="inline-block drop-shadow-[0_2px_10px_rgba(0,0,0,0.55)]">{emoji}</span>
+      <span className="inline-block drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]">{emoji}</span>
     </motion.div>
   );
 }
