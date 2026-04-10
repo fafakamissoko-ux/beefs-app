@@ -2572,7 +2572,7 @@ export function TikTokStyleArena({
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#08080A]">
         {dailyRoomUrl ? (
           <div
-            className={`relative z-[1] w-full overflow-hidden ${beefEnded ? 'min-h-0 flex-1' : 'h-[40%] min-h-[200px] shrink-0'}`}
+            className="relative z-[1] min-h-0 w-full flex-1 overflow-hidden"
           >
             <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
               {/* LEFT — Participant A (moitié gauche) */}
@@ -3104,7 +3104,7 @@ export function TikTokStyleArena({
         ) : (
         /* Placeholder — même hauteur vidéo que avec room */
         <div
-          className={`relative z-[1] w-full overflow-hidden ${beefEnded ? 'min-h-0 flex-1' : 'h-[40%] min-h-[200px] shrink-0'}`}
+          className="relative z-[1] min-h-0 w-full flex-1 overflow-hidden"
         >
           <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
           {debaters[0] ? (
@@ -3431,7 +3431,7 @@ export function TikTokStyleArena({
 
       {/* ── Dock social — pleine largeur, collé au bas, sans chevauchement vidéo ── */}
       {!beefEnded && (
-        <div className="relative z-[2] flex min-h-0 w-full flex-1 flex-col">
+        <div className="relative z-[2] flex h-[23%] min-h-[104px] w-full shrink-0 flex-col">
         <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-black/40 shadow-2xl backdrop-blur-3xl lg:flex-row lg:items-stretch lg:gap-6 lg:rounded-t-[2rem] lg:px-4 lg:pt-3 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
