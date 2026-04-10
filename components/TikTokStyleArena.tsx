@@ -2568,10 +2568,12 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* TikTok Live : split plein écran + overlays absolus */}
-      <div className="relative min-h-0 flex-1 overflow-hidden bg-[#08080A]">
+      {/* TikTok Live : vidéo zone haute + chat pleine largeur en dessous (sans chevauchement) */}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#08080A]">
         {dailyRoomUrl ? (
-          <div className="absolute inset-0">
+          <div
+            className={`relative z-[1] w-full overflow-hidden ${beefEnded ? 'min-h-0 flex-1' : 'h-[40%] min-h-[200px] shrink-0'}`}
+          >
             <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
               {/* LEFT — Participant A (moitié gauche) */}
               <motion.div
@@ -2794,7 +2796,7 @@ export function TikTokStyleArena({
               </motion.div>
 
               {/* CENTER — Médiateur (bulle prestige jaune, z-50) */}
-              <div className="pointer-events-auto absolute left-1/2 top-[35%] z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
+              <div className="pointer-events-auto absolute left-1/2 top-1/2 z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -2851,7 +2853,7 @@ export function TikTokStyleArena({
                       type="button"
                       onClick={() => emitTapSupport('M')}
                       aria-label="Envoyer du soutien au médiateur"
-                      className="relative h-[170px] w-[170px] shrink-0 overflow-hidden rounded-full border-4 border-yellow-300 bg-yellow-500 shadow-[0_0_20px_rgba(255,215,0,0.8)] transition-transform active:scale-[0.98]"
+                      className="relative h-[min(170px,32dvh)] w-[min(170px,32dvh)] shrink-0 overflow-hidden rounded-full border-4 border-yellow-300 bg-yellow-500 shadow-[0_0_20px_rgba(255,215,0,0.8)] transition-transform active:scale-[0.98]"
                     >
                       {mediatorParticipant?.videoTrack ? (
                         <ParticipantVideo
@@ -3100,8 +3102,10 @@ export function TikTokStyleArena({
             )}
           </div>
         ) : (
-        /* Placeholder — split plein écran TikTok Live (sans room) */
-        <div className="absolute inset-0">
+        /* Placeholder — même hauteur vidéo que avec room */
+        <div
+          className={`relative z-[1] w-full overflow-hidden ${beefEnded ? 'min-h-0 flex-1' : 'h-[40%] min-h-[200px] shrink-0'}`}
+        >
           <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
           {debaters[0] ? (
             <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]">
@@ -3169,14 +3173,14 @@ export function TikTokStyleArena({
           )}
 
           {/* Médiateur — bulle 170px prestige (jaune) */}
-          <div className="pointer-events-auto absolute left-1/2 top-[35%] z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
+          <div className="pointer-events-auto absolute left-1/2 top-1/2 z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.3 }}
               className="relative flex flex-col items-center gap-2"
             >
-              <div className="flex h-[170px] w-[170px] shrink-0 items-center justify-center rounded-full border-4 border-yellow-300 bg-yellow-500 text-4xl shadow-[0_0_20px_rgba(255,215,0,0.8)]">
+              <div className="flex h-[min(170px,32dvh)] w-[min(170px,32dvh)] shrink-0 items-center justify-center rounded-full border-4 border-yellow-300 bg-yellow-500 text-4xl shadow-[0_0_20px_rgba(255,215,0,0.8)]">
                 👤
               </div>
               <button
@@ -3425,10 +3429,10 @@ export function TikTokStyleArena({
         </>
       )}
 
-      {/* ── Dock social — pilule translucide flottante ── */}
+      {/* ── Dock social — pleine largeur, collé au bas, sans chevauchement vidéo ── */}
       {!beefEnded && (
-        <div className="pointer-events-none absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-4 right-4 z-50 lg:left-[12%] lg:right-[12%]">
-        <div className="pointer-events-auto flex max-h-[min(32vh,260px)] min-h-0 flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-2xl backdrop-blur-3xl lg:flex-row lg:items-stretch lg:gap-6 lg:rounded-[2rem] lg:p-4">
+        <div className="relative z-[2] flex min-h-0 w-full flex-1 flex-col">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-black/40 shadow-2xl backdrop-blur-3xl lg:flex-row lg:items-stretch lg:gap-6 lg:rounded-t-[2rem] lg:px-4 lg:pt-3 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             aria-live="polite"
