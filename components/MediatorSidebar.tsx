@@ -112,13 +112,14 @@ export function MediatorSidebar({
           <motion.aside
             role="dialog"
             aria-label="Commande médiateur"
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 340 }}
-            className="absolute right-4 top-20 z-[131] flex h-[calc(100%-7rem)] max-h-[70vh] w-60 shrink-0 flex-col overflow-hidden rounded-3xl border border-gray-800 bg-[#08080A]/90 p-4 backdrop-blur-xl max-lg:right-[max(1rem,env(safe-area-inset-right))] max-lg:top-[max(5rem,calc(env(safe-area-inset-top)+3.25rem))] max-lg:max-h-[min(70%,calc(100dvh-6rem))] max-lg:w-[min(15rem,calc(100vw-2rem))] max-lg:p-3"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 32, stiffness: 380 }}
+            className="fixed inset-x-0 bottom-0 z-[131] mx-auto flex max-h-[55vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border-t border-white/10 bg-[#08080A]/95 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-24px_64px_rgba(0,0,0,0.6)] backdrop-blur-2xl"
           >
-            <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+            <div className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-white/20" />
+            <div className="flex shrink-0 items-center justify-between gap-3 pb-2">
               <span className="font-mono text-xs font-bold tracking-tight text-white/90">
                 Commande
               </span>
