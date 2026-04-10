@@ -2568,16 +2568,14 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* Zone vidéo pleine hauteur — dock social flottant par-dessus */}
-      <div className="relative min-h-0 flex-1 overflow-hidden bg-[#08080A]">
-      <div className="absolute inset-0 bg-[#08080A]">
+      {/* Prestige : colonne vidéo 70% + dock 30% (structure mockup) */}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#08080A]">
         {dailyRoomUrl ? (
-          <>
-            {/* Grille duo + bulle médiateur — géométrie Liquid Luxury */}
-            <div className="absolute inset-0 flex flex-col gap-2 bg-[#08080A] p-2 lg:flex-row lg:items-center lg:justify-center lg:gap-4 lg:p-5">
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="relative flex min-h-0 flex-1 flex-col px-6 mb-6 lg:h-[70%] lg:flex lg:flex-row lg:gap-6">
               {/* LEFT — Participant A */}
               <motion.div
-                className="relative min-h-[36vh] w-full flex-1 overflow-hidden rounded-2xl border border-blue-600 bg-gradient-to-br from-obsidian via-[#0a1020] to-[#001433]/50 shadow-[0_0_15px_rgba(37,99,235,0.4)] lg:h-[70%] lg:max-h-[70vh] lg:min-h-0 lg:w-1/2 lg:max-w-[50%] lg:flex-none lg:rounded-3xl"
+                className="flex-1 rounded-3xl border-2 border-cobalt bg-[#08080A] p-6 relative flex min-h-[280px] flex-col justify-end overflow-hidden transition-all hover:scale-[1.01] lg:min-h-0"
                 animate={
                   rematchSequence
                     ? { x: [0, -5, 5, -4, 4, -3, 3, 0], y: [0, 3, -3, 2, -2, 0] }
@@ -2589,14 +2587,14 @@ export function TikTokStyleArena({
                     : { duration: 0.2 }
                 }
               >
-                <div className="pointer-events-none absolute inset-x-0 top-0 z-[22] flex items-start justify-between gap-2 px-3 pt-3">
+                <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start justify-between gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null);
                     }}
-                    className="pointer-events-auto max-w-[min(100%,14rem)] truncate rounded-full bg-black/55 px-3 py-1.5 text-left font-mono text-sm font-semibold text-white shadow-[0_8px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+                    className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-left font-mono text-xs font-semibold text-white"
                   >
                     {leftPanelName} ({pulseVoicesA})
                   </button>
@@ -2695,7 +2693,7 @@ export function TikTokStyleArena({
                         audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack}
                         muted={leftPanelIsLocal ? true : leftRemoteAudioMuted}
                         mirror={leftPanelIsLocal}
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="absolute inset-0 h-full w-full rounded-3xl object-cover"
                       />
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 py-8">
@@ -2795,8 +2793,8 @@ export function TikTokStyleArena({
                 )}
               </motion.div>
 
-              {/* CENTER — Médiateur (bulle 170px, au-dessus des panneaux) */}
-              <div className="pointer-events-auto absolute left-1/2 top-1/2 z-40 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
+              {/* CENTER — Médiateur (mockup top-[35%]) */}
+              <div className="pointer-events-auto absolute left-1/2 top-[35%] z-40 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -2897,7 +2895,7 @@ export function TikTokStyleArena({
 
               {/* RIGHT — Participant B */}
               <motion.div
-                className="relative min-h-[36vh] w-full flex-1 overflow-hidden rounded-2xl border border-orange-500 bg-gradient-to-br from-obsidian via-[#180808] to-[#331000]/45 shadow-[0_0_15px_rgba(249,115,22,0.4)] lg:h-[70%] lg:max-h-[70vh] lg:min-h-0 lg:w-1/2 lg:max-w-[50%] lg:flex-none lg:rounded-3xl"
+                className="flex-1 rounded-3xl border-2 border-ember bg-[#08080A] p-6 relative flex min-h-[280px] flex-col justify-end overflow-hidden transition-all hover:scale-[1.01] lg:min-h-0"
                 animate={
                   rematchSequence
                     ? { x: [0, 5, -5, 4, -4, 3, -3, 0], y: [0, -3, 3, -2, 2, 0] }
@@ -2910,7 +2908,7 @@ export function TikTokStyleArena({
                 }
               >
                 <div
-                  className={`pointer-events-none absolute inset-x-0 top-0 z-[22] flex items-start gap-2 px-3 pt-3 ${userRole === 'viewer' ? 'justify-between' : 'justify-end'}`}
+                  className={`pointer-events-none absolute right-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start gap-2 ${userRole === 'viewer' ? 'justify-between' : 'justify-end'}`}
                 >
                   {userRole === 'viewer' && (
                     <div className="pointer-events-auto relative flex shrink-0 items-center justify-center">
@@ -2930,7 +2928,7 @@ export function TikTokStyleArena({
                       e.stopPropagation();
                       void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
                     }}
-                    className="pointer-events-auto max-w-[min(100%,14rem)] truncate rounded-full bg-black/55 px-3 py-1.5 text-right font-mono text-sm font-semibold text-white shadow-[0_8px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+                    className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-right font-mono text-xs font-semibold text-white"
                   >
                     {rightPanelName} ({pulseVoicesB})
                   </button>
@@ -3016,7 +3014,7 @@ export function TikTokStyleArena({
                         videoTrack={rightPanel.videoTrack}
                         audioTrack={rightPanel.audioTrack}
                         muted={rightRemoteAudioMuted}
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="absolute inset-0 h-full w-full rounded-3xl object-cover"
                       />
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 py-8">
@@ -3075,33 +3073,52 @@ export function TikTokStyleArena({
                   </div>
                 )}
               </motion.div>
+
+              <div className="pointer-events-none absolute inset-0 z-[45]">
+                <FlyingReactionsLayer
+                  reactions={flyingReactions}
+                  onRemove={(id) => setFlyingReactions((prev) => prev.filter((r) => r.id !== id))}
+                />
+                <AnimatePresence>
+                  {giftPrestigeFlash > 0 && (
+                    <motion.div
+                      key={giftPrestigeFlash}
+                      initial={{ opacity: 0.5 }}
+                      animate={{ opacity: 0 }}
+                      transition={{ duration: 0.9, ease: 'easeOut' }}
+                      className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(251,191,36,0.42),transparent_55%)]"
+                    />
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
 
             {/* Joining indicator */}
             {isJoining && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-30">
-                <div className="bg-black/90 rounded-xl px-6 py-4 flex items-center gap-3">
-                  <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-                  <span className="text-white font-semibold">Connexion en cours...</span>
+              <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60">
+                <div className="flex items-center gap-3 rounded-xl bg-black/90 px-6 py-4">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                  <span className="font-semibold text-white">Connexion en cours...</span>
                 </div>
               </div>
             )}
             {callError && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-900/90 border border-red-500 rounded-xl px-4 py-2 z-30">
-                <span className="text-red-300 text-sm">⚠️ {callError}</span>
+              <div className="absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-xl border border-red-500 bg-red-900/90 px-4 py-2">
+                <span className="text-sm text-red-300">⚠️ {callError}</span>
               </div>
             )}
-          </>
+          </div>
         ) : (
-        /* Placeholder — grille duo (sans Daily) */
-        <div className="relative flex h-full w-full flex-col gap-2 bg-[#08080A] p-2 lg:flex-row lg:items-center lg:justify-center lg:gap-4 lg:p-5">
+        /* Placeholder — même grille Prestige que Daily (sans room) */
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="relative flex min-h-0 flex-1 flex-col px-6 mb-6 lg:h-[70%] lg:flex lg:flex-row lg:gap-6">
           {debaters[0] ? (
-            <div className="relative min-h-[36vh] w-full flex-1 overflow-hidden rounded-2xl border border-blue-600 bg-gradient-to-br from-cobalt-600/15 to-obsidian shadow-[0_0_15px_rgba(37,99,235,0.4)] lg:h-[70%] lg:max-h-[70vh] lg:min-h-0 lg:w-1/2 lg:max-w-[50%] lg:flex-none lg:rounded-3xl">
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-[22] flex items-start justify-between gap-2 px-3 pt-3">
+            <div className="flex-1 rounded-3xl border-2 border-cobalt bg-[#08080A] p-6 relative flex min-h-[280px] flex-col justify-end overflow-hidden transition-all hover:scale-[1.01] lg:min-h-0">
+              <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => void openProfile(debaters[0].name, debaters[0].id)}
-                  className="pointer-events-auto max-w-[min(100%,14rem)] truncate rounded-full bg-black/55 px-3 py-1.5 text-left font-mono text-sm font-semibold text-white shadow-[0_8px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+                  className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-left font-mono text-xs font-semibold text-white"
                 >
                   {debaters[0].name} ({pulseVoicesA})
                 </button>
@@ -3174,8 +3191,8 @@ export function TikTokStyleArena({
             </div>
           )}
 
-          {/* Médiateur — bulle 170px (placeholder) */}
-          <div className="pointer-events-auto absolute left-1/2 top-1/2 z-40 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
+          {/* Médiateur — bulle 170px (mockup top-[35%]) */}
+          <div className="pointer-events-auto absolute left-1/2 top-[35%] z-40 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -3221,9 +3238,9 @@ export function TikTokStyleArena({
           </div>
 
           {debaters[1] ? (
-            <div className="relative min-h-[36vh] w-full flex-1 overflow-hidden rounded-2xl border border-orange-500 bg-gradient-to-br from-red-900/20 to-brand-900/20 shadow-[0_0_15px_rgba(249,115,22,0.4)] lg:h-[70%] lg:max-h-[70vh] lg:min-h-0 lg:w-1/2 lg:max-w-[50%] lg:flex-none lg:rounded-3xl">
+            <div className="flex-1 rounded-3xl border-2 border-ember bg-[#08080A] p-6 relative flex min-h-[280px] flex-col justify-end overflow-hidden transition-all hover:scale-[1.01] lg:min-h-0">
               <div
-                className={`pointer-events-none absolute inset-x-0 top-0 z-[22] flex items-start gap-2 px-3 pt-3 ${userRole === 'viewer' ? 'justify-between' : 'justify-end'}`}
+                className={`pointer-events-none absolute right-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start gap-2 ${userRole === 'viewer' ? 'justify-between' : 'justify-end'}`}
               >
                 {userRole === 'viewer' && (
                   <div className="pointer-events-auto relative flex shrink-0 items-center justify-center">
@@ -3240,7 +3257,7 @@ export function TikTokStyleArena({
                 <button
                   type="button"
                   onClick={() => void openProfile(debaters[1].name, debaters[1].id)}
-                  className="pointer-events-auto max-w-[min(100%,14rem)] truncate rounded-full bg-black/55 px-3 py-1.5 text-right font-mono text-sm font-semibold text-white shadow-[0_8px_28px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+                  className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-right font-mono text-xs font-semibold text-white"
                 >
                   {debaters[1].name} ({pulseVoicesB})
                 </button>
@@ -3300,9 +3317,9 @@ export function TikTokStyleArena({
               </div>
             </div>
           )}
+          </div>
         </div>
-        )} {/* end placeholder conditional */}
-      </div>
+        )}
 
       {/* ── Top Overlay — TikTok-style header (zone vidéo uniquement) ── */}
       <div className="absolute left-0 right-0 top-0 z-30 bg-transparent p-2 sm:p-3">
@@ -3447,34 +3464,14 @@ export function TikTokStyleArena({
         </>
       )}
 
-      {/* ── Réactions volantes sur la zone vidéo (comme avant le bandeau strip) ── */}
-      <div className="pointer-events-none absolute inset-0 z-[45]">
-        <FlyingReactionsLayer
-          reactions={flyingReactions}
-          onRemove={(id) => setFlyingReactions((prev) => prev.filter((r) => r.id !== id))}
-        />
-        <AnimatePresence>
-          {giftPrestigeFlash > 0 && (
-            <motion.div
-              key={giftPrestigeFlash}
-              initial={{ opacity: 0.5 }}
-              animate={{ opacity: 0 }}
-              transition={{ duration: 0.9, ease: 'easeOut' }}
-              className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(251,191,36,0.42),transparent_55%)]"
-            />
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* ── Dock social flottant (Liquid Luxury) ── */}
+      {/* ── Dock social Prestige (30% — caisson, pas barre collée) ── */}
       {!beefEnded && (
-        <div className="pointer-events-none absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-6 right-6 z-50 lg:left-1/4 lg:right-1/4">
-          <div className="pointer-events-auto flex max-h-[min(30vh,240px)] min-h-0 flex-row gap-2 overflow-hidden rounded-3xl border border-white/10 bg-black/60 p-2 shadow-[0_24px_64px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+        <div className="h-[30%] min-h-[140px] shrink-0 overflow-hidden rounded-3xl bg-black/60 frosted-titanium backdrop-blur-xl lg:m-6 lg:flex lg:gap-6 lg:border-2 lg:border-gray-800 lg:p-6">
           <div
-            className="pointer-events-auto flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-4 lg:p-0"
             aria-live="polite"
           >
-          <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div
             className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_16%,#000_36%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_16%,#000_36%)]"
           >
@@ -3588,7 +3585,7 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative flex w-[min(11rem,34vw)] shrink-0 flex-col items-center justify-center gap-2 px-1 py-1"
+            className="relative flex w-[min(11rem,34vw)] shrink-0 flex-col items-center justify-center gap-2 border-gray-800 px-2 py-2 lg:w-auto lg:min-w-[10.5rem] lg:border-l lg:pl-6"
           >
             {userRole === 'viewer' && (
               <div className="flex flex-wrap justify-center gap-1">
@@ -3785,7 +3782,6 @@ export function TikTokStyleArena({
               </div>
 
             </div>
-          </div>
           </div>
         </div>
       )}
