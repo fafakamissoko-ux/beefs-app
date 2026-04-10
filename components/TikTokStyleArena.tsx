@@ -2572,10 +2572,10 @@ export function TikTokStyleArena({
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#08080A]">
         {dailyRoomUrl ? (
           <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="relative flex min-h-0 flex-1 flex-col px-6 mb-6 lg:h-[70%] lg:flex lg:flex-row lg:gap-6">
+            <div className={`relative flex min-h-0 flex-1 flex-col gap-4 px-6 pb-6 lg:flex-row lg:gap-6${isHost && mediatorSidebarOpen ? ' lg:pr-[17rem]' : ''}`}>
               {/* LEFT — Participant A */}
               <motion.div
-                className="flex-1 rounded-3xl border-2 border-cobalt bg-[#08080A] p-6 relative flex min-h-[280px] flex-col justify-end overflow-hidden transition-all hover:scale-[1.01] lg:min-h-0"
+                className="flex-1 rounded-3xl border-2 border-cobalt bg-[#08080A] relative flex min-h-[280px] flex-col justify-end overflow-hidden transition-all hover:scale-[1.01] lg:min-h-0"
                 animate={
                   rematchSequence
                     ? { x: [0, -5, 5, -4, 4, -3, 3, 0], y: [0, 3, -3, 2, -2, 0] }
@@ -2696,12 +2696,12 @@ export function TikTokStyleArena({
                         className="absolute inset-0 h-full w-full rounded-3xl object-cover"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 py-8">
-                        <div className="flex aspect-video w-[min(88%,20rem)] max-w-full shrink-0 items-center justify-center rounded-2xl bg-sky-500/15 text-4xl font-black text-white/90 shadow-inner backdrop-blur-sm sm:text-5xl">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl bg-cobalt-500/10">
+                        <span className="text-5xl font-black text-white/80">
                           {leftPanel ? leftPanelName[0].toUpperCase() : '👤'}
-                        </div>
+                        </span>
                         {!leftPanel && (
-                          <div className="frosted-titanium flex items-center gap-2 rounded-full px-3 py-1.5">
+                          <div className="mt-3 flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 backdrop-blur-md">
                             <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
                             <span className="text-white text-[11px] font-semibold tracking-tight">En attente...</span>
                           </div>
@@ -2793,8 +2793,8 @@ export function TikTokStyleArena({
                 )}
               </motion.div>
 
-              {/* CENTER — Médiateur (mockup top-[35%]) */}
-              <div className="pointer-events-auto absolute left-1/2 top-[35%] z-40 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
+              {/* CENTER — Médiateur (bulle prestige jaune, z-50) */}
+              <div className="pointer-events-auto absolute left-1/2 top-[35%] z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -2851,30 +2851,21 @@ export function TikTokStyleArena({
                       type="button"
                       onClick={() => emitTapSupport('M')}
                       aria-label="Envoyer du soutien au médiateur"
-                      className="relative block rounded-full shadow-[0_24px_64px_rgba(0,0,0,0.55),0_0_48px_rgba(59,130,246,0.12)] transition-transform active:scale-[0.98]"
-                      style={{
-                        background:
-                          'linear-gradient(135deg, rgba(59,130,246,0.55), rgba(251,146,60,0.45))',
-                        padding: 2,
-                      }}
+                      className="relative h-[170px] w-[170px] shrink-0 overflow-hidden rounded-full border-4 border-yellow-300 bg-yellow-500 shadow-[0_0_20px_rgba(255,215,0,0.8)] transition-transform active:scale-[0.98]"
                     >
-                      <div className="h-[170px] w-[170px] shrink-0 overflow-hidden rounded-full bg-gray-900">
-                        {mediatorParticipant?.videoTrack ? (
-                          <ParticipantVideo
-                            videoTrack={mediatorParticipant.videoTrack}
-                            audioTrack={mediatorIsLocal ? undefined : mediatorParticipant.audioTrack}
-                            muted={mediatorIsLocal}
-                            mirror={mediatorIsLocal}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center">
-                            <span className="font-mono text-3xl font-black text-white md:text-4xl">
-                              {mediatorName?.[0]?.toUpperCase() || '·'}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                      {mediatorParticipant?.videoTrack ? (
+                        <ParticipantVideo
+                          videoTrack={mediatorParticipant.videoTrack}
+                          audioTrack={mediatorIsLocal ? undefined : mediatorParticipant.audioTrack}
+                          muted={mediatorIsLocal}
+                          mirror={mediatorIsLocal}
+                          className="absolute inset-0 h-full w-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="font-mono text-3xl font-black text-white md:text-4xl">
+                          {mediatorName?.[0]?.toUpperCase() || '·'}
+                        </span>
+                      )}
                     </button>
                   </div>
                   <button
@@ -2895,7 +2886,7 @@ export function TikTokStyleArena({
 
               {/* RIGHT — Participant B */}
               <motion.div
-                className="flex-1 rounded-3xl border-2 border-ember bg-[#08080A] p-6 relative flex min-h-[280px] flex-col justify-end overflow-hidden transition-all hover:scale-[1.01] lg:min-h-0"
+                className="flex-1 rounded-3xl border-2 border-ember bg-[#08080A] relative flex min-h-[280px] flex-col justify-end overflow-hidden transition-all hover:scale-[1.01] lg:min-h-0"
                 animate={
                   rematchSequence
                     ? { x: [0, 5, -5, 4, -4, 3, -3, 0], y: [0, -3, 3, -2, 2, 0] }
@@ -3017,12 +3008,12 @@ export function TikTokStyleArena({
                         className="absolute inset-0 h-full w-full rounded-3xl object-cover"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 py-8">
-                        <div className="flex aspect-video w-[min(88%,20rem)] max-w-full shrink-0 items-center justify-center rounded-2xl bg-orange-500/15 text-4xl font-black text-white/90 shadow-inner backdrop-blur-sm sm:text-5xl">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl bg-ember-500/10">
+                        <span className="text-5xl font-black text-white/80">
                           {rightPanel ? rightPanelName[0].toUpperCase() : '👤'}
-                        </div>
+                        </span>
                         {!rightPanel && (
-                          <div className="frosted-titanium flex items-center gap-2 rounded-full px-3 py-1.5">
+                          <div className="mt-3 flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 backdrop-blur-md">
                             <div className="h-2 w-2 rounded-full bg-red-400 animate-pulse" />
                             <span className="text-white text-[11px] font-semibold tracking-tight">En attente...</span>
                           </div>
@@ -3111,10 +3102,10 @@ export function TikTokStyleArena({
         ) : (
         /* Placeholder — même grille Prestige que Daily (sans room) */
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="relative flex min-h-0 flex-1 flex-col px-6 mb-6 lg:h-[70%] lg:flex lg:flex-row lg:gap-6">
+          <div className={`relative flex min-h-0 flex-1 flex-col gap-4 px-6 pb-6 lg:flex-row lg:gap-6${isHost && mediatorSidebarOpen ? ' lg:pr-[17rem]' : ''}`}>
           {debaters[0] ? (
-            <div className="flex-1 rounded-3xl border-2 border-cobalt bg-[#08080A] p-6 relative flex min-h-[280px] flex-col justify-end overflow-hidden transition-all hover:scale-[1.01] lg:min-h-0">
-              <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start justify-between gap-2">
+            <div className="flex-1 rounded-3xl border-2 border-cobalt bg-[#08080A] relative flex min-h-[280px] flex-col justify-end overflow-hidden transition-all hover:scale-[1.01] lg:min-h-0">
+              <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-2rem)] items-start justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => void openProfile(debaters[0].name, debaters[0].id)}
@@ -3135,17 +3126,10 @@ export function TikTokStyleArena({
                   </div>
                 )}
               </div>
-              <div className="absolute inset-0 flex items-center justify-center p-6">
-                <motion.div
-                  initial={{ scale: 0.96, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-                  className={`flex aspect-video w-full max-w-md items-center justify-center rounded-2xl bg-gradient-to-br from-cobalt-500/25 to-ember-500/20 text-5xl font-black text-white/90 shadow-inner backdrop-blur-md ${
-                    speakingTurnTarget === debaters[0]?.id ? 'border-2 border-green-400' : 'border border-blue-400/40'
-                  }`}
-                >
-                  👤
-                </motion.div>
+              <div className={`absolute inset-0 flex items-center justify-center rounded-3xl bg-cobalt-500/10 text-5xl font-black text-white/80 ${
+                speakingTurnTarget === debaters[0]?.id ? 'ring-2 ring-inset ring-green-400' : ''
+              }`}>
+                👤
               </div>
               <AnimatePresence>
                 {speakingTurnTarget === debaters[0]?.id && timerRunning && (
@@ -3191,18 +3175,16 @@ export function TikTokStyleArena({
             </div>
           )}
 
-          {/* Médiateur — bulle 170px (mockup top-[35%]) */}
-          <div className="pointer-events-auto absolute left-1/2 top-[35%] z-40 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
+          {/* Médiateur — bulle 170px prestige (jaune) */}
+          <div className="pointer-events-auto absolute left-1/2 top-[35%] z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.3 }}
               className="relative flex flex-col items-center gap-2"
             >
-              <div className="h-[170px] w-[170px] shrink-0 rounded-full bg-gradient-to-br from-cobalt-500 via-ember-500 to-obsidian p-1 shadow-[0_12px_48px_rgba(0,0,0,0.55),0_0_40px_rgba(59,130,246,0.15)]">
-                <div className="flex h-full w-full items-center justify-center rounded-full bg-black text-4xl">
-                  👤
-                </div>
+              <div className="flex h-[170px] w-[170px] shrink-0 items-center justify-center rounded-full border-4 border-yellow-300 bg-yellow-500 text-4xl shadow-[0_0_20px_rgba(255,215,0,0.8)]">
+                👤
               </div>
               <button
                 type="button"
@@ -3238,9 +3220,9 @@ export function TikTokStyleArena({
           </div>
 
           {debaters[1] ? (
-            <div className="flex-1 rounded-3xl border-2 border-ember bg-[#08080A] p-6 relative flex min-h-[280px] flex-col justify-end overflow-hidden transition-all hover:scale-[1.01] lg:min-h-0">
+            <div className="flex-1 rounded-3xl border-2 border-ember bg-[#08080A] relative flex min-h-[280px] flex-col justify-end overflow-hidden transition-all hover:scale-[1.01] lg:min-h-0">
               <div
-                className={`pointer-events-none absolute right-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start gap-2 ${userRole === 'viewer' ? 'justify-between' : 'justify-end'}`}
+                className={`pointer-events-none absolute right-4 top-4 z-[22] flex w-[calc(100%-2rem)] items-start gap-2 ${userRole === 'viewer' ? 'justify-between' : 'justify-end'}`}
               >
                 {userRole === 'viewer' && (
                   <div className="pointer-events-auto relative flex shrink-0 items-center justify-center">
@@ -3262,17 +3244,10 @@ export function TikTokStyleArena({
                   {debaters[1].name} ({pulseVoicesB})
                 </button>
               </div>
-              <div className="absolute inset-0 flex items-center justify-center p-6">
-                <motion.div
-                  initial={{ scale: 0.96, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.1 }}
-                  className={`flex aspect-video w-full max-w-md items-center justify-center rounded-2xl bg-gradient-to-br from-red-500/30 to-brand-400/25 text-5xl font-black text-white/90 shadow-inner backdrop-blur-md ${
-                    speakingTurnTarget === debaters[1]?.id ? 'border-2 border-green-400' : 'border border-orange-400/40'
-                  }`}
-                >
-                  👤
-                </motion.div>
+              <div className={`absolute inset-0 flex items-center justify-center rounded-3xl bg-ember-500/10 text-5xl font-black text-white/80 ${
+                speakingTurnTarget === debaters[1]?.id ? 'ring-2 ring-inset ring-green-400' : ''
+              }`}>
+                👤
               </div>
               <AnimatePresence>
                 {speakingTurnTarget === debaters[1]?.id && timerRunning && (
@@ -3321,8 +3296,8 @@ export function TikTokStyleArena({
         </div>
         )}
 
-      {/* ── Top Overlay — TikTok-style header (zone vidéo uniquement) ── */}
-      <div className="absolute left-0 right-0 top-0 z-30 bg-transparent p-2 sm:p-3">
+      {/* ── Top Overlay — Header (z-[60] au-dessus bulle médiateur z-50) ── */}
+      <div className="absolute left-0 right-0 top-0 z-[60] bg-transparent p-2 sm:p-3">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-transparent lg:from-transparent" />
 
         <div className="relative grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-0.5">
@@ -3464,16 +3439,17 @@ export function TikTokStyleArena({
         </>
       )}
 
-      {/* ── Dock social Prestige (30% — caisson, pas barre collée) ── */}
+      {/* ── Dock social — pilule translucide flottante ── */}
       {!beefEnded && (
-        <div className="h-[30%] min-h-[140px] shrink-0 overflow-hidden rounded-3xl bg-black/60 frosted-titanium backdrop-blur-xl lg:m-6 lg:flex lg:gap-6 lg:border-2 lg:border-gray-800 lg:p-6">
+        <div className="pointer-events-none absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-4 right-4 z-50 lg:left-[12%] lg:right-[12%]">
+        <div className="pointer-events-auto flex max-h-[min(32vh,260px)] min-h-0 flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/40 shadow-2xl backdrop-blur-3xl lg:flex-row lg:items-stretch lg:gap-6 lg:rounded-[2rem] lg:p-4">
           <div
-            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-4 lg:p-0"
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             aria-live="polite"
           >
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div
-            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_16%,#000_36%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_16%,#000_36%)]"
+            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-4 py-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)]"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -3546,7 +3522,7 @@ export function TikTokStyleArena({
               );
             })}
           </div>
-          <div className="relative min-w-0 bg-black/40 px-2 pb-2 pt-1.5 shadow-[0_-8px_32px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+          <div className="relative min-w-0 px-3 pb-2 pt-1">
             <input
               type="text"
               value={chatInput}
@@ -3783,6 +3759,7 @@ export function TikTokStyleArena({
 
             </div>
           </div>
+        </div>
         </div>
       )}
 

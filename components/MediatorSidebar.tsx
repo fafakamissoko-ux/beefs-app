@@ -116,7 +116,7 @@ export function MediatorSidebar({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 340 }}
-            className="absolute right-4 top-20 z-[131] flex h-[70%] w-60 shrink-0 flex-col overflow-hidden rounded-3xl border border-gray-800 bg-[#08080A]/90 p-4 max-lg:right-[max(1rem,env(safe-area-inset-right))] max-lg:top-[max(5rem,calc(env(safe-area-inset-top)+3.25rem))] max-lg:max-h-[min(70%,calc(100dvh-6rem))] max-lg:w-[min(15rem,calc(100vw-2rem))] max-lg:p-3"
+            className="absolute right-4 top-20 z-[131] flex h-[calc(100%-7rem)] max-h-[70vh] w-60 shrink-0 flex-col overflow-hidden rounded-3xl border border-gray-800 bg-[#08080A]/90 p-4 backdrop-blur-xl max-lg:right-[max(1rem,env(safe-area-inset-right))] max-lg:top-[max(5rem,calc(env(safe-area-inset-top)+3.25rem))] max-lg:max-h-[min(70%,calc(100dvh-6rem))] max-lg:w-[min(15rem,calc(100vw-2rem))] max-lg:p-3"
           >
             <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
               <span className="font-mono text-xs font-bold tracking-tight text-white/90">
