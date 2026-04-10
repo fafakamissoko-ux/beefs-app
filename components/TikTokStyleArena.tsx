@@ -2572,10 +2572,10 @@ export function TikTokStyleArena({
       <div className="relative min-h-0 flex-1 overflow-hidden bg-[#08080A]">
         {dailyRoomUrl ? (
           <div className="absolute inset-0">
-            <div className="absolute inset-0 z-0 flex h-full w-full flex-col sm:flex-row">
+            <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
               {/* LEFT — Participant A (moitié gauche) */}
               <motion.div
-                className="relative h-1/2 w-full overflow-hidden bg-[#08080A] sm:h-full sm:w-1/2"
+                className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]"
                 animate={
                   rematchSequence
                     ? { x: [0, -5, 5, -4, 4, -3, 3, 0], y: [0, 3, -3, 2, -2, 0] }
@@ -2886,7 +2886,7 @@ export function TikTokStyleArena({
 
               {/* RIGHT — Participant B (moitié droite) */}
               <motion.div
-                className="relative h-1/2 w-full overflow-hidden bg-[#08080A] sm:h-full sm:w-1/2 sm:border-l sm:border-white/20"
+                className="pointer-events-auto relative h-full w-1/2 overflow-hidden border-l border-white/20 bg-[#08080A]"
                 animate={
                   rematchSequence
                     ? { x: [0, 5, -5, 4, -4, 3, -3, 0], y: [0, -3, 3, -2, 2, 0] }
@@ -3102,9 +3102,9 @@ export function TikTokStyleArena({
         ) : (
         /* Placeholder — split plein écran TikTok Live (sans room) */
         <div className="absolute inset-0">
-          <div className="absolute inset-0 z-0 flex h-full w-full flex-col sm:flex-row">
+          <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
           {debaters[0] ? (
-            <div className="relative h-1/2 w-full overflow-hidden bg-[#08080A] sm:h-full sm:w-1/2">
+            <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]">
               <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-2rem)] items-start justify-between gap-2">
                 <button
                   type="button"
@@ -3154,7 +3154,7 @@ export function TikTokStyleArena({
               </AnimatePresence>
             </div>
           ) : (
-            <div className="relative h-1/2 w-full overflow-hidden bg-[#08080A] sm:h-full sm:w-1/2">
+            <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]">
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-cobalt-500/5">
                 <motion.div 
                   animate={{ scale: [1, 1.05, 1] }}
@@ -3213,7 +3213,7 @@ export function TikTokStyleArena({
           </div>
 
           {debaters[1] ? (
-            <div className="relative h-1/2 w-full overflow-hidden bg-[#08080A] sm:h-full sm:w-1/2 sm:border-l sm:border-white/20">
+            <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden border-l border-white/20 bg-[#08080A]">
               <div
                 className={`pointer-events-none absolute right-4 top-4 z-[22] flex w-[calc(100%-2rem)] items-start gap-2 ${userRole === 'viewer' ? 'justify-between' : 'justify-end'}`}
               >
@@ -3265,7 +3265,7 @@ export function TikTokStyleArena({
               </AnimatePresence>
             </div>
           ) : (
-            <div className="relative h-1/2 w-full overflow-hidden bg-[#08080A] sm:h-full sm:w-1/2 sm:border-l sm:border-white/20">
+            <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden border-l border-white/20 bg-[#08080A]">
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-ember-500/5">
                 <motion.div 
                   animate={{ scale: [1, 1.05, 1] }}
