@@ -67,6 +67,9 @@ type MediatorSidebarProps = {
   onParolePresetSecChange: (sec: number) => void;
   announcementText: string;
   onSetAnnouncement: (text: string) => void;
+  /** Invitations en attente (beef_participants.pending) */
+  pendingInvites: Array<{ userId: string; label: string }>;
+  onOpenInviteFlow?: () => void;
 };
 
 const TILE = 'flex flex-col items-center justify-center gap-1.5 rounded-[2.5rem] border border-white/10 bg-white/5 px-3 py-4 backdrop-blur-3xl transition-all active:scale-[0.97]';
@@ -117,6 +120,8 @@ export function MediatorSidebar({
   onParolePresetSecChange,
   announcementText,
   onSetAnnouncement,
+  pendingInvites,
+  onOpenInviteFlow,
 }: MediatorSidebarProps) {
   const [verdictOpen, setVerdictOpen] = useState(false);
   const [soundboardOpen, setSoundboardOpen] = useState(false);
@@ -124,7 +129,7 @@ export function MediatorSidebar({
   const [announceDraft, setAnnounceDraft] = useState('');
   const [invitePanelOpen, setInvitePanelOpen] = useState(false);
 
-  const INVITE_QUEUE_STUB_COUNT = 3;
+  const pendingInviteCount = pendingInvites.length;
 
   const formatParole = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -190,18 +195,33 @@ export function MediatorSidebar({
                     </span>
                     <span className="font-mono text-[9px] text-white/45">Bientôt · co-hôtes</span>
                   </div>
+                  {onOpenInviteFlow && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenInviteFlow()}
+                      className="mb-2 w-full rounded-2xl border border-cobalt-500/35 bg-cobalt-600/15 py-2.5 font-mono text-[9px] font-black uppercase tracking-widest text-cobalt-100 hover:bg-cobalt-500/25"
+                    >
+                      Inviter un participant
+                    </button>
+                  )}
                   <ul className="max-h-40 space-y-2 overflow-y-auto">
-                    {Array.from({ length: INVITE_QUEUE_STUB_COUNT }, (_, i) => (
-                      <li
-                        key={i}
-                        className="flex items-center justify-between rounded-2xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5"
-                      >
-                        <span className="font-mono text-[11px] text-white/70">Invité {i + 1}</span>
-                        <span className="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[8px] uppercase tracking-wider text-white/50">
-                          En attente
-                        </span>
+                    {pendingInvites.length === 0 ? (
+                      <li className="rounded-2xl border border-dashed border-white/10 px-3 py-4 text-center font-mono text-[10px] text-white/45">
+                        Aucune invitation en attente
                       </li>
-                    ))}
+                    ) : (
+                      pendingInvites.map((inv) => (
+                        <li
+                          key={inv.userId}
+                          className="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5"
+                        >
+                          <span className="min-w-0 truncate font-mono text-[11px] text-white/80">{inv.label}</span>
+                          <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 font-mono text-[8px] uppercase tracking-wider text-white/50">
+                            En attente
+                          </span>
+                        </li>
+                      ))
+                    )}
                   </ul>
                 </motion.div>
               )}
@@ -309,9 +329,11 @@ export function MediatorSidebar({
                 >
                   <Users className={`${TILE_ICON} text-cobalt-300`} strokeWidth={1.2} />
                   <span className={`${TILE_LABEL} text-cobalt-100`}>Invités</span>
-                  <span className="absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-ember-500 px-1 font-mono text-[9px] font-black text-black">
-                    {INVITE_QUEUE_STUB_COUNT}
-                  </span>
+                  {pendingInviteCount > 0 && (
+                    <span className="absolute right-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-ember-500 px-1 font-mono text-[9px] font-black text-black">
+                      {pendingInviteCount > 99 ? '99+' : pendingInviteCount}
+                    </span>
+                  )}
                 </button>
 
                 {/* ── ANNONCE (ticker) ── */}
@@ -336,17 +358,6 @@ export function MediatorSidebar({
                     <div className="grid grid-cols-3 gap-1.5">
                       <button
                         type="button"
-                        onClick={() => onFocusTargetChange(null)}
-                        className={`rounded-[2rem] py-2.5 font-mono text-[8px] font-black uppercase tracking-wide ${
-                          focusTarget === null
-                            ? 'bg-blue-500/35 text-white'
-                            : 'bg-white/5 text-white/65 hover:bg-white/10'
-                        }`}
-                      >
-                        50/50
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => onFocusTargetChange('A')}
                         className={`rounded-[2rem] py-2.5 font-mono text-[8px] font-black uppercase tracking-wide ${
                           focusTarget === 'A'
@@ -355,6 +366,17 @@ export function MediatorSidebar({
                         }`}
                       >
                         Focus A
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onFocusTargetChange(null)}
+                        className={`rounded-[2rem] py-2.5 font-mono text-[8px] font-black uppercase tracking-wide ${
+                          focusTarget === null
+                            ? 'bg-blue-500/35 text-white'
+                            : 'bg-white/5 text-white/65 hover:bg-white/10'
+                        }`}
+                      >
+                        50/50
                       </button>
                       <button
                         type="button"

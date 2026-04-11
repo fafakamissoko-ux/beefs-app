@@ -193,8 +193,14 @@ export function TikTokStyleArena({
   const [auraB, setAuraB] = useState(0);
   const [auraMed, setAuraMed] = useState(0);
   const [auraFeverMed, setAuraFeverMed] = useState(false);
-  /** null = 50/50, A ou B = ce panneau occupe ~80 % de la largeur */
+  /** null = 50/50, A ou B = ce panneau occupe ~80 % de la largeur (synchronisé en broadcast pour tous) */
   const [focusTarget, setFocusTarget] = useState<null | 'A' | 'B'>(null);
+  const focusTargetRef = useRef<null | 'A' | 'B'>(null);
+  useEffect(() => {
+    focusTargetRef.current = focusTarget;
+  }, [focusTarget]);
+
+  const [pendingInvites, setPendingInvites] = useState<Array<{ userId: string; label: string }>>([]);
   const [parolePresetSec, setParolePresetSec] = useState(60);
   const [announcementTicker, setAnnouncementTicker] = useState('');
   const [gloryChallengerSlot, setGloryChallengerSlot] = useState<null | 'A' | 'B'>(null);
@@ -297,6 +303,8 @@ export function TikTokStyleArena({
   /** Colonne emoji / cadeaux / partage — fermeture au tap extérieur */
   const reactionDockRef = useRef<HTMLDivElement>(null);
   const chatMessagesScrollRef = useRef<HTMLDivElement>(null);
+  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+  const lastChatSendSuccessAtRef = useRef(0);
   useEffect(() => {
     if (!showAllReactions && !showGiftPicker) return;
     const onPointerDown = (e: PointerEvent) => {
@@ -329,9 +337,16 @@ export function TikTokStyleArena({
   }, [mediatorSidebarOpen]);
 
   useEffect(() => {
-    const el = chatMessagesScrollRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
+    const id = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const el = chatMessagesScrollRef.current;
+        if (el) {
+          el.scrollTop = el.scrollHeight;
+        }
+        chatMessagesEndRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
+      });
+    });
+    return () => window.cancelAnimationFrame(id);
   }, [visibleMessages]);
 
   useEffect(() => {
@@ -342,6 +357,67 @@ export function TikTokStyleArena({
 
   // Moderator controls — check if current user is the beef creator
   const isHost = userId === host.id;
+
+  const fetchPendingInvites = useCallback(async () => {
+    if (!isHost) return;
+    type ParticipantPendingRow = {
+      user_id: string;
+      users:
+        | { username: string | null; display_name: string | null }
+        | { username: string | null; display_name: string | null }[]
+        | null;
+    };
+    const { data, error } = await supabase
+      .from('beef_participants')
+      .select('user_id, users(username, display_name)')
+      .eq('beef_id', roomId)
+      .eq('invite_status', 'pending');
+    if (error) {
+      console.warn('[Live] Invités en attente:', error.message);
+      return;
+    }
+    const raw = (data ?? []) as unknown as ParticipantPendingRow[];
+    setPendingInvites(
+      raw.map((r) => {
+        const uJoin = r.users;
+        const u = Array.isArray(uJoin) ? uJoin[0] : uJoin;
+        return {
+          userId: r.user_id,
+          label:
+            (u?.display_name && u.display_name.trim()) ||
+            (u?.username && u.username.trim()) ||
+            'Invité',
+        };
+      }),
+    );
+  }, [isHost, roomId]);
+
+  useEffect(() => {
+    if (!isHost || !mediatorSidebarOpen) return;
+    void fetchPendingInvites();
+  }, [isHost, mediatorSidebarOpen, fetchPendingInvites]);
+
+  useEffect(() => {
+    if (!isHost || !roomId) return;
+    const ch = supabase
+      .channel(`beef_participants_live_${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'beef_participants',
+          filter: `beef_id=eq.${roomId}`,
+        },
+        () => {
+          void fetchPendingInvites();
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [isHost, roomId, fetchPendingInvites]);
 
   const goBuyPoints = useCallback(() => {
     openBuyPointsPage(router);
@@ -401,6 +477,13 @@ export function TikTokStyleArena({
         type: 'broadcast',
         event: 'beef_global_timer',
         payload: { active, paused, remainingSec, endsAtMs },
+      })
+      .catch(() => {});
+    void channelRef.current
+      .send({
+        type: 'broadcast',
+        event: 'video_focus',
+        payload: { target: focusTargetRef.current },
       })
       .catch(() => {});
   }, []);
@@ -1370,6 +1453,12 @@ export function TikTokStyleArena({
         if (dA) addPulseVoices('A', dA);
         if (dB) addPulseVoices('B', dB);
       })
+      .on('broadcast', { event: 'video_focus' }, ({ payload }: { payload?: { target?: unknown } }) => {
+        const t = payload?.target;
+        if (t === null || t === 'A' || t === 'B') {
+          setFocusTarget(t);
+        }
+      })
       .on('broadcast', { event: 'beef_global_timer' }, ({ payload }: any) => {
         if (isHostRef.current) return;
         const active = !!payload?.active;
@@ -1515,6 +1604,15 @@ export function TikTokStyleArena({
         if (status === 'SUBSCRIBED') {
           channelRef.current = channel;
           setLiveConnected(true);
+          if (isHostRef.current) {
+            void channel
+              .send({
+                type: 'broadcast',
+                event: 'video_focus',
+                payload: { target: focusTargetRef.current },
+              })
+              .catch(() => {});
+          }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.warn('[Live] Broadcast failed — polling fallback active');
           setLiveConnected(false);
@@ -1543,6 +1641,17 @@ export function TikTokStyleArena({
     router,
     leave,
   ]);
+
+  useEffect(() => {
+    if (!isHost || !liveConnected || !channelRef.current) return;
+    void channelRef.current
+      .send({
+        type: 'broadcast',
+        event: 'video_focus',
+        payload: { target: focusTarget },
+      })
+      .catch(() => {});
+  }, [focusTarget, isHost, liveConnected]);
 
   useEffect(() => {
     if (!liveConnected || !isHost || !timerActive) return;
@@ -2127,6 +2236,7 @@ export function TikTokStyleArena({
     }]);
     setInviteInput('');
     toast(`Invitation envoyée à ${foundUser.display_name || foundUser.username}`, 'success');
+    void fetchPendingInvites();
   };
 
   const handleInviteFromModal = async (invitedUserId: string) => {
@@ -2161,6 +2271,7 @@ export function TikTokStyleArena({
       }]);
     }
     toast('Invitation envoyée !', 'success');
+    void fetchPendingInvites();
   };
 
   const openProfile = async (username: string, knownUserId?: string | null) => {
@@ -2278,6 +2389,13 @@ export function TikTokStyleArena({
     const cleanContent = sanitizeMessage(chatInput);
     if (!cleanContent) return;
 
+    const now = Date.now();
+    const sinceLast = now - lastChatSendSuccessAtRef.current;
+    if (lastChatSendSuccessAtRef.current > 0 && sinceLast < 2200) {
+      toast('Merci d’attendre ~2 s entre deux messages (limite anti-spam).', 'info');
+      return;
+    }
+
     const senderInitial = userName?.[0]?.toUpperCase() || '?';
     const localKey = `${userName}::${cleanContent}`;
     seenMsgKeys.current.add(localKey);
@@ -2300,10 +2418,24 @@ export function TikTokStyleArena({
     if (error || !inserted?.id) {
       seenMsgKeys.current.delete(localKey);
       console.error('[Live] Message insert failed:', error?.message, error);
-      toast('Impossible d\'envoyer le message', 'error');
+      const msg = (error?.message ?? '').toLowerCase();
+      const rls =
+        error?.code === '42501' ||
+        msg.includes('row-level security') ||
+        msg.includes('policy');
+      if (rls) {
+        toast(
+          'Envoi refusé (limite de messages ou droits). Réessaie dans quelques secondes.',
+          'error',
+        );
+      } else {
+        toast('Impossible d’envoyer le message', 'error');
+      }
       setChatInput(cleanContent);
       return;
     }
+
+    lastChatSendSuccessAtRef.current = Date.now();
 
     const localMsg: VisibleMessage = {
       id: inserted.id,
@@ -2312,14 +2444,16 @@ export function TikTokStyleArena({
       timestamp: Date.now(),
       initial: senderInitial,
     };
-    setVisibleMessages(prev => [...prev, localMsg].slice(-80));
+    setVisibleMessages((prev) => [...prev, localMsg].slice(-80));
 
     if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'message',
-        payload: { user_name: userName, content: cleanContent, initial: senderInitial, id: inserted.id },
-      }).catch(() => console.warn('[Live] Message broadcast failed'));
+      channelRef.current
+        .send({
+          type: 'broadcast',
+          event: 'message',
+          payload: { user_name: userName, content: cleanContent, initial: senderInitial, id: inserted.id },
+        })
+        .catch(() => console.warn('[Live] Message broadcast failed'));
     }
     console.log('[Live] Sending message as:', userName, '| userId:', userId?.slice(0, 8));
   };
@@ -3608,6 +3742,8 @@ export function TikTokStyleArena({
             onParolePresetSecChange={setParolePresetSec}
             announcementText={announcementTicker}
             onSetAnnouncement={setAnnouncementTicker}
+            pendingInvites={pendingInvites}
+            onOpenInviteFlow={() => setShowInviteModal(true)}
           />
         </>
       )}
@@ -3623,7 +3759,7 @@ export function TikTokStyleArena({
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div
             ref={chatMessagesScrollRef}
-            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 max-lg:max-h-[min(30dvh,220px)] sm:px-4 sm:py-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] lg:max-h-none"
+            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 max-lg:max-h-[min(30dvh,220px)] sm:px-4 sm:py-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] lg:max-h-[min(32vh,320px)]"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -3695,6 +3831,7 @@ export function TikTokStyleArena({
                 </motion.div>
               );
             })}
+            <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
           </div>
           <div className="relative min-w-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1">
             <input
@@ -3704,7 +3841,7 @@ export function TikTokStyleArena({
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  handleSendMessage();
+                  void handleSendMessage();
                 }
               }}
               placeholder="Message..."

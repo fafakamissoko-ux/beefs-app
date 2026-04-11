@@ -85,18 +85,19 @@ function WheelColumn({ values, value, onChange, format, ariaLabel }: WheelColumn
 
   return (
     <div
-      className="relative w-[4.25rem] shrink-0 overflow-hidden rounded-xl bg-black/40"
+      className="relative w-[4.25rem] shrink-0 overflow-hidden rounded-xl bg-[#121218]/95 ring-1 ring-white/[0.08]"
       style={{ height: VISIBLE_ROWS * ROW_H }}
     >
+      {/* Pas de backdrop-blur ici : il rendait les chiffres illisibles au centre */}
       <div
-        className="pointer-events-none absolute inset-x-1 top-1/2 z-10 h-10 -translate-y-1/2 rounded-lg bg-white/[0.14] backdrop-blur-sm"
+        className="pointer-events-none absolute inset-x-0.5 top-1/2 z-[1] h-10 -translate-y-1/2 rounded-md bg-zinc-800/95 ring-1 ring-white/15"
         aria-hidden
       />
       <div
         ref={scrollerRef}
         role="listbox"
         aria-label={ariaLabel}
-        className="hide-scrollbar h-full overflow-y-auto overscroll-contain"
+        className="hide-scrollbar relative z-[2] h-full overflow-y-auto overscroll-contain"
         onScroll={scheduleFlush}
         onPointerDown={() => {
           draggingRef.current = true;
@@ -114,7 +115,7 @@ function WheelColumn({ values, value, onChange, format, ariaLabel }: WheelColumn
           const selected = v === value;
           return (
             <button
-              key={v}
+              key={`${ariaLabel}-${v}`}
               type="button"
               role="option"
               aria-selected={selected}
@@ -123,10 +124,10 @@ function WheelColumn({ values, value, onChange, format, ariaLabel }: WheelColumn
                 const j = values.indexOf(v);
                 if (j >= 0) scrollToIndex(j, 'smooth');
               }}
-              className={`flex h-10 w-full shrink-0 items-center justify-center font-mono text-sm tabular-nums transition-[opacity,transform,font-weight] ${
+              className={`flex h-10 w-full shrink-0 touch-manipulation items-center justify-center font-mono text-sm tabular-nums outline-none transition-[opacity,transform,font-weight] focus:outline-none focus-visible:outline-none ${
                 selected
                   ? 'scale-105 text-base font-bold text-white'
-                  : 'text-[13px] font-medium text-white/30'
+                  : 'text-[13px] font-medium text-white/35'
               }`}
             >
               {format(v)}
