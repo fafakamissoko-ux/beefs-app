@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useFeatureGuide } from '@/hooks/useFeatureGuide';
@@ -70,6 +71,16 @@ export function FeatureGuide({
   const { visible, dismiss } = useFeatureGuide(id);
   const show = visible && !suppress;
 
+  /** Desktop : bulle ancrée ; mobile : carte fixe au-dessus du dock pour éviter les chevauchements */
+  const [isLg, setIsLg] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const sync = () => setIsLg(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
   const bgClass = variant === 'dark'
     ? 'bg-[#1a1a2e] border-brand-500/30'
     : 'bg-white border-gray-200';
@@ -89,11 +100,16 @@ export function FeatureGuide({
           animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          className={`absolute z-[120] ${getTooltipPosition(position, align)}`}
-          style={{ width: 220 }}
+          className={
+            isLg
+              ? `absolute z-[120] w-[220px] max-w-[min(220px,calc(100vw-1.5rem))] ${getTooltipPosition(position, align)}`
+              : 'fixed left-1/2 top-auto z-[90] w-[min(320px,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)] -translate-x-1/2 bottom-[max(12rem,calc(28dvh+env(safe-area-inset-bottom)+3.25rem))]'
+          }
         >
           <div className={`relative rounded-xl border px-3.5 py-2.5 shadow-xl backdrop-blur-sm ${bgClass}`}>
-            <div className={`absolute w-0 h-0 border-[6px] ${getArrowPosition(position, align)} ${arrowBorderDir[position]}`} />
+            {isLg ? (
+              <div className={`absolute w-0 h-0 border-[6px] ${getArrowPosition(position, align)} ${arrowBorderDir[position]}`} />
+            ) : null}
 
             <button
               type="button"

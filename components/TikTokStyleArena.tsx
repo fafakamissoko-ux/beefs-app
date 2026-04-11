@@ -723,9 +723,10 @@ export function TikTokStyleArena({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  /** Pas de bulles « onboarding » quand la salle est déjà active */
+  /** Pas de bulles « onboarding » quand la salle est déjà active ou pendant la connexion Daily */
   const featureGuideSuppress =
-    isJoined && (remoteParticipants.length > 0 || timerActive);
+    isJoining ||
+    (isJoined && (remoteParticipants.length > 0 || timerActive));
 
   useEffect(() => {
     challengersEverJoinedRef.current = false;
@@ -3088,7 +3089,7 @@ export function TikTokStyleArena({
 
             {/* Joining indicator */}
             {isJoining && (
-              <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60">
+              <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/60">
                 <div className="flex items-center gap-3 rounded-xl bg-black/90 px-6 py-4">
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
                   <span className="font-semibold text-white">Connexion en cours...</span>
@@ -3431,15 +3432,15 @@ export function TikTokStyleArena({
 
       {/* ── Dock social — pleine largeur, collé au bas, sans chevauchement vidéo ── */}
       {!beefEnded && (
-        <div className="relative z-[40] flex h-[28%] min-h-[118px] w-full shrink-0 flex-col overflow-visible">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible rounded-t-3xl border-x border-t border-white/10 bg-black/40 shadow-2xl backdrop-blur-3xl lg:flex-row lg:items-stretch lg:gap-6 lg:rounded-t-[2rem] lg:px-4 lg:pt-3 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="relative z-[40] flex h-[28%] min-h-[118px] max-lg:min-h-[132px] w-full shrink-0 flex-col overflow-visible">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible rounded-t-3xl border-x border-t border-white/10 bg-black/40 shadow-2xl backdrop-blur-3xl max-lg:gap-1 lg:flex-row lg:items-stretch lg:gap-6 lg:rounded-t-[2rem] lg:px-4 lg:pt-3 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             aria-live="polite"
           >
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div
-            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-4 py-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)]"
+            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 max-lg:max-h-[min(22dvh,140px)] sm:px-4 sm:py-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] lg:max-h-none"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -3512,7 +3513,7 @@ export function TikTokStyleArena({
               );
             })}
           </div>
-          <div className="relative min-w-0 px-3 pb-2 pt-1">
+          <div className="relative min-w-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1">
             <input
               type="text"
               value={chatInput}
@@ -3551,7 +3552,7 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[120] flex w-[min(11rem,34vw)] shrink-0 flex-col items-center justify-center gap-2 overflow-visible border-gray-800 px-2 py-2 lg:w-auto lg:min-w-[10.5rem] lg:border-l lg:pl-6"
+            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-visible border-t border-white/10 px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:border-t-0 lg:border-l lg:border-gray-800 lg:px-2 lg:py-2 lg:pl-6"
           >
             {userRole === 'viewer' && (
               <div className="flex flex-wrap justify-center gap-1">
