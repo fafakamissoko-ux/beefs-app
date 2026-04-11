@@ -56,6 +56,8 @@ type MediatorSidebarProps = {
   mediatorCamEnabled?: boolean;
   onMediatorToggleMic?: () => void | Promise<void>;
   onMediatorToggleCam?: () => void | Promise<void>;
+  isFocusMode?: boolean;
+  onToggleFocus?: () => void;
 };
 
 const TILE = 'flex flex-col items-center justify-center gap-1.5 rounded-[2.5rem] border border-white/10 bg-white/5 px-3 py-4 backdrop-blur-3xl transition-all active:scale-[0.97]';
@@ -98,6 +100,8 @@ export function MediatorSidebar({
   mediatorCamEnabled,
   onMediatorToggleMic,
   onMediatorToggleCam,
+  isFocusMode,
+  onToggleFocus,
 }: MediatorSidebarProps) {
   const [verdictOpen, setVerdictOpen] = useState(false);
   const [soundboardOpen, setSoundboardOpen] = useState(false);
@@ -240,6 +244,18 @@ export function MediatorSidebar({
                   )}
                 </AnimatePresence>
 
+                {/* ── FOCUS (col-span-2) ── */}
+                {onToggleFocus && (
+                  <button
+                    type="button"
+                    onClick={onToggleFocus}
+                    className={`${TILE_WIDE} ${isFocusMode ? 'border-blue-400/40 bg-blue-500/10' : ''}`}
+                  >
+                    <Maximize2 className={`${TILE_ICON} text-blue-400`} strokeWidth={1.2} />
+                    <span className={`${TILE_LABEL} text-blue-200`}>{isFocusMode ? 'Split 50/50' : 'Focus 80/20'}</span>
+                  </button>
+                )}
+
                 {/* ── CHRONO (Timer) ── */}
                 {timerActive && (
                   <button
@@ -351,8 +367,9 @@ export function MediatorSidebar({
               </AnimatePresence>
 
               {/* ═══ TIME DIALS ═══ */}
-              {timerActive && (
-                <section className="mt-5 space-y-4 border-t border-white/[0.06] pt-4">
+              <section className="mt-5 space-y-4 border-t border-white/[0.06] pt-4">
+                {timerActive && (
+                <div className="space-y-4">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="font-mono text-[10px] font-semibold tracking-tight text-white/75">Temps débat</h3>
                     <div className="flex gap-1">
@@ -396,8 +413,46 @@ export function MediatorSidebar({
                     onDelta={(d) => setParoleDurationSec((p) => clampParole(p + d))}
                     ariaLabel="Durée du prochain tour de parole"
                   />
-                </section>
-              )}
+                </div>
+                )}
+
+                {/* Tour de parole — toujours visible même avant le lancement */}
+                {!timerActive && (
+                  <div className="space-y-3">
+                    <h3 className="font-mono text-[10px] font-semibold tracking-tight text-white/75">Tour de parole</h3>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[9px] text-white/60">Pas molette</span>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setJogStepSec(5)}
+                          className={`rounded-[2.5rem] px-2 py-0.5 font-mono text-[8px] font-black uppercase ${
+                            jogStepSec === 5 ? 'bg-ember-500/35 text-ember-100' : 'border border-white/12 bg-white/5 text-white/85'
+                          }`}
+                        >
+                          5s
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setJogStepSec(10)}
+                          className={`rounded-[2.5rem] px-2 py-0.5 font-mono text-[8px] font-black uppercase ${
+                            jogStepSec === 10 ? 'bg-ember-500/35 text-ember-100' : 'border border-white/12 bg-white/5 text-white/85'
+                          }`}
+                        >
+                          10s
+                        </button>
+                      </div>
+                    </div>
+                    <TimeJogDial
+                      display={formatParole(paroleDurationSec)}
+                      subtitle="Durée parole (molette)"
+                      stepSec={jogStepSec}
+                      onDelta={(d) => setParoleDurationSec((p) => clampParole(p + d))}
+                      ariaLabel="Durée du prochain tour de parole"
+                    />
+                  </div>
+                )}
+              </section>
 
               {/* ═══ CHALLENGERS ═══ */}
               {remoteRows.length > 0 && (

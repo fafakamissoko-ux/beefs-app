@@ -732,21 +732,31 @@ export function TikTokStyleArena({
   };
 
   // ── Aura decay (−1 toutes les 500ms) ──
+  const auraFeverRef = useRef(false);
+  useEffect(() => { auraFeverRef.current = auraFeverMed; }, [auraFeverMed]);
+
   useEffect(() => {
     const iv = setInterval(() => {
       setAuraA((v) => Math.max(0, v - 1));
       setAuraB((v) => Math.max(0, v - 1));
-      setAuraMed((v) => {
-        if (v >= 100 && !auraFeverMed) {
-          setAuraFeverMed(true);
-          setTimeout(() => { setAuraFeverMed(false); setAuraMed(0); }, 15_000);
-          return 100;
-        }
-        return auraFeverMed ? v : Math.max(0, v - 1);
-      });
+      if (!auraFeverRef.current) {
+        setAuraMed((v) => Math.max(0, v - 1));
+      }
     }, 500);
     return () => clearInterval(iv);
-  }, [auraFeverMed]);
+  }, []);
+
+  // Auto-Fever trigger
+  useEffect(() => {
+    if (auraMed >= 100 && !auraFeverMed) {
+      setAuraFeverMed(true);
+      const t = setTimeout(() => {
+        setAuraFeverMed(false);
+        setAuraMed(0);
+      }, 15_000);
+      return () => clearTimeout(t);
+    }
+  }, [auraMed, auraFeverMed]);
 
   const auraIntensityA = Math.round(15 + (auraA / 100) * 45);
   const auraOpacityA = (0.2 + (auraA / 100) * 0.6).toFixed(2);
@@ -2624,6 +2634,14 @@ export function TikTokStyleArena({
                     : { duration: 0.2 }
                 }
               >
+                {/* Aura gauge badge (host only) */}
+                {isHost && auraA > 0 && (
+                  <div className="pointer-events-none absolute bottom-3 left-3 z-[25] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
+                    <div className="h-1.5 rounded-full bg-blue-500 transition-all duration-300" style={{ width: `${Math.max(8, auraA * 0.5)}px` }} />
+                    <span className="font-mono text-[8px] font-bold tabular-nums text-blue-300">{auraA}%</span>
+                    {auraA >= 100 && <span className="text-[8px] font-black text-blue-200 animate-pulse">PRÊT</span>}
+                  </div>
+                )}
                 <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start justify-between gap-2">
                   <button
                     type="button"
@@ -2905,6 +2923,14 @@ export function TikTokStyleArena({
                         </span>
                       )}
                     </button>
+                    {/* Aura gauge badge (host only) */}
+                    {isHost && auraMed > 0 && (
+                      <div className="pointer-events-none absolute -bottom-1 left-1/2 z-[26] flex -translate-x-1/2 items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
+                        <div className="h-1.5 rounded-full bg-yellow-400 transition-all duration-300" style={{ width: `${Math.max(8, auraMed * 0.4)}px` }} />
+                        <span className="font-mono text-[8px] font-bold tabular-nums text-yellow-200">{auraMed}%</span>
+                        {auraFeverMed && <span className="text-[8px] font-black text-yellow-100 animate-pulse">FEVER</span>}
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -2937,6 +2963,14 @@ export function TikTokStyleArena({
                     : { duration: 0.2 }
                 }
               >
+                {/* Aura gauge badge (host only) */}
+                {isHost && auraB > 0 && (
+                  <div className="pointer-events-none absolute bottom-3 right-3 z-[25] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
+                    <div className="h-1.5 rounded-full bg-orange-500 transition-all duration-300" style={{ width: `${Math.max(8, auraB * 0.5)}px` }} />
+                    <span className="font-mono text-[8px] font-bold tabular-nums text-orange-300">{auraB}%</span>
+                    {auraB >= 100 && <span className="text-[8px] font-black text-orange-200 animate-pulse">PRÊT</span>}
+                  </div>
+                )}
                 <div
                   className={`pointer-events-none absolute right-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start gap-2 ${userRole === 'viewer' ? 'justify-between' : 'justify-end'}`}
                 >
@@ -3460,6 +3494,8 @@ export function TikTokStyleArena({
             mediatorCamEnabled={camEnabled}
             onMediatorToggleMic={() => void toggleMic()}
             onMediatorToggleCam={() => void toggleCam()}
+            isFocusMode={isFocusMode}
+            onToggleFocus={() => setIsFocusMode((v) => !v)}
           />
         </>
       )}
@@ -3586,7 +3622,7 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-visible border-t border-white/10 px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:border-t-0 lg:border-l lg:border-gray-800 lg:px-2 lg:py-2 lg:pl-6"
+            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-visible px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
             {userRole === 'viewer' && (
               <div className="flex flex-wrap justify-center gap-1">
