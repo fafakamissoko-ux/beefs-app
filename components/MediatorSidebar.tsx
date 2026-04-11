@@ -2,14 +2,28 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PanelRightClose, UserX, Mic, MicOff, Play, Video, VideoOff } from 'lucide-react';
+import {
+  X,
+  Gavel,
+  Maximize2,
+  MicOff,
+  Mic,
+  Timer,
+  Megaphone,
+  Users,
+  Music,
+  Octagon,
+  Play,
+  Video,
+  VideoOff,
+  UserX,
+} from 'lucide-react';
 import { TimeJogDial } from '@/components/TimeJogDial';
 
 export type MediatorRemoteRow = {
   sessionId: string;
   label: string;
   slot: 'A' | 'B';
-  /** UUID arène — sync broadcast + état signal */
   debaterId: string | null;
   audioOn: boolean;
 };
@@ -18,11 +32,9 @@ type MediatorSidebarProps = {
   open: boolean;
   onClose: () => void;
   timerActive: boolean;
-  /** Chrono global du beef (pas le tour de parole). */
   beefTimerPaused: boolean;
   onPauseBeefTimer: () => void;
   onResumeBeefTimer: () => void;
-  /** Remet le compte à rebours au plafond (ex. 4 h). */
   onResetBeefTimer: () => void;
   startingBeef: boolean;
   onStartBeef: () => void | Promise<void>;
@@ -36,22 +48,28 @@ type MediatorSidebarProps = {
   onPauseSpeakingTurn: () => void;
   onResumeSpeakingTurn: () => void;
   onRestartSpeakingTurn: () => void;
-  /** Temps restant du chrono global (affichage molette) */
   beefTimeFormatted: string;
-  /** muted = micro coupé (Daily + signal si debaterId) */
   onSetChallengerMuted: (sessionId: string, debaterId: string | null, muted: boolean) => void;
   onEjectParticipant: (sessionId: string) => void | Promise<void>;
   onAdjustTime: (deltaSec: number) => void;
-  /** Contrôles perso médiateur (récupération cam/micro) */
   mediatorMicEnabled?: boolean;
   mediatorCamEnabled?: boolean;
   onMediatorToggleMic?: () => void | Promise<void>;
   onMediatorToggleCam?: () => void | Promise<void>;
 };
 
-/**
- * Régie médiateur — Obsidian / Ember, JetBrains Mono.
- */
+const TILE = 'flex flex-col items-center justify-center gap-1.5 rounded-[2.5rem] border border-white/10 bg-white/5 px-3 py-4 backdrop-blur-3xl transition-all active:scale-[0.97]';
+const TILE_WIDE = `${TILE} col-span-2`;
+const TILE_ICON = 'h-5 w-5';
+const TILE_LABEL = 'font-mono text-[9px] font-bold uppercase tracking-widest';
+
+const SOUNDBOARD_SOUNDS = [
+  { emoji: '🔔', label: 'Bell' },
+  { emoji: '📢', label: 'Horn' },
+  { emoji: '😂', label: 'Laugh' },
+  { emoji: '👏', label: 'Clap' },
+];
+
 export function MediatorSidebar({
   open,
   onClose,
@@ -82,6 +100,7 @@ export function MediatorSidebar({
   onMediatorToggleCam,
 }: MediatorSidebarProps) {
   const [verdictOpen, setVerdictOpen] = useState(false);
+  const [soundboardOpen, setSoundboardOpen] = useState(false);
   const [jogStepSec, setJogStepSec] = useState<5 | 10>(5);
   const [paroleDurationSec, setParoleDurationSec] = useState(60);
 
@@ -93,53 +112,63 @@ export function MediatorSidebar({
   };
 
   useEffect(() => {
-    if (!open) setVerdictOpen(false);
+    if (!open) {
+      setVerdictOpen(false);
+      setSoundboardOpen(false);
+    }
   }, [open]);
 
   return (
     <AnimatePresence>
       {open && (
         <>
+          {/* Backdrop */}
           <motion.button
             type="button"
-            aria-label="Fermer la barre de commande"
-            className="fixed inset-0 z-[130] bg-black/50 backdrop-blur-[2px] md:bg-black/30"
+            aria-label="Fermer le command deck"
+            className="fixed inset-0 z-[130] bg-black/50 backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
           />
+
+          {/* Bottom Sheet */}
           <motion.aside
             role="dialog"
-            aria-label="Commande médiateur"
+            aria-label="Command Deck"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 32, stiffness: 380 }}
-            className="fixed inset-x-0 bottom-0 z-[131] mx-auto flex max-h-[55vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border-t border-white/10 bg-[#08080A]/95 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-24px_64px_rgba(0,0,0,0.6)] backdrop-blur-2xl"
+            className="fixed inset-x-0 bottom-0 z-[131] mx-auto flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-t-[2.5rem] border-t border-white/10 bg-[#08080A]/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-24px_64px_rgba(0,0,0,0.6)] backdrop-blur-3xl"
           >
-            <div className="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-white/20" />
-            <div className="flex shrink-0 items-center justify-between gap-3 pb-2">
+            {/* Drag handle */}
+            <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-white/20" />
+
+            {/* Header */}
+            <div className="flex shrink-0 items-center justify-between gap-3 pb-3">
               <span className="font-mono text-xs font-bold tracking-tight text-white/90">
-                Commande
+                Command Deck
               </span>
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/40 text-white hover:bg-white/10"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[2.5rem] border border-white/10 bg-white/5 text-white backdrop-blur-3xl hover:bg-white/10"
                 aria-label="Fermer"
               >
-                <PanelRightClose className="h-4 w-4" strokeWidth={1} />
+                <X className="h-4 w-4" strokeWidth={1} />
               </button>
             </div>
 
-            <div className="shrink-0 px-3 py-3">
-              {!timerActive ? (
+            {/* Launch beef (pre-timer) */}
+            {!timerActive && (
+              <div className="shrink-0 px-1 pb-3">
                 <motion.button
                   type="button"
                   disabled={startingBeef}
                   onClick={() => void onStartBeef()}
-                  className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-[#FF4D00]/80 bg-[#FF4D00] py-3 font-mono text-[11px] font-black uppercase tracking-[0.18em] text-black shadow-[0_0_28px_rgba(255,77,0,0.55)] disabled:cursor-wait disabled:opacity-70"
+                  className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-[2.5rem] border border-[#FF4D00]/80 bg-[#FF4D00] py-3.5 font-mono text-[11px] font-black uppercase tracking-[0.18em] text-black shadow-[0_0_28px_rgba(255,77,0,0.55)] disabled:cursor-wait disabled:opacity-70"
                   animate={
                     startingBeef
                       ? {}
@@ -156,147 +185,228 @@ export function MediatorSidebar({
                   <Play className="h-4 w-4 shrink-0 text-black" strokeWidth={1} aria-hidden />
                   {startingBeef ? 'Lancement…' : 'Lancer le beef'}
                 </motion.button>
-              ) : (
-                <div className="space-y-2">
-                  <div className="rounded-xl border border-white/10 bg-black/35 py-2 text-center font-mono text-[10px] font-bold uppercase tracking-widest text-white/90 lg:py-1.5 lg:text-[8px] lg:tracking-[0.2em]">
-                    Chrono actif
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={beefTimerPaused ? onResumeBeefTimer : onPauseBeefTimer}
-                      className={`rounded-xl border py-2 font-mono text-[9px] font-black uppercase tracking-wide lg:py-1.5 lg:text-[8px] ${
-                        beefTimerPaused
-                          ? 'border-emerald-500/45 bg-emerald-600/20 text-emerald-100 hover:bg-emerald-500/30'
-                          : 'border-amber-500/45 bg-amber-500/15 text-amber-100 hover:bg-amber-500/28'
-                      }`}
+              </div>
+            )}
+
+            {/* Scrollable content */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-4 hide-scrollbar">
+              {/* ═══ TILE GRID ═══ */}
+              <div className="grid grid-cols-2 gap-2.5">
+
+                {/* ── VERDICT (col-span-2) ── */}
+                <button
+                  type="button"
+                  onClick={() => setVerdictOpen((v) => !v)}
+                  className={`${TILE_WIDE} ${verdictOpen ? 'border-amber-400/40 bg-amber-500/10' : ''}`}
+                >
+                  <Gavel className={`${TILE_ICON} text-amber-400`} strokeWidth={1.2} />
+                  <span className={`${TILE_LABEL} text-amber-200`}>Verdict</span>
+                </button>
+
+                {/* Verdict options */}
+                <AnimatePresence initial={false}>
+                  {verdictOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                      className="col-span-2 overflow-hidden"
                     >
-                      {beefTimerPaused ? 'Reprendre' : 'Pause'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={onResetBeefTimer}
-                      className="rounded-xl border border-white/18 bg-white/10 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-white/16 lg:py-1.5 lg:text-[8px]"
-                    >
-                      Reset chrono
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5">
+                      <div className="grid grid-cols-3 gap-2 pt-1 pb-2">
+                        <button
+                          type="button"
+                          onClick={() => { onVerdict('resolved'); setVerdictOpen(false); onClose(); }}
+                          className="rounded-[2.5rem] border border-emerald-400/40 bg-emerald-600/20 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-white hover:bg-emerald-500/35"
+                        >
+                          Résolu
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { onVerdict('closed'); setVerdictOpen(false); onClose(); }}
+                          className="rounded-[2.5rem] border border-white/15 bg-white/8 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-white hover:bg-white/15"
+                        >
+                          Clos
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { onVerdict('rematch'); setVerdictOpen(false); onClose(); }}
+                          className="rounded-[2.5rem] border border-ember-500/40 bg-ember-600/20 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-ember-100 hover:bg-ember-500/35"
+                        >
+                          Rematch
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* ── CHRONO (Timer) ── */}
+                {timerActive && (
+                  <button
+                    type="button"
+                    onClick={beefTimerPaused ? onResumeBeefTimer : onPauseBeefTimer}
+                    className={`${TILE} ${beefTimerPaused ? 'border-emerald-400/30 bg-emerald-500/10' : 'border-amber-400/30 bg-amber-500/10'}`}
+                  >
+                    <Timer className={`${TILE_ICON} ${beefTimerPaused ? 'text-emerald-400' : 'text-amber-400'}`} strokeWidth={1.2} />
+                    <span className={`${TILE_LABEL} text-white`}>{beefTimerPaused ? 'Reprendre' : 'Pause'}</span>
+                    <span className="font-mono text-[11px] font-bold tabular-nums text-white/70">{beefTimeFormatted}</span>
+                  </button>
+                )}
+
+                {/* ── MUTE A/B ── */}
+                <button
+                  type="button"
+                  onClick={() => void onMediatorToggleMic?.()}
+                  className={`${TILE} ${mediatorMicEnabled ? '' : 'border-red-500/30 bg-red-500/10'}`}
+                >
+                  {mediatorMicEnabled ? (
+                    <Mic className={`${TILE_ICON} text-white`} strokeWidth={1.2} />
+                  ) : (
+                    <MicOff className={`${TILE_ICON} text-red-400`} strokeWidth={1.2} />
+                  )}
+                  <span className={`${TILE_LABEL} text-white/80`}>Mon micro</span>
+                </button>
+
+                {/* ── CAM ── */}
+                <button
+                  type="button"
+                  onClick={() => void onMediatorToggleCam?.()}
+                  className={`${TILE} ${mediatorCamEnabled ? '' : 'border-red-500/30 bg-red-500/10'}`}
+                >
+                  {mediatorCamEnabled ? (
+                    <Video className={`${TILE_ICON} text-white`} strokeWidth={1.2} />
+                  ) : (
+                    <VideoOff className={`${TILE_ICON} text-red-400`} strokeWidth={1.2} />
+                  )}
+                  <span className={`${TILE_LABEL} text-white/80`}>Ma cam</span>
+                </button>
+
+                {/* ── TIME ADJUST ── */}
+                {timerActive && (
+                  <>
                     <button
                       type="button"
                       onClick={() => onAdjustTime(15 * 60)}
-                      className="rounded-xl border border-cobalt-500/40 bg-cobalt-600/20 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-cobalt-500/35 lg:py-1.5 lg:text-[8px]"
+                      className={TILE}
                     >
-                      +15 min
+                      <Timer className={`${TILE_ICON} text-cobalt-400`} strokeWidth={1.2} />
+                      <span className={`${TILE_LABEL} text-white/80`}>+15 min</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => onAdjustTime(30 * 60)}
-                      className="rounded-xl border border-cobalt-500/40 bg-cobalt-600/20 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-cobalt-500/35 lg:py-1.5 lg:text-[8px]"
+                      className={TILE}
                     >
-                      +30 min
+                      <Timer className={`${TILE_ICON} text-cobalt-400`} strokeWidth={1.2} />
+                      <span className={`${TILE_LABEL} text-white/80`}>+30 min</span>
                     </button>
+                  </>
+                )}
+
+                {/* ── SOUNDBOARD ── */}
+                <button
+                  type="button"
+                  onClick={() => setSoundboardOpen((v) => !v)}
+                  className={`${TILE} ${soundboardOpen ? 'border-purple-400/30 bg-purple-500/10' : ''}`}
+                >
+                  <Music className={`${TILE_ICON} text-purple-400`} strokeWidth={1.2} />
+                  <span className={`${TILE_LABEL} text-white/80`}>Sons</span>
+                </button>
+
+                {/* ── FIN DU BEEF ── */}
+                <button
+                  type="button"
+                  onClick={() => setVerdictOpen((v) => !v)}
+                  className={`${TILE} border-red-500/20 bg-red-500/5`}
+                >
+                  <Octagon className={`${TILE_ICON} text-red-500`} strokeWidth={1.2} />
+                  <span className={`${TILE_LABEL} text-red-300`}>Fin</span>
+                </button>
+              </div>
+
+              {/* Soundboard expanded */}
+              <AnimatePresence initial={false}>
+                {soundboardOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <div className="grid grid-cols-4 gap-2 pt-3">
+                      {SOUNDBOARD_SOUNDS.map((s) => (
+                        <button
+                          key={s.label}
+                          type="button"
+                          className="flex flex-col items-center gap-1 rounded-[2.5rem] border border-white/10 bg-white/5 py-3 backdrop-blur-3xl transition-transform active:scale-90"
+                        >
+                          <span className="text-xl">{s.emoji}</span>
+                          <span className="font-mono text-[7px] font-bold uppercase tracking-wider text-white/60">{s.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ═══ TIME DIALS ═══ */}
+              {timerActive && (
+                <section className="mt-5 space-y-4 border-t border-white/[0.06] pt-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="font-mono text-[10px] font-semibold tracking-tight text-white/75">Temps débat</h3>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setJogStepSec(5)}
+                        className={`rounded-[2.5rem] px-2 py-0.5 font-mono text-[8px] font-black uppercase ${
+                          jogStepSec === 5 ? 'bg-ember-500/35 text-ember-100' : 'border border-white/12 bg-white/5 text-white/85'
+                        }`}
+                      >
+                        5s
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setJogStepSec(10)}
+                        className={`rounded-[2.5rem] px-2 py-0.5 font-mono text-[8px] font-black uppercase ${
+                          jogStepSec === 10 ? 'bg-ember-500/35 text-ember-100' : 'border border-white/12 bg-white/5 text-white/85'
+                        }`}
+                      >
+                        10s
+                      </button>
+                    </div>
                   </div>
-                </div>
+                  <TimeJogDial
+                    display={beefTimeFormatted}
+                    stepSec={jogStepSec}
+                    onDelta={onAdjustTime}
+                    quickJumps={[
+                      { label: '−30s', delta: -30 },
+                      { label: '+30s', delta: 30 },
+                      { label: '+60s', delta: 60 },
+                    ]}
+                    ariaLabel="Ajuster le temps restant du débat"
+                  />
+
+                  <h3 className="font-mono text-[10px] font-semibold tracking-tight text-white/75 pt-2">Tour de parole</h3>
+                  <TimeJogDial
+                    display={formatParole(paroleDurationSec)}
+                    subtitle="Durée parole (molette)"
+                    stepSec={jogStepSec}
+                    onDelta={(d) => setParoleDurationSec((p) => clampParole(p + d))}
+                    ariaLabel="Durée du prochain tour de parole"
+                  />
+                </section>
               )}
-            </div>
 
-            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4 hide-scrollbar">
-              <section className="space-y-2 pb-4">
-                <h3 className="text-[11px] font-semibold tracking-tight text-white/75">Cam / micro</h3>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    title="Micro médiateur"
-                    onClick={() => void onMediatorToggleMic?.()}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-2.5 font-mono text-[10px] font-bold shadow-[0_12px_32px_rgba(0,0,0,0.35)] backdrop-blur-md lg:py-2 ${
-                      mediatorMicEnabled
-                        ? 'bg-white/10 text-white'
-                        : 'bg-red-500/25 text-red-100'
-                    }`}
-                  >
-                    {mediatorMicEnabled ? (
-                      <Mic className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1.2} />
-                    ) : (
-                      <MicOff className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1.2} />
-                    )}
-                    <span className="lg:sr-only">Micro</span>
-                  </button>
-                  <button
-                    type="button"
-                    title="Caméra médiateur"
-                    onClick={() => void onMediatorToggleCam?.()}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-2.5 font-mono text-[10px] font-bold shadow-[0_12px_32px_rgba(0,0,0,0.35)] backdrop-blur-md lg:py-2 ${
-                      mediatorCamEnabled
-                        ? 'bg-white/10 text-white'
-                        : 'bg-red-500/25 text-red-100'
-                    }`}
-                  >
-                    {mediatorCamEnabled ? (
-                      <Video className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1.2} />
-                    ) : (
-                      <VideoOff className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1.2} />
-                    )}
-                    <span className="lg:sr-only">Cam</span>
-                  </button>
-                </div>
-              </section>
-              <section className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-[11px] font-semibold tracking-tight text-white/75">Temps débat</h3>
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setJogStepSec(5)}
-                      className={`rounded-xl px-1.5 py-0.5 font-mono text-[8px] font-black uppercase lg:px-1 lg:py-0.5 lg:text-[7px] ${
-                        jogStepSec === 5 ? 'bg-ember-500/35 text-ember-100' : 'border border-white/12 bg-white/12 text-white/85'
-                      }`}
-                    >
-                      5s
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setJogStepSec(10)}
-                      className={`rounded-xl px-1.5 py-0.5 font-mono text-[8px] font-black uppercase lg:px-1 lg:py-0.5 lg:text-[7px] ${
-                        jogStepSec === 10 ? 'bg-ember-500/35 text-ember-100' : 'border border-white/12 bg-white/12 text-white/85'
-                      }`}
-                    >
-                      10s
-                    </button>
-                  </div>
-                </div>
-                <TimeJogDial
-                  display={beefTimeFormatted}
-                  stepSec={jogStepSec}
-                  onDelta={onAdjustTime}
-                  quickJumps={[
-                    { label: '−30s', delta: -30 },
-                    { label: '+30s', delta: 30 },
-                    { label: '+60s', delta: 60 },
-                  ]}
-                  ariaLabel="Ajuster le temps restant du débat"
-                  className="lg:gap-1.5"
-                  dialClassName="lg:h-[6.25rem] lg:w-[6.25rem]"
-                />
-              </section>
-
-              <section className="space-y-2 border-t border-white/[0.06] pt-4">
-                <h3 className="text-[11px] font-semibold tracking-tight text-white/75">Tour de parole</h3>
-                <TimeJogDial
-                  display={formatParole(paroleDurationSec)}
-                  subtitle="Durée parole (molette · pas libre)"
-                  stepSec={jogStepSec}
-                  onDelta={(d) => setParoleDurationSec((p) => clampParole(p + d))}
-                  ariaLabel="Durée du prochain tour de parole"
-                  className="lg:gap-1.5"
-                  dialClassName="lg:h-[6.25rem] lg:w-[6.25rem]"
-                />
-              </section>
-
+              {/* ═══ CHALLENGERS ═══ */}
               {remoteRows.length > 0 && (
-                <section className="space-y-2">
-                  <h3 className="text-[11px] font-semibold tracking-tight text-white/75">Challengers</h3>
-                  <ul className="space-y-3">
+                <section className="mt-5 space-y-3 border-t border-white/[0.06] pt-4">
+                  <div className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5 text-white/60" strokeWidth={1.2} />
+                    <h3 className="font-mono text-[10px] font-semibold tracking-tight text-white/75">Challengers</h3>
+                  </div>
+                  <ul className="space-y-2.5">
                     {remoteRows.map((row) => {
                       const muted = !row.audioOn;
                       const lockedOut =
@@ -306,35 +416,30 @@ export function MediatorSidebar({
                       return (
                         <li
                           key={row.sessionId}
-                          className="space-y-2 rounded-xl border border-white/[0.12] bg-black/40 p-2.5"
+                          className="space-y-2 rounded-[2.5rem] border border-white/10 bg-white/5 p-3.5 backdrop-blur-3xl"
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="min-w-0 font-mono text-[11px] font-bold text-white lg:text-[10px]">
+                            <span className="min-w-0 font-mono text-[11px] font-bold text-white">
                               <span className="text-ember-400">{row.slot}</span>
                               <span className="text-white/40"> · </span>
                               <span className="truncate">{row.label}</span>
                             </span>
                           </div>
 
-                          <div className="flex gap-1.5 pt-0.5">
-                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-white/55 lg:text-[8px]">
-                              Parole
-                            </span>
-                          </div>
                           {speakingTurnActive && hotMicSpeakerSlot === row.slot ? (
                             <div className="space-y-1.5">
                               <div className="grid grid-cols-2 gap-1.5">
                                 <button
                                   type="button"
                                   onClick={onStopSpeakingTurn}
-                                  className="rounded-xl border border-white/20 bg-white/10 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white transition-colors hover:bg-white/18 lg:py-1.5 lg:text-[8px]"
+                                  className="rounded-[2.5rem] border border-white/15 bg-white/8 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-white/15"
                                 >
                                   Arrêter
                                 </button>
                                 <button
                                   type="button"
                                   onClick={speakingTurnPaused ? onResumeSpeakingTurn : onPauseSpeakingTurn}
-                                  className="rounded-xl border border-amber-500/45 bg-amber-500/15 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-amber-100 transition-colors hover:bg-amber-500/28 lg:py-1.5 lg:text-[8px]"
+                                  className="rounded-[2.5rem] border border-amber-500/40 bg-amber-500/12 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-amber-100 hover:bg-amber-500/25"
                                 >
                                   {speakingTurnPaused ? 'Reprendre' : 'Pause'}
                                 </button>
@@ -342,7 +447,7 @@ export function MediatorSidebar({
                               <button
                                 type="button"
                                 onClick={onRestartSpeakingTurn}
-                                className="w-full rounded-xl border border-cobalt-500/45 bg-cobalt-600/20 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white transition-colors hover:bg-cobalt-500/35 lg:py-1.5 lg:text-[8px]"
+                                className="w-full rounded-[2.5rem] border border-cobalt-500/40 bg-cobalt-600/15 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-cobalt-500/30"
                               >
                                 Relancer le tour
                               </button>
@@ -352,7 +457,7 @@ export function MediatorSidebar({
                               type="button"
                               disabled={speakingTurnActive}
                               onClick={() => onHotMic(row.slot, paroleDurationSec)}
-                              className="flex w-full items-center justify-center rounded-xl border border-ember-500/40 bg-ember-500/15 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-ember-50 transition-colors hover:bg-ember-500/28 disabled:cursor-not-allowed disabled:opacity-35 lg:py-1.5 lg:text-[9px]"
+                              className="flex w-full items-center justify-center rounded-[2.5rem] border border-ember-500/40 bg-ember-500/12 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-ember-50 hover:bg-ember-500/25 disabled:cursor-not-allowed disabled:opacity-35"
                             >
                               Lancer parole · {formatParole(paroleDurationSec)}
                             </button>
@@ -365,39 +470,38 @@ export function MediatorSidebar({
                               onClick={() =>
                                 lockedOut ? undefined : onSetChallengerMuted(row.sessionId, row.debaterId, !muted)
                               }
-                              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border px-2 py-2 font-mono text-[10px] font-bold lg:gap-1 lg:py-1.5 lg:text-[9px] ${
+                              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[2.5rem] border px-2 py-2 font-mono text-[10px] font-bold ${
                                 lockedOut
                                   ? 'cursor-not-allowed border-white/10 bg-black/50 text-white/45'
                                   : muted
-                                    ? 'border-cobalt-500/50 bg-cobalt-600/25 text-white'
-                                    : 'border-white/18 bg-white/12 text-white'
+                                    ? 'border-cobalt-500/40 bg-cobalt-600/15 text-white'
+                                    : 'border-white/15 bg-white/8 text-white'
                               }`}
                             >
                               {lockedOut ? (
                                 <>
                                   <MicOff className="h-3.5 w-3.5 shrink-0 opacity-60" strokeWidth={1} />
-                                  Attendez votre tour
+                                  Attendez
                                 </>
                               ) : muted ? (
                                 <>
                                   <Mic className="h-3.5 w-3.5 shrink-0" strokeWidth={1} />
-                                  Réactiver micro
+                                  Réactiver
                                 </>
                               ) : (
                                 <>
                                   <MicOff className="h-3.5 w-3.5 shrink-0" strokeWidth={1} />
-                                  Couper micro
+                                  Couper
                                 </>
                               )}
                             </button>
                             <button
                               type="button"
-                              title="Expulser le participant"
+                              title="Expulser"
                               onClick={() => void onEjectParticipant(row.sessionId)}
-                              className="flex shrink-0 items-center gap-1 rounded-xl border border-ember-500/50 bg-ember-500/25 px-2.5 py-2 font-mono text-[10px] font-bold text-white hover:bg-ember-500/40 lg:px-2 lg:py-1.5"
+                              className="flex shrink-0 items-center gap-1 rounded-[2.5rem] border border-ember-500/40 bg-ember-500/15 px-3 py-2 font-mono text-[10px] font-bold text-white hover:bg-ember-500/30"
                             >
-                              <UserX className="h-3.5 w-3.5 lg:h-3 lg:w-3" strokeWidth={1} />
-                              <span className="lg:sr-only">Kick</span>
+                              <UserX className="h-3.5 w-3.5" strokeWidth={1} />
                             </button>
                           </div>
                         </li>
@@ -406,66 +510,6 @@ export function MediatorSidebar({
                   </ul>
                 </section>
               )}
-            </div>
-
-            <div className="shrink-0 space-y-2 border-t border-white/[0.12] bg-black/35 px-3 py-3">
-              <p className="px-0.5 font-mono text-[8px] font-semibold uppercase tracking-wider text-white/75 lg:text-[7px] lg:tracking-[0.12em]">
-                Fin du beef — choisis un verdict
-              </p>
-              <button
-                type="button"
-                onClick={() => setVerdictOpen((v) => !v)}
-                className="w-full rounded-xl border border-white/22 bg-white/12 py-2.5 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-white transition-colors hover:bg-white/18 lg:py-2 lg:text-[9px] lg:tracking-[0.14em]"
-              >
-                Terminer le beef
-              </button>
-              <AnimatePresence initial={false}>
-                {verdictOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                    className="overflow-hidden"
-                  >
-                    <div className="flex flex-col gap-1.5 pt-1 font-mono">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onVerdict('resolved');
-                          setVerdictOpen(false);
-                          onClose();
-                        }}
-                        className="rounded-xl border border-emerald-400/55 bg-emerald-600/35 py-2.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-500/50 lg:py-2 lg:text-[9px]"
-                      >
-                        Résolu
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onVerdict('closed');
-                          setVerdictOpen(false);
-                          onClose();
-                        }}
-                        className="rounded-xl border border-white/25 bg-white/14 py-2.5 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/22 lg:py-2 lg:text-[9px]"
-                      >
-                        Clos
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onVerdict('rematch');
-                          setVerdictOpen(false);
-                          onClose();
-                        }}
-                        className="rounded-xl border border-ember-500/60 bg-ember-600/30 py-2.5 text-[10px] font-black uppercase tracking-widest text-ember-100 hover:bg-ember-500/45 lg:py-2 lg:text-[9px]"
-                      >
-                        Rematch
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           </motion.aside>
         </>

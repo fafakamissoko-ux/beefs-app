@@ -19,6 +19,7 @@ import {
   Timer,
   Pause,
   Share2,
+  Sliders,
 } from 'lucide-react';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { ChatPanel } from './ChatPanel';
@@ -186,6 +187,13 @@ export function TikTokStyleArena({
   const [mediatorSidebarOpen, setMediatorSidebarOpen] = useState(false);
   const [showGiftPicker, setShowGiftPicker] = useState(false);
   const [showViewerList, setShowViewerList] = useState(false);
+
+  // ── AURA "FERVEUR SOCIALE" ──
+  const [auraA, setAuraA] = useState(0);
+  const [auraB, setAuraB] = useState(0);
+  const [auraMed, setAuraMed] = useState(0);
+  const [auraFeverMed, setAuraFeverMed] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
 
   // ── END-OF-BEEF STATE ──
   const [beefEnded, setBeefEnded] = useState(false);
@@ -722,6 +730,30 @@ export function TikTokStyleArena({
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
+
+  // ── Aura decay (−1 toutes les 500ms) ──
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setAuraA((v) => Math.max(0, v - 1));
+      setAuraB((v) => Math.max(0, v - 1));
+      setAuraMed((v) => {
+        if (v >= 100 && !auraFeverMed) {
+          setAuraFeverMed(true);
+          setTimeout(() => { setAuraFeverMed(false); setAuraMed(0); }, 15_000);
+          return 100;
+        }
+        return auraFeverMed ? v : Math.max(0, v - 1);
+      });
+    }, 500);
+    return () => clearInterval(iv);
+  }, [auraFeverMed]);
+
+  const auraIntensityA = Math.round(15 + (auraA / 100) * 45);
+  const auraOpacityA = (0.2 + (auraA / 100) * 0.6).toFixed(2);
+  const auraIntensityB = Math.round(15 + (auraB / 100) * 45);
+  const auraOpacityB = (0.2 + (auraB / 100) * 0.6).toFixed(2);
+  const auraIntensityMed = Math.round(20 + (auraMed / 100) * 50);
+  const auraOpacityMed = (0.3 + (auraMed / 100) * 0.7).toFixed(2);
 
   /** Pas de bulles « onboarding » quand la salle est déjà active ou pendant la connexion Daily */
   const featureGuideSuppress =
@@ -1262,8 +1294,11 @@ export function TikTokStyleArena({
   const emitTapSupport = useCallback((target: 'A' | 'B' | 'M') => {
     if (target === 'M') {
       setSupportBurst((p) => ({ ...p, M: p.M + 1 }));
+      setAuraMed((v) => Math.min(100, v + 3));
     } else {
       setSupportBurst((p) => ({ ...p, [target]: p[target] + 1 }));
+      if (target === 'A') setAuraA((v) => Math.min(100, v + 4));
+      else setAuraB((v) => Math.min(100, v + 4));
     }
     const xPercent =
       target === 'A' ? 14 + Math.random() * 16 : target === 'B' ? 70 + Math.random() * 16 : 44 + Math.random() * 12;
@@ -2569,16 +2604,15 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* TikTok Live : vidéo zone haute + chat pleine largeur en dessous (sans chevauchement) */}
+      {/* TikTok Battle : vidéo 60% + chat overlay */}
       <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
         {dailyRoomUrl ? (
-          <div
-            className="relative z-[1] min-h-0 w-full flex-1 overflow-hidden"
-          >
+          <div className="relative z-[1] h-[60%] w-full shrink-0 overflow-hidden">
             <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
-              {/* LEFT — Participant A (moitié gauche) */}
+              {/* LEFT — Participant A */}
               <motion.div
-                className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]"
+                className={`pointer-events-auto relative h-full overflow-hidden bg-[#08080A] transition-all duration-500 ${isFocusMode ? 'w-[80%]' : 'w-1/2'}`}
+                style={{ boxShadow: `inset 0 0 ${auraIntensityA}px rgba(37,99,235,${auraOpacityA})` }}
                 animate={
                   rematchSequence
                     ? { x: [0, -5, 5, -4, 4, -3, 3, 0], y: [0, 3, -3, 2, -2, 0] }
@@ -2854,7 +2888,8 @@ export function TikTokStyleArena({
                       type="button"
                       onClick={() => emitTapSupport('M')}
                       aria-label="Envoyer du soutien au médiateur"
-                      className="relative h-[min(170px,32dvh)] w-[min(170px,32dvh)] shrink-0 overflow-hidden rounded-full border-4 border-yellow-300 bg-yellow-500 shadow-[0_0_20px_rgba(255,215,0,0.8)] transition-transform active:scale-[0.98]"
+                      className={`relative h-[min(170px,32dvh)] w-[min(170px,32dvh)] shrink-0 overflow-hidden rounded-full border-4 border-yellow-300 bg-yellow-500 transition-transform active:scale-[0.98] ${auraFeverMed ? 'saturate-150 brightness-110' : ''}`}
+                      style={{ boxShadow: `0 0 ${auraIntensityMed}px rgba(255,215,0,${auraOpacityMed})` }}
                     >
                       {mediatorParticipant?.videoTrack ? (
                         <ParticipantVideo
@@ -2887,9 +2922,10 @@ export function TikTokStyleArena({
                 </motion.div>
               </div>
 
-              {/* RIGHT — Participant B (moitié droite) */}
+              {/* RIGHT — Participant B */}
               <motion.div
-                className="pointer-events-auto relative h-full w-1/2 overflow-hidden border-l border-white/20 bg-[#08080A]"
+                className={`pointer-events-auto relative h-full overflow-hidden border-l border-white/20 bg-[#08080A] transition-all duration-500 ${isFocusMode ? 'w-[20%]' : 'w-1/2'}`}
+                style={{ boxShadow: `inset 0 0 ${auraIntensityB}px rgba(234,88,12,${auraOpacityB})` }}
                 animate={
                   rematchSequence
                     ? { x: [0, 5, -5, 4, -4, 3, -3, 0], y: [0, -3, 3, -2, 2, 0] }
@@ -3104,9 +3140,7 @@ export function TikTokStyleArena({
           </div>
         ) : (
         /* Placeholder — même hauteur vidéo que avec room */
-        <div
-          className="relative z-[1] min-h-0 w-full flex-1 overflow-hidden"
-        >
+        <div className="relative z-[1] h-[60%] w-full shrink-0 overflow-hidden">
           <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
           {debaters[0] ? (
             <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]">
@@ -3364,7 +3398,7 @@ export function TikTokStyleArena({
                 }
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#08080a]/80 text-ember-300 shadow-[0_8px_28px_rgba(0,0,0,0.45)] backdrop-blur-md transition-colors hover:bg-ember-500/12 lg:bg-transparent lg:text-white lg:shadow-none lg:backdrop-blur-none lg:hover:text-cobalt-100 lg:hover:shadow-[0_0_26px_rgba(59,130,246,0.42)]"
               >
-                <PanelRight className="h-5 w-5" strokeWidth={1.2} aria-hidden />
+                <Sliders className="h-5 w-5" strokeWidth={1.2} aria-hidden />
               </button>
             ) : (
               <button
@@ -3430,10 +3464,10 @@ export function TikTokStyleArena({
         </>
       )}
 
-      {/* ── Dock social — pleine largeur, collé au bas, sans chevauchement vidéo ── */}
+      {/* ── Dock social — overlay massif bas, obstrue le bas des vidéos ── */}
       {!beefEnded && (
-        <div className="relative z-[40] flex h-[28%] min-h-[118px] w-full shrink-0 flex-col overflow-visible max-lg:h-[38%] max-lg:min-h-[152px]">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible rounded-t-3xl border-x border-t border-white/10 bg-black/40 shadow-2xl backdrop-blur-3xl max-lg:gap-1 lg:flex-row lg:items-stretch lg:gap-6 lg:rounded-t-[2rem] lg:px-4 lg:pt-3 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[40] flex h-[45%] min-h-[160px] w-full flex-col justify-end overflow-visible max-lg:h-[50%]">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-stretch lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             aria-live="polite"
