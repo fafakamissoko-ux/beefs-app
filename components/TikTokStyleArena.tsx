@@ -304,7 +304,7 @@ export function TikTokStyleArena({
   const reactionDockRef = useRef<HTMLDivElement>(null);
   const chatMessagesScrollRef = useRef<HTMLDivElement>(null);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
-  const lastChatSendSuccessAtRef = useRef(0);
+  const announcementClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!showAllReactions && !showGiftPicker) return;
     const onPointerDown = (e: PointerEvent) => {
@@ -1459,6 +1459,24 @@ export function TikTokStyleArena({
           setFocusTarget(t);
         }
       })
+      .on('broadcast', { event: 'announcement_banner' }, ({ payload }: { payload?: { text?: string; durationSec?: number } }) => {
+        if (isHostRef.current) return;
+        const raw = String(payload?.text ?? '').trim();
+        if (announcementClearTimerRef.current) {
+          clearTimeout(announcementClearTimerRef.current);
+          announcementClearTimerRef.current = null;
+        }
+        if (!raw) {
+          setAnnouncementTicker('');
+          return;
+        }
+        const d = Math.max(3, Math.min(120, Math.floor(Number(payload?.durationSec) || 12)));
+        setAnnouncementTicker(raw);
+        announcementClearTimerRef.current = setTimeout(() => {
+          setAnnouncementTicker('');
+          announcementClearTimerRef.current = null;
+        }, d * 1000);
+      })
       .on('broadcast', { event: 'beef_global_timer' }, ({ payload }: any) => {
         if (isHostRef.current) return;
         const active = !!payload?.active;
@@ -1689,11 +1707,11 @@ export function TikTokStyleArena({
       } catch {}
     };
 
-    const interval = setInterval(poll, 3000);
+    const interval = setInterval(poll, 8000);
     return () => clearInterval(interval);
   }, [roomId, userId, addRemoteMessage]);
 
-  // 3) Reaction polling fallback — queries DB for new reactions every 3s
+  // 3) Reaction polling fallback — requêtes DB (intervalle large pour limiter la charge réseau)
   useEffect(() => {
     let lastReactionTs = new Date().toISOString();
 
@@ -1717,7 +1735,7 @@ export function TikTokStyleArena({
       } catch {}
     };
 
-    const interval = setInterval(pollReactions, 3000);
+    const interval = setInterval(pollReactions, 8000);
     return () => clearInterval(interval);
   }, [roomId, userId, addRemoteReaction]);
 
@@ -2383,18 +2401,68 @@ export function TikTokStyleArena({
     }
   };
 
+  const clearAnnouncementBanner = useCallback(() => {
+    if (announcementClearTimerRef.current) {
+      clearTimeout(announcementClearTimerRef.current);
+      announcementClearTimerRef.current = null;
+    }
+    setAnnouncementTicker('');
+    if (channelRef.current && isHost) {
+      void channelRef.current
+        .send({
+          type: 'broadcast',
+          event: 'announcement_banner',
+          payload: { text: '', durationSec: 0 },
+        })
+        .catch(() => {});
+    }
+  }, [isHost]);
+
+  const publishAnnouncementBanner = useCallback(
+    (text: string, durationSec: number) => {
+      const trimmed = text.trim();
+      if (announcementClearTimerRef.current) {
+        clearTimeout(announcementClearTimerRef.current);
+        announcementClearTimerRef.current = null;
+      }
+      if (!trimmed) {
+        clearAnnouncementBanner();
+        return;
+      }
+      const d = Math.max(3, Math.min(120, Math.floor(durationSec) || 12));
+      setAnnouncementTicker(trimmed);
+      announcementClearTimerRef.current = setTimeout(() => {
+        setAnnouncementTicker('');
+        announcementClearTimerRef.current = null;
+      }, d * 1000);
+      if (channelRef.current && isHost) {
+        void channelRef.current
+          .send({
+            type: 'broadcast',
+            event: 'announcement_banner',
+            payload: { text: trimmed, durationSec: d },
+          })
+          .catch(() => {});
+      }
+    },
+    [isHost, clearAnnouncementBanner],
+  );
+
+  useEffect(
+    () => () => {
+      if (announcementClearTimerRef.current) {
+        clearTimeout(announcementClearTimerRef.current);
+        announcementClearTimerRef.current = null;
+      }
+    },
+    [],
+  );
+
   const handleSendMessage = async () => {
     if (!chatInput.trim()) return;
 
     const cleanContent = sanitizeMessage(chatInput);
     if (!cleanContent) return;
-
-    const now = Date.now();
-    const sinceLast = now - lastChatSendSuccessAtRef.current;
-    if (lastChatSendSuccessAtRef.current > 0 && sinceLast < 2200) {
-      toast('Merci d’attendre ~2 s entre deux messages (limite anti-spam).', 'info');
-      return;
-    }
 
     const senderInitial = userName?.[0]?.toUpperCase() || '?';
     const localKey = `${userName}::${cleanContent}`;
@@ -2434,8 +2502,6 @@ export function TikTokStyleArena({
       setChatInput(cleanContent);
       return;
     }
-
-    lastChatSendSuccessAtRef.current = Date.now();
 
     const localMsg: VisibleMessage = {
       id: inserted.id,
@@ -3741,17 +3807,21 @@ export function TikTokStyleArena({
             parolePresetSec={parolePresetSec}
             onParolePresetSecChange={setParolePresetSec}
             announcementText={announcementTicker}
-            onSetAnnouncement={setAnnouncementTicker}
+            onPublishAnnouncement={publishAnnouncementBanner}
+            onClearAnnouncement={clearAnnouncementBanner}
             pendingInvites={pendingInvites}
-            onOpenInviteFlow={() => setShowInviteModal(true)}
+            onOpenInviteFlow={() => {
+              setMediatorSidebarOpen(false);
+              setShowInviteModal(true);
+            }}
           />
         </>
       )}
 
       {/* ── Dock social — overlay massif bas, obstrue le bas des vidéos ── */}
       {!beefEnded && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[40] flex h-[45%] min-h-[160px] w-full flex-col justify-end overflow-hidden max-lg:h-[50%]">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[40] flex h-[45%] min-h-[160px] w-full flex-col justify-end overflow-visible max-lg:h-[50%]">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             aria-live="polite"
@@ -3872,7 +3942,7 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-hidden px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-visible px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
             {userRole === 'viewer' && (
               <div className="flex flex-wrap justify-center gap-1">
@@ -3897,7 +3967,7 @@ export function TikTokStyleArena({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 8 }}
-                    className="pointer-events-auto absolute bottom-full right-0 z-[200] mb-2 max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] origin-bottom-right overflow-y-auto overscroll-contain rounded-xl border border-white/[0.1] bg-[#0c0c0f]/98 p-2 pt-1.5 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-0 sm:translate-x-0"
+                    className="pointer-events-auto absolute bottom-full right-0 z-[300] mb-2 max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] origin-bottom-right overflow-y-auto overscroll-contain rounded-xl border border-white/[0.1] bg-[#0c0c0f]/98 p-2 pt-1.5 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-0 sm:translate-x-0"
                   >
                     <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2">
                       <span className="pl-0.5 text-[11px] font-semibold text-white/75">Réactions</span>
@@ -3935,7 +4005,7 @@ export function TikTokStyleArena({
                     initial={{ opacity: 0, y: 10, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                    className="pointer-events-auto absolute bottom-full right-0 z-[200] mb-2 w-[220px] rounded-xl border border-white/12 bg-[#0c0c0f]/98 p-3 pt-2 shadow-2xl backdrop-blur-xl"
+                    className="pointer-events-auto absolute bottom-full right-0 z-[300] mb-2 w-[220px] rounded-xl border border-white/12 bg-[#0c0c0f]/98 p-3 pt-2 shadow-2xl backdrop-blur-xl"
                   >
                     <div className="mb-2 flex items-start justify-between gap-2 border-b border-white/[0.08] pb-2">
                       <p className="min-w-0 flex-1 pl-0.5 text-[11px] font-semibold leading-snug text-white/75">

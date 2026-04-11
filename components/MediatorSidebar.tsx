@@ -66,7 +66,8 @@ type MediatorSidebarProps = {
   parolePresetSec: number;
   onParolePresetSecChange: (sec: number) => void;
   announcementText: string;
-  onSetAnnouncement: (text: string) => void;
+  onPublishAnnouncement: (text: string, durationSec: number) => void;
+  onClearAnnouncement: () => void;
   /** Invitations en attente (beef_participants.pending) */
   pendingInvites: Array<{ userId: string; label: string }>;
   onOpenInviteFlow?: () => void;
@@ -119,7 +120,8 @@ export function MediatorSidebar({
   parolePresetSec,
   onParolePresetSecChange,
   announcementText,
-  onSetAnnouncement,
+  onPublishAnnouncement,
+  onClearAnnouncement,
   pendingInvites,
   onOpenInviteFlow,
 }: MediatorSidebarProps) {
@@ -128,6 +130,7 @@ export function MediatorSidebar({
   const [announceEditorOpen, setAnnounceEditorOpen] = useState(false);
   const [announceDraft, setAnnounceDraft] = useState('');
   const [invitePanelOpen, setInvitePanelOpen] = useState(false);
+  const [announceDurationSec, setAnnounceDurationSec] = useState(12);
 
   const pendingInviteCount = pendingInvites.length;
 
@@ -187,24 +190,24 @@ export function MediatorSidebar({
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-                  className="mb-3 overflow-hidden rounded-[1.75rem] border border-white/12 bg-black/50 px-3 py-2 backdrop-blur-xl"
+                  className="mb-4 overflow-hidden rounded-[1.75rem] border border-white/12 bg-black/50 px-3 pb-4 pt-3 backdrop-blur-xl"
                 >
-                  <div className="mb-2 flex items-center justify-between">
+                  <div className="mb-3 flex items-center justify-between gap-2">
                     <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/80">
                       File invités
                     </span>
-                    <span className="font-mono text-[9px] text-white/45">Bientôt · co-hôtes</span>
+                    <span className="shrink-0 font-mono text-[9px] text-white/45">Co-hôtes</span>
                   </div>
                   {onOpenInviteFlow && (
                     <button
                       type="button"
                       onClick={() => onOpenInviteFlow()}
-                      className="mb-2 w-full rounded-2xl border border-cobalt-500/35 bg-cobalt-600/15 py-2.5 font-mono text-[9px] font-black uppercase tracking-widest text-cobalt-100 hover:bg-cobalt-500/25"
+                      className="mb-4 w-full rounded-2xl border border-cobalt-500/35 bg-cobalt-600/15 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-cobalt-100 hover:bg-cobalt-500/25"
                     >
                       Inviter un participant
                     </button>
                   )}
-                  <ul className="max-h-40 space-y-2 overflow-y-auto">
+                  <ul className="max-h-40 space-y-2 overflow-y-auto pb-1">
                     {pendingInvites.length === 0 ? (
                       <li className="rounded-2xl border border-dashed border-white/10 px-3 py-4 text-center font-mono text-[10px] text-white/45">
                         Aucune invitation en attente
@@ -498,11 +501,30 @@ export function MediatorSidebar({
                         placeholder="Message du bandeau…"
                         className="mb-2 w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white placeholder-white/35 focus:border-amber-400/40 focus:outline-none"
                       />
+                      <p className="mb-1.5 font-mono text-[8px] font-bold uppercase tracking-wider text-white/40">
+                        Durée d&apos;affichage
+                      </p>
+                      <div className="mb-3 flex flex-wrap gap-1.5">
+                        {([5, 10, 15, 30, 60] as const).map((sec) => (
+                          <button
+                            key={sec}
+                            type="button"
+                            onClick={() => setAnnounceDurationSec(sec)}
+                            className={`rounded-full px-2.5 py-1 font-mono text-[8px] font-black uppercase tracking-wide ${
+                              announceDurationSec === sec
+                                ? 'bg-amber-500/40 text-amber-50'
+                                : 'border border-white/12 bg-white/5 text-white/65 hover:bg-white/10'
+                            }`}
+                          >
+                            {sec}s
+                          </button>
+                        ))}
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => {
-                            onSetAnnouncement(announceDraft.trim());
+                            onPublishAnnouncement(announceDraft.trim(), announceDurationSec);
                             setAnnounceEditorOpen(false);
                           }}
                           className="rounded-[2rem] border border-amber-500/50 bg-amber-500/20 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-amber-50 hover:bg-amber-500/35"
@@ -512,7 +534,7 @@ export function MediatorSidebar({
                         <button
                           type="button"
                           onClick={() => {
-                            onSetAnnouncement('');
+                            onClearAnnouncement();
                             setAnnounceDraft('');
                           }}
                           className="rounded-[2rem] border border-white/15 bg-white/5 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-white/75 hover:bg-white/10"
