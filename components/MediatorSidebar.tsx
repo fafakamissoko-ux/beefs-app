@@ -139,7 +139,6 @@ export function MediatorSidebar({
   const [announceEditorOpen, setAnnounceEditorOpen] = useState(false);
   const [announceDraft, setAnnounceDraft] = useState('');
   const [invitePanelOpen, setInvitePanelOpen] = useState(false);
-  const [inviteComposerOpen, setInviteComposerOpen] = useState(false);
   const [announceDurationSec, setAnnounceDurationSec] = useState(12);
   /** Chrono beef : réglage fin (+15/+30 + roulette) replié par défaut pour libérer le scroll */
   const [beefTimerExpanded, setBeefTimerExpanded] = useState(false);
@@ -159,7 +158,6 @@ export function MediatorSidebar({
       setSoundboardOpen(false);
       setAnnounceEditorOpen(false);
       setInvitePanelOpen(false);
-      setInviteComposerOpen(false);
       setBeefTimerExpanded(false);
       setParoleWheelExpanded(false);
     }
@@ -202,70 +200,6 @@ export function MediatorSidebar({
           >
             {/* Drag handle */}
             <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-white/20" />
-
-            <AnimatePresence initial={false}>
-              {invitePanelOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-                  className="mb-4 overflow-hidden rounded-[1.75rem] border border-white/12 bg-black/50 px-3 pb-4 pt-3 backdrop-blur-xl"
-                >
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/80">
-                      File invités
-                    </span>
-                    <span className="shrink-0 font-mono text-[9px] text-white/45">Co-hôtes</span>
-                  </div>
-                  {onInviteParticipant && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setInviteComposerOpen((v) => !v);
-                        }}
-                        className={`mb-2 w-full rounded-2xl border py-3 font-mono text-[9px] font-black uppercase tracking-widest transition-colors ${
-                          inviteComposerOpen
-                            ? 'border-cobalt-400/50 bg-cobalt-500/25 text-white'
-                            : 'border-cobalt-500/35 bg-cobalt-600/15 text-cobalt-100 hover:bg-cobalt-500/25'
-                        }`}
-                      >
-                        Inviter un participant
-                      </button>
-                      {inviteComposerOpen && (
-                        <MediatorInviteInline
-                          excludeParticipantIds={inviteExcludeParticipantIds}
-                          currentUserId={inviteCurrentUserId}
-                          onInvite={onInviteParticipant}
-                        />
-                      )}
-                    </>
-                  )}
-                  <ul className="max-h-40 space-y-2 overflow-y-auto pb-1">
-                    {pendingInvites.length === 0 ? (
-                      <li className="rounded-2xl border border-dashed border-white/10 px-3 py-4 text-center font-mono text-[10px] text-white/45">
-                        Aucune invitation en attente
-                      </li>
-                    ) : (
-                      pendingInvites.map((inv) => (
-                        <li
-                          key={inv.userId}
-                          className="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5"
-                        >
-                          <span className="min-w-0 truncate font-mono text-[11px] text-white/80">{inv.label}</span>
-                          <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 font-mono text-[8px] uppercase tracking-wider text-white/50">
-                            En attente
-                          </span>
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {/* Header */}
             <div className="flex shrink-0 items-center justify-between gap-3 pb-3">
@@ -446,13 +380,7 @@ export function MediatorSidebar({
                 {/* ── INVITÉS ── */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setInvitePanelOpen((v) => {
-                      const next = !v;
-                      if (!next) setInviteComposerOpen(false);
-                      return next;
-                    })
-                  }
+                  onClick={() => setInvitePanelOpen((v) => !v)}
                   className={`${TILE} relative ${invitePanelOpen ? 'border-cobalt-400/35 bg-cobalt-500/10' : ''}`}
                 >
                   <Users className={`${TILE_ICON} text-cobalt-300`} strokeWidth={1.2} />
@@ -463,6 +391,56 @@ export function MediatorSidebar({
                     </span>
                   )}
                 </button>
+
+                {/* File invités + recherche : sous la tuile (comme Annonce / Verdict) */}
+                <AnimatePresence initial={false}>
+                  {invitePanelOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                      className="col-span-2 overflow-hidden"
+                    >
+                      <div className="flex max-h-[min(52vh,420px)] flex-col gap-3 overflow-y-auto overflow-x-hidden overscroll-contain rounded-[2rem] border border-white/12 bg-black/50 p-3 backdrop-blur-xl [-webkit-overflow-scrolling:touch] touch-pan-y">
+                        <div className="flex shrink-0 items-center justify-between gap-2">
+                          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/80">
+                            File invités
+                          </span>
+                          <span className="shrink-0 font-mono text-[9px] text-white/45">Co-hôtes</span>
+                        </div>
+                        {onInviteParticipant && (
+                          <MediatorInviteInline
+                            excludeParticipantIds={inviteExcludeParticipantIds}
+                            currentUserId={inviteCurrentUserId}
+                            onInvite={onInviteParticipant}
+                          />
+                        )}
+                        <ul className="shrink-0 space-y-2 border-t border-white/10 pt-3">
+                          {pendingInvites.length === 0 ? (
+                            <li className="rounded-2xl border border-dashed border-white/10 px-3 py-4 text-center font-mono text-[10px] text-white/45">
+                              Aucune invitation en attente
+                            </li>
+                          ) : (
+                            pendingInvites.map((inv) => (
+                              <li
+                                key={inv.userId}
+                                className="flex items-start justify-between gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5"
+                              >
+                                <span className="min-w-0 break-words font-mono text-[11px] text-white/85">
+                                  {inv.label}
+                                </span>
+                                <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 font-mono text-[8px] uppercase tracking-wider text-white/50">
+                                  En attente
+                                </span>
+                              </li>
+                            ))
+                          )}
+                        </ul>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* ── ANNONCE (ticker) ── */}
                 <button

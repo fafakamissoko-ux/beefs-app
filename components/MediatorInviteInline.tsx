@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { Search, UserPlus, Check } from 'lucide-react';
+import { Search, UserPlus, Check, Loader2, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
 
@@ -17,11 +17,32 @@ function escapeIlikePattern(q: string): string {
   return q.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
 
+function normalizeSearchQuery(raw: string): string {
+  return raw.trim().replace(/^@+/u, '');
+}
+
+function mergeUserRows(
+  a: MediatorInviteSearchUser[],
+  b: MediatorInviteSearchUser[],
+): MediatorInviteSearchUser[] {
+  const seen = new Set<string>();
+  const out: MediatorInviteSearchUser[] = [];
+  for (const row of [...a, ...b]) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    out.push(row);
+    if (out.length >= 25) break;
+  }
+  return out;
+}
+
 type MediatorInviteInlineProps = {
   excludeParticipantIds: string[];
   currentUserId: string | null | undefined;
   onInvite: (userId: string) => void | Promise<void>;
 };
+
+type SearchPhase = 'idle' | 'debouncing' | 'loading' | 'results' | 'empty' | 'error';
 
 export function MediatorInviteInline({
   excludeParticipantIds,
@@ -32,42 +53,77 @@ export function MediatorInviteInline({
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [invitedUsers, setInvitedUsers] = useState<string[]>([]);
   const [results, setResults] = useState<MediatorInviteSearchUser[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [phase, setPhase] = useState<SearchPhase>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const requestSeq = useRef(0);
 
   useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    const t = window.setTimeout(() => setDebouncedQuery(searchQuery), 160);
     return () => window.clearTimeout(t);
   }, [searchQuery]);
 
+  const normalizedTyping = normalizeSearchQuery(searchQuery);
+  const normalizedDebounced = normalizeSearchQuery(debouncedQuery);
+  const isDebouncing =
+    normalizedTyping.length > 0 && normalizedTyping !== normalizedDebounced;
+
   const runSearch = useCallback(async () => {
-    const q = debouncedQuery.trim();
+    const q = normalizeSearchQuery(debouncedQuery);
     if (!q) {
+      requestSeq.current += 1;
       setResults([]);
-      setSearching(false);
+      setPhase('idle');
+      setErrorMessage(null);
       return;
     }
 
-    setSearching(true);
-    try {
-      const pattern = `%${escapeIlikePattern(q)}%`;
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, username, display_name, avatar_url')
-        .or(`username.ilike.${pattern},display_name.ilike.${pattern}`)
-        .limit(25);
+    const seq = ++requestSeq.current;
+    setPhase('loading');
+    setErrorMessage(null);
 
-      if (error) throw error;
+    const pattern = `%${escapeIlikePattern(q)}%`;
+
+    try {
+      const [byUsername, byDisplayName] = await Promise.all([
+        supabase
+          .from('users')
+          .select('id, username, display_name, avatar_url')
+          .ilike('username', pattern)
+          .limit(20),
+        supabase
+          .from('users')
+          .select('id, username, display_name, avatar_url')
+          .ilike('display_name', pattern)
+          .limit(20),
+      ]);
+
+      if (seq !== requestSeq.current) return;
+
+      const err = byUsername.error || byDisplayName.error;
+      if (err) {
+        console.warn('[MediatorInvite] search users:', err.message, err);
+        setResults([]);
+        setPhase('error');
+        setErrorMessage(
+          'Les suggestions ne sont pas disponibles pour le moment. Vérifie ta connexion et réessaie.',
+        );
+        return;
+      }
 
       const ex = new Set(excludeParticipantIds.filter(Boolean));
-      const rows = (data ?? []) as MediatorInviteSearchUser[];
-      const filtered = rows.filter(
-        (u) => !ex.has(u.id) && u.id !== currentUserId,
-      );
-      setResults(filtered);
-    } catch {
+      const merged = mergeUserRows(
+        (byUsername.data ?? []) as MediatorInviteSearchUser[],
+        (byDisplayName.data ?? []) as MediatorInviteSearchUser[],
+      ).filter((u) => !ex.has(u.id) && u.id !== currentUserId);
+
+      setResults(merged);
+      setPhase(merged.length > 0 ? 'results' : 'empty');
+    } catch (e) {
+      if (seq !== requestSeq.current) return;
+      console.warn('[MediatorInvite] search exception:', e);
       setResults([]);
-    } finally {
-      setSearching(false);
+      setPhase('error');
+      setErrorMessage('Erreur lors de la recherche. Réessaie dans un instant.');
     }
   }, [debouncedQuery, excludeParticipantIds, currentUserId]);
 
@@ -84,38 +140,73 @@ export function MediatorInviteInline({
       setSearchQuery('');
       setDebouncedQuery('');
       setResults([]);
+      setPhase('idle');
+      setErrorMessage(null);
     }, 900);
   };
 
+  const feedbackLine = (() => {
+    if (!normalizedTyping) {
+      return 'Commence à taper un @pseudo ou un nom : les suggestions apparaissent ici.';
+    }
+    if (isDebouncing) {
+      return 'Recherche des profils…';
+    }
+    if (phase === 'loading') {
+      return 'Chargement des suggestions…';
+    }
+    if (phase === 'error' && errorMessage) {
+      return errorMessage;
+    }
+    if (phase === 'empty') {
+      return `Aucun profil pour « ${normalizedDebounced} ». Essaie un autre pseudo ou nom.`;
+    }
+    if (phase === 'results') {
+      return `${results.length} suggestion${results.length > 1 ? 's' : ''} — touche une ligne pour inviter.`;
+    }
+    return null;
+  })();
+
   return (
-    <div className="mt-1 space-y-3 border-t border-white/10 pt-3">
+    <div className="space-y-3 border-t border-white/10 pt-3">
       <p className="font-mono text-[9px] leading-relaxed text-white/50">
-        Invite un co-hôte : recherche par pseudo ou nom affiché.
+        Invite un co-hôte : pseudo (@optionnel) ou nom affiché.
       </p>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
         <input
-          type="search"
+          type="text"
+          inputMode="search"
+          enterKeyHint="search"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Rechercher…"
-          className="w-full rounded-2xl border border-white/12 bg-black/40 py-2.5 pl-9 pr-3 font-mono text-[11px] text-white placeholder-white/30 focus:border-cobalt-500/50 focus:outline-none"
+          placeholder="@pseudo ou nom…"
           autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          className="w-full rounded-2xl border border-white/12 bg-black/40 py-2.5 pl-9 pr-3 font-mono text-[11px] text-white placeholder-white/30 focus:border-cobalt-500/50 focus:outline-none"
         />
       </div>
 
-      <div className="max-h-44 space-y-1.5 overflow-y-auto pr-0.5">
-        {!debouncedQuery.trim() ? (
-          <p className="py-4 text-center font-mono text-[10px] text-white/40">
-            Tape un nom ou un @pseudo
-          </p>
-        ) : searching ? (
-          <p className="py-4 text-center font-mono text-[10px] text-white/45">Recherche…</p>
-        ) : results.length === 0 ? (
-          <p className="py-4 text-center font-mono text-[10px] text-white/45">
-            Aucun résultat
-          </p>
-        ) : (
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex min-h-[2.5rem] items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.03] px-2.5 py-2 font-mono text-[10px] leading-snug text-white/55"
+      >
+        {(isDebouncing || phase === 'loading') && (
+          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-cobalt-400" aria-hidden />
+        )}
+        {phase === 'error' && (
+          <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />
+        )}
+        <span className="min-w-0 flex-1">{feedbackLine}</span>
+      </div>
+
+      <div className="space-y-1.5 pr-0.5">
+        {normalizedTyping.length > 0 &&
+          !isDebouncing &&
+          phase !== 'loading' &&
+          phase === 'results' &&
           results.map((u) => {
             const isInvited = invitedUsers.includes(u.id);
             const label = u.display_name?.trim() || u.username;
@@ -132,7 +223,7 @@ export function MediatorInviteInline({
                     : 'border-white/10 bg-white/[0.04] hover:border-cobalt-500/40 hover:bg-cobalt-500/10'
                 }`}
               >
-                <div className="flex min-w-0 items-center gap-2.5">
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
                   <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full">
                     {u.avatar_url ? (
                       <Image
@@ -148,9 +239,13 @@ export function MediatorInviteInline({
                       </div>
                     )}
                   </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-mono text-[11px] font-bold text-white">{label}</p>
-                    <p className="truncate font-mono text-[9px] text-white/45">@{u.username}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words font-mono text-[11px] font-bold leading-tight text-white">
+                      {label}
+                    </p>
+                    <p className="break-all font-mono text-[9px] leading-tight text-cobalt-200/80">
+                      @{u.username}
+                    </p>
                   </div>
                 </div>
                 {isInvited ? (
@@ -163,8 +258,7 @@ export function MediatorInviteInline({
                 )}
               </motion.button>
             );
-          })
-        )}
+          })}
       </div>
     </div>
   );
