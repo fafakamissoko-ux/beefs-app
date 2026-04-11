@@ -1225,6 +1225,12 @@ export function TikTokStyleArena({
     : userName;
 
   const rightPanel = isHost ? sortedRemoteParticipants[1] : nonHostRemotes[0];
+  /** Si le flux local Daily est mappé sur le panneau droit (rare mais possible selon l’ordre des peers). */
+  const rightPanelIsLocal =
+    !isHost &&
+    !!localParticipant &&
+    !!rightPanel &&
+    rightPanel.sessionId === localParticipant.sessionId;
   const rightPanelName = isHost
     ? (sortedRemoteParticipants[1]?.userName || 'Challenger 2')
     : (nonHostRemotes[0]?.userName || 'Challenger 2');
@@ -2878,7 +2884,8 @@ export function TikTokStyleArena({
         )}
         {dailyRoomUrl ? (
           <div className="relative z-[1] h-[60%] w-full shrink-0 overflow-hidden">
-            <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
+            {/* Bandeau haute réservée sous le header z-[60] (chrono / LIVE) pour éviter overlap avec noms + contrôles */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 top-14 z-0 flex h-auto flex-row max-lg:top-[3.35rem] lg:top-12">
               {/* LEFT — Participant A */}
               <motion.div
                 className={`pointer-events-auto relative h-full overflow-hidden bg-[#08080A] transition-all duration-500 ${focusTarget === 'A' ? 'w-[80%]' : focusTarget === 'B' ? 'w-[20%]' : 'w-1/2'}`}
@@ -3108,7 +3115,7 @@ export function TikTokStyleArena({
                   <button
                     type="button"
                     onClick={() => emitTapSupport('A')}
-                    className="absolute inset-0 z-[4] touch-manipulation bg-transparent"
+                    className="absolute inset-x-0 top-0 bottom-28 z-[4] touch-manipulation bg-transparent"
                     aria-label="Envoyer du soutien au challenger A"
                   />
                 )}
@@ -3146,10 +3153,14 @@ export function TikTokStyleArena({
                   </div>
                 )}
                 {leftPanelIsLocal && !isViewer && (
-                  <div className="absolute bottom-3 right-3 z-20 flex gap-1.5">
+                  <div className="absolute bottom-3 right-3 z-[38] flex gap-1.5">
                     <button
                       type="button"
-                      onClick={toggleMic}
+                      onClick={() => {
+                        requestAnimationFrame(() => {
+                          requestAnimationFrame(() => toggleMic());
+                        });
+                      }}
                       aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
                       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
                     >
@@ -3161,7 +3172,11 @@ export function TikTokStyleArena({
                     </button>
                     <button
                       type="button"
-                      onClick={toggleCam}
+                      onClick={() => {
+                        requestAnimationFrame(() => {
+                          requestAnimationFrame(() => toggleCam());
+                        });
+                      }}
                       aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
                       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
                     >
@@ -3505,7 +3520,7 @@ export function TikTokStyleArena({
                   <button
                     type="button"
                     onClick={() => emitTapSupport('B')}
-                    className="absolute inset-0 z-[4] touch-manipulation bg-transparent"
+                    className="absolute inset-x-0 top-0 bottom-28 z-[4] touch-manipulation bg-transparent"
                     aria-label="Envoyer du soutien au challenger B"
                   />
                 )}
@@ -3528,6 +3543,42 @@ export function TikTokStyleArena({
                     )}
                     {Math.floor(speakingTurnRemaining / 60)}:
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                  </div>
+                )}
+                {rightPanelIsLocal && !isViewer && (
+                  <div className="absolute bottom-3 right-3 z-[38] flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        requestAnimationFrame(() => {
+                          requestAnimationFrame(() => toggleMic());
+                        });
+                      }}
+                      aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
+                    >
+                      {micEnabled ? (
+                        <Mic className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
+                      ) : (
+                        <MicOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        requestAnimationFrame(() => {
+                          requestAnimationFrame(() => toggleCam());
+                        });
+                      }}
+                      aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
+                    >
+                      {camEnabled ? (
+                        <Video className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
+                      ) : (
+                        <VideoOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
+                      )}
+                    </button>
                   </div>
                 )}
               </motion.div>
@@ -3791,8 +3842,8 @@ export function TikTokStyleArena({
             ) : null}
           </div>
 
-          {/* Droite : partage, LIVE, spectateurs, régie ou quitter */}
-          <div className="flex min-w-0 items-center justify-end gap-1.5">
+          {/* Droite : partage, LIVE, spectateurs, régie — masqué sur mobile (reproduit dans le dock bas pour éviter overlap vidéo) */}
+          <div className="hidden min-w-0 items-center justify-end gap-1.5 lg:flex">
             <button
               type="button"
               onClick={onShare}
@@ -4031,6 +4082,51 @@ export function TikTokStyleArena({
             ref={reactionDockRef}
             className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-visible px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
+            {/* Mobile / tablette : barre live (partage, LIVE, vues, régie) au-dessus des réactions — remplit l’espace utile sans chevaucher les panneaux vidéo */}
+            <div className="flex w-full shrink-0 flex-wrap items-center justify-center gap-2 border-b border-white/[0.08] pb-2 lg:hidden">
+              <button
+                type="button"
+                onClick={onShare}
+                aria-label="Partager le direct"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.08] shadow-[0_6px_20px_rgba(0,0,0,0.35)] backdrop-blur-md"
+              >
+                <Share2 className="h-[18px] w-[18px] text-white" strokeWidth={1.2} aria-hidden />
+              </button>
+              <div className="flex items-center rounded-full bg-red-600/90 px-2.5 py-1 shadow-[0_4px_16px_rgba(220,38,38,0.35)]">
+                <div className={`mr-1 h-1.5 w-1.5 rounded-full ${liveConnected ? 'animate-pulse bg-white' : 'bg-yellow-300'}`} />
+                <span className="text-[10px] font-black tracking-wider text-white">LIVE</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowViewerList(true)}
+                className="flex items-center gap-1 rounded-full bg-white/[0.08] px-2.5 py-1.5 shadow-[0_6px_20px_rgba(0,0,0,0.35)] backdrop-blur-md"
+              >
+                <Eye className="h-3.5 w-3.5 text-white" strokeWidth={1.2} aria-hidden />
+                {liveViewerCount > 0 && (
+                  <span className="text-[11px] font-bold tabular-nums text-white">{liveViewerCount}</span>
+                )}
+              </button>
+              {isHost ? (
+                <button
+                  type="button"
+                  onClick={() => setMediatorSidebarOpen((o) => !o)}
+                  aria-expanded={mediatorSidebarOpen}
+                  aria-label={mediatorSidebarOpen ? 'Fermer la régie' : 'Ouvrir la régie'}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ember-500/20 text-ember-200 shadow-[0_6px_20px_rgba(0,0,0,0.35)] backdrop-blur-md"
+                >
+                  <Sliders className="h-5 w-5" strokeWidth={1.2} aria-hidden />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleLeave}
+                  aria-label="Quitter le direct"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.08] shadow-[0_6px_20px_rgba(0,0,0,0.35)] backdrop-blur-md"
+                >
+                  <X className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
+                </button>
+              )}
+            </div>
             {userRole === 'viewer' && (
               <div className="flex flex-wrap justify-center gap-1">
                 {SPECTATOR_QUICK_REACTIONS.map((emoji) => (
