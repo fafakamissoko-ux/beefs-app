@@ -17,6 +17,8 @@ import {
   Video,
   VideoOff,
   UserX,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { TimeWheelPicker } from '@/components/TimeWheelPicker';
 import { MediatorInviteInline } from '@/components/MediatorInviteInline';
@@ -139,6 +141,9 @@ export function MediatorSidebar({
   const [invitePanelOpen, setInvitePanelOpen] = useState(false);
   const [inviteComposerOpen, setInviteComposerOpen] = useState(false);
   const [announceDurationSec, setAnnounceDurationSec] = useState(12);
+  /** Chrono beef : réglage fin (+15/+30 + roulette) replié par défaut pour libérer le scroll */
+  const [beefTimerExpanded, setBeefTimerExpanded] = useState(false);
+  const [paroleWheelExpanded, setParoleWheelExpanded] = useState(false);
 
   const pendingInviteCount = pendingInvites.length;
 
@@ -155,8 +160,14 @@ export function MediatorSidebar({
       setAnnounceEditorOpen(false);
       setInvitePanelOpen(false);
       setInviteComposerOpen(false);
+      setBeefTimerExpanded(false);
+      setParoleWheelExpanded(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!timerActive) setBeefTimerExpanded(false);
+  }, [timerActive]);
 
   useEffect(() => {
     if (announceEditorOpen) {
@@ -187,7 +198,7 @@ export function MediatorSidebar({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 32, stiffness: 380 }}
-            className="fixed inset-x-0 bottom-0 z-[131] mx-auto flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-t-[2.5rem] border-t border-white/10 bg-[#08080A]/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-24px_64px_rgba(0,0,0,0.6)] backdrop-blur-3xl"
+            className="fixed inset-x-0 bottom-0 z-[131] mx-auto flex max-h-[min(88dvh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-t-[2.5rem] border-t border-white/10 bg-[#08080A]/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-24px_64px_rgba(0,0,0,0.6)] backdrop-blur-3xl"
           >
             {/* Drag handle */}
             <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-white/20" />
@@ -298,59 +309,90 @@ export function MediatorSidebar({
               </div>
             )}
 
-            {/* Chrono beef : directement sous la zone « Lancer le beef », hors grille basse */}
-            {timerActive && (
-              <div className="shrink-0 space-y-2 px-1 pb-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={beefTimerPaused ? onResumeBeefTimer : onPauseBeefTimer}
-                    className={`flex flex-col items-center justify-center gap-1 rounded-[2.5rem] border px-3 py-3 backdrop-blur-3xl transition-all active:scale-[0.97] ${
-                      beefTimerPaused
-                        ? 'border-emerald-400/30 bg-emerald-500/10'
-                        : 'border-amber-400/30 bg-amber-500/10'
-                    }`}
-                  >
-                    <Timer
-                      className={`h-5 w-5 ${beefTimerPaused ? 'text-emerald-400' : 'text-amber-400'}`}
-                      strokeWidth={1.2}
-                    />
-                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-white">
-                      {beefTimerPaused ? 'Reprendre' : 'Pause'}
-                    </span>
-                  </button>
-                  <div className="flex flex-col items-center justify-center gap-0.5 rounded-[2.5rem] border border-white/10 bg-white/[0.05] px-3 py-3 backdrop-blur-3xl">
-                    <span className="font-mono text-[8px] font-bold uppercase tracking-widest text-white/50">
-                      Temps restant
-                    </span>
-                    <span className="font-mono text-lg font-black tabular-nums tracking-tight text-white">
-                      {beefTimeFormatted}
-                    </span>
+            {/* Scrollable content — chrono beef inclus ici pour permettre le scroll vers Invités / Annonce */}
+            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-1 pb-4 overscroll-contain hide-scrollbar">
+              {timerActive && (
+                <div className="mb-3 space-y-2 border-b border-white/[0.08] pb-3">
+                  <p className="font-mono text-[8px] font-bold uppercase tracking-widest text-white/40">
+                    Chrono beef
+                  </p>
+                  <div className="flex items-stretch gap-2">
+                    <button
+                      type="button"
+                      onClick={beefTimerPaused ? onResumeBeefTimer : onPauseBeefTimer}
+                      className={`flex min-h-[4.25rem] flex-1 flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-2 backdrop-blur-3xl transition-all active:scale-[0.98] ${
+                        beefTimerPaused
+                          ? 'border-emerald-400/30 bg-emerald-500/10'
+                          : 'border-amber-400/30 bg-amber-500/10'
+                      }`}
+                    >
+                      <Timer
+                        className={`h-5 w-5 shrink-0 ${beefTimerPaused ? 'text-emerald-400' : 'text-amber-400'}`}
+                        strokeWidth={1.2}
+                      />
+                      <span className="font-mono text-[8px] font-bold uppercase tracking-widest text-white">
+                        {beefTimerPaused ? 'Reprendre' : 'Pause'}
+                      </span>
+                    </button>
+                    <div className="flex min-h-[4.25rem] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/10 bg-white/[0.05] px-2 py-2 backdrop-blur-3xl">
+                      <span className="font-mono text-[7px] font-bold uppercase tracking-widest text-white/45">
+                        Restant
+                      </span>
+                      <span className="font-mono text-base font-black tabular-nums tracking-tight text-white sm:text-lg">
+                        {beefTimeFormatted}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBeefTimerExpanded((v) => !v)}
+                      aria-expanded={beefTimerExpanded}
+                      aria-label={
+                        beefTimerExpanded
+                          ? 'Replier prolongations et roulette du chrono'
+                          : 'Déplier prolongations et roulette du chrono'
+                      }
+                      className="flex w-11 shrink-0 flex-col items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-white/80 transition-colors hover:bg-white/10"
+                    >
+                      {beefTimerExpanded ? (
+                        <ChevronUp className="h-5 w-5" strokeWidth={2} />
+                      ) : (
+                        <ChevronDown className="h-5 w-5" strokeWidth={2} />
+                      )}
+                    </button>
                   </div>
+                  <AnimatePresence initial={false}>
+                    {beefTimerExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                        className="space-y-2 overflow-hidden"
+                      >
+                        <div className="grid grid-cols-2 gap-2">
+                          <button type="button" onClick={() => onAdjustTime(15 * 60)} className={TILE}>
+                            <Timer className={`${TILE_ICON} text-cobalt-400`} strokeWidth={1.2} />
+                            <span className={`${TILE_LABEL} text-white/80`}>+15 min</span>
+                          </button>
+                          <button type="button" onClick={() => onAdjustTime(30 * 60)} className={TILE}>
+                            <Timer className={`${TILE_ICON} text-cobalt-400`} strokeWidth={1.2} />
+                            <span className={`${TILE_LABEL} text-white/80`}>+30 min</span>
+                          </button>
+                        </div>
+                        <TimeWheelPicker
+                          valueSec={beefRemainingSec}
+                          minSec={0}
+                          maxSec={maxBeefDurationSec}
+                          onChange={(sec) => onAdjustTime(sec - beefRemainingSec)}
+                          ariaLabel="Temps restant du débat"
+                          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] py-3"
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => onAdjustTime(15 * 60)} className={TILE}>
-                    <Timer className={`${TILE_ICON} text-cobalt-400`} strokeWidth={1.2} />
-                    <span className={`${TILE_LABEL} text-white/80`}>+15 min</span>
-                  </button>
-                  <button type="button" onClick={() => onAdjustTime(30 * 60)} className={TILE}>
-                    <Timer className={`${TILE_ICON} text-cobalt-400`} strokeWidth={1.2} />
-                    <span className={`${TILE_LABEL} text-white/80`}>+30 min</span>
-                  </button>
-                </div>
-                <TimeWheelPicker
-                  valueSec={beefRemainingSec}
-                  minSec={0}
-                  maxSec={maxBeefDurationSec}
-                  onChange={(sec) => onAdjustTime(sec - beefRemainingSec)}
-                  ariaLabel="Temps restant du débat"
-                  className="rounded-2xl border border-white/[0.06] bg-white/[0.02] py-3"
-                />
-              </div>
-            )}
+              )}
 
-            {/* Scrollable content */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-4 hide-scrollbar">
               {/* ═══ TILE GRID ═══ */}
               <div className="grid grid-cols-2 gap-2.5">
 
@@ -623,21 +665,47 @@ export function MediatorSidebar({
               </AnimatePresence>
 
               {/* ═══ ROULETTES TEMPS ═══ */}
-              <section className="mt-5 space-y-4 border-t border-white/[0.06] pt-4">
-                <div className="space-y-2">
-                  <h3 className="font-mono text-[10px] font-semibold tracking-tight text-white/75">
-                    Tour de parole
-                  </h3>
-                  <p className="font-mono text-[9px] text-white/45">Réglage : {formatParole(parolePresetSec)}</p>
-                  <TimeWheelPicker
-                    valueSec={parolePresetSec}
-                    minSec={15}
-                    maxSec={600}
-                    onChange={onParolePresetSecChange}
-                    ariaLabel="Durée du prochain tour de parole"
-                    className="rounded-2xl border border-white/[0.06] bg-white/[0.02] py-3"
-                  />
-                </div>
+              <section className="mt-5 space-y-2 border-t border-white/[0.06] pt-4">
+                <button
+                  type="button"
+                  onClick={() => setParoleWheelExpanded((v) => !v)}
+                  aria-expanded={paroleWheelExpanded}
+                  className="flex w-full items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.07]"
+                >
+                  <div className="min-w-0">
+                    <h3 className="font-mono text-[10px] font-semibold tracking-tight text-white/80">
+                      Tour de parole
+                    </h3>
+                    <p className="font-mono text-[9px] text-white/45">
+                      Durée : {formatParole(parolePresetSec)}
+                    </p>
+                  </div>
+                  {paroleWheelExpanded ? (
+                    <ChevronUp className="h-4 w-4 shrink-0 text-white/50" strokeWidth={2} />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 shrink-0 text-white/50" strokeWidth={2} />
+                  )}
+                </button>
+                <AnimatePresence initial={false}>
+                  {paroleWheelExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <TimeWheelPicker
+                        valueSec={parolePresetSec}
+                        minSec={15}
+                        maxSec={600}
+                        onChange={onParolePresetSecChange}
+                        ariaLabel="Durée du prochain tour de parole"
+                        className="rounded-2xl border border-white/[0.06] bg-white/[0.02] py-3"
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </section>
 
               {/* ═══ CHALLENGERS ═══ */}
