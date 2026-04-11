@@ -29,7 +29,6 @@ import { FeatureGuide } from './FeatureGuide';
 import { ViewerListModal } from './ViewerListModal';
 import { useDailyCall } from '@/hooks/useDailyCall';
 import { supabase } from '@/lib/supabase/client';
-import { InviteParticipantModal } from './InviteParticipantModal';
 import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
 import { DEFAULT_FREE_PREVIEW_MINUTES, viewerNeedsContinuationPay } from '@/lib/beef-preview';
@@ -425,8 +424,6 @@ export function TikTokStyleArena({
     openBuyPointsPage(router);
   }, [router]);
 
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  
   // Participant roles from DB — maps Daily.co userNames to beef roles
   const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});
   const [liveViewerCount, setLiveViewerCount] = useState(viewerCount);
@@ -461,6 +458,8 @@ export function TikTokStyleArena({
 
   // ── VOTE SYSTEM — TikTok-style duel gauge ──
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  /** Sérialise les INSERT chat pour éviter les rafales concurrentes côté RLS. */
+  const messageSendChainRef = useRef(Promise.resolve());
 
   /** Synchronise le chrono global vers challengers et spectateurs (médiateur uniquement). */
   const broadcastBeefGlobalTimer = useCallback(() => {
@@ -1330,6 +1329,10 @@ export function TikTokStyleArena({
   const [ringParticipants, setRingParticipants] = useState<RingParticipant[]>([]);
   const [participationRequests, setParticipationRequests] = useState<ParticipationRequest[]>([]);
   const [debaters, setDebaters] = useState<Debater[]>([]);
+  const inviteExcludeParticipantIds = useMemo(
+    () => Array.from(new Set([...debaters.map((d) => d.id), userId].filter(Boolean))),
+    [debaters, userId],
+  );
   const [currentSpeaker, setCurrentSpeaker] = useState<string | null>(null);
   const [timerRunning, setTimerRunning] = useState(false);
   const [inviteInput, setInviteInput] = useState('');
@@ -1403,10 +1406,15 @@ export function TikTokStyleArena({
   const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | 'M' | null) => {
     if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && (supportSlot === 'A' || supportSlot === 'B')) {
       setSupportBurst((prev) => ({ ...prev, [supportSlot]: prev[supportSlot] + 1 }));
+      if (emoji === '❤️') {
+        if (supportSlot === 'A') setAuraA((v) => Math.min(100, v + 4));
+        else setAuraB((v) => Math.min(100, v + 4));
+      }
       return;
     }
     if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && supportSlot === 'M') {
       setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
+      if (emoji === '❤️') setAuraMed((v) => Math.min(100, v + 3));
       return;
     }
     const entry = createFlyingReactionEntry(emoji);
@@ -2470,7 +2478,7 @@ export function TikTokStyleArena({
     [],
   );
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = () => {
     if (!chatInput.trim()) return;
 
     const cleanContent = sanitizeMessage(chatInput);
@@ -2482,58 +2490,74 @@ export function TikTokStyleArena({
     setTimeout(() => seenMsgKeys.current.delete(localKey), 5000);
     setChatInput('');
 
-    const { data: inserted, error } = await supabase
-      .from('beef_messages')
-      .insert({
-        beef_id: roomId,
-        user_id: userId,
-        username: userName,
-        display_name: userName,
-        content: cleanContent,
-        is_pinned: false,
-      })
-      .select('id')
-      .single();
+    const isRlsPolicyError = (err: { code?: string; message?: string } | null) => {
+      const msg = (err?.message ?? '').toLowerCase();
+      return (
+        err?.code === '42501' ||
+        msg.includes('row-level security') ||
+        msg.includes('policy')
+      );
+    };
 
-    if (error || !inserted?.id) {
+    const attemptInsert = async (attempt: number): Promise<void> => {
+      const { data: inserted, error } = await supabase
+        .from('beef_messages')
+        .insert({
+          beef_id: roomId,
+          user_id: userId,
+          username: userName,
+          display_name: userName,
+          content: cleanContent,
+          is_pinned: false,
+        })
+        .select('id')
+        .single();
+
+      if (!error && inserted?.id) {
+        const localMsg: VisibleMessage = {
+          id: inserted.id,
+          user_name: userName,
+          content: cleanContent,
+          timestamp: Date.now(),
+          initial: senderInitial,
+        };
+        setVisibleMessages((prev) => [...prev, localMsg].slice(-80));
+        channelRef.current
+          ?.send({
+            type: 'broadcast',
+            event: 'message',
+            payload: {
+              user_name: userName,
+              content: cleanContent,
+              initial: senderInitial,
+              id: inserted.id,
+            },
+          })
+          .catch(() => console.warn('[Live] Message broadcast failed'));
+        return;
+      }
+
+      if (error && isRlsPolicyError(error) && attempt < 6) {
+        await new Promise((r) => setTimeout(r, 100 + attempt * 120));
+        return attemptInsert(attempt + 1);
+      }
+
       seenMsgKeys.current.delete(localKey);
       console.error('[Live] Message insert failed:', error?.message, error);
-      const msg = (error?.message ?? '').toLowerCase();
-      const rls =
-        error?.code === '42501' ||
-        msg.includes('row-level security') ||
-        msg.includes('policy');
-      if (rls) {
+      if (error && isRlsPolicyError(error)) {
         toast(
-          'Envoi refusé (limite de messages ou droits). Réessaie dans quelques secondes.',
+          'Envoi temporairement refusé (limite ou droits). Réessaie dans un instant.',
           'error',
         );
       } else {
         toast('Impossible d’envoyer le message', 'error');
       }
       setChatInput(cleanContent);
-      return;
-    }
-
-    const localMsg: VisibleMessage = {
-      id: inserted.id,
-      user_name: userName,
-      content: cleanContent,
-      timestamp: Date.now(),
-      initial: senderInitial,
     };
-    setVisibleMessages((prev) => [...prev, localMsg].slice(-80));
 
-    if (channelRef.current) {
-      channelRef.current
-        .send({
-          type: 'broadcast',
-          event: 'message',
-          payload: { user_name: userName, content: cleanContent, initial: senderInitial, id: inserted.id },
-        })
-        .catch(() => console.warn('[Live] Message broadcast failed'));
-    }
-    console.log('[Live] Sending message as:', userName, '| userId:', userId?.slice(0, 8));
+    messageSendChainRef.current = messageSendChainRef.current
+      .then(() => attemptInsert(0))
+      .catch((e) => console.error('[Live] Message send chain:', e));
   };
 
   const isUuid = (s: string) =>
@@ -3874,7 +3898,9 @@ export function TikTokStyleArena({
             onPublishAnnouncement={publishAnnouncementBanner}
             onClearAnnouncement={clearAnnouncementBanner}
             pendingInvites={pendingInvites}
-            onOpenInviteFlow={() => setShowInviteModal(true)}
+            onInviteParticipant={handleInviteFromModal}
+            inviteExcludeParticipantIds={inviteExcludeParticipantIds}
+            inviteCurrentUserId={userId}
           />
         </>
       )}
@@ -4206,14 +4232,6 @@ export function TikTokStyleArena({
       )}
 
       </div>
-
-      {/* Invite Participant Modal */}
-      <InviteParticipantModal
-        isOpen={showInviteModal}
-        currentParticipants={debaters.map(d => d.id).concat([userId])}
-        onInvite={handleInviteFromModal}
-        onClose={() => setShowInviteModal(false)}
-      />
 
       {/* User Profile Modal */}
       <AnimatePresence>

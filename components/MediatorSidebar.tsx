@@ -19,6 +19,7 @@ import {
   UserX,
 } from 'lucide-react';
 import { TimeWheelPicker } from '@/components/TimeWheelPicker';
+import { MediatorInviteInline } from '@/components/MediatorInviteInline';
 
 export type MediatorRemoteRow = {
   sessionId: string;
@@ -70,7 +71,11 @@ type MediatorSidebarProps = {
   onClearAnnouncement: () => void;
   /** Invitations en attente (beef_participants.pending) */
   pendingInvites: Array<{ userId: string; label: string }>;
-  onOpenInviteFlow?: () => void;
+  /** Inviter un co-hôte (recherche inline dans le Command Deck) */
+  onInviteParticipant?: (userId: string) => void | Promise<void>;
+  /** IDs déjà sur le ring / à exclure de la recherche (dont l’hôte courant) */
+  inviteExcludeParticipantIds?: string[];
+  inviteCurrentUserId?: string | null;
 };
 
 const TILE = 'flex flex-col items-center justify-center gap-1.5 rounded-[2.5rem] border border-white/10 bg-white/5 px-3 py-4 backdrop-blur-3xl transition-all active:scale-[0.97]';
@@ -123,13 +128,16 @@ export function MediatorSidebar({
   onPublishAnnouncement,
   onClearAnnouncement,
   pendingInvites,
-  onOpenInviteFlow,
+  onInviteParticipant,
+  inviteExcludeParticipantIds = [],
+  inviteCurrentUserId = null,
 }: MediatorSidebarProps) {
   const [verdictOpen, setVerdictOpen] = useState(false);
   const [soundboardOpen, setSoundboardOpen] = useState(false);
   const [announceEditorOpen, setAnnounceEditorOpen] = useState(false);
   const [announceDraft, setAnnounceDraft] = useState('');
   const [invitePanelOpen, setInvitePanelOpen] = useState(false);
+  const [inviteComposerOpen, setInviteComposerOpen] = useState(false);
   const [announceDurationSec, setAnnounceDurationSec] = useState(12);
 
   const pendingInviteCount = pendingInvites.length;
@@ -146,6 +154,7 @@ export function MediatorSidebar({
       setSoundboardOpen(false);
       setAnnounceEditorOpen(false);
       setInvitePanelOpen(false);
+      setInviteComposerOpen(false);
     }
   }, [open]);
 
@@ -198,18 +207,31 @@ export function MediatorSidebar({
                     </span>
                     <span className="shrink-0 font-mono text-[9px] text-white/45">Co-hôtes</span>
                   </div>
-                  {onOpenInviteFlow && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onOpenInviteFlow();
-                      }}
-                      className="mb-4 w-full rounded-2xl border border-cobalt-500/35 bg-cobalt-600/15 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-cobalt-100 hover:bg-cobalt-500/25"
-                    >
-                      Inviter un participant
-                    </button>
+                  {onInviteParticipant && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setInviteComposerOpen((v) => !v);
+                        }}
+                        className={`mb-2 w-full rounded-2xl border py-3 font-mono text-[9px] font-black uppercase tracking-widest transition-colors ${
+                          inviteComposerOpen
+                            ? 'border-cobalt-400/50 bg-cobalt-500/25 text-white'
+                            : 'border-cobalt-500/35 bg-cobalt-600/15 text-cobalt-100 hover:bg-cobalt-500/25'
+                        }`}
+                      >
+                        Inviter un participant
+                      </button>
+                      {inviteComposerOpen && (
+                        <MediatorInviteInline
+                          excludeParticipantIds={inviteExcludeParticipantIds}
+                          currentUserId={inviteCurrentUserId}
+                          onInvite={onInviteParticipant}
+                        />
+                      )}
+                    </>
                   )}
                   <ul className="max-h-40 space-y-2 overflow-y-auto pb-1">
                     {pendingInvites.length === 0 ? (
@@ -276,6 +298,57 @@ export function MediatorSidebar({
               </div>
             )}
 
+            {/* Chrono beef : directement sous la zone « Lancer le beef », hors grille basse */}
+            {timerActive && (
+              <div className="shrink-0 space-y-2 px-1 pb-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={beefTimerPaused ? onResumeBeefTimer : onPauseBeefTimer}
+                    className={`flex flex-col items-center justify-center gap-1 rounded-[2.5rem] border px-3 py-3 backdrop-blur-3xl transition-all active:scale-[0.97] ${
+                      beefTimerPaused
+                        ? 'border-emerald-400/30 bg-emerald-500/10'
+                        : 'border-amber-400/30 bg-amber-500/10'
+                    }`}
+                  >
+                    <Timer
+                      className={`h-5 w-5 ${beefTimerPaused ? 'text-emerald-400' : 'text-amber-400'}`}
+                      strokeWidth={1.2}
+                    />
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-white">
+                      {beefTimerPaused ? 'Reprendre' : 'Pause'}
+                    </span>
+                  </button>
+                  <div className="flex flex-col items-center justify-center gap-0.5 rounded-[2.5rem] border border-white/10 bg-white/[0.05] px-3 py-3 backdrop-blur-3xl">
+                    <span className="font-mono text-[8px] font-bold uppercase tracking-widest text-white/50">
+                      Temps restant
+                    </span>
+                    <span className="font-mono text-lg font-black tabular-nums tracking-tight text-white">
+                      {beefTimeFormatted}
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => onAdjustTime(15 * 60)} className={TILE}>
+                    <Timer className={`${TILE_ICON} text-cobalt-400`} strokeWidth={1.2} />
+                    <span className={`${TILE_LABEL} text-white/80`}>+15 min</span>
+                  </button>
+                  <button type="button" onClick={() => onAdjustTime(30 * 60)} className={TILE}>
+                    <Timer className={`${TILE_ICON} text-cobalt-400`} strokeWidth={1.2} />
+                    <span className={`${TILE_LABEL} text-white/80`}>+30 min</span>
+                  </button>
+                </div>
+                <TimeWheelPicker
+                  valueSec={beefRemainingSec}
+                  minSec={0}
+                  maxSec={maxBeefDurationSec}
+                  onChange={(sec) => onAdjustTime(sec - beefRemainingSec)}
+                  ariaLabel="Temps restant du débat"
+                  className="rounded-2xl border border-white/[0.06] bg-white/[0.02] py-3"
+                />
+              </div>
+            )}
+
             {/* Scrollable content */}
             <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-4 hide-scrollbar">
               {/* ═══ TILE GRID ═══ */}
@@ -331,7 +404,13 @@ export function MediatorSidebar({
                 {/* ── INVITÉS ── */}
                 <button
                   type="button"
-                  onClick={() => setInvitePanelOpen((v) => !v)}
+                  onClick={() =>
+                    setInvitePanelOpen((v) => {
+                      const next = !v;
+                      if (!next) setInviteComposerOpen(false);
+                      return next;
+                    })
+                  }
                   className={`${TILE} relative ${invitePanelOpen ? 'border-cobalt-400/35 bg-cobalt-500/10' : ''}`}
                 >
                   <Users className={`${TILE_ICON} text-cobalt-300`} strokeWidth={1.2} />
@@ -352,6 +431,74 @@ export function MediatorSidebar({
                   <Megaphone className={`${TILE_ICON} text-amber-300`} strokeWidth={1.2} />
                   <span className={`${TILE_LABEL} text-amber-100`}>Annonce</span>
                 </button>
+
+                {/* Éditeur d’annonce : juste sous la tuile Annonce */}
+                <AnimatePresence initial={false}>
+                  {announceEditorOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                      className="col-span-2 overflow-hidden"
+                    >
+                      <div className="rounded-[2rem] border border-white/12 bg-black/45 p-3 backdrop-blur-xl">
+                        <label htmlFor="mediator-announce-input" className="sr-only">
+                          Texte de l&apos;annonce
+                        </label>
+                        <textarea
+                          id="mediator-announce-input"
+                          value={announceDraft}
+                          onChange={(e) => setAnnounceDraft(e.target.value)}
+                          rows={2}
+                          placeholder="Message du bandeau…"
+                          className="mb-2 w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white placeholder-white/35 focus:border-amber-400/40 focus:outline-none"
+                        />
+                        <p className="mb-1.5 font-mono text-[8px] font-bold uppercase tracking-wider text-white/40">
+                          Durée d&apos;affichage
+                        </p>
+                        <div className="mb-3 flex flex-wrap gap-1.5">
+                          {([5, 10, 15, 30, 60] as const).map((sec) => (
+                            <button
+                              key={sec}
+                              type="button"
+                              onClick={() => setAnnounceDurationSec(sec)}
+                              className={`rounded-full px-2.5 py-1 font-mono text-[8px] font-black uppercase tracking-wide ${
+                                announceDurationSec === sec
+                                  ? 'bg-amber-500/40 text-amber-50'
+                                  : 'border border-white/12 bg-white/5 text-white/65 hover:bg-white/10'
+                              }`}
+                            >
+                              {sec}s
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onPublishAnnouncement(announceDraft.trim(), announceDurationSec);
+                              setAnnounceEditorOpen(false);
+                            }}
+                            className="rounded-[2rem] border border-amber-500/50 bg-amber-500/20 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-amber-50 hover:bg-amber-500/35"
+                          >
+                            Publier
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onClearAnnouncement();
+                              setAnnounceDraft('');
+                            }}
+                            className="rounded-[2rem] border border-white/15 bg-white/5 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-white/75 hover:bg-white/10"
+                          >
+                            Effacer bannière
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* ── FOCUS caméra (col-span-2) ── */}
                 {onFocusTargetChange && (
@@ -400,19 +547,6 @@ export function MediatorSidebar({
                   </div>
                 )}
 
-                {/* ── CHRONO (Timer) ── */}
-                {timerActive && (
-                  <button
-                    type="button"
-                    onClick={beefTimerPaused ? onResumeBeefTimer : onPauseBeefTimer}
-                    className={`${TILE} ${beefTimerPaused ? 'border-emerald-400/30 bg-emerald-500/10' : 'border-amber-400/30 bg-amber-500/10'}`}
-                  >
-                    <Timer className={`${TILE_ICON} ${beefTimerPaused ? 'text-emerald-400' : 'text-amber-400'}`} strokeWidth={1.2} />
-                    <span className={`${TILE_LABEL} text-white`}>{beefTimerPaused ? 'Reprendre' : 'Pause'}</span>
-                    <span className="font-mono text-[11px] font-bold tabular-nums text-white/70">{beefTimeFormatted}</span>
-                  </button>
-                )}
-
                 {/* ── MUTE A/B ── */}
                 <button
                   type="button"
@@ -441,28 +575,6 @@ export function MediatorSidebar({
                   <span className={`${TILE_LABEL} text-white/80`}>Ma cam</span>
                 </button>
 
-                {/* ── TIME ADJUST ── */}
-                {timerActive && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => onAdjustTime(15 * 60)}
-                      className={TILE}
-                    >
-                      <Timer className={`${TILE_ICON} text-cobalt-400`} strokeWidth={1.2} />
-                      <span className={`${TILE_LABEL} text-white/80`}>+15 min</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onAdjustTime(30 * 60)}
-                      className={TILE}
-                    >
-                      <Timer className={`${TILE_ICON} text-cobalt-400`} strokeWidth={1.2} />
-                      <span className={`${TILE_LABEL} text-white/80`}>+30 min</span>
-                    </button>
-                  </>
-                )}
-
                 {/* ── SOUNDBOARD ── */}
                 <button
                   type="button"
@@ -483,73 +595,6 @@ export function MediatorSidebar({
                   <span className={`${TILE_LABEL} text-red-300`}>Fin</span>
                 </button>
               </div>
-
-              <AnimatePresence initial={false}>
-                {announceEditorOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-                    className="mb-3 overflow-hidden"
-                  >
-                    <div className="rounded-[2rem] border border-white/12 bg-black/45 p-3 backdrop-blur-xl">
-                      <label htmlFor="mediator-announce-input" className="sr-only">
-                        Texte de l&apos;annonce
-                      </label>
-                      <textarea
-                        id="mediator-announce-input"
-                        value={announceDraft}
-                        onChange={(e) => setAnnounceDraft(e.target.value)}
-                        rows={2}
-                        placeholder="Message du bandeau…"
-                        className="mb-2 w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white placeholder-white/35 focus:border-amber-400/40 focus:outline-none"
-                      />
-                      <p className="mb-1.5 font-mono text-[8px] font-bold uppercase tracking-wider text-white/40">
-                        Durée d&apos;affichage
-                      </p>
-                      <div className="mb-3 flex flex-wrap gap-1.5">
-                        {([5, 10, 15, 30, 60] as const).map((sec) => (
-                          <button
-                            key={sec}
-                            type="button"
-                            onClick={() => setAnnounceDurationSec(sec)}
-                            className={`rounded-full px-2.5 py-1 font-mono text-[8px] font-black uppercase tracking-wide ${
-                              announceDurationSec === sec
-                                ? 'bg-amber-500/40 text-amber-50'
-                                : 'border border-white/12 bg-white/5 text-white/65 hover:bg-white/10'
-                            }`}
-                          >
-                            {sec}s
-                          </button>
-                        ))}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onPublishAnnouncement(announceDraft.trim(), announceDurationSec);
-                            setAnnounceEditorOpen(false);
-                          }}
-                          className="rounded-[2rem] border border-amber-500/50 bg-amber-500/20 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-amber-50 hover:bg-amber-500/35"
-                        >
-                          Publier
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onClearAnnouncement();
-                            setAnnounceDraft('');
-                          }}
-                          className="rounded-[2rem] border border-white/15 bg-white/5 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-white/75 hover:bg-white/10"
-                        >
-                          Effacer bannière
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
               {/* Soundboard expanded */}
               <AnimatePresence initial={false}>
@@ -579,27 +624,6 @@ export function MediatorSidebar({
 
               {/* ═══ ROULETTES TEMPS ═══ */}
               <section className="mt-5 space-y-4 border-t border-white/[0.06] pt-4">
-                {timerActive && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-mono text-[10px] font-semibold tracking-tight text-white/75">
-                        Temps débat
-                      </h3>
-                      <span className="font-mono text-[10px] font-bold tabular-nums text-white/50">
-                        {beefTimeFormatted}
-                      </span>
-                    </div>
-                    <TimeWheelPicker
-                      valueSec={beefRemainingSec}
-                      minSec={0}
-                      maxSec={maxBeefDurationSec}
-                      onChange={(sec) => onAdjustTime(sec - beefRemainingSec)}
-                      ariaLabel="Temps restant du débat"
-                      className="rounded-2xl border border-white/[0.06] bg-white/[0.02] py-3"
-                    />
-                  </div>
-                )}
-
                 <div className="space-y-2">
                   <h3 className="font-mono text-[10px] font-semibold tracking-tight text-white/75">
                     Tour de parole
