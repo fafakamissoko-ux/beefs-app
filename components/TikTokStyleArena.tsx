@@ -193,7 +193,11 @@ export function TikTokStyleArena({
   const [auraB, setAuraB] = useState(0);
   const [auraMed, setAuraMed] = useState(0);
   const [auraFeverMed, setAuraFeverMed] = useState(false);
-  const [isFocusMode, setIsFocusMode] = useState(false);
+  /** null = 50/50, A ou B = ce panneau occupe ~80 % de la largeur */
+  const [focusTarget, setFocusTarget] = useState<null | 'A' | 'B'>(null);
+  const [parolePresetSec, setParolePresetSec] = useState(60);
+  const [announcementTicker, setAnnouncementTicker] = useState('');
+  const [gloryChallengerSlot, setGloryChallengerSlot] = useState<null | 'A' | 'B'>(null);
 
   // ── END-OF-BEEF STATE ──
   const [beefEnded, setBeefEnded] = useState(false);
@@ -292,6 +296,7 @@ export function TikTokStyleArena({
   const [showAllReactions, setShowAllReactions] = useState(false); // NEW: Toggle pour afficher toutes les réactions
   /** Colonne emoji / cadeaux / partage — fermeture au tap extérieur */
   const reactionDockRef = useRef<HTMLDivElement>(null);
+  const chatMessagesScrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!showAllReactions && !showGiftPicker) return;
     const onPointerDown = (e: PointerEvent) => {
@@ -322,6 +327,18 @@ export function TikTokStyleArena({
       setShowGiftPicker(false);
     }
   }, [mediatorSidebarOpen]);
+
+  useEffect(() => {
+    const el = chatMessagesScrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [visibleMessages]);
+
+  useEffect(() => {
+    if (!gloryChallengerSlot) return;
+    const t = setTimeout(() => setGloryChallengerSlot(null), 15_000);
+    return () => clearTimeout(t);
+  }, [gloryChallengerSlot]);
 
   // Moderator controls — check if current user is the beef creator
   const isHost = userId === host.id;
@@ -2616,17 +2633,28 @@ export function TikTokStyleArena({
 
       {/* TikTok Battle : vidéo 60% + chat overlay */}
       <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
+        {announcementTicker.trim() !== '' && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-[102] border-b border-white/10 bg-black/55 px-3 py-2 backdrop-blur-md pt-[max(0.35rem,env(safe-area-inset-top))]">
+            <p className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-white">
+              {announcementTicker}
+            </p>
+          </div>
+        )}
         {dailyRoomUrl ? (
           <div className="relative z-[1] h-[60%] w-full shrink-0 overflow-hidden">
             <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
               {/* LEFT — Participant A */}
               <motion.div
-                className={`pointer-events-auto relative h-full overflow-hidden bg-[#08080A] transition-all duration-500 ${isFocusMode ? 'w-[80%]' : 'w-1/2'}`}
+                className={`pointer-events-auto relative h-full overflow-hidden bg-[#08080A] transition-all duration-500 ${focusTarget === 'A' ? 'w-[80%]' : focusTarget === 'B' ? 'w-[20%]' : 'w-1/2'}`}
                 style={{ boxShadow: `inset 0 0 ${auraIntensityA}px rgba(37,99,235,${auraOpacityA})` }}
                 animate={
                   rematchSequence
-                    ? { x: [0, -5, 5, -4, 4, -3, 3, 0], y: [0, 3, -3, 2, -2, 0] }
-                    : { x: 0, y: 0 }
+                    ? { x: [0, -5, 5, -4, 4, -3, 3, 0], y: [0, 3, -3, 2, -2, 0], scale: 1 }
+                    : {
+                        x: 0,
+                        y: 0,
+                        scale: gloryChallengerSlot === 'A' ? 1.04 : 1,
+                      }
                 }
                 transition={
                   rematchSequence
@@ -2636,10 +2664,24 @@ export function TikTokStyleArena({
               >
                 {/* Aura gauge badge (host only) */}
                 {isHost && auraA > 0 && (
-                  <div className="pointer-events-none absolute bottom-3 left-3 z-[25] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
+                  <div className="pointer-events-auto absolute bottom-3 left-3 z-[25] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
                     <div className="h-1.5 rounded-full bg-blue-500 transition-all duration-300" style={{ width: `${Math.max(8, auraA * 0.5)}px` }} />
-                    <span className="font-mono text-[8px] font-bold tabular-nums text-blue-300">{auraA}%</span>
-                    {auraA >= 100 && <span className="text-[8px] font-black text-blue-200 animate-pulse">PRÊT</span>}
+                    <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-blue-300">{auraA}%</span>
+                    {auraA >= 100 && (
+                      <span className="pointer-events-none text-[8px] font-black text-blue-200 animate-pulse">PRÊT</span>
+                    )}
+                    {auraA >= 100 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setGloryChallengerSlot('A');
+                        }}
+                        className="ml-0.5 shrink-0 rounded-full bg-white/25 px-1.5 py-0.5 font-mono text-[7px] font-black uppercase tracking-wide text-white shadow-[0_0_12px_rgba(255,255,255,0.35)] hover:bg-white/35"
+                      >
+                        Gloire
+                      </button>
+                    )}
                   </div>
                 )}
                 <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start justify-between gap-2">
@@ -2685,6 +2727,29 @@ export function TikTokStyleArena({
                           ],
                         }}
                         transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <AnimatePresence>
+                  {gloryChallengerSlot === 'A' && (
+                    <motion.div
+                      key="glory-overlay-a"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="pointer-events-none absolute inset-0 z-[6]"
+                    >
+                      <motion.div
+                        className="absolute inset-0"
+                        animate={{
+                          boxShadow: [
+                            'inset 0 0 40px rgba(255,255,255,0.4)',
+                            'inset 0 0 88px rgba(186,230,255,0.55)',
+                            'inset 0 0 40px rgba(255,255,255,0.4)',
+                          ],
+                        }}
+                        transition={{ duration: 0.75, repeat: Infinity, ease: 'easeInOut' }}
                       />
                     </motion.div>
                   )}
@@ -2950,12 +3015,16 @@ export function TikTokStyleArena({
 
               {/* RIGHT — Participant B */}
               <motion.div
-                className={`pointer-events-auto relative h-full overflow-hidden border-l border-white/20 bg-[#08080A] transition-all duration-500 ${isFocusMode ? 'w-[20%]' : 'w-1/2'}`}
+                className={`pointer-events-auto relative h-full overflow-hidden border-l border-white/20 bg-[#08080A] transition-all duration-500 ${focusTarget === 'B' ? 'w-[80%]' : focusTarget === 'A' ? 'w-[20%]' : 'w-1/2'}`}
                 style={{ boxShadow: `inset 0 0 ${auraIntensityB}px rgba(234,88,12,${auraOpacityB})` }}
                 animate={
                   rematchSequence
-                    ? { x: [0, 5, -5, 4, -4, 3, -3, 0], y: [0, -3, 3, -2, 2, 0] }
-                    : { x: 0, y: 0 }
+                    ? { x: [0, 5, -5, 4, -4, 3, -3, 0], y: [0, -3, 3, -2, 2, 0], scale: 1 }
+                    : {
+                        x: 0,
+                        y: 0,
+                        scale: gloryChallengerSlot === 'B' ? 1.04 : 1,
+                      }
                 }
                 transition={
                   rematchSequence
@@ -2965,10 +3034,24 @@ export function TikTokStyleArena({
               >
                 {/* Aura gauge badge (host only) */}
                 {isHost && auraB > 0 && (
-                  <div className="pointer-events-none absolute bottom-3 right-3 z-[25] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
+                  <div className="pointer-events-auto absolute bottom-3 right-3 z-[25] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
                     <div className="h-1.5 rounded-full bg-orange-500 transition-all duration-300" style={{ width: `${Math.max(8, auraB * 0.5)}px` }} />
-                    <span className="font-mono text-[8px] font-bold tabular-nums text-orange-300">{auraB}%</span>
-                    {auraB >= 100 && <span className="text-[8px] font-black text-orange-200 animate-pulse">PRÊT</span>}
+                    <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-orange-300">{auraB}%</span>
+                    {auraB >= 100 && (
+                      <span className="pointer-events-none text-[8px] font-black text-orange-200 animate-pulse">PRÊT</span>
+                    )}
+                    {auraB >= 100 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setGloryChallengerSlot('B');
+                        }}
+                        className="ml-0.5 shrink-0 rounded-full bg-white/25 px-1.5 py-0.5 font-mono text-[7px] font-black uppercase tracking-wide text-white shadow-[0_0_12px_rgba(255,255,255,0.35)] hover:bg-white/35"
+                      >
+                        Gloire
+                      </button>
+                    )}
                   </div>
                 )}
                 <div
@@ -3016,6 +3099,29 @@ export function TikTokStyleArena({
                           ],
                         }}
                         transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <AnimatePresence>
+                  {gloryChallengerSlot === 'B' && (
+                    <motion.div
+                      key="glory-overlay-b"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="pointer-events-none absolute inset-0 z-[6]"
+                    >
+                      <motion.div
+                        className="absolute inset-0"
+                        animate={{
+                          boxShadow: [
+                            'inset 0 0 40px rgba(255,255,255,0.4)',
+                            'inset 0 0 88px rgba(255,220,186,0.5)',
+                            'inset 0 0 40px rgba(255,255,255,0.4)',
+                          ],
+                        }}
+                        transition={{ duration: 0.75, repeat: Infinity, ease: 'easeInOut' }}
                       />
                     </motion.div>
                   )}
@@ -3494,22 +3600,29 @@ export function TikTokStyleArena({
             mediatorCamEnabled={camEnabled}
             onMediatorToggleMic={() => void toggleMic()}
             onMediatorToggleCam={() => void toggleCam()}
-            isFocusMode={isFocusMode}
-            onToggleFocus={() => setIsFocusMode((v) => !v)}
+            focusTarget={focusTarget}
+            onFocusTargetChange={setFocusTarget}
+            beefRemainingSec={beefTimeRemaining}
+            maxBeefDurationSec={MAX_BEEF_DURATION}
+            parolePresetSec={parolePresetSec}
+            onParolePresetSecChange={setParolePresetSec}
+            announcementText={announcementTicker}
+            onSetAnnouncement={setAnnouncementTicker}
           />
         </>
       )}
 
       {/* ── Dock social — overlay massif bas, obstrue le bas des vidéos ── */}
       {!beefEnded && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[40] flex h-[45%] min-h-[160px] w-full flex-col justify-end overflow-visible max-lg:h-[50%]">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-stretch lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[40] flex h-[45%] min-h-[160px] w-full flex-col justify-end overflow-hidden max-lg:h-[50%]">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             aria-live="polite"
           >
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div
+            ref={chatMessagesScrollRef}
             className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 max-lg:max-h-[min(30dvh,220px)] sm:px-4 sm:py-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] lg:max-h-none"
           >
             {visibleMessages.map((message) => {
@@ -3622,7 +3735,7 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-visible px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-hidden px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
             {userRole === 'viewer' && (
               <div className="flex flex-wrap justify-center gap-1">
