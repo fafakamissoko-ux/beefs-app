@@ -103,7 +103,7 @@ export function FeatureGuide({
           className={
             isLg
               ? `absolute z-[120] w-[220px] max-w-[min(220px,calc(100vw-1.5rem))] ${getTooltipPosition(position, align)}`
-              : 'fixed left-1/2 top-auto z-[90] w-[min(320px,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)] -translate-x-1/2 bottom-[max(12rem,calc(28dvh+env(safe-area-inset-bottom)+3.25rem))]'
+              : 'fixed left-1/2 top-auto z-[90] w-[min(320px,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)] -translate-x-1/2 bottom-[max(12rem,calc(38dvh+env(safe-area-inset-bottom)+3.25rem))]'
           }
         >
           <div className={`relative rounded-xl border px-3.5 py-2.5 shadow-xl backdrop-blur-sm ${bgClass}`}>

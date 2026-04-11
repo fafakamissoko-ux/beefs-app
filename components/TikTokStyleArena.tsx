@@ -3432,7 +3432,7 @@ export function TikTokStyleArena({
 
       {/* ── Dock social — pleine largeur, collé au bas, sans chevauchement vidéo ── */}
       {!beefEnded && (
-        <div className="relative z-[40] flex h-[28%] min-h-[118px] max-lg:min-h-[132px] w-full shrink-0 flex-col overflow-visible">
+        <div className="relative z-[40] flex h-[28%] min-h-[118px] w-full shrink-0 flex-col overflow-visible max-lg:h-[38%] max-lg:min-h-[152px]">
         <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible rounded-t-3xl border-x border-t border-white/10 bg-black/40 shadow-2xl backdrop-blur-3xl max-lg:gap-1 lg:flex-row lg:items-stretch lg:gap-6 lg:rounded-t-[2rem] lg:px-4 lg:pt-3 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
@@ -3440,7 +3440,7 @@ export function TikTokStyleArena({
           >
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div
-            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 max-lg:max-h-[min(22dvh,140px)] sm:px-4 sm:py-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] lg:max-h-none"
+            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 max-lg:max-h-[min(30dvh,220px)] sm:px-4 sm:py-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] lg:max-h-none"
           >
             {visibleMessages.map((message) => {
               const canDelete =
