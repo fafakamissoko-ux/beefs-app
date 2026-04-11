@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, UserPlus, Check } from 'lucide-react';
 import Image from 'next/image';
@@ -37,6 +38,11 @@ export function InviteParticipantModal({
   const [invitedUsers, setInvitedUsers] = useState<string[]>([]);
   const [results, setResults] = useState<SearchUser[]>([]);
   const [searching, setSearching] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedQuery(searchQuery), 300);
@@ -97,15 +103,17 @@ export function InviteParticipantModal({
     }
   };
 
-  if (!isOpen) return null;
+  if (!mounted || typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <AnimatePresence>
+      {isOpen && (
       <motion.div
+        key="invite-participant-root"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[140] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
         onClick={onClose}
       >
         <motion.div
@@ -224,6 +232,8 @@ export function InviteParticipantModal({
           </div>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+      )}
+    </AnimatePresence>,
+    document.body,
   );
 }

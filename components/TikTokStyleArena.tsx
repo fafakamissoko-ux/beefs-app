@@ -223,6 +223,8 @@ export function TikTokStyleArena({
   const mediatorWasConnectedRef = useRef(false);
   /** True dès qu’au moins un challenger attendu a été vu dans la room Daily (évite la fin auto tant qu’on attend les connexions). */
   const challengersEverJoinedRef = useRef(false);
+  /** Évite de spammer le toast « challengers partis » tant que la room reste vide */
+  const challengersAllLeftNotifiedRef = useRef(false);
   const [userPoints, setUserPoints] = useState(0);
   const [profileFollowsTarget, setProfileFollowsTarget] = useState(false);
 
@@ -846,17 +848,16 @@ export function TikTokStyleArena({
     return () => clearInterval(iv);
   }, []);
 
-  // Auto-Fever trigger
+  // Auto-Fever médiateur : 15 s puis reset — deps SANS auraFeverMed sinon le cleanup annule le timer dès que fever passe à true
   useEffect(() => {
-    if (auraMed >= 100 && !auraFeverMed) {
-      setAuraFeverMed(true);
-      const t = setTimeout(() => {
-        setAuraFeverMed(false);
-        setAuraMed(0);
-      }, 15_000);
-      return () => clearTimeout(t);
-    }
-  }, [auraMed, auraFeverMed]);
+    if (auraMed < 100) return;
+    setAuraFeverMed(true);
+    const t = setTimeout(() => {
+      setAuraFeverMed(false);
+      setAuraMed(0);
+    }, 15_000);
+    return () => clearTimeout(t);
+  }, [auraMed]);
 
   const auraIntensityA = Math.round(15 + (auraA / 100) * 45);
   const auraOpacityA = (0.2 + (auraA / 100) * 0.6).toFixed(2);
@@ -947,7 +948,7 @@ export function TikTokStyleArena({
       toast('Le médiateur est de retour', 'success');
     }
 
-    // Tous les challengers ont quitté : uniquement si au moins un s’était connecté avant (sinon on attend encore les arrivées)
+    // Challengers partis, médiateur toujours présent : ne pas terminer le beef — notification unique.
     if (
       isHost &&
       challengerUserIds.length > 0 &&
@@ -955,12 +956,12 @@ export function TikTokStyleArena({
       remoteParticipants.length === 0 &&
       isJoined
     ) {
-      const timeout = setTimeout(() => {
-        if (remoteParticipants.length === 0 && !beefEndedRef.current) {
-          endBeefRef.current?.('Tous les challengers ont quitté');
-        }
-      }, 5000);
-      return () => clearTimeout(timeout);
+      if (!challengersAllLeftNotifiedRef.current) {
+        challengersAllLeftNotifiedRef.current = true;
+        toast('Les challengers ont quitté la room — le direct continue. Tu peux terminer le beef depuis la régie.', 'info');
+      }
+    } else if (remoteParticipants.length > 0) {
+      challengersAllLeftNotifiedRef.current = false;
     }
   }, [remoteParticipants, isJoined, isHost, host.id, host.name, participantRoles, mediatorGraceActive, toast]);
 
@@ -1313,6 +1314,17 @@ export function TikTokStyleArena({
     if (!speakingTurnActive) return null;
     return hotMicSpeakerSlot ?? floorAnnouncement?.slot ?? null;
   }, [speakingTurnActive, hotMicSpeakerSlot, floorAnnouncement]);
+
+  const gloryIntenseA =
+    gloryChallengerSlot === 'A' &&
+    speakingTurnActive &&
+    effectiveHotMicSpeakerSlot === 'A' &&
+    !speakingTurnPaused;
+  const gloryIntenseB =
+    gloryChallengerSlot === 'B' &&
+    speakingTurnActive &&
+    effectiveHotMicSpeakerSlot === 'B' &&
+    !speakingTurnPaused;
 
   // Multi-participant system
   const [ringParticipants, setRingParticipants] = useState<RingParticipant[]>([]);
@@ -2853,13 +2865,13 @@ export function TikTokStyleArena({
                     : {
                         x: 0,
                         y: 0,
-                        scale: gloryChallengerSlot === 'A' ? 1.04 : 1,
+                        scale: gloryIntenseA ? 1.075 : gloryChallengerSlot === 'A' ? 1.04 : 1,
                       }
                 }
                 transition={
                   rematchSequence
                     ? { duration: 0.35, repeat: 22, ease: 'easeInOut' }
-                    : { duration: 0.2 }
+                    : { duration: gloryIntenseA ? 0.35 : 0.2 }
                 }
               >
                 {/* Aura gauge badge (host only) */}
@@ -2938,19 +2950,45 @@ export function TikTokStyleArena({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[6]"
+                      className={`pointer-events-none absolute inset-0 ${gloryIntenseA ? 'z-[8]' : 'z-[6]'}`}
                     >
                       <motion.div
                         className="absolute inset-0"
                         animate={{
-                          boxShadow: [
-                            'inset 0 0 40px rgba(255,255,255,0.4)',
-                            'inset 0 0 88px rgba(186,230,255,0.55)',
-                            'inset 0 0 40px rgba(255,255,255,0.4)',
-                          ],
+                          boxShadow: gloryIntenseA
+                            ? [
+                                'inset 0 0 56px rgba(255,255,255,0.75)',
+                                'inset 0 0 120px rgba(200,230,255,0.95)',
+                                'inset 0 0 72px rgba(255,255,255,0.85)',
+                                'inset 0 0 120px rgba(186,220,255,0.9)',
+                                'inset 0 0 56px rgba(255,255,255,0.75)',
+                              ]
+                            : [
+                                'inset 0 0 40px rgba(255,255,255,0.4)',
+                                'inset 0 0 88px rgba(186,230,255,0.55)',
+                                'inset 0 0 40px rgba(255,255,255,0.4)',
+                              ],
                         }}
-                        transition={{ duration: 0.75, repeat: Infinity, ease: 'easeInOut' }}
+                        transition={{
+                          duration: gloryIntenseA ? 0.45 : 0.75,
+                          repeat: Infinity,
+                          ease: 'easeInOut',
+                        }}
                       />
+                      {gloryIntenseA && (
+                        <motion.div
+                          className="absolute inset-0 mix-blend-screen"
+                          animate={{
+                            opacity: [0.25, 0.55, 0.3, 0.5, 0.25],
+                            background: [
+                              'radial-gradient(circle at 30% 40%, rgba(255,255,255,0.5) 0%, transparent 55%)',
+                              'radial-gradient(circle at 70% 55%, rgba(200,240,255,0.55) 0%, transparent 50%)',
+                              'radial-gradient(circle at 50% 35%, rgba(255,255,255,0.45) 0%, transparent 60%)',
+                            ],
+                          }}
+                          transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -3223,13 +3261,13 @@ export function TikTokStyleArena({
                     : {
                         x: 0,
                         y: 0,
-                        scale: gloryChallengerSlot === 'B' ? 1.04 : 1,
+                        scale: gloryIntenseB ? 1.075 : gloryChallengerSlot === 'B' ? 1.04 : 1,
                       }
                 }
                 transition={
                   rematchSequence
                     ? { duration: 0.35, repeat: 22, ease: 'easeInOut' }
-                    : { duration: 0.2 }
+                    : { duration: gloryIntenseB ? 0.35 : 0.2 }
                 }
               >
                 {/* Aura gauge badge (host only) */}
@@ -3310,19 +3348,45 @@ export function TikTokStyleArena({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[6]"
+                      className={`pointer-events-none absolute inset-0 ${gloryIntenseB ? 'z-[8]' : 'z-[6]'}`}
                     >
                       <motion.div
                         className="absolute inset-0"
                         animate={{
-                          boxShadow: [
-                            'inset 0 0 40px rgba(255,255,255,0.4)',
-                            'inset 0 0 88px rgba(255,220,186,0.5)',
-                            'inset 0 0 40px rgba(255,255,255,0.4)',
-                          ],
+                          boxShadow: gloryIntenseB
+                            ? [
+                                'inset 0 0 56px rgba(255,255,255,0.72)',
+                                'inset 0 0 118px rgba(255,230,200,0.92)',
+                                'inset 0 0 72px rgba(255,255,255,0.8)',
+                                'inset 0 0 118px rgba(255,215,180,0.88)',
+                                'inset 0 0 56px rgba(255,255,255,0.72)',
+                              ]
+                            : [
+                                'inset 0 0 40px rgba(255,255,255,0.4)',
+                                'inset 0 0 88px rgba(255,220,186,0.5)',
+                                'inset 0 0 40px rgba(255,255,255,0.4)',
+                              ],
                         }}
-                        transition={{ duration: 0.75, repeat: Infinity, ease: 'easeInOut' }}
+                        transition={{
+                          duration: gloryIntenseB ? 0.45 : 0.75,
+                          repeat: Infinity,
+                          ease: 'easeInOut',
+                        }}
                       />
+                      {gloryIntenseB && (
+                        <motion.div
+                          className="absolute inset-0 mix-blend-screen"
+                          animate={{
+                            opacity: [0.25, 0.52, 0.28, 0.48, 0.25],
+                            background: [
+                              'radial-gradient(circle at 65% 42%, rgba(255,255,255,0.48) 0%, transparent 55%)',
+                              'radial-gradient(circle at 35% 58%, rgba(255,230,200,0.5) 0%, transparent 50%)',
+                              'radial-gradient(circle at 50% 38%, rgba(255,255,255,0.42) 0%, transparent 58%)',
+                            ],
+                          }}
+                          transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -3810,10 +3874,7 @@ export function TikTokStyleArena({
             onPublishAnnouncement={publishAnnouncementBanner}
             onClearAnnouncement={clearAnnouncementBanner}
             pendingInvites={pendingInvites}
-            onOpenInviteFlow={() => {
-              setMediatorSidebarOpen(false);
-              setShowInviteModal(true);
-            }}
+            onOpenInviteFlow={() => setShowInviteModal(true)}
           />
         </>
       )}

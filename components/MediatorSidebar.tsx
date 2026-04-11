@@ -201,7 +201,11 @@ export function MediatorSidebar({
                   {onOpenInviteFlow && (
                     <button
                       type="button"
-                      onClick={() => onOpenInviteFlow()}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onOpenInviteFlow();
+                      }}
                       className="mb-4 w-full rounded-2xl border border-cobalt-500/35 bg-cobalt-600/15 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-cobalt-100 hover:bg-cobalt-500/25"
                     >
                       Inviter un participant
