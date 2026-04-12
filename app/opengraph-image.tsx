@@ -5,7 +5,26 @@ export const alt = 'Beefs - Débats en live';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
+/** Sources TTF (fonts.gstatic) — alignées sur next/font (Space Grotesk + JetBrains Mono, latin). */
+const OG_FONT_SPACE_GROTESK = {
+  w400:
+    'https://fonts.gstatic.com/s/spacegrotesk/v22/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj7oUUsj.ttf',
+  w700:
+    'https://fonts.gstatic.com/s/spacegrotesk/v22/V8mQoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj4PVksj.ttf',
+} as const;
+
+const OG_FONT_JETBRAINS_MONO = {
+  w400:
+    'https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf',
+} as const;
+
 export default async function Image() {
+  const [spaceGrotesk400, spaceGrotesk700, jetbrainsMono400] = await Promise.all([
+    fetch(OG_FONT_SPACE_GROTESK.w400).then((res) => res.arrayBuffer()),
+    fetch(OG_FONT_SPACE_GROTESK.w700).then((res) => res.arrayBuffer()),
+    fetch(OG_FONT_JETBRAINS_MONO.w400).then((res) => res.arrayBuffer()),
+  ]);
+
   return new ImageResponse(
     (
       <div
@@ -17,7 +36,7 @@ export default async function Image() {
           alignItems: 'center',
           justifyContent: 'center',
           background: 'linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 50%, #0d0d0d 100%)',
-          fontFamily: 'sans-serif',
+          fontFamily: '"Space Grotesk", sans-serif',
         }}
       >
         {/* Fire gradient accent */}
@@ -45,10 +64,11 @@ export default async function Image() {
           <span
             style={{
               fontSize: 80,
-              fontWeight: 900,
+              fontWeight: 700,
               background: 'linear-gradient(135deg, #FF6B2C, #E83A14)',
               backgroundClip: 'text',
               color: 'transparent',
+              fontFamily: '"Space Grotesk", sans-serif',
             }}
           >
             Beefs
@@ -60,8 +80,9 @@ export default async function Image() {
           style={{
             fontSize: 32,
             color: '#ffffff',
-            fontWeight: 600,
+            fontWeight: 700,
             marginBottom: 8,
+            fontFamily: '"Space Grotesk", sans-serif',
           }}
         >
           Débats en live
@@ -72,6 +93,8 @@ export default async function Image() {
             color: '#888888',
             maxWidth: 600,
             textAlign: 'center',
+            fontFamily: '"Space Grotesk", sans-serif',
+            fontWeight: 400,
           }}
         >
           Crée un beef, invite des challengers et laisse le public voter
@@ -86,6 +109,8 @@ export default async function Image() {
             gap: 24,
             color: '#555',
             fontSize: 16,
+            fontFamily: '"JetBrains Mono", monospace',
+            fontWeight: 400,
           }}
         >
           <span>🎤 Débats</span>
@@ -95,6 +120,28 @@ export default async function Image() {
         </div>
       </div>
     ),
-    { ...size }
+    {
+      ...size,
+      fonts: [
+        {
+          name: 'Space Grotesk',
+          data: spaceGrotesk400,
+          style: 'normal',
+          weight: 400,
+        },
+        {
+          name: 'Space Grotesk',
+          data: spaceGrotesk700,
+          style: 'normal',
+          weight: 700,
+        },
+        {
+          name: 'JetBrains Mono',
+          data: jetbrainsMono400,
+          style: 'normal',
+          weight: 400,
+        },
+      ],
+    },
   );
 }

@@ -10,8 +10,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-sans)", "Space Grotesk", "system-ui", "sans-serif"],
-        mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "monospace"],
+        sans: ["var(--font-space-grotesk)", "sans-serif"],
+        mono: ["var(--font-jetbrains-mono)", "monospace"],
       },
       colors: {
         obsidian: {
