@@ -44,7 +44,6 @@ import {
   FlyingReactionsLayer,
   createFlyingReactionEntry,
   pushFlyingReaction,
-  SPECTATOR_QUICK_REACTIONS,
   type FlyingReactionEntry,
 } from './FlyingReactionsLayer';
 import { PointTrigger } from './PointTrigger';
@@ -1447,7 +1446,7 @@ export function TikTokStyleArena({
   const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | 'M' | null) => {
     if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && (supportSlot === 'A' || supportSlot === 'B')) {
       setSupportBurst((prev) => ({ ...prev, [supportSlot]: prev[supportSlot] + 1 }));
-      if (emoji === '❤️') {
+      if (emoji === '❤️' || emoji === HEART_ON_FIRE) {
         if (supportSlot === 'A') setAuraA((v) => Math.min(100, v + 4));
         else setAuraB((v) => Math.min(100, v + 4));
       }
@@ -1455,7 +1454,7 @@ export function TikTokStyleArena({
     }
     if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && supportSlot === 'M') {
       setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
-      if (emoji === '❤️') setAuraMed((v) => Math.min(100, v + 3));
+      if (emoji === '❤️' || emoji === HEART_ON_FIRE) setAuraMed((v) => Math.min(100, v + 3));
       return;
     }
     const entry = createFlyingReactionEntry(emoji);
@@ -1805,14 +1804,15 @@ export function TikTokStyleArena({
 
     const integrated = INTEGRATED_SUPPORT_REACTIONS.has(emoji);
     const slotAB = (myVote ?? lastPulseSideRef.current ?? 'A') as 'A' | 'B';
+    const isHeartEmoji = emoji === '❤️' || emoji === HEART_ON_FIRE;
     const heartTarget: 'A' | 'B' | 'M' =
-      emoji === '❤️' && speakingTurnActive && effectiveHotMicSpeakerSlot
+      isHeartEmoji && speakingTurnActive && effectiveHotMicSpeakerSlot
         ? effectiveHotMicSpeakerSlot
-        : emoji === '❤️'
+        : isHeartEmoji
           ? 'M'
           : slotAB;
 
-    if (integrated && emoji === '❤️') {
+    if (integrated && isHeartEmoji) {
       if (heartTarget === 'M') {
         setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
       } else {
@@ -1845,7 +1845,7 @@ export function TikTokStyleArena({
           type: 'broadcast',
           event: 'reaction',
           payload:
-            integrated && emoji === '❤️'
+            integrated && isHeartEmoji
               ? { emoji, supportSlot: heartTarget }
               : integrated
                 ? { emoji, supportSlot: slotAB }
@@ -3117,7 +3117,7 @@ export function TikTokStyleArena({
                         audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack}
                         muted={leftPanelIsLocal ? true : leftRemoteAudioMuted}
                         mirror={leftPanelIsLocal}
-                        className="absolute inset-0 h-full w-full object-cover"
+                        className={`absolute inset-0 h-full w-full object-cover ${leftPanelIsLocal ? 'pointer-events-none' : ''}`}
                       />
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-cobalt-500/10">
@@ -3150,7 +3150,7 @@ export function TikTokStyleArena({
                   <button
                     type="button"
                     onClick={() => emitTapSupport('A')}
-                    className="absolute inset-x-0 top-0 bottom-28 z-[4] touch-manipulation bg-transparent"
+                    className="absolute inset-x-0 top-0 bottom-36 z-[4] touch-manipulation bg-transparent"
                     aria-label="Envoyer du soutien au challenger A"
                   />
                 )}
@@ -3187,15 +3187,51 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                {/* Desktop — capsule challenger (coin intérieur bas-droit), au-dessus des contrôles micro/cam */}
-                <div className="pointer-events-none absolute bottom-20 right-4 z-[22] hidden max-w-[min(12rem,calc(50%-2rem))] lg:flex">
+                {/* Bas dalle : capsule challenger (desktop) + micro/cam au-dessus — z élevé, vidéo locale sans pointer-events */}
+                <div className="absolute bottom-3 right-3 z-[100] flex max-w-[min(12rem,calc(50%-0.5rem))] flex-col-reverse items-end gap-2">
+                  {leftPanelIsLocal && !isViewer && (
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => toggleMic());
+                          });
+                        }}
+                        aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
+                        className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
+                      >
+                        {micEnabled ? (
+                          <Mic className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
+                        ) : (
+                          <MicOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => toggleCam());
+                          });
+                        }}
+                        aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
+                        className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
+                      >
+                        {camEnabled ? (
+                          <Video className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
+                        ) : (
+                          <VideoOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
+                        )}
+                      </button>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null);
                     }}
-                    className="glass-prestige pointer-events-auto flex max-w-full items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 touch-manipulation"
+                    className="glass-prestige hidden max-w-full touch-manipulation items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 lg:flex"
                   >
                     <span
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold uppercase text-white"
@@ -3208,42 +3244,6 @@ export function TikTokStyleArena({
                     </span>
                   </button>
                 </div>
-                {leftPanelIsLocal && !isViewer && (
-                  <div className="absolute bottom-3 right-3 z-[55] flex gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        requestAnimationFrame(() => {
-                          requestAnimationFrame(() => toggleMic());
-                        });
-                      }}
-                      aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
-                      className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
-                    >
-                      {micEnabled ? (
-                        <Mic className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                      ) : (
-                        <MicOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        requestAnimationFrame(() => {
-                          requestAnimationFrame(() => toggleCam());
-                        });
-                      }}
-                      aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
-                      className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
-                    >
-                      {camEnabled ? (
-                        <Video className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                      ) : (
-                        <VideoOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                      )}
-                    </button>
-                  </div>
-                )}
               </motion.div>
 
               {/* CENTER — Médiateur : hit targets seulement sur la bulle et le badge (évite de bloquer micro/cam des challengers) */}
@@ -3541,9 +3541,10 @@ export function TikTokStyleArena({
                     {rightPanel?.videoTrack ? (
                       <ParticipantVideo
                         videoTrack={rightPanel.videoTrack}
-                        audioTrack={rightPanel.audioTrack}
-                        muted={rightRemoteAudioMuted}
-                        className="absolute inset-0 h-full w-full object-cover"
+                        audioTrack={rightPanelIsLocal ? undefined : rightPanel.audioTrack}
+                        muted={rightPanelIsLocal ? true : rightRemoteAudioMuted}
+                        mirror={rightPanelIsLocal}
+                        className={`absolute inset-0 h-full w-full object-cover ${rightPanelIsLocal ? 'pointer-events-none' : ''}`}
                       />
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-ember-500/10">
@@ -3576,7 +3577,7 @@ export function TikTokStyleArena({
                   <button
                     type="button"
                     onClick={() => emitTapSupport('B')}
-                    className="absolute inset-x-0 top-0 bottom-28 z-[4] touch-manipulation bg-transparent"
+                    className="absolute inset-x-0 top-0 bottom-36 z-[4] touch-manipulation bg-transparent"
                     aria-label="Envoyer du soutien au challenger B"
                   />
                 )}
@@ -3601,14 +3602,50 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                <div className="pointer-events-none absolute bottom-20 left-4 z-[22] hidden max-w-[min(12rem,calc(50%-2rem))] lg:flex">
+                <div className="absolute bottom-3 left-3 z-[100] flex max-w-[min(12rem,calc(50%-0.5rem))] flex-col-reverse items-start gap-2">
+                  {rightPanelIsLocal && !isViewer && (
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => toggleMic());
+                          });
+                        }}
+                        aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
+                        className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
+                      >
+                        {micEnabled ? (
+                          <Mic className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
+                        ) : (
+                          <MicOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => toggleCam());
+                          });
+                        }}
+                        aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
+                        className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
+                      >
+                        {camEnabled ? (
+                          <Video className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
+                        ) : (
+                          <VideoOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
+                        )}
+                      </button>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
                     }}
-                    className="glass-prestige pointer-events-auto flex max-w-full items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 touch-manipulation"
+                    className="glass-prestige hidden max-w-full touch-manipulation items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 lg:flex"
                   >
                     <span
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold uppercase text-white"
@@ -3621,42 +3658,6 @@ export function TikTokStyleArena({
                     </span>
                   </button>
                 </div>
-                {rightPanelIsLocal && !isViewer && (
-                  <div className="absolute bottom-3 right-3 z-[55] flex gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        requestAnimationFrame(() => {
-                          requestAnimationFrame(() => toggleMic());
-                        });
-                      }}
-                      aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
-                      className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
-                    >
-                      {micEnabled ? (
-                        <Mic className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                      ) : (
-                        <MicOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        requestAnimationFrame(() => {
-                          requestAnimationFrame(() => toggleCam());
-                        });
-                      }}
-                      aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
-                      className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
-                    >
-                      {camEnabled ? (
-                        <Video className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                      ) : (
-                        <VideoOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                      )}
-                    </button>
-                  </div>
-                )}
               </motion.div>
 
             </div>
@@ -3882,9 +3883,6 @@ export function TikTokStyleArena({
 
         <div className="flex justify-center">
           <div className="glass-prestige pointer-events-auto flex flex-col items-center justify-center gap-0.5 rounded-full px-4 py-2 text-center">
-            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-white/95">
-              {mediatorName}
-            </span>
             {isJoined && timerActive ? (
               <div
                 className={`flex items-center gap-1 font-mono text-xs font-bold tabular-nums ${
@@ -4160,36 +4158,19 @@ export function TikTokStyleArena({
             ref={reactionDockRef}
             className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-visible px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
-            {userRole === 'viewer' && (
-              <div className="mb-1 hidden w-full flex-wrap justify-center gap-1.5 lg:flex">
-                {LIVE_POPULAR_EMOJI_STRIP.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => handleReaction(emoji)}
-                    aria-label={`Réaction ${emoji}`}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
-                  >
-                    <span aria-hidden>{emoji}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {userRole === 'viewer' && (
-              <div className="flex flex-wrap justify-center gap-1 lg:hidden">
-                {SPECTATOR_QUICK_REACTIONS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => handleReaction(emoji)}
-                    aria-label={`Réaction ${emoji}`}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-base shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90"
-                  >
-                    <span aria-hidden>{emoji}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="mb-1 flex w-full flex-wrap justify-center gap-1.5 px-0.5">
+              {LIVE_POPULAR_EMOJI_STRIP.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => handleReaction(emoji)}
+                  aria-label={`Réaction ${emoji}`}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
+                >
+                  <span aria-hidden>{emoji}</span>
+                </button>
+              ))}
+            </div>
 
             <div className="relative z-[130] flex flex-wrap items-center justify-center gap-1.5 overflow-visible">
               <AnimatePresence>
