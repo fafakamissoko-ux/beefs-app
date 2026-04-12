@@ -115,8 +115,7 @@ const POPULAR_REACTIONS = [
   '🙌', '💎', '🌟', '✨', '🚀', '💥'
 ];
 
-/** Bandeau réactions rapides (10) — exclus du panneau 😀. */
-const LIVE_POPULAR_EMOJI_STRIP = ARENA_QUICK_REACTIONS;
+/** Bandeau mobile : 10 emojis ; desktop : 5 visibles + panneau 😀 pour le reste. */
 
 const HEART_ON_FIRE = '❤️‍🔥';
 
@@ -1807,58 +1806,11 @@ export function TikTokStyleArena({
     return () => window.clearInterval(id);
   }, [liveConnected, isHost, timerActive, timerPaused, broadcastBeefGlobalTimer]);
 
-  /** Historique au chargement (refresh / changement de beef) + conservation des envois optimistes (pending_*). */
+  /** Chat : uniquement les messages du live (pas d’historique DB au join). */
   useEffect(() => {
     if (!roomId) return;
-    const beefIdForFetch = roomId;
     seenMsgKeys.current.clear();
     setVisibleMessages([]);
-    let cancelled = false;
-    void (async () => {
-      const { data, error } = await supabase
-        .from('beef_messages')
-        .select('id, username, display_name, content, user_id, created_at')
-        .eq('beef_id', beefIdForFetch)
-        .eq('is_deleted', false)
-        .order('created_at', { ascending: true })
-        .limit(80);
-
-      if (cancelled) return;
-      if (error) return;
-
-      const fromDb: VisibleMessage[] = (data ?? []).map((row) => {
-        const uname = row.display_name?.trim() || row.username?.trim() || '?';
-        return {
-          id: row.id,
-          user_name: uname,
-          content: row.content,
-          timestamp: new Date(row.created_at).getTime(),
-          initial: (uname.charAt(0) || '?').toUpperCase(),
-        };
-      });
-
-      const isMsgUuid = (s: string) =>
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
-
-      setVisibleMessages((prev) => {
-        const byId = new Map<string, VisibleMessage>();
-        for (const m of fromDb) byId.set(m.id, m);
-        for (const m of prev) {
-          if (m.id.startsWith('pending_')) byId.set(m.id, m);
-        }
-        const next = Array.from(byId.values())
-          .sort((a, b) => a.timestamp - b.timestamp)
-          .slice(-80);
-        seenMsgKeys.current.clear();
-        for (const m of next) {
-          if (isMsgUuid(m.id)) seenMsgKeys.current.add(`id:${m.id}`);
-        }
-        return next;
-      });
-    })();
-    return () => {
-      cancelled = true;
-    };
   }, [roomId]);
 
   // 2) Polling fallback — queries DB for new messages every 3s (guaranteed delivery)
@@ -3054,7 +3006,7 @@ export function TikTokStyleArena({
       <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
         {dailyRoomUrl ? (
           <div
-            className={`relative z-[50] h-[60%] w-full shrink-0 overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
+            className={`relative z-[50] pointer-events-none h-[60%] w-full shrink-0 overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
           >
             {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
             <div className="pointer-events-none absolute inset-0 z-0 flex h-auto flex-row gap-2 px-1">
@@ -3818,7 +3770,7 @@ export function TikTokStyleArena({
 
             {/* Joining indicator */}
             {isJoining && (
-              <div className="absolute inset-0 z-[160] flex items-center justify-center bg-black/60">
+              <div className="pointer-events-auto absolute inset-0 z-[160] flex items-center justify-center bg-black/60">
                 <div className="flex items-center gap-3 rounded-xl bg-black/90 px-6 py-4">
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
                   <span className="font-semibold text-white">Connexion en cours...</span>
@@ -3833,7 +3785,7 @@ export function TikTokStyleArena({
           </div>
         ) : (
         /* Placeholder — même hauteur vidéo que avec room */
-        <div className="relative z-[50] h-[60%] w-full shrink-0 overflow-hidden">
+        <div className="relative z-[50] pointer-events-none h-[60%] w-full shrink-0 overflow-hidden">
           <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
           {debaters[0] ? (
             <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]">
@@ -4182,8 +4134,8 @@ export function TikTokStyleArena({
 
       {/* ── Dock social — overlay massif bas, obstrue le bas des vidéos ── */}
       {!beefEnded && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[40] flex h-[45%] min-h-[160px] w-full flex-col justify-end overflow-visible max-lg:h-[50%]">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-stretch lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[55] flex h-[45%] min-h-[160px] w-full flex-col justify-end overflow-visible max-lg:h-[50%]">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             aria-live="polite"
@@ -4265,7 +4217,7 @@ export function TikTokStyleArena({
             })}
             <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
           </div>
-          <div className="relative min-w-0 shrink-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1">
+          <div className="relative z-[130] min-w-0 shrink-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1">
             <input
               type="text"
               value={chatInput}
@@ -4280,7 +4232,7 @@ export function TikTokStyleArena({
               aria-label="Message dans le chat du direct"
               autoComplete="off"
               enterKeyHint="send"
-              className="w-full rounded-2xl bg-[#08080a]/65 py-2 pl-2.5 pr-10 text-[13px] font-medium tracking-tight text-white shadow-[0_8px_32px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.04)] placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_24px_rgba(59,130,246,0.22),0_8px_32px_rgba(0,0,0,0.45)]"
+              className="relative z-[1] w-full rounded-2xl bg-[#08080a]/65 py-2 pl-2.5 pr-10 text-[13px] font-medium tracking-tight text-white shadow-[0_8px_32px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.04)] placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_24px_rgba(59,130,246,0.22),0_8px_32px_rgba(0,0,0,0.45)]"
             />
             <button
               type="button"
@@ -4304,21 +4256,21 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-2 lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:w-auto lg:min-w-[10.5rem] lg:max-w-[12rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
-            {/* Desktop : colonne étroite (≈ ancienne largeur), remplit la zone au-dessus de 😀 / cœur / cadeau */}
+            {/* Desktop : comme capture — 1 rangée de 5 + 😀 / cœur / cadeau (les 5 autres restent dans le panneau 😀) */}
             <div
               role="toolbar"
               aria-label="Réactions rapides"
-              className="mb-0 hidden max-h-[min(42vh,240px)] w-9 shrink-0 flex-col gap-0.5 overflow-y-auto overflow-x-hidden px-0.5 hide-scrollbar lg:mb-1 lg:flex lg:w-9 lg:min-w-9 lg:self-end"
+              className="mb-0 hidden w-full shrink-0 flex-row flex-wrap justify-end gap-1 px-0.5 lg:mb-0 lg:flex lg:max-w-full"
             >
-              {LIVE_POPULAR_EMOJI_STRIP.map((emoji) => (
+              {ARENA_QUICK_REACTIONS.slice(0, 5).map((emoji) => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => handleReaction(emoji)}
                   aria-label={`Réaction ${emoji}`}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-base shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform duration-75 hover:bg-white/10 active:scale-90 touch-manipulation"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform duration-75 hover:bg-white/10 active:scale-90 touch-manipulation"
                 >
                   <span aria-hidden>{emoji}</span>
                 </button>
