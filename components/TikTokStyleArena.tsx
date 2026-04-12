@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -313,16 +314,59 @@ export function TikTokStyleArena({
   const [contextMenuMsg, setContextMenuMsg] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showAllReactions, setShowAllReactions] = useState(false); // NEW: Toggle pour afficher toutes les réactions
+  /** Portail body : cadeaux / panneau réactions au-dessus de la vidéo (z-50) */
+  const [dockPickersMounted, setDockPickersMounted] = useState(false);
+  const [dockPickerPos, setDockPickerPos] = useState<{ bottom: number; right: number } | null>(null);
   /** Colonne emoji / cadeaux / partage — fermeture au tap extérieur */
   const reactionDockRef = useRef<HTMLDivElement>(null);
   const chatMessagesScrollRef = useRef<HTMLDivElement>(null);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const announcementClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    setDockPickersMounted(true);
+  }, []);
+
+  const measureDockPickerPosition = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (!showAllReactions && !showGiftPicker) {
+      setDockPickerPos(null);
+      return;
+    }
+    const el = reactionDockRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setDockPickerPos({
+      bottom: Math.max(8, window.innerHeight - r.top + 8),
+      right: Math.max(8, window.innerWidth - r.right),
+    });
+  }, [showAllReactions, showGiftPicker]);
+
+  useLayoutEffect(() => {
+    measureDockPickerPosition();
+    const id = window.requestAnimationFrame(() => measureDockPickerPosition());
+    return () => window.cancelAnimationFrame(id);
+  }, [measureDockPickerPosition]);
+
+  useEffect(() => {
+    if (!showAllReactions && !showGiftPicker) return;
+    const ro = () => measureDockPickerPosition();
+    window.addEventListener('resize', ro);
+    window.visualViewport?.addEventListener('resize', ro);
+    window.visualViewport?.addEventListener('scroll', ro);
+    return () => {
+      window.removeEventListener('resize', ro);
+      window.visualViewport?.removeEventListener('resize', ro);
+      window.visualViewport?.removeEventListener('scroll', ro);
+    };
+  }, [showAllReactions, showGiftPicker, measureDockPickerPosition]);
+
+  useEffect(() => {
     if (!showAllReactions && !showGiftPicker) return;
     const onPointerDown = (e: PointerEvent) => {
       const root = reactionDockRef.current;
-      if (root?.contains(e.target as Node)) return;
+      const target = e.target;
+      if (root?.contains(target as Node)) return;
+      if (target instanceof Element && target.closest('[data-arena-dock-popover]')) return;
       setShowAllReactions(false);
       setShowGiftPicker(false);
     };
@@ -4066,7 +4110,7 @@ export function TikTokStyleArena({
       {/* ── Dock social — overlay massif bas, obstrue le bas des vidéos ── */}
       {!beefEnded && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[40] flex h-[45%] min-h-[160px] w-full flex-col justify-end overflow-visible max-lg:h-[50%]">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-stretch lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             aria-live="polite"
@@ -4187,13 +4231,13 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:gap-2 lg:py-1.5 lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:pl-6"
+            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:min-h-0 lg:flex-1 lg:flex-col lg:flex-nowrap lg:items-center lg:justify-between lg:gap-2 lg:self-stretch lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
-            {/* 10 réactions en une bande scrollable ≈ largeur des 5 anciennes (desktop) / une ligne (mobile) */}
+            {/* Desktop : grille 2×5 (remplit la hauteur à droite du chat) */}
             <div
               role="toolbar"
               aria-label="Réactions rapides"
-              className="mb-0 hidden max-w-[12rem] flex-nowrap gap-1 overflow-x-auto overflow-y-hidden hide-scrollbar lg:mb-1 lg:flex lg:px-0.5"
+              className="mb-0 hidden w-[5.5rem] shrink-0 grid-cols-2 grid-rows-5 gap-1 justify-items-center px-0.5 lg:mb-0 lg:grid lg:self-start"
             >
               {LIVE_POPULAR_EMOJI_STRIP.map((emoji) => (
                 <button
@@ -4201,7 +4245,7 @@ export function TikTokStyleArena({
                   type="button"
                   onClick={() => handleReaction(emoji)}
                   aria-label={`Réaction ${emoji}`}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform duration-75 hover:bg-white/10 active:scale-90 touch-manipulation"
                 >
                   <span aria-hidden>{emoji}</span>
                 </button>
@@ -4218,162 +4262,36 @@ export function TikTokStyleArena({
                   type="button"
                   onClick={() => handleReaction(emoji)}
                   aria-label={`Réaction ${emoji}`}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-[15px] shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
+                  className="flex h-9 min-h-[2.25rem] w-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-full bg-black/40 text-[15px] shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform duration-75 hover:bg-white/10 active:scale-90 touch-manipulation"
                 >
                   <span aria-hidden>{emoji}</span>
                 </button>
               ))}
             </div>
 
-            <div className="relative z-[130] flex flex-wrap items-center justify-center gap-1.5 overflow-visible">
-              <AnimatePresence>
-                {showAllReactions && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 8 }}
-                    className="pointer-events-auto absolute bottom-full right-0 z-[300] mb-2 max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] origin-bottom-right overflow-y-auto overscroll-contain rounded-xl border border-white/[0.1] bg-[#0c0c0f]/98 p-2 pt-1.5 shadow-2xl backdrop-blur-xl sm:left-auto sm:right-0 sm:translate-x-0"
-                  >
-                    <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2">
-                      <span className="pl-0.5 text-[11px] font-semibold text-white/75">Réactions</span>
-                      <button
-                        type="button"
-                        onClick={() => setShowAllReactions(false)}
-                        aria-label="Fermer le panneau de réactions"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                      >
-                        <X className="h-4 w-4" strokeWidth={1.5} aria-hidden />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-6 gap-1 sm:grid-cols-8">
-                      {PICKER_REACTIONS.map((emoji) => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={() => {
-                            handleReaction(emoji);
-                            setShowAllReactions(false);
-                          }}
-                          aria-label={`Réagir avec ${emoji}`}
-                          className="flex h-9 w-9 items-center justify-center rounded-xl text-lg hover:bg-white/10 active:scale-90"
-                        >
-                          <span aria-hidden>{emoji}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <AnimatePresence>
-                {showGiftPicker && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                    className="pointer-events-auto absolute bottom-full right-0 z-[300] mb-2 w-[220px] rounded-xl border border-white/12 bg-[#0c0c0f]/98 p-3 pt-2 shadow-2xl backdrop-blur-xl"
-                  >
-                    <div className="mb-2 flex items-start justify-between gap-2 border-b border-white/[0.08] pb-2">
-                      <p className="min-w-0 flex-1 pl-0.5 text-[11px] font-semibold leading-snug text-white/75">
-                        Envoyer au médiateur
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setShowGiftPicker(false)}
-                        aria-label="Fermer les cadeaux"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                      >
-                        <X className="h-4 w-4" strokeWidth={1.5} aria-hidden />
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {[
-                        { emoji: '🌹', label: 'Rose', id: 'rose', cost: 10 },
-                        { emoji: '🔥', label: 'Fire', id: 'fire', cost: 25 },
-                        { emoji: '👑', label: 'Couronne', id: 'crown', cost: 100 },
-                        { emoji: '💎', label: 'Diamant', id: 'diamond', cost: 50 },
-                      ].map((gift) => (
-                        <button
-                          key={gift.label}
-                          onClick={async () => {
-                            if (userPoints < gift.cost) {
-                              toast(`Points insuffisants — il te manque ${gift.cost - userPoints} pts (solde ${userPoints})`, 'error', {
-                                action: {
-                                  label: 'Recharger',
-                                  onClick: () => goBuyPoints(),
-                                },
-                              });
-                              return;
-                            }
-
-                            try {
-                              const {
-                                data: { session },
-                              } = await supabase.auth.getSession();
-                              const res = await fetch('/api/gifts/send', {
-                                method: 'POST',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                  Authorization: `Bearer ${session?.access_token || ''}`,
-                                },
-                                body: JSON.stringify({
-                                  beef_id: roomId,
-                                  recipient_id: host.id,
-                                  gift_type_id: gift.id,
-                                  points_amount: gift.cost,
-                                }),
-                              });
-                              const data = await res.json();
-                              if (!res.ok) throw new Error(data.error);
-                              setUserPoints(data.newBalance);
-                              if (gift.cost >= 50) {
-                                setGiftPrestigeFlash((k) => k + 1);
-                              }
-                              toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
-                            } catch (err: any) {
-                              const m = err?.message || "Erreur lors de l'envoi";
-                              if (typeof m === 'string' && m.toLowerCase().includes('insuffisant')) {
-                                toast(m, 'error', {
-                                  action: { label: 'Recharger', onClick: () => goBuyPoints() },
-                                });
-                              } else {
-                                toast(m, 'error');
-                              }
-                            }
-                            setShowGiftPicker(false);
-                          }}
-                          className="flex flex-col items-center gap-1 rounded-xl bg-white/5 p-2 hover:bg-white/12"
-                        >
-                          <span className="text-2xl">{gift.emoji}</span>
-                          <span className="text-[10px] font-bold text-white">{gift.label}</span>
-                          <span className="text-[9px] font-semibold text-ember-400">{gift.cost} pts</span>
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            <div className="relative z-[130] flex flex-wrap items-center justify-center gap-2 overflow-visible max-lg:gap-1.5 lg:mt-auto lg:shrink-0">
               <motion.button
                 type="button"
-                whileTap={{ scale: 0.92 }}
-                transition={{ duration: 0.3 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ duration: 0.08, ease: 'easeOut' }}
                 onClick={() => {
                   setShowGiftPicker(false);
                   setShowAllReactions((v) => !v);
                 }}
                 aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
                 aria-expanded={showAllReactions}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-lg shadow-[0_6px_22px_rgba(0,0,0,0.35)] backdrop-blur-md touch-manipulation"
+                className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-xl bg-white/[0.06] text-lg shadow-[0_6px_22px_rgba(0,0,0,0.35)] backdrop-blur-md touch-manipulation"
               >
                 <span aria-hidden>😀</span>
               </motion.button>
 
               <motion.button
                 type="button"
-                whileTap={{ scale: 0.88 }}
-                transition={{ duration: 0.3 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ duration: 0.08, ease: 'easeOut' }}
                 onClick={() => handleReaction(HEART_ON_FIRE)}
                 aria-label="Envoyer une réaction cœur enflammé"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-xl leading-none shadow-[0_6px_22px_rgba(0,0,0,0.35)] backdrop-blur-md touch-manipulation"
+                className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-xl bg-white/[0.06] text-xl leading-none shadow-[0_6px_22px_rgba(0,0,0,0.35)] backdrop-blur-md touch-manipulation"
               >
                 <span aria-hidden>{HEART_ON_FIRE}</span>
               </motion.button>
@@ -4381,15 +4299,15 @@ export function TikTokStyleArena({
               <div className="relative flex shrink-0">
                 <motion.button
                   type="button"
-                  whileTap={{ scale: 0.88 }}
-                  transition={{ duration: 0.3 }}
+                  whileTap={{ scale: 0.96 }}
+                  transition={{ duration: 0.08, ease: 'easeOut' }}
                   onClick={() => {
                     setShowAllReactions(false);
                     setShowGiftPicker((v) => !v);
                   }}
                   aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
                   aria-expanded={showGiftPicker}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-ember-600/90 to-cobalt-700/80 shadow-[0_8px_28px_rgba(0,0,0,0.45),0_0_24px_rgba(251,146,60,0.15)]"
+                  className="flex h-10 w-10 select-none items-center justify-center rounded-xl bg-gradient-to-br from-ember-600/90 to-cobalt-700/80 shadow-[0_8px_28px_rgba(0,0,0,0.45),0_0_24px_rgba(251,146,60,0.15)] touch-manipulation"
                 >
                   <Gift className="h-[18px] w-[18px] text-white" strokeWidth={1.2} aria-hidden />
                 </motion.button>
@@ -4410,6 +4328,163 @@ export function TikTokStyleArena({
       )}
 
       </div>
+
+      {dockPickersMounted &&
+        typeof document !== 'undefined' &&
+        dockPickerPos &&
+        (showAllReactions || showGiftPicker) &&
+        createPortal(
+          <AnimatePresence mode="wait">
+            {showAllReactions && (
+              <motion.div
+                key="arena-all-reactions"
+                data-arena-dock-popover
+                role="dialog"
+                aria-modal="true"
+                aria-label="Réactions"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                style={{
+                  position: 'fixed',
+                  bottom: dockPickerPos.bottom,
+                  right: dockPickerPos.right,
+                  zIndex: 560,
+                }}
+                className="pointer-events-auto max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-xl border border-white/[0.1] bg-[#0c0c0f]/98 p-2 pt-1.5 shadow-2xl backdrop-blur-xl"
+              >
+                <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2">
+                  <span className="pl-0.5 text-[11px] font-semibold text-white/75">Réactions</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllReactions(false)}
+                    aria-label="Fermer le panneau de réactions"
+                    className="flex h-9 min-h-9 min-w-9 shrink-0 touch-manipulation items-center justify-center rounded-xl text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                  >
+                    <X className="h-4 w-4" strokeWidth={1.5} aria-hidden />
+                  </button>
+                </div>
+                <div className="grid grid-cols-6 gap-1 sm:grid-cols-8">
+                  {PICKER_REACTIONS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => {
+                        handleReaction(emoji);
+                        setShowAllReactions(false);
+                      }}
+                      aria-label={`Réagir avec ${emoji}`}
+                      className="flex h-9 min-h-9 w-9 min-w-9 touch-manipulation items-center justify-center rounded-xl text-lg hover:bg-white/10 active:scale-95"
+                    >
+                      <span aria-hidden>{emoji}</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+            {showGiftPicker && (
+              <motion.div
+                key="arena-gift-picker"
+                data-arena-dock-popover
+                role="dialog"
+                aria-modal="true"
+                aria-label="Cadeaux"
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                style={{
+                  position: 'fixed',
+                  bottom: dockPickerPos.bottom,
+                  right: dockPickerPos.right,
+                  zIndex: 560,
+                }}
+                className="pointer-events-auto w-[min(calc(100vw-1.5rem),220px)] rounded-xl border border-white/12 bg-[#0c0c0f]/98 p-3 pt-2 shadow-2xl backdrop-blur-xl"
+              >
+                <div className="mb-2 flex items-start justify-between gap-2 border-b border-white/[0.08] pb-2">
+                  <p className="min-w-0 flex-1 pl-0.5 text-[11px] font-semibold leading-snug text-white/75">
+                    Envoyer au médiateur
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowGiftPicker(false)}
+                    aria-label="Fermer les cadeaux"
+                    className="flex h-9 min-h-9 min-w-9 shrink-0 touch-manipulation items-center justify-center rounded-xl text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                  >
+                    <X className="h-4 w-4" strokeWidth={1.5} aria-hidden />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { emoji: '🌹', label: 'Rose', id: 'rose', cost: 10 },
+                    { emoji: '🔥', label: 'Fire', id: 'fire', cost: 25 },
+                    { emoji: '👑', label: 'Couronne', id: 'crown', cost: 100 },
+                    { emoji: '💎', label: 'Diamant', id: 'diamond', cost: 50 },
+                  ].map((gift) => (
+                    <button
+                      key={gift.label}
+                      type="button"
+                      onClick={async () => {
+                        if (userPoints < gift.cost) {
+                          toast(`Points insuffisants — il te manque ${gift.cost - userPoints} pts (solde ${userPoints})`, 'error', {
+                            action: {
+                              label: 'Recharger',
+                              onClick: () => goBuyPoints(),
+                            },
+                          });
+                          return;
+                        }
+
+                        try {
+                          const {
+                            data: { session },
+                          } = await supabase.auth.getSession();
+                          const res = await fetch('/api/gifts/send', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              Authorization: `Bearer ${session?.access_token || ''}`,
+                            },
+                            body: JSON.stringify({
+                              beef_id: roomId,
+                              recipient_id: host.id,
+                              gift_type_id: gift.id,
+                              points_amount: gift.cost,
+                            }),
+                          });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data.error);
+                          setUserPoints(data.newBalance);
+                          if (gift.cost >= 50) {
+                            setGiftPrestigeFlash((k) => k + 1);
+                          }
+                          toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
+                        } catch (err: unknown) {
+                          const m = err instanceof Error ? err.message : "Erreur lors de l'envoi";
+                          if (typeof m === 'string' && m.toLowerCase().includes('insuffisant')) {
+                            toast(m, 'error', {
+                              action: { label: 'Recharger', onClick: () => goBuyPoints() },
+                            });
+                          } else {
+                            toast(m, 'error');
+                          }
+                        }
+                        setShowGiftPicker(false);
+                      }}
+                      className="flex touch-manipulation flex-col items-center gap-1 rounded-xl bg-white/5 p-2 transition-transform active:scale-[0.98] hover:bg-white/12"
+                    >
+                      <span className="text-2xl">{gift.emoji}</span>
+                      <span className="text-[10px] font-bold text-white">{gift.label}</span>
+                      <span className="text-[9px] font-semibold text-ember-400">{gift.cost} pts</span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
 
       {/* User Profile Modal */}
       <AnimatePresence>
