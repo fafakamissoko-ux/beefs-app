@@ -4069,7 +4069,7 @@ export function TikTokStyleArena({
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div
             ref={chatMessagesScrollRef}
-            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:h-[min(36svh,280px)] max-lg:min-h-[9rem] max-lg:flex-none max-lg:shrink-0 max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
+            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:min-h-0 max-lg:max-h-[min(26svh,200px)] max-lg:flex-1 max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -4143,7 +4143,7 @@ export function TikTokStyleArena({
             })}
             <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
           </div>
-          <div className="relative min-w-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1">
+          <div className="relative min-w-0 shrink-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1">
             <input
               type="text"
               value={chatInput}
@@ -4157,18 +4157,18 @@ export function TikTokStyleArena({
               placeholder="Message..."
               aria-label="Message dans le chat du direct"
               autoComplete="off"
+              enterKeyHint="send"
               className="w-full rounded-2xl bg-[#08080a]/65 py-2 pl-2.5 pr-10 text-[13px] font-medium tracking-tight text-white shadow-[0_8px_32px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.04)] placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_24px_rgba(59,130,246,0.22),0_8px_32px_rgba(0,0,0,0.45)]"
             />
-            {chatInput.trim() && (
-              <button
-                type="button"
-                onClick={handleSendMessage}
-                aria-label="Envoyer le message"
-                className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-xl bg-ember-500 hover:bg-ember-600"
-              >
-                <Send className="h-3 w-3 text-white" strokeWidth={1} aria-hidden />
-              </button>
-            )}
+            <button
+              type="button"
+              disabled={!chatInput.trim()}
+              onClick={() => void handleSendMessage()}
+              aria-label="Envoyer le message"
+              className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-xl bg-ember-500 hover:bg-ember-600 disabled:pointer-events-none disabled:opacity-35"
+            >
+              <Send className="h-3 w-3 text-white" strokeWidth={1} aria-hidden />
+            </button>
             <FeatureGuide
               id="arena-chat"
               title="Chat en direct"
@@ -4184,36 +4184,32 @@ export function TikTokStyleArena({
             ref={reactionDockRef}
             className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-visible px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
-            {userRole === 'viewer' && (
-              <div className="mb-1 hidden w-full flex-wrap justify-center gap-1 px-0.5 lg:flex">
-                {LIVE_POPULAR_EMOJI_STRIP.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => handleReaction(emoji)}
-                    aria-label={`Réaction ${emoji}`}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
-                  >
-                    <span aria-hidden>{emoji}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {userRole === 'viewer' && (
-              <div className="flex max-w-full flex-wrap justify-center gap-1 px-0.5 lg:hidden">
-                {ARENA_QUICK_REACTIONS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => handleReaction(emoji)}
-                    aria-label={`Réaction ${emoji}`}
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-[15px] shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
-                  >
-                    <span aria-hidden>{emoji}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="mb-1 hidden w-full flex-wrap justify-center gap-1 px-0.5 lg:flex">
+              {LIVE_POPULAR_EMOJI_STRIP.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => handleReaction(emoji)}
+                  aria-label={`Réaction ${emoji}`}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
+                >
+                  <span aria-hidden>{emoji}</span>
+                </button>
+              ))}
+            </div>
+            <div className="flex max-w-full flex-wrap justify-center gap-1 px-0.5 lg:hidden">
+              {ARENA_QUICK_REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => handleReaction(emoji)}
+                  aria-label={`Réaction ${emoji}`}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-[15px] shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
+                >
+                  <span aria-hidden>{emoji}</span>
+                </button>
+              ))}
+            </div>
 
             <div className="relative z-[130] flex flex-wrap items-center justify-center gap-1.5 overflow-visible">
               <AnimatePresence>
