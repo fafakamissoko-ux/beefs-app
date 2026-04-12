@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -361,7 +361,7 @@ export function TikTokStyleArena({
     });
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     scrollChatToEnd();
   }, [visibleMessages, scrollChatToEnd]);
 
@@ -1445,11 +1445,11 @@ export function TikTokStyleArena({
   const seenMsgKeys = useRef(new Set<string>());
 
   const addRemoteMessage = useCallback((msgUserName: string, content: string, initial?: string, dbId?: string) => {
-    const key = `${msgUserName}::${content}`;
+    const key = dbId ? `id:${dbId}` : `${msgUserName}::${content}`;
     if (seenMsgKeys.current.has(key)) return;
     seenMsgKeys.current.add(key);
-    // Remove key after 5s so the same message text can be sent again later
-    setTimeout(() => seenMsgKeys.current.delete(key), 5000);
+    const ttlMs = dbId ? 60_000 : 5000;
+    setTimeout(() => seenMsgKeys.current.delete(key), ttlMs);
     const msgId = dbId || `m_${Date.now()}_${Math.random()}`;
     const newMsg: VisibleMessage = {
       id: msgId,
@@ -2581,6 +2581,11 @@ export function TikTokStyleArena({
           initial: senderInitial,
         };
         setVisibleMessages((prev) => [...prev, localMsg].slice(-80));
+        queueMicrotask(() => {
+          scrollChatToEnd();
+          window.setTimeout(() => scrollChatToEnd(), 50);
+          window.setTimeout(() => scrollChatToEnd(), 200);
+        });
         channelRef.current
           ?.send({
             type: 'broadcast',
@@ -4069,7 +4074,7 @@ export function TikTokStyleArena({
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div
             ref={chatMessagesScrollRef}
-            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:min-h-0 max-lg:max-h-[min(26svh,200px)] max-lg:flex-1 max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
+            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:min-h-0 max-lg:max-h-[min(30svh,240px)] max-lg:flex-1 max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -4182,22 +4187,31 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-visible px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:gap-2 lg:py-1.5 lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:pl-6"
           >
-            <div className="mb-1 hidden w-full flex-wrap justify-center gap-1 px-0.5 lg:flex">
+            {/* 10 réactions en une bande scrollable ≈ largeur des 5 anciennes (desktop) / une ligne (mobile) */}
+            <div
+              role="toolbar"
+              aria-label="Réactions rapides"
+              className="mb-0 hidden max-w-[12rem] flex-nowrap gap-1 overflow-x-auto overflow-y-hidden hide-scrollbar lg:mb-1 lg:flex lg:px-0.5"
+            >
               {LIVE_POPULAR_EMOJI_STRIP.map((emoji) => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => handleReaction(emoji)}
                   aria-label={`Réaction ${emoji}`}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
                 >
                   <span aria-hidden>{emoji}</span>
                 </button>
               ))}
             </div>
-            <div className="flex max-w-full flex-wrap justify-center gap-1 px-0.5 lg:hidden">
+            <div
+              role="toolbar"
+              aria-label="Réactions rapides"
+              className="flex max-w-full flex-nowrap justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-0.5 hide-scrollbar [-webkit-overflow-scrolling:touch] lg:hidden"
+            >
               {ARENA_QUICK_REACTIONS.map((emoji) => (
                 <button
                   key={emoji}
