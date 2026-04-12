@@ -10,7 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "Space Grotesk", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "monospace"],
       },
       colors: {
@@ -63,6 +63,9 @@ const config: Config = {
         "arena-dark": "#08080A",
         "arena-darker": "#040405",
         "arena-gray": "#12121a",
+        "prestige-gold": "#D4AF37",
+        "prestige-blue": "#3B82F6",
+        "prestige-orange": "#F97316",
         prestige: {
           void: "#08080A",
           ink: "#0c0c0f",

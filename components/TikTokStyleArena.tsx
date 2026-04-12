@@ -1209,6 +1209,36 @@ export function TikTokStyleArena({
     return 0;
   });
 
+  const hasExpectedChallengers = useMemo(
+    () => Object.keys(participantRoles).some((uid) => uid !== host.id),
+    [participantRoles, host.id],
+  );
+
+  /** Spectateur : LIVE « chaud » dès qu’un challenger attendu est dans la room ; repli si rôles pas encore chargés. */
+  const challengerOnAir = useMemo(() => {
+    const matched = remoteParticipants.some((p) => {
+      if (remoteMatchesMediator(p, host.id, host.name)) return false;
+      return matchRemoteToExpectedBeefParticipant(p, host.id, host.name, participantRoles) !== null;
+    });
+    if (matched) return true;
+    if (!isViewer) return false;
+    const nonMediator = remoteParticipants.filter(
+      (p) => !remoteMatchesMediator(p, host.id, host.name),
+    );
+    if (nonMediator.length === 0) return false;
+    if (!hasExpectedChallengers) return true;
+    return false;
+  }, [remoteParticipants, host.id, host.name, participantRoles, isViewer, hasExpectedChallengers]);
+
+  const liveBadgeHot = isViewer ? challengerOnAir : isJoined;
+
+  const islandChallengerRemote = useMemo(
+    () =>
+      sortedRemoteParticipants.find((p) => !remoteMatchesMediator(p, host.id, host.name)) ?? null,
+    [sortedRemoteParticipants, host.id, host.name],
+  );
+  const islandChallengerLabel = islandChallengerRemote?.userName?.trim() || 'En attente…';
+
   // Video layout: determine which participant goes in each slot based on role
   const hostRemoteParticipant = !isHost
     ? remoteParticipants.find(p => remoteMatchesMediator(p, host.id, host.name)) ?? null
@@ -2838,7 +2868,7 @@ export function TikTokStyleArena({
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-16 left-1/2 -translate-x-1/2 z-[100] bg-yellow-500/90 backdrop-blur-sm text-black px-4 py-2 rounded-xl flex items-center gap-3 shadow-lg"
+          className="absolute top-28 left-1/2 -translate-x-1/2 z-[100] bg-yellow-500/90 backdrop-blur-sm text-black px-4 py-2 rounded-xl flex items-center gap-3 shadow-lg"
         >
           <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
           <div className="text-sm font-semibold text-center max-w-[min(100vw-2rem,20rem)]">
@@ -2851,7 +2881,7 @@ export function TikTokStyleArena({
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-16 left-1/2 -translate-x-1/2 z-[100] bg-white/10 backdrop-blur-sm text-white px-5 py-3 rounded-xl flex items-center gap-3 shadow-lg border border-white/10"
+          className="absolute top-28 left-1/2 -translate-x-1/2 z-[100] bg-white/10 backdrop-blur-sm text-white px-5 py-3 rounded-xl flex items-center gap-3 shadow-lg border border-white/10"
         >
           <div className="w-5 h-5 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
           <div className="text-sm font-medium">
@@ -2883,12 +2913,12 @@ export function TikTokStyleArena({
           </div>
         )}
         {dailyRoomUrl ? (
-          <div className="relative z-[1] h-[60%] w-full shrink-0 overflow-hidden">
-            {/* Bandeau haute réservée sous le header z-[60] (chrono / LIVE) pour éviter overlap avec noms + contrôles */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 top-14 z-0 flex h-auto flex-row max-lg:top-[3.35rem] lg:top-12">
+          <div className="relative z-[1] h-[60%] w-full shrink-0 overflow-hidden pt-24 max-sm:pt-28">
+            {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
+            <div className="pointer-events-none absolute inset-0 z-0 flex h-auto flex-row gap-2 px-1">
               {/* LEFT — Participant A */}
               <motion.div
-                className={`pointer-events-auto relative h-full overflow-hidden bg-[#08080A] transition-all duration-500 ${focusTarget === 'A' ? 'w-[80%]' : focusTarget === 'B' ? 'w-[20%]' : 'w-1/2'}`}
+                className={`pointer-events-auto relative h-full overflow-hidden rounded-[2rem] bg-[#08080A] transition-all duration-500 ${focusTarget === 'A' ? 'w-[80%]' : focusTarget === 'B' ? 'w-[20%]' : 'w-1/2'}`}
                 style={{ boxShadow: `inset 0 0 ${auraIntensityA}px rgba(37,99,235,${auraOpacityA})` }}
                 animate={
                   rematchSequence
@@ -3292,7 +3322,7 @@ export function TikTokStyleArena({
 
               {/* RIGHT — Participant B */}
               <motion.div
-                className={`pointer-events-auto relative h-full overflow-hidden border-l border-white/20 bg-[#08080A] transition-all duration-500 ${focusTarget === 'B' ? 'w-[80%]' : focusTarget === 'A' ? 'w-[20%]' : 'w-1/2'}`}
+                className={`pointer-events-auto relative h-full overflow-hidden rounded-[2rem] border-l border-white/15 bg-[#08080A] transition-all duration-500 ${focusTarget === 'B' ? 'w-[80%]' : focusTarget === 'A' ? 'w-[20%]' : 'w-1/2'}`}
                 style={{ boxShadow: `inset 0 0 ${auraIntensityB}px rgba(234,88,12,${auraOpacityB})` }}
                 animate={
                   rematchSequence
@@ -3800,72 +3830,88 @@ export function TikTokStyleArena({
         </div>
         )}
 
-      {/* ── Top Overlay — Header (z-[60] au-dessus bulle médiateur z-50) ── */}
-      <div className="absolute left-0 right-0 top-0 z-[60] bg-transparent p-2 sm:p-3">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-transparent lg:from-transparent" />
+      {/* ── Header « Islands » — pointer-events uniquement sur les capsules (vidéo cliquable ailleurs) ── */}
+      <div className="pointer-events-none fixed left-0 right-0 top-14 z-[60] grid w-full grid-cols-1 items-start gap-2 p-4 sm:grid-cols-[1fr_auto_1fr] sm:gap-3">
+        <div className="flex justify-center sm:justify-start">
+          <div className="glass-prestige pointer-events-auto flex max-w-full items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 sm:pr-4">
+            <div
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold uppercase text-white"
+              aria-hidden
+            >
+              {islandChallengerLabel.startsWith('En attente') ? '—' : (islandChallengerLabel.charAt(0) || '?').toUpperCase()}
+            </div>
+            <span
+              className="max-w-[150px] truncate font-sans text-sm font-bold text-white"
+              title={islandChallengerLabel}
+            >
+              {islandChallengerLabel}
+            </span>
+          </div>
+        </div>
 
-        <div className="relative grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-0.5">
-          <div className="min-w-0 pl-0.5" aria-hidden />
-
-          {/* Centre : chrono ou badge */}
-          <div className="flex items-center justify-center gap-1.5">
+        <div className="flex justify-center">
+          <div className="glass-prestige pointer-events-auto flex flex-col items-center justify-center gap-0.5 rounded-full px-4 py-2 text-center">
+            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-white/95">
+              {mediatorName}
+            </span>
             {isJoined && timerActive ? (
               <div
-                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-colors duration-200 max-lg:backdrop-blur-2xl lg:bg-transparent lg:shadow-none lg:backdrop-blur-none lg:hover:shadow-[0_0_28px_rgba(59,130,246,0.4)] ${
-                timerPaused
-                  ? 'bg-amber-950/88 lg:bg-transparent'
-                  : beefTimeRemaining <= 5 * 60
-                    ? 'animate-pulse bg-red-950/88 max-lg:animate-pulse lg:bg-transparent'
-                    : 'bg-zinc-950/90 lg:bg-transparent'
-              }`}
-              >
-                {timerPaused ? (
-                  <Pause className="h-3.5 w-3.5 text-amber-300" strokeWidth={1.2} aria-hidden />
-                ) : (
-                  <Timer className="h-3.5 w-3.5 text-white" strokeWidth={1.2} aria-hidden />
-                )}
-                <span className={`text-sm font-bold tabular-nums drop-shadow-sm ${
+                className={`flex items-center gap-1 font-mono text-xs font-bold tabular-nums ${
                   timerPaused
                     ? 'text-amber-200'
-                    : beefTimeRemaining <= 5 * 60 ? 'text-red-300' : 'text-white'
-                }`}>
-                  {formatBeefTime(beefTimeRemaining)}
-                </span>
+                    : beefTimeRemaining <= 5 * 60
+                      ? 'text-red-300'
+                      : 'text-white/90'
+                }`}
+              >
+                {timerPaused ? (
+                  <Pause className="h-3 w-3 shrink-0" strokeWidth={1.2} aria-hidden />
+                ) : (
+                  <Timer className="h-3 w-3 shrink-0" strokeWidth={1.2} aria-hidden />
+                )}
+                <span>{formatBeefTime(beefTimeRemaining)}</span>
                 {timerPaused && (
-                  <span className="text-amber-200 text-[10px] font-black animate-pulse ml-0.5">PAUSE</span>
+                  <span className="text-[9px] font-black uppercase tracking-wide text-amber-200 animate-pulse">Pause</span>
                 )}
               </div>
             ) : isJoined && !timerActive && isHost ? (
-              <div className="flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1 shadow-[0_8px_28px_rgba(0,0,0,0.4)] max-lg:backdrop-blur-2xl lg:bg-transparent lg:shadow-none lg:backdrop-blur-none lg:transition-colors lg:hover:shadow-[0_0_22px_rgba(59,130,246,0.32)]">
-                <span className="text-xs font-medium text-white/55">Pas de chrono</span>
-              </div>
+              <span className="font-mono text-[9px] uppercase tracking-wider text-white/50">Pas de chrono</span>
             ) : null}
           </div>
+        </div>
 
-          {/* Droite : partage, LIVE, spectateurs, régie — masqué sur mobile (reproduit dans le dock bas pour éviter overlap vidéo) */}
-          <div className="hidden min-w-0 items-center justify-end gap-1.5 lg:flex">
+        <div className="flex justify-center sm:justify-end">
+          <div className="glass-prestige pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-full py-1.5 pl-2 pr-1.5 sm:gap-2 sm:pl-3">
+            <div
+              className={`flex items-center rounded-full px-2 py-0.5 ${
+                liveBadgeHot
+                  ? 'animate-pulse bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.45)]'
+                  : 'bg-white/10'
+              }`}
+            >
+              <div
+                className={`mr-1 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-white' : 'bg-amber-300'}`}
+              />
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-white">LIVE</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowViewerList(true)}
+              className="flex items-center gap-1 rounded-full px-1.5 py-1 transition-colors hover:bg-white/10"
+              aria-label="Spectateurs"
+            >
+              <Eye className="h-3.5 w-3.5 text-white" strokeWidth={1.2} aria-hidden />
+              <span className="min-w-[1ch] font-mono text-[11px] font-medium tabular-nums text-white">
+                {liveViewerCount > 0 ? liveViewerCount : '—'}
+              </span>
+            </button>
             <button
               type="button"
               onClick={onShare}
               aria-label="Partager le direct"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors max-lg:bg-white/[0.06] max-lg:shadow-[0_8px_28px_rgba(0,0,0,0.35)] max-lg:backdrop-blur-2xl lg:bg-transparent lg:hover:shadow-[0_0_22px_rgba(59,130,246,0.35)]"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
             >
-              <Share2 className="h-[18px] w-[18px] text-white" strokeWidth={1.2} aria-hidden />
-            </button>
-            {/* LIVE badge */}
-            <div className="flex items-center rounded-full bg-red-600/95 px-2 py-0.5 shadow-[0_6px_24px_rgba(220,38,38,0.35)] lg:bg-transparent lg:shadow-[0_0_24px_rgba(239,68,68,0.25)] lg:transition-all lg:hover:shadow-[0_0_28px_rgba(59,130,246,0.38)]">
-              <div className={`mr-1 h-1.5 w-1.5 rounded-full ${liveConnected ? 'animate-pulse bg-white' : 'bg-yellow-300'}`} />
-              <span className="text-[10px] font-black tracking-wider text-white">LIVE</span>
-            </div>
-            {/* Viewer count — clickable to show viewer list */}
-            <button
-              onClick={() => setShowViewerList(true)}
-              className="flex items-center gap-1 rounded-full px-2.5 py-1 transition-colors max-lg:bg-white/[0.07] max-lg:shadow-[0_8px_28px_rgba(0,0,0,0.35)] max-lg:backdrop-blur-2xl lg:bg-transparent lg:backdrop-blur-none lg:hover:shadow-[0_0_26px_rgba(59,130,246,0.45)]"
-            >
-              <Eye className="h-3.5 w-3.5 text-white" strokeWidth={1.2} aria-hidden />
-              {liveViewerCount > 0 && (
-                <span className="text-[11px] font-bold tabular-nums text-white">{liveViewerCount}</span>
-              )}
+              <Share2 className="h-[17px] w-[17px] text-white" strokeWidth={1.2} aria-hidden />
             </button>
             {isHost ? (
               <button
@@ -3875,7 +3921,7 @@ export function TikTokStyleArena({
                 aria-label={
                   mediatorSidebarOpen ? 'Fermer la commande médiateur' : 'Ouvrir la commande médiateur'
                 }
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#08080a]/80 text-ember-300 shadow-[0_8px_28px_rgba(0,0,0,0.45)] backdrop-blur-md transition-colors hover:bg-ember-500/12 lg:bg-transparent lg:text-white lg:shadow-none lg:backdrop-blur-none lg:hover:text-cobalt-100 lg:hover:shadow-[0_0_26px_rgba(59,130,246,0.42)]"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-amber-200 transition-colors hover:bg-white/10 hover:text-white"
               >
                 <Sliders className="h-5 w-5" strokeWidth={1.2} aria-hidden />
               </button>
@@ -3883,7 +3929,8 @@ export function TikTokStyleArena({
               <button
                 type="button"
                 onClick={handleLeave}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 shadow-[0_8px_28px_rgba(0,0,0,0.4)] backdrop-blur-md transition-colors hover:bg-black/50 lg:bg-transparent lg:shadow-none lg:backdrop-blur-none lg:hover:shadow-[0_0_22px_rgba(59,130,246,0.35)] lg:hover:bg-transparent"
+                aria-label="Quitter le direct"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
               >
                 <X className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
               </button>
@@ -4082,51 +4129,6 @@ export function TikTokStyleArena({
             ref={reactionDockRef}
             className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-visible px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
-            {/* Mobile / tablette : barre live (partage, LIVE, vues, régie) au-dessus des réactions — remplit l’espace utile sans chevaucher les panneaux vidéo */}
-            <div className="flex w-full shrink-0 flex-wrap items-center justify-center gap-2 border-b border-white/[0.08] pb-2 lg:hidden">
-              <button
-                type="button"
-                onClick={onShare}
-                aria-label="Partager le direct"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.08] shadow-[0_6px_20px_rgba(0,0,0,0.35)] backdrop-blur-md"
-              >
-                <Share2 className="h-[18px] w-[18px] text-white" strokeWidth={1.2} aria-hidden />
-              </button>
-              <div className="flex items-center rounded-full bg-red-600/90 px-2.5 py-1 shadow-[0_4px_16px_rgba(220,38,38,0.35)]">
-                <div className={`mr-1 h-1.5 w-1.5 rounded-full ${liveConnected ? 'animate-pulse bg-white' : 'bg-yellow-300'}`} />
-                <span className="text-[10px] font-black tracking-wider text-white">LIVE</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowViewerList(true)}
-                className="flex items-center gap-1 rounded-full bg-white/[0.08] px-2.5 py-1.5 shadow-[0_6px_20px_rgba(0,0,0,0.35)] backdrop-blur-md"
-              >
-                <Eye className="h-3.5 w-3.5 text-white" strokeWidth={1.2} aria-hidden />
-                {liveViewerCount > 0 && (
-                  <span className="text-[11px] font-bold tabular-nums text-white">{liveViewerCount}</span>
-                )}
-              </button>
-              {isHost ? (
-                <button
-                  type="button"
-                  onClick={() => setMediatorSidebarOpen((o) => !o)}
-                  aria-expanded={mediatorSidebarOpen}
-                  aria-label={mediatorSidebarOpen ? 'Fermer la régie' : 'Ouvrir la régie'}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ember-500/20 text-ember-200 shadow-[0_6px_20px_rgba(0,0,0,0.35)] backdrop-blur-md"
-                >
-                  <Sliders className="h-5 w-5" strokeWidth={1.2} aria-hidden />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleLeave}
-                  aria-label="Quitter le direct"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.08] shadow-[0_6px_20px_rgba(0,0,0,0.35)] backdrop-blur-md"
-                >
-                  <X className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
-                </button>
-              )}
-            </div>
             {userRole === 'viewer' && (
               <div className="flex flex-wrap justify-center gap-1">
                 {SPECTATOR_QUICK_REACTIONS.map((emoji) => (

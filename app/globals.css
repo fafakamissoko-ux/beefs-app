@@ -2,16 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-
 @layer base {
+  :root {
+    --prestige-gold: #d4af37;
+    --prestige-blue: #3b82f6;
+    --prestige-orange: #f97316;
+  }
+
   html {
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
   }
 
   body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: var(--font-sans), "Space Grotesk", system-ui, -apple-system, sans-serif;
     color: #ececf1;
     letter-spacing: -0.011em;
     background-color: #08080a;
@@ -35,6 +39,10 @@
 }
 
 @layer components {
+  .glass-prestige {
+    @apply bg-white/5 backdrop-blur-3xl border border-white/10 shadow-2xl;
+  }
+
   .glass {
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(24px) saturate(150%);
