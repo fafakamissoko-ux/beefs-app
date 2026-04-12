@@ -33,6 +33,7 @@ import { sanitizeMessage } from '@/lib/security';
 import { DEFAULT_FREE_PREVIEW_MINUTES, viewerNeedsContinuationPay } from '@/lib/beef-preview';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
+import { ARENA_QUICK_REACTIONS } from '@/lib/arena-quick-reactions';
 import {
   buildParticipantAliasSet,
   isValidArenaUserId,
@@ -42,7 +43,6 @@ import {
 } from '@/lib/participant-identity';
 import {
   FlyingReactionsLayer,
-  SPECTATOR_QUICK_REACTIONS,
   createFlyingReactionEntry,
   pushFlyingReaction,
   type FlyingReactionEntry,
@@ -114,12 +114,12 @@ const POPULAR_REACTIONS = [
   '🙌', '💎', '🌟', '✨', '🚀', '💥'
 ];
 
-/** Une rangée, max 5 — desktop uniquement ; exclus du panneau 😀. */
-const LIVE_POPULAR_EMOJI_STRIP = ['👏', '😂', '🤔', '😮', '🎉'] as const;
+/** Bandeau réactions rapides (10) — exclus du panneau 😀. */
+const LIVE_POPULAR_EMOJI_STRIP = ARENA_QUICK_REACTIONS;
 
 const HEART_ON_FIRE = '❤️‍🔥';
 
-const STRIP_SET = new Set<string>(LIVE_POPULAR_EMOJI_STRIP);
+const STRIP_SET = new Set<string>(ARENA_QUICK_REACTIONS);
 
 const PICKER_REACTIONS = POPULAR_REACTIONS.filter((e) => {
   if (STRIP_SET.has(e)) return false;
@@ -349,8 +349,8 @@ export function TikTokStyleArena({
     }
   }, [mediatorSidebarOpen]);
 
-  useEffect(() => {
-    const id = window.requestAnimationFrame(() => {
+  const scrollChatToEnd = useCallback(() => {
+    window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
         const el = chatMessagesScrollRef.current;
         if (el) {
@@ -359,8 +359,25 @@ export function TikTokStyleArena({
         chatMessagesEndRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
       });
     });
-    return () => window.cancelAnimationFrame(id);
-  }, [visibleMessages]);
+  }, []);
+
+  useEffect(() => {
+    scrollChatToEnd();
+  }, [visibleMessages, scrollChatToEnd]);
+
+  /** Clavier mobile (visualViewport) : la hauteur du dock change — rescroll + évite masque qui « mange » les bulles. */
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const onLayoutChange = () => scrollChatToEnd();
+    vv?.addEventListener('resize', onLayoutChange);
+    vv?.addEventListener('scroll', onLayoutChange);
+    window.addEventListener('resize', onLayoutChange);
+    return () => {
+      vv?.removeEventListener('resize', onLayoutChange);
+      vv?.removeEventListener('scroll', onLayoutChange);
+      window.removeEventListener('resize', onLayoutChange);
+    };
+  }, [scrollChatToEnd]);
 
   useEffect(() => {
     if (!gloryChallengerSlot) return;
@@ -4052,7 +4069,7 @@ export function TikTokStyleArena({
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div
             ref={chatMessagesScrollRef}
-            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 max-lg:max-h-[min(30dvh,220px)] sm:px-4 sm:py-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] lg:max-h-[min(32vh,320px)]"
+            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:h-[min(36svh,280px)] max-lg:min-h-[9rem] max-lg:flex-none max-lg:shrink-0 max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -4168,7 +4185,7 @@ export function TikTokStyleArena({
             className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-visible px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
             {userRole === 'viewer' && (
-              <div className="mb-1 hidden w-full flex-wrap justify-center gap-1.5 lg:flex">
+              <div className="mb-1 hidden w-full flex-wrap justify-center gap-1 px-0.5 lg:flex">
                 {LIVE_POPULAR_EMOJI_STRIP.map((emoji) => (
                   <button
                     key={emoji}
@@ -4183,14 +4200,14 @@ export function TikTokStyleArena({
               </div>
             )}
             {userRole === 'viewer' && (
-              <div className="flex flex-wrap justify-center gap-1 lg:hidden">
-                {SPECTATOR_QUICK_REACTIONS.map((emoji) => (
+              <div className="flex max-w-full flex-wrap justify-center gap-1 px-0.5 lg:hidden">
+                {ARENA_QUICK_REACTIONS.map((emoji) => (
                   <button
                     key={emoji}
                     type="button"
                     onClick={() => handleReaction(emoji)}
                     aria-label={`Réaction ${emoji}`}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-base shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-[15px] shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
                   >
                     <span aria-hidden>{emoji}</span>
                   </button>

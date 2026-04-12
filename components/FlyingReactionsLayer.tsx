@@ -3,8 +3,7 @@
 import { useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-/** Réactions rapides (spectateurs). */
-export const SPECTATOR_QUICK_REACTIONS = ['🔥', '👏', '🤔', '😮'] as const;
+export { ARENA_QUICK_REACTIONS as SPECTATOR_QUICK_REACTIONS } from '@/lib/arena-quick-reactions';
 
 export type FlyingReactionEntry = {
   id: string;
