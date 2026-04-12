@@ -1502,7 +1502,10 @@ export function TikTokStyleArena({
       timestamp: Date.now(),
       initial: initial || msgUserName?.[0]?.toUpperCase() || '?',
     };
-    setVisibleMessages(prev => [...prev, newMsg].slice(-80));
+    setVisibleMessages((prev) => {
+      if (dbId && prev.some((m) => m.id === dbId)) return prev;
+      return [...prev, newMsg].slice(-80);
+    });
   }, []);
 
   const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | 'M' | null) => {
@@ -1804,6 +1807,60 @@ export function TikTokStyleArena({
     return () => window.clearInterval(id);
   }, [liveConnected, isHost, timerActive, timerPaused, broadcastBeefGlobalTimer]);
 
+  /** Historique au chargement (refresh / changement de beef) + conservation des envois optimistes (pending_*). */
+  useEffect(() => {
+    if (!roomId) return;
+    const beefIdForFetch = roomId;
+    seenMsgKeys.current.clear();
+    setVisibleMessages([]);
+    let cancelled = false;
+    void (async () => {
+      const { data, error } = await supabase
+        .from('beef_messages')
+        .select('id, username, display_name, content, user_id, created_at')
+        .eq('beef_id', beefIdForFetch)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: true })
+        .limit(80);
+
+      if (cancelled) return;
+      if (error) return;
+
+      const fromDb: VisibleMessage[] = (data ?? []).map((row) => {
+        const uname = row.display_name?.trim() || row.username?.trim() || '?';
+        return {
+          id: row.id,
+          user_name: uname,
+          content: row.content,
+          timestamp: new Date(row.created_at).getTime(),
+          initial: (uname.charAt(0) || '?').toUpperCase(),
+        };
+      });
+
+      const isMsgUuid = (s: string) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
+
+      setVisibleMessages((prev) => {
+        const byId = new Map<string, VisibleMessage>();
+        for (const m of fromDb) byId.set(m.id, m);
+        for (const m of prev) {
+          if (m.id.startsWith('pending_')) byId.set(m.id, m);
+        }
+        const next = Array.from(byId.values())
+          .sort((a, b) => a.timestamp - b.timestamp)
+          .slice(-80);
+        seenMsgKeys.current.clear();
+        for (const m of next) {
+          if (isMsgUuid(m.id)) seenMsgKeys.current.add(`id:${m.id}`);
+        }
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId]);
+
   // 2) Polling fallback — queries DB for new messages every 3s (guaranteed delivery)
   useEffect(() => {
     let lastTs = new Date().toISOString();
@@ -1821,8 +1878,8 @@ export function TikTokStyleArena({
 
         if (data && data.length > 0) {
           lastTs = data[data.length - 1].created_at;
-          data.forEach(msg => {
-            if (msg.user_id === userId) return;
+          data.forEach((msg) => {
+            if (String(msg.user_id) === String(userId)) return;
             addRemoteMessage(msg.display_name || msg.username, msg.content, undefined, msg.id);
           });
         }
@@ -2588,9 +2645,19 @@ export function TikTokStyleArena({
     if (!cleanContent) return;
 
     const senderInitial = userName?.[0]?.toUpperCase() || '?';
-    const localKey = `${userName}::${cleanContent}`;
-    seenMsgKeys.current.add(localKey);
-    setTimeout(() => seenMsgKeys.current.delete(localKey), 5000);
+    const pendingId =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? `pending_${crypto.randomUUID()}`
+        : `pending_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+
+    const optimistic: VisibleMessage = {
+      id: pendingId,
+      user_name: userName,
+      content: cleanContent,
+      timestamp: Date.now(),
+      initial: senderInitial,
+    };
+    setVisibleMessages((prev) => [...prev, optimistic].slice(-80));
     setChatInput('');
 
     const isRlsPolicyError = (err: { code?: string; message?: string } | null) => {
@@ -2617,14 +2684,20 @@ export function TikTokStyleArena({
         .single();
 
       if (!error && inserted?.id) {
-        const localMsg: VisibleMessage = {
-          id: inserted.id,
-          user_name: userName,
-          content: cleanContent,
-          timestamp: Date.now(),
-          initial: senderInitial,
-        };
-        setVisibleMessages((prev) => [...prev, localMsg].slice(-80));
+        seenMsgKeys.current.add(`id:${inserted.id}`);
+        setVisibleMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId
+              ? {
+                  id: inserted.id,
+                  user_name: userName,
+                  content: cleanContent,
+                  timestamp: Date.now(),
+                  initial: senderInitial,
+                }
+              : m,
+          ),
+        );
         queueMicrotask(() => {
           scrollChatToEnd();
           window.setTimeout(() => scrollChatToEnd(), 50);
@@ -2650,7 +2723,7 @@ export function TikTokStyleArena({
         return attemptInsert(attempt + 1);
       }
 
-      seenMsgKeys.current.delete(localKey);
+      setVisibleMessages((prev) => prev.filter((m) => m.id !== pendingId));
       console.error('[Live] Message insert failed:', error?.message, error);
       if (error && isRlsPolicyError(error)) {
         toast(
@@ -4231,13 +4304,13 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:min-h-0 lg:flex-1 lg:flex-col lg:flex-nowrap lg:items-center lg:justify-between lg:gap-2 lg:self-stretch lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-2 lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
-            {/* Desktop : grille 2×5 (remplit la hauteur à droite du chat) */}
+            {/* Desktop : colonne étroite (≈ ancienne largeur), remplit la zone au-dessus de 😀 / cœur / cadeau */}
             <div
               role="toolbar"
               aria-label="Réactions rapides"
-              className="mb-0 hidden w-[5.5rem] shrink-0 grid-cols-2 grid-rows-5 gap-1 justify-items-center px-0.5 lg:mb-0 lg:grid lg:self-start"
+              className="mb-0 hidden max-h-[min(42vh,240px)] w-9 shrink-0 flex-col gap-0.5 overflow-y-auto overflow-x-hidden px-0.5 hide-scrollbar lg:mb-1 lg:flex lg:w-9 lg:min-w-9 lg:self-end"
             >
               {LIVE_POPULAR_EMOJI_STRIP.map((emoji) => (
                 <button
@@ -4245,7 +4318,7 @@ export function TikTokStyleArena({
                   type="button"
                   onClick={() => handleReaction(emoji)}
                   aria-label={`Réaction ${emoji}`}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform duration-75 hover:bg-white/10 active:scale-90 touch-manipulation"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/40 text-base shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform duration-75 hover:bg-white/10 active:scale-90 touch-manipulation"
                 >
                   <span aria-hidden>{emoji}</span>
                 </button>
@@ -4269,7 +4342,7 @@ export function TikTokStyleArena({
               ))}
             </div>
 
-            <div className="relative z-[130] flex flex-wrap items-center justify-center gap-2 overflow-visible max-lg:gap-1.5 lg:mt-auto lg:shrink-0">
+            <div className="relative z-[130] flex flex-wrap items-center justify-center gap-2 overflow-visible max-lg:gap-1.5 lg:shrink-0">
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.96 }}
