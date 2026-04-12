@@ -2676,6 +2676,8 @@ export function TikTokStyleArena({
     // We're in the process of joining — show arena but with a connecting overlay
   }
 
+  const arenaHasAnnouncement = announcementTicker.trim() !== '';
+
   return (
     <div className="relative flex h-full min-h-0 w-full max-w-full flex-col bg-[#08080A]">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
@@ -2910,15 +2912,10 @@ export function TikTokStyleArena({
 
       {/* TikTok Battle : vidéo 60% + chat overlay */}
       <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
-        {announcementTicker.trim() !== '' && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-[102] border-b border-white/10 bg-black/55 px-3 py-2 backdrop-blur-md pt-[max(0.35rem,env(safe-area-inset-top))]">
-            <p className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-white">
-              {announcementTicker}
-            </p>
-          </div>
-        )}
         {dailyRoomUrl ? (
-          <div className="relative z-[1] h-[60%] w-full shrink-0 overflow-hidden pt-24 max-sm:pt-28">
+          <div
+            className={`relative z-[1] h-[60%] w-full shrink-0 overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
+          >
             {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
             <div className="pointer-events-none absolute inset-0 z-0 flex h-auto flex-row gap-2 px-1">
               {/* LEFT — Participant A */}
@@ -3877,8 +3874,18 @@ export function TikTokStyleArena({
         </div>
         )}
 
-      {/* ── Header « Islands » — îlot gauche retiré (noms challengers sur dalles en desktop) ── */}
-      <div className="pointer-events-none fixed left-0 right-0 top-14 z-[60] grid w-full grid-cols-1 items-start gap-2 p-4 sm:grid-cols-[1fr_auto_1fr] sm:gap-3">
+      {/* ── Header fixe : annonce puis chrono / LIVE (pile unique, mobile + desktop) ── */}
+      <div className="pointer-events-none fixed left-0 right-0 top-14 z-[60] flex w-full flex-col">
+        {arenaHasAnnouncement && (
+          <div className="pointer-events-none shrink-0 border-b border-white/10 bg-black/65 px-3 py-2 backdrop-blur-md">
+            <p className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white">
+              {announcementTicker}
+            </p>
+          </div>
+        )}
+        <div
+          className={`grid w-full grid-cols-1 items-start gap-2 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 ${arenaHasAnnouncement ? 'px-4 pb-3 pt-2' : 'p-4'}`}
+        >
         <div className="hidden min-w-0 sm:block" aria-hidden />
 
         <div className="flex justify-center">
@@ -3966,6 +3973,7 @@ export function TikTokStyleArena({
             )}
           </div>
         </div>
+        </div>
       </div>
 
       {/* ── Médiateur — barre de commande (privée) — ouverture via bouton header (plus de FAB) ── */}
@@ -4035,7 +4043,7 @@ export function TikTokStyleArena({
       {/* ── Dock social — overlay massif bas, obstrue le bas des vidéos ── */}
       {!beefEnded && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[40] flex h-[45%] min-h-[160px] w-full flex-col justify-end overflow-visible max-lg:h-[50%]">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-stretch lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             aria-live="polite"
@@ -4043,7 +4051,7 @@ export function TikTokStyleArena({
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div
             ref={chatMessagesScrollRef}
-            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 max-lg:max-h-[min(30dvh,220px)] sm:px-4 sm:py-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] lg:max-h-[min(32vh,320px)]"
+            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 pb-6 max-lg:max-h-[min(30dvh,220px)] max-lg:pb-24 sm:px-4 sm:py-2 hide-scrollbar [mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] [-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_30%)] lg:max-h-[min(32vh,320px)] lg:pb-6"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -4156,23 +4164,23 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-2 overflow-visible px-1 py-1.5 max-lg:justify-evenly lg:w-auto lg:min-w-[10.5rem] lg:flex-col lg:flex-nowrap lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-stretch justify-center gap-2 overflow-visible px-1 py-1.5 max-lg:justify-evenly lg:min-w-0 lg:w-full lg:max-w-none lg:flex-1 lg:flex-col lg:flex-nowrap lg:self-stretch lg:border-l lg:border-white/10 lg:px-3 lg:py-2 lg:pl-6"
           >
-            <div className="mb-1 flex w-full flex-wrap justify-center gap-1.5 px-0.5">
+            <div className="mb-1 flex w-full min-w-0 gap-1.5 px-0.5">
               {LIVE_POPULAR_EMOJI_STRIP.map((emoji) => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => handleReaction(emoji)}
                   aria-label={`Réaction ${emoji}`}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
+                  className="flex h-11 min-h-[2.75rem] min-w-0 max-w-[3.25rem] flex-1 items-center justify-center rounded-full bg-black/40 text-xl shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform hover:bg-white/10 active:scale-90 touch-manipulation"
                 >
                   <span aria-hidden>{emoji}</span>
                 </button>
               ))}
             </div>
 
-            <div className="relative z-[130] flex flex-wrap items-center justify-center gap-1.5 overflow-visible">
+            <div className="relative z-[130] flex w-full min-w-0 gap-1.5 overflow-visible lg:justify-stretch">
               <AnimatePresence>
                 {showAllReactions && (
                   <motion.div
@@ -4309,7 +4317,7 @@ export function TikTokStyleArena({
                 }}
                 aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
                 aria-expanded={showAllReactions}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-lg shadow-[0_6px_22px_rgba(0,0,0,0.35)] backdrop-blur-md touch-manipulation"
+                className="flex h-11 min-h-[2.75rem] min-w-0 max-w-[4rem] flex-1 items-center justify-center rounded-xl bg-white/[0.06] text-lg shadow-[0_6px_22px_rgba(0,0,0,0.35)] backdrop-blur-md touch-manipulation"
               >
                 <span aria-hidden>😀</span>
               </motion.button>
@@ -4320,12 +4328,12 @@ export function TikTokStyleArena({
                 transition={{ duration: 0.3 }}
                 onClick={() => handleReaction(HEART_ON_FIRE)}
                 aria-label="Envoyer une réaction cœur enflammé"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-xl leading-none shadow-[0_6px_22px_rgba(0,0,0,0.35)] backdrop-blur-md touch-manipulation"
+                className="flex h-11 min-h-[2.75rem] min-w-0 max-w-[4rem] flex-1 items-center justify-center rounded-xl bg-white/[0.06] text-xl leading-none shadow-[0_6px_22px_rgba(0,0,0,0.35)] backdrop-blur-md touch-manipulation"
               >
                 <span aria-hidden>{HEART_ON_FIRE}</span>
               </motion.button>
 
-              <div className="relative flex shrink-0">
+              <div className="relative flex min-w-0 max-w-[4rem] flex-1">
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.88 }}
@@ -4336,7 +4344,7 @@ export function TikTokStyleArena({
                   }}
                   aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
                   aria-expanded={showGiftPicker}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-ember-600/90 to-cobalt-700/80 shadow-[0_8px_28px_rgba(0,0,0,0.45),0_0_24px_rgba(251,146,60,0.15)]"
+                  className="flex h-11 min-h-[2.75rem] w-full min-w-0 items-center justify-center rounded-xl bg-gradient-to-br from-ember-600/90 to-cobalt-700/80 shadow-[0_8px_28px_rgba(0,0,0,0.45),0_0_24px_rgba(251,146,60,0.15)] touch-manipulation"
                 >
                   <Gift className="h-[18px] w-[18px] text-white" strokeWidth={1.2} aria-hidden />
                 </motion.button>
