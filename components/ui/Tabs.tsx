@@ -1,18 +1,19 @@
 'use client';
 
 import { createContext, useContext, useState } from 'react';
+import { motion } from 'framer-motion';
 
 const TabsContext = createContext<{
   value: string;
   onChange: (value: string) => void;
 }>({ value: '', onChange: () => {} });
 
-export function Tabs({ 
-  defaultValue, 
-  children, 
-  className = '' 
-}: { 
-  defaultValue: string; 
+export function Tabs({
+  defaultValue,
+  children,
+  className = '',
+}: {
+  defaultValue: string;
   children: React.ReactNode;
   className?: string;
 }) {
@@ -20,32 +21,32 @@ export function Tabs({
 
   return (
     <TabsContext.Provider value={{ value, onChange: setValue }}>
-      <div className={className}>
-        {children}
-      </div>
+      <div className={`font-sans ${className}`}>{children}</div>
     </TabsContext.Provider>
   );
 }
 
-export function TabsList({ 
-  children, 
-  className = '' 
-}: { 
+export function TabsList({
+  children,
+  className = '',
+}: {
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <div className={`flex border-b ${className}`}>
+    <div
+      className={`relative inline-flex items-center gap-1 rounded-full bg-white/[0.05] p-1 backdrop-blur-md ${className}`}
+    >
       {children}
     </div>
   );
 }
 
-export function TabsTrigger({ 
-  value, 
-  children 
-}: { 
-  value: string; 
+export function TabsTrigger({
+  value,
+  children,
+}: {
+  value: string;
   children: React.ReactNode;
 }) {
   const { value: selectedValue, onChange } = useContext(TabsContext);
@@ -53,30 +54,38 @@ export function TabsTrigger({
 
   return (
     <button
+      type="button"
+      role="tab"
+      aria-selected={isActive}
       onClick={() => onChange(value)}
-      className={`flex-1 px-2 py-2 font-bold text-xs transition-colors ${
-        isActive 
-          ? 'text-arena-blue border-b-2 border-arena-blue' 
-          : 'text-gray-400 hover:text-white'
+      className={`relative z-[1] rounded-full px-4 py-1.5 text-xs font-bold tracking-wide transition-colors duration-200 ${
+        isActive
+          ? 'text-white'
+          : 'text-gray-500 hover:text-gray-200'
       }`}
     >
-      {children}
+      {isActive && (
+        <motion.span
+          layoutId="tab-active-pill"
+          className="absolute inset-0 rounded-full bg-white/[0.1] ring-1 ring-white/[0.12] shadow-[0_0_12px_rgba(0,82,255,0.12)]"
+          transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+        />
+      )}
+      <span className="relative">{children}</span>
     </button>
   );
 }
 
-export function TabsContent({ 
-  value, 
-  children, 
-  className = '' 
-}: { 
-  value: string; 
+export function TabsContent({
+  value,
+  children,
+  className = '',
+}: {
+  value: string;
   children: React.ReactNode;
   className?: string;
 }) {
   const { value: selectedValue } = useContext(TabsContext);
-
   if (selectedValue !== value) return null;
-
   return <div className={className}>{children}</div>;
 }

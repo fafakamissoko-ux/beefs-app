@@ -5,6 +5,7 @@ const config: Config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "!./components/_archive/**",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
@@ -154,6 +155,14 @@ const config: Config = {
               "inset 0 0 0 1px rgba(255, 77, 0, 0.5), 0 0 36px rgba(0, 82, 255, 0.35)",
           },
         },
+      },
+      zIndex: {
+        header: "100",
+        dropdown: "150",
+        "modal-backdrop": "190",
+        modal: "200",
+        toast: "300",
+        gate: "9999",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",

@@ -107,6 +107,17 @@
     background: linear-gradient(135deg, #ff6a2e, #ff4d00);
     box-shadow: 0 0 24px rgba(255, 77, 0, 0.35);
   }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+    background: linear-gradient(135deg, #ff4d00, #cc3d00);
+  }
+  .btn-primary[aria-busy="true"] {
+    pointer-events: none;
+    animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
 
   .btn-secondary {
     @apply px-5 py-2.5 text-white font-semibold rounded-[2px] transition-all duration-200 active:scale-[0.97];
@@ -117,6 +128,17 @@
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.15);
   }
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+  .btn-secondary[aria-busy="true"] {
+    pointer-events: none;
+    animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
 
   .input-field {
     @apply w-full rounded-[2px] px-4 py-3 text-white placeholder-gray-500 focus:outline-none transition-all duration-200;
@@ -124,8 +146,14 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
   .input-field:focus {
-    border-color: rgba(0, 82, 255, 0.45);
-    box-shadow: 0 0 0 3px rgba(0, 82, 255, 0.12);
+    border-color: rgba(0, 82, 255, 0.55);
+    box-shadow: 0 0 0 3px rgba(0, 82, 255, 0.14), 0 0 18px rgba(0, 82, 255, 0.08);
+  }
+  .input-field:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.04);
   }
 
   .card {

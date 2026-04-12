@@ -34,6 +34,13 @@ export function useToast() {
   return useContext(ToastContext);
 }
 
+const toastVariants: Record<ToastType, string> = {
+  success: 'bg-green-500/[0.12] border border-green-500/25 text-green-400',
+  error: 'bg-red-500/[0.12] border border-red-500/25 text-red-400',
+  info: 'bg-cyan-400/10 border border-cyan-400/20 text-cyan-300',
+};
+const emberVariant = 'bg-ember-500/[0.12] border border-ember-500/35 text-amber-200';
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -68,62 +75,48 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     info: <Info className="w-4 h-4" strokeWidth={1} />,
   };
 
-  const styles = {
-    success: { bg: 'rgba(34, 197, 94, 0.12)', border: 'rgba(34, 197, 94, 0.25)', color: '#4ade80' },
-    error: { bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.25)', color: '#f87171' },
-    info: { bg: 'rgba(0, 229, 255, 0.1)', border: 'rgba(0, 229, 255, 0.2)', color: '#67e8f9' },
-  };
-  const emberOverlay = {
-    bg: 'rgba(255, 77, 0, 0.12)',
-    border: 'rgba(255, 77, 0, 0.35)',
-    color: '#fdba74',
-  };
-
   return (
     <ToastContext.Provider value={{ toast: addToast }}>
       {children}
-      <div className="fixed top-16 right-4 z-[200] flex flex-col gap-2 pointer-events-none max-w-sm w-full">
+      <div className="fixed top-16 right-4 z-toast flex flex-col gap-2 pointer-events-none max-w-sm w-full">
         <AnimatePresence>
-          {toasts.map(t => (
-            <motion.div
-              key={t.id}
-              initial={{ opacity: 0, x: 40, scale: 0.95 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 40, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl backdrop-blur-xl shadow-modal"
-              style={{
-                background: t.tone === 'ember' ? emberOverlay.bg : styles[t.type].bg,
-                border: `1px solid ${t.tone === 'ember' ? emberOverlay.border : styles[t.type].border}`,
-              }}
-            >
-              <span style={{ color: t.tone === 'ember' ? emberOverlay.color : styles[t.type].color }}>
-                {icons[t.type]}
-              </span>
-              <div className="flex-1 min-w-0 flex flex-col gap-2">
-                <p
-                  className={`text-sm font-medium ${t.tone === 'ember' ? 'text-amber-50/95' : 'text-white'}`}
-                >
-                  {t.message}
-                </p>
-                {t.action && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      t.action?.onClick();
-                      removeToast(t.id);
-                    }}
-                    className="self-start px-3 py-1.5 rounded-lg text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors"
+          {toasts.map(t => {
+            const variant = t.tone === 'ember' ? emberVariant : toastVariants[t.type];
+            return (
+              <motion.div
+                key={t.id}
+                initial={{ opacity: 0, x: 40, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 40, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl backdrop-blur-xl shadow-modal ${variant}`}
+              >
+                <span>{icons[t.type]}</span>
+                <div className="flex-1 min-w-0 flex flex-col gap-2">
+                  <p
+                    className={`text-sm font-medium ${t.tone === 'ember' ? 'text-amber-50/95' : 'text-white'}`}
                   >
-                    {t.action.label}
-                  </button>
-                )}
-              </div>
-              <button type="button" onClick={() => removeToast(t.id)} className="text-gray-500 hover:text-white transition-colors shrink-0">
-                <X className="w-3.5 h-3.5" strokeWidth={1} />
-              </button>
-            </motion.div>
-          ))}
+                    {t.message}
+                  </p>
+                  {t.action && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        t.action?.onClick();
+                        removeToast(t.id);
+                      }}
+                      className="self-start px-3 py-1.5 rounded-lg text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors"
+                    >
+                      {t.action.label}
+                    </button>
+                  )}
+                </div>
+                <button type="button" onClick={() => removeToast(t.id)} className="text-gray-500 hover:text-white transition-colors shrink-0">
+                  <X className="w-3.5 h-3.5" strokeWidth={1} />
+                </button>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </div>
     </ToastContext.Provider>

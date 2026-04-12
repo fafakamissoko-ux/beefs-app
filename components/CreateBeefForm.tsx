@@ -281,7 +281,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 pt-20"
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-modal flex items-center justify-center p-4 pt-20"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-beef-dialog-title"

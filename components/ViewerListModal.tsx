@@ -37,7 +37,7 @@ export function ViewerListModal({ viewers, viewerCount, onClose }: ViewerListMod
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md"
+          className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/95 backdrop-blur-md"
           onClick={requestClose}
         >
           <motion.div

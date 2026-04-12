@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { PreJoinScreen } from './PreJoinScreen';
+import { PreJoinScreen } from '../PreJoinScreen';
 
 interface DailyVideoProps {
   roomUrl: string;

@@ -67,7 +67,7 @@ export function BetaGate({ children }: { children: React.ReactNode }) {
 
   // Gate
   return (
-    <div className="fixed inset-0 bg-black z-[9999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black z-gate flex items-center justify-center p-4">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-[120px]" style={{ background: 'rgba(232, 58, 20, 0.06)' }} />
         <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full blur-[120px]" style={{ background: 'rgba(0, 229, 255, 0.04)' }} />

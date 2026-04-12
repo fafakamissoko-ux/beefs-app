@@ -74,7 +74,7 @@ export function BeefNotificationToasts({ userId }: BeefNotificationToastsProps) 
   };
 
   return (
-    <div className="fixed top-20 right-4 z-[999] flex flex-col gap-2 pointer-events-none">
+    <div className="fixed top-20 right-4 z-toast flex flex-col gap-2 pointer-events-none">
       <AnimatePresence>
         {toasts.map(toast => {
           const c = config[toast.type];
