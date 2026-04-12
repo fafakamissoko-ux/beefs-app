@@ -589,7 +589,7 @@ export default function ProfileContent() {
           <div className="skeleton h-40 rounded-2xl mb-6" />
           {/* Avatar + info skeleton */}
           <div className="flex items-end gap-4 -mt-16 mb-6 px-4">
-            <div className="skeleton w-24 h-24 rounded-full ring-4 ring-black" />
+            <div className="skeleton w-24 h-24 rounded-[2rem] ring-4 ring-black" />
             <div className="flex-1 space-y-2 pb-2">
               <div className="skeleton h-6 w-40" />
               <div className="skeleton h-4 w-24" />
@@ -638,7 +638,7 @@ export default function ProfileContent() {
         <AppBackButton className="mb-4" />
 
         {/* Profile Header */}
-        <div className="card rounded-3xl overflow-hidden mb-6">
+        <div className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.08] backdrop-blur-2xl mb-8">
           {/* Cover Image */}
           <div className="h-48 relative overflow-hidden group">
             {profile.banner_url ? (
@@ -664,7 +664,7 @@ export default function ProfileContent() {
             {/* Avatar */}
             <div className="flex items-end justify-between mb-4">
               <div className="relative">
-                <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-4 overflow-hidden flex items-center justify-center text-4xl font-black text-white" style={{ borderColor: profile.accent_color || '#E83A14' }}>
+                <div className={`relative w-32 h-32 rounded-[2rem] bg-gradient-to-br from-gray-700 to-gray-800 border-4 overflow-hidden flex items-center justify-center text-4xl font-black text-white ${profile.is_premium ? 'shadow-[0_0_24px_rgba(212,175,55,0.35)]' : ''}`} style={{ borderColor: profile.is_premium ? '#D4AF37' : (profile.accent_color || '#E83A14') }}>
                   {profile.avatar_url ? (
                     <Image
                       src={profile.avatar_url}
@@ -679,7 +679,7 @@ export default function ProfileContent() {
                   )}
                 </div>
 
-                <label className="absolute bottom-0 right-0 w-10 h-10 bg-brand-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-brand-600 transition-colors">
+                <label className="absolute bottom-0 right-0 w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center cursor-pointer hover:bg-brand-600 transition-colors">
                   <Camera className="w-5 h-5 text-white" />
                   <input
                     type="file"
@@ -695,7 +695,7 @@ export default function ProfileContent() {
                 <button
                   type="button"
                   onClick={() => setPublicPreviewOpen(true)}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/15 border border-white/10 rounded-[2px] text-white font-semibold transition-colors flex items-center gap-2 text-sm"
+                  className="px-4 py-2 bg-white/[0.06] hover:bg-white/10 border border-white/[0.1] rounded-full text-white font-sans font-semibold transition-colors flex items-center gap-2 text-sm"
                   title="Voir ton profil public tel qu’il apparaît pour les autres"
                 >
                   <Eye className="w-4 h-4" aria-hidden />
@@ -716,14 +716,14 @@ export default function ProfileContent() {
                       toast('Lien copié !', 'success');
                     }
                   }}
-                  className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-[2px] text-white font-semibold transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] rounded-full text-white font-sans font-semibold transition-colors flex items-center gap-2"
                 >
                   <Share2 className="w-4 h-4" />
                   Partager
                 </button>
                 <Link
                   href={hrefWithFrom('/settings', pathname)}
-                  className="px-4 py-2 bg-brand-500 hover:bg-brand-600 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-brand-500 hover:bg-brand-600 rounded-full text-white font-sans font-semibold transition-colors flex items-center gap-2"
                 >
                   <Settings className="w-4 h-4" />
                   Modifier
@@ -734,7 +734,7 @@ export default function ProfileContent() {
             {/* User Info */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-3xl font-black text-white">{profile.display_name}</h1>
+                <h1 className="font-sans text-3xl font-black text-white">{profile.display_name}</h1>
               </div>
               <p className="text-gray-400 text-sm">@{profile.username}</p>
             </div>
@@ -744,81 +744,48 @@ export default function ProfileContent() {
             )}
 
             {/* Points — mis en avant */}
-            <div className="mb-5 rounded-2xl bg-gradient-to-r from-brand-500/15 via-amber-500/10 to-brand-600/15 border border-brand-500/25 px-5 py-4 flex items-center justify-between gap-4">
+            <div className="mb-6 rounded-2xl bg-white/[0.05] backdrop-blur-2xl border border-white/[0.1] px-6 py-5 flex items-center justify-between gap-4 shadow-[0_0_24px_rgba(212,175,55,0.06)]">
               <div className="min-w-0">
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wide">Points totaux</p>
-                <p className="text-3xl sm:text-4xl font-black text-white tabular-nums tracking-tight">
+                <p className="font-sans text-[10px] font-bold uppercase tracking-[0.15em] text-white/40">Points totaux</p>
+                <p className="font-mono text-4xl sm:text-5xl font-black text-prestige-gold tabular-nums tracking-tight">
                   {profile.points.toLocaleString('fr-FR')}
                 </p>
-                <p className="text-gray-500 text-xs mt-1">100 pts = 1€ · solde gains</p>
+                <p className="font-mono text-[10px] text-white/30 mt-1 tracking-wider">100 pts = 1€ · solde gains</p>
               </div>
-              <div className="w-14 h-14 rounded-2xl bg-brand-500/20 flex items-center justify-center flex-shrink-0">
-                <Trophy className="w-8 h-8 text-brand-400" />
+              <div className="w-14 h-14 rounded-2xl bg-prestige-gold/10 border border-prestige-gold/20 flex items-center justify-center flex-shrink-0">
+                <Trophy className="w-8 h-8 text-prestige-gold" />
               </div>
             </div>
 
             {/* Stats — raccourcis optionnels par ligne (voir cases ci‑dessous) */}
-            <div className="flex gap-6 mb-2 flex-wrap">
-              {statsShortcuts.participations ? (
-                <button
-                  type="button"
-                  onClick={goStatsParticipations}
-                  className="text-left rounded-[2px] -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-                >
-                  <span className="text-2xl font-black text-white">{stats.beefs_participated}</span>
-                  <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Participations</span>
-                </button>
-              ) : (
-                <div>
-                  <span className="text-2xl font-black text-white">{stats.beefs_participated}</span>
-                  <span className="text-gray-400 text-sm ml-1">Participations</span>
-                </div>
-              )}
-              {statsShortcuts.mediations ? (
-                <button
-                  type="button"
-                  onClick={goStatsMediations}
-                  className="text-left rounded-[2px] -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-                >
-                  <span className="text-2xl font-black text-white">{stats.beefs_hosted}</span>
-                  <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Médiations</span>
-                </button>
-              ) : (
-                <div>
-                  <span className="text-2xl font-black text-white">{stats.beefs_hosted}</span>
-                  <span className="text-gray-400 text-sm ml-1">Médiations</span>
-                </div>
-              )}
-              {statsShortcuts.followers ? (
-                <button
-                  type="button"
-                  onClick={goStatsFollowers}
-                  className="text-left rounded-[2px] -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-                >
-                  <span className="text-2xl font-black text-white">{stats.followers}</span>
-                  <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Abonnés</span>
-                </button>
-              ) : (
-                <div>
-                  <span className="text-2xl font-black text-white">{stats.followers}</span>
-                  <span className="text-gray-400 text-sm ml-1">Abonnés</span>
-                </div>
-              )}
-              {statsShortcuts.following ? (
-                <button
-                  type="button"
-                  onClick={goStatsFollowing}
-                  className="text-left rounded-[2px] -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-                >
-                  <span className="text-2xl font-black text-white">{stats.following}</span>
-                  <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Abonnements</span>
-                </button>
-              ) : (
-                <div>
-                  <span className="text-2xl font-black text-white">{stats.following}</span>
-                  <span className="text-gray-400 text-sm ml-1">Abonnements</span>
-                </div>
-              )}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+              {([
+                { key: 'participations' as const, value: stats.beefs_participated, label: 'Participations', shortcut: statsShortcuts.participations, action: goStatsParticipations },
+                { key: 'mediations' as const, value: stats.beefs_hosted, label: 'Médiations', shortcut: statsShortcuts.mediations, action: goStatsMediations },
+                { key: 'followers' as const, value: stats.followers, label: 'Abonnés', shortcut: statsShortcuts.followers, action: goStatsFollowers },
+                { key: 'following' as const, value: stats.following, label: 'Abonnements', shortcut: statsShortcuts.following, action: goStatsFollowing },
+              ] as const).map((s) => {
+                const inner = (
+                  <>
+                    <span className="font-mono text-2xl font-black text-white tabular-nums">{s.value}</span>
+                    <span className={`font-sans text-[10px] font-bold uppercase tracking-[0.12em] mt-0.5 ${s.shortcut ? 'text-brand-400' : 'text-white/40'}`}>{s.label}</span>
+                  </>
+                );
+                return s.shortcut ? (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={s.action}
+                    className="flex flex-col items-center rounded-xl bg-white/[0.04] border border-white/[0.06] px-3 py-3 hover:bg-white/[0.07] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
+                  >
+                    {inner}
+                  </button>
+                ) : (
+                  <div key={s.key} className="flex flex-col items-center rounded-xl bg-white/[0.04] border border-white/[0.06] px-3 py-3">
+                    {inner}
+                  </div>
+                );
+              })}
             </div>
             <div className="mb-4 max-w-lg">
               <StatShortcutToggles
@@ -859,39 +826,39 @@ export default function ProfileContent() {
         </div>
 
         {/* Tabs */}
-        <div className="card rounded-2xl p-6">
-          <div className="flex gap-4 mb-6 border-b border-gray-700 pb-4">
+        <div className="rounded-[2rem] bg-white/[0.04] border border-white/[0.08] backdrop-blur-2xl p-6">
+          <div className="inline-flex items-center gap-1 rounded-full bg-white/[0.05] p-1 backdrop-blur-md mb-6">
             <button
               onClick={() => setActiveTab('stats')}
-              className={`px-4 py-2 font-semibold rounded-lg transition-colors ${
+              className={`flex items-center gap-2 rounded-full px-5 py-2 font-sans text-xs font-bold transition-all duration-200 ${
                 activeTab === 'stats'
-                  ? 'bg-brand-500 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  ? 'text-white bg-white/10 ring-1 ring-white/[0.12]'
+                  : 'text-gray-500 hover:text-gray-200'
               }`}
             >
-              <TrendingUp className="w-4 h-4 inline mr-2" />
+              <TrendingUp className="w-4 h-4" />
               Statistiques
             </button>
             <button
               onClick={() => setActiveTab('debates')}
-              className={`px-4 py-2 font-semibold rounded-lg transition-colors ${
+              className={`flex items-center gap-2 rounded-full px-5 py-2 font-sans text-xs font-bold transition-all duration-200 ${
                 activeTab === 'debates'
-                  ? 'bg-brand-500 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  ? 'text-white bg-white/10 ring-1 ring-white/[0.12]'
+                  : 'text-gray-500 hover:text-gray-200'
               }`}
             >
-              <Flame className="w-4 h-4 inline mr-2" />
+              <Flame className="w-4 h-4" />
               Mes Beefs
             </button>
             <button
               onClick={() => { setActiveTab('gains'); setWithdrawalStep('summary'); }}
-              className={`px-4 py-2 font-semibold rounded-lg transition-colors ${
+              className={`flex items-center gap-2 rounded-full px-5 py-2 font-sans text-xs font-bold transition-all duration-200 ${
                 activeTab === 'gains'
-                  ? 'bg-green-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  ? 'text-white bg-white/10 ring-1 ring-white/[0.12]'
+                  : 'text-gray-500 hover:text-gray-200'
               }`}
             >
-              <Wallet className="w-4 h-4 inline mr-2" />
+              <Wallet className="w-4 h-4" />
               Mes Gains
             </button>
           </div>
@@ -908,102 +875,38 @@ export default function ProfileContent() {
                 <strong className="text-gray-400">Abandonné</strong> si la room s’arrête sans médiation aboutie (déconnexion, bug, fin sans statut).
                 Les anciens tests marqués « résolus » par défaut peuvent encore apparaître ainsi jusqu’à correction des données.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                {/* Resolved */}
-                <button
-                  onClick={() => setSelectedResolutionFilter(selectedResolutionFilter === 'resolved' ? null : 'resolved')}
-                  className={`bg-gradient-to-br from-green-500/10 to-green-600/5 border rounded-[2px] p-4 text-left transition-all hover:scale-105 ${
-                    selectedResolutionFilter === 'resolved' 
-                      ? 'border-green-500 ring-2 ring-green-500/50' 
-                      : 'border-green-500/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
-                      <Check className="w-5 h-5 text-green-400" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-black text-white">{stats.beefs_resolved}</p>
-                      <p className="text-green-400 text-xs font-semibold">Résolus</p>
-                    </div>
-                  </div>
-                  <p className="text-gray-400 text-xs">Conflits réglés avec succès</p>
-                  {selectedResolutionFilter === 'resolved' && (
-                    <p className="text-green-400 text-xs mt-2 font-semibold">✓ Filtre actif</p>
-                  )}
-                </button>
-
-                {/* In Progress */}
-                <button
-                  onClick={() => setSelectedResolutionFilter(selectedResolutionFilter === 'in_progress' ? null : 'in_progress')}
-                  className={`bg-gradient-to-br from-blue-500/10 to-blue-600/5 border rounded-[2px] p-4 text-left transition-all hover:scale-105 ${
-                    selectedResolutionFilter === 'in_progress' 
-                      ? 'border-blue-500 ring-2 ring-blue-500/50' 
-                      : 'border-blue-500/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-blue-400" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-black text-white">{stats.beefs_in_progress}</p>
-                      <p className="text-blue-400 text-xs font-semibold">En cours</p>
-                    </div>
-                  </div>
-                  <p className="text-gray-400 text-xs">Beefs actifs ou programmés</p>
-                  {selectedResolutionFilter === 'in_progress' && (
-                    <p className="text-blue-400 text-xs mt-2 font-semibold">✓ Filtre actif</p>
-                  )}
-                </button>
-
-                {/* Unresolved */}
-                <button
-                  onClick={() => setSelectedResolutionFilter(selectedResolutionFilter === 'unresolved' ? null : 'unresolved')}
-                  className={`bg-gradient-to-br from-brand-500/10 to-brand-600/5 border rounded-[2px] p-4 text-left transition-all hover:scale-105 ${
-                    selectedResolutionFilter === 'unresolved' 
-                      ? 'border-brand-500 ring-2 ring-brand-500/50' 
-                      : 'border-brand-500/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-brand-500/20 rounded-full flex items-center justify-center">
-                      <X className="w-5 h-5 text-brand-400" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-black text-white">{stats.beefs_unresolved}</p>
-                      <p className="text-brand-400 text-xs font-semibold">Non résolus</p>
-                    </div>
-                  </div>
-                  <p className="text-gray-400 text-xs">Médiation sans accord</p>
-                  {selectedResolutionFilter === 'unresolved' && (
-                    <p className="text-brand-400 text-xs mt-2 font-semibold">✓ Filtre actif</p>
-                  )}
-                </button>
-
-                {/* Abandoned */}
-                <button
-                  onClick={() => setSelectedResolutionFilter(selectedResolutionFilter === 'abandoned' ? null : 'abandoned')}
-                  className={`bg-gradient-to-br from-gray-500/10 to-gray-600/5 border rounded-[2px] p-4 text-left transition-all hover:scale-105 ${
-                    selectedResolutionFilter === 'abandoned' 
-                      ? 'border-gray-400 ring-2 ring-gray-400/50' 
-                      : 'border-gray-500/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-10 h-10 bg-gray-500/20 rounded-full flex items-center justify-center">
-                      <Flame className="w-5 h-5 text-gray-400" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-black text-white">{stats.beefs_abandoned}</p>
-                      <p className="text-gray-400 text-xs font-semibold">Abandonnés</p>
-                    </div>
-                  </div>
-                  <p className="text-gray-400 text-xs">Beefs annulés</p>
-                  {selectedResolutionFilter === 'abandoned' && (
-                    <p className="text-gray-400 text-xs mt-2 font-semibold">✓ Filtre actif</p>
-                  )}
-                </button>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {([
+                  { id: 'resolved', value: stats.beefs_resolved, label: 'Résolus', desc: 'Conflits réglés avec succès', color: 'green', icon: Check },
+                  { id: 'in_progress', value: stats.beefs_in_progress, label: 'En cours', desc: 'Beefs actifs ou programmés', color: 'blue', icon: Clock },
+                  { id: 'unresolved', value: stats.beefs_unresolved, label: 'Non résolus', desc: 'Médiation sans accord', color: 'brand', icon: X },
+                  { id: 'abandoned', value: stats.beefs_abandoned, label: 'Abandonnés', desc: 'Beefs annulés', color: 'gray', icon: Flame },
+                ] as const).map((tile) => {
+                  const Icon = tile.icon;
+                  const active = selectedResolutionFilter === tile.id;
+                  const accent = tile.color === 'brand' ? 'brand-500' : tile.color === 'gray' ? 'gray-500' : `${tile.color}-500`;
+                  return (
+                    <button
+                      key={tile.id}
+                      onClick={() => setSelectedResolutionFilter(active ? null : tile.id)}
+                      className={`rounded-2xl bg-white/[0.04] backdrop-blur-xl border p-4 text-left transition-all duration-200 hover:scale-[0.98] hover:bg-white/[0.06] ${
+                        active ? `border-${accent} ring-2 ring-${accent}/50` : 'border-white/[0.08]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`w-10 h-10 bg-${accent}/15 rounded-xl flex items-center justify-center`}>
+                          <Icon className={`w-5 h-5 text-${tile.color === 'brand' ? 'brand-400' : tile.color === 'gray' ? 'gray-400' : `${tile.color}-400`}`} />
+                        </div>
+                        <div>
+                          <p className="font-mono text-2xl font-black text-white tabular-nums">{tile.value}</p>
+                          <p className={`font-sans text-[10px] font-bold uppercase tracking-[0.12em] text-${tile.color === 'brand' ? 'brand-400' : tile.color === 'gray' ? 'gray-400' : `${tile.color}-400`}`}>{tile.label}</p>
+                        </div>
+                      </div>
+                      <p className="font-sans text-[11px] text-white/35">{tile.desc}</p>
+                      {active && <p className={`font-mono text-[10px] mt-2 font-bold tracking-wider text-${tile.color === 'brand' ? 'brand-400' : tile.color === 'gray' ? 'gray-400' : `${tile.color}-400`}`}>FILTRE ACTIF</p>}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Filtered Beefs List */}
@@ -1554,7 +1457,7 @@ export default function ProfileContent() {
 
       {publicPreviewOpen && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm"
+          className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm"
           role="presentation"
           onClick={closePublicPreview}
         >
@@ -1562,7 +1465,7 @@ export default function ProfileContent() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="profile-preview-title"
-            className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl border border-white/10 bg-[#0f0f0f] shadow-2xl"
+            className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-[2rem] border border-white/[0.1] bg-white/[0.04] backdrop-blur-2xl shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 flex-shrink-0">

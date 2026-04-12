@@ -300,17 +300,17 @@ export default function MessagesPage() {
     <div className="h-[calc(100vh-3.5rem)] bg-black overflow-hidden">
       <div className="max-w-5xl mx-auto flex h-full">
         {/* Conversation list */}
-        <div className={`w-full md:w-96 border-r border-white/10 flex flex-col ${selectedConv ? 'hidden md:flex' : 'flex'}`}>
-          <div className="p-4 border-b border-white/10 flex items-center justify-between gap-2">
+        <div className={`w-full md:w-96 border-r border-white/[0.06] flex flex-col ${selectedConv ? 'hidden md:flex' : 'flex'}`}>
+          <div className="p-4 border-b border-white/[0.06] flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <AppBackButton className="shrink-0" />
-              <h1 className="text-xl font-black text-white truncate">Messages</h1>
+              <h1 className="font-sans text-xl font-black text-white truncate">Messages</h1>
             </div>
             <button
               onClick={() => setShowNewConv(!showNewConv)}
-              className="w-10 h-10 rounded-full bg-brand-500 hover:bg-brand-600 flex items-center justify-center transition-colors"
+              className="w-10 h-10 rounded-xl bg-prestige-gold/90 hover:bg-prestige-gold flex items-center justify-center transition-colors"
             >
-              <Plus className="w-4 h-4 text-white" />
+              <Plus className="w-4 h-4 text-black" />
             </button>
           </div>
 
@@ -331,7 +331,7 @@ export default function MessagesPage() {
                       value={searchQuery}
                       onChange={(e) => searchUsers(e.target.value)}
                       placeholder="Rechercher un utilisateur..."
-                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-brand-500/50"
+                      className="w-full bg-white/[0.05] border-b border-white/[0.1] rounded-none px-10 py-2.5 font-sans text-sm text-white placeholder-white/30 focus:outline-none focus:border-cobalt-500/50 transition-colors"
                       autoFocus
                     />
                   </div>
@@ -343,7 +343,7 @@ export default function MessagesPage() {
                           onClick={() => startConversation(u)}
                           className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-colors text-left"
                         >
-                          <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex-shrink-0 overflow-hidden">
+                          <div className="relative w-10 h-10 rounded-[1rem] bg-gradient-to-br from-brand-500 to-brand-600 flex-shrink-0 overflow-hidden">
                             {u.avatar_url ? (
                               <Image src={u.avatar_url} alt="" fill className="object-cover" sizes="40px" />
                             ) : (
@@ -351,8 +351,8 @@ export default function MessagesPage() {
                             )}
                           </div>
                           <div>
-                            <p className="text-white text-sm font-semibold">{u.display_name}</p>
-                            <p className="text-gray-500 text-xs">@{u.username}</p>
+                            <p className="font-sans text-sm font-bold text-white">{u.display_name}</p>
+                            <p className="font-mono text-[10px] text-white/35 tracking-wider">@{u.username}</p>
                           </div>
                         </button>
                       ))}
@@ -384,7 +384,7 @@ export default function MessagesPage() {
                     selectedConv?.id === conv.id ? 'bg-white/5' : ''
                   }`}
                 >
-                  <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-brand-500/80 to-brand-600/80 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                  <div className="relative w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-brand-500/80 to-brand-600/80 flex-shrink-0 overflow-hidden flex items-center justify-center">
                     {conv.other_user.avatar_url ? (
                       <Image src={conv.other_user.avatar_url} alt="" fill className="object-cover" sizes="48px" />
                     ) : (
@@ -393,12 +393,12 @@ export default function MessagesPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className="text-white font-semibold text-sm truncate">{conv.other_user.display_name}</p>
+                      <p className="font-sans text-sm font-bold text-white truncate">{conv.other_user.display_name}</p>
                       {conv.last_message_at && (
-                        <span className="text-gray-600 text-[11px] flex-shrink-0">{formatTime(conv.last_message_at)}</span>
+                        <span className="font-mono text-[10px] text-white/30 tracking-wider flex-shrink-0">{formatTime(conv.last_message_at)}</span>
                       )}
                     </div>
-                    <p className="text-gray-500 text-xs truncate mt-0.5">
+                    <p className="font-sans text-xs text-white/35 truncate mt-0.5">
                       {conv.last_message_text || 'Aucun message'}
                     </p>
                   </div>
@@ -413,10 +413,10 @@ export default function MessagesPage() {
           {selectedConv ? (
             <>
               {/* Chat header */}
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06]">
                 <button
                   onClick={() => setSelectedConv(null)}
-                  className="md:hidden w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center"
+                  className="md:hidden w-10 h-10 rounded-xl hover:bg-white/[0.06] flex items-center justify-center transition-colors"
                 >
                   <ArrowLeft className="w-5 h-5 text-white" />
                 </button>
@@ -424,7 +424,7 @@ export default function MessagesPage() {
                   className="flex items-center gap-3 flex-1 cursor-pointer"
                   onClick={() => router.push(hrefWithFrom(`/profile/${selectedConv.other_user.username}`, pathname))}
                 >
-                  <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-600 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                  <div className="relative w-10 h-10 rounded-[1rem] bg-gradient-to-br from-brand-500 to-brand-600 flex-shrink-0 overflow-hidden flex items-center justify-center">
                     {selectedConv.other_user.avatar_url ? (
                       <Image src={selectedConv.other_user.avatar_url} alt="" fill className="object-cover" sizes="40px" />
                     ) : (
@@ -432,8 +432,8 @@ export default function MessagesPage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-white font-bold text-sm">{selectedConv.other_user.display_name}</p>
-                    <p className="text-gray-500 text-xs">@{selectedConv.other_user.username}</p>
+                    <p className="font-sans text-sm font-bold text-white">{selectedConv.other_user.display_name}</p>
+                    <p className="font-mono text-[10px] text-white/35 tracking-wider">@{selectedConv.other_user.username}</p>
                   </div>
                 </div>
               </div>
@@ -458,14 +458,14 @@ export default function MessagesPage() {
                         animate={{ opacity: 1, y: 0 }}
                         className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed ${
+                        <div className={`max-w-[75%] px-4 py-2.5 text-sm leading-relaxed ${
                           isMine
-                            ? 'bg-brand-500 text-white rounded-br-md'
-                            : 'bg-white/10 text-white rounded-bl-md'
+                            ? 'rounded-lg rounded-br-sm bg-cobalt-500/10 border border-cobalt-500/20 text-white'
+                            : 'rounded-lg rounded-bl-sm bg-white/[0.05] border border-white/[0.08] text-white'
                         }`}>
-                          <p>{msg.content}</p>
-                          <div className={`flex items-center justify-end gap-1 mt-1 ${isMine ? 'text-white/60' : 'text-gray-500'}`}>
-                            <span className="text-[10px]">
+                          <p className="font-sans font-light">{msg.content}</p>
+                          <div className={`flex items-center justify-end gap-1 mt-1.5 ${isMine ? 'text-white/40' : 'text-white/30'}`}>
+                            <span className="font-mono text-[10px] tracking-wider">
                               {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                             {isMine && (
@@ -483,7 +483,7 @@ export default function MessagesPage() {
               </div>
 
               {/* Message input */}
-              <div className="px-4 py-3 border-t border-white/10">
+              <div className="px-4 py-3 border-t border-white/[0.06]">
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
@@ -491,14 +491,14 @@ export default function MessagesPage() {
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                     placeholder="Ecris ton message..."
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-brand-500/50"
+                    className="flex-1 bg-white/[0.05] border-b border-white/[0.1] rounded-none px-4 py-2.5 font-sans text-sm text-white placeholder-white/30 focus:outline-none focus:border-cobalt-500/50 transition-colors"
                   />
                   <button
                     onClick={sendMessage}
                     disabled={!newMessage.trim()}
-                    className="w-10 h-10 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    className="w-10 h-10 rounded-xl bg-prestige-gold/90 hover:bg-prestige-gold disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
                   >
-                    <Send className="w-4 h-4 text-white" />
+                    <Send className="w-4 h-4 text-black" />
                   </button>
                 </div>
               </div>
@@ -506,9 +506,9 @@ export default function MessagesPage() {
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <MessageCircle className="w-16 h-16 text-gray-800 mx-auto mb-4" />
-                <p className="text-gray-500 font-semibold">Selectionne une conversation</p>
-                <p className="text-gray-700 text-sm mt-1">ou commence une nouvelle discussion</p>
+                <MessageCircle className="w-16 h-16 text-white/10 mx-auto mb-4" />
+                <p className="font-sans text-sm font-bold text-white/50">Sélectionne une conversation</p>
+                <p className="font-sans text-xs text-white/25 mt-1">ou commence une nouvelle discussion</p>
               </div>
             </div>
           )}
