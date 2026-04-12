@@ -115,7 +115,7 @@ const POPULAR_REACTIONS = [
   '🙌', '💎', '🌟', '✨', '🚀', '💥'
 ];
 
-/** Bandeau mobile : 10 emojis ; desktop : 5 visibles + panneau 😀 pour le reste. */
+/** Bandeau mobile : 10 emojis scroll ; desktop : grille 2×5 + panneau 😀 pour le reste. */
 
 const HEART_ON_FIRE = '❤️‍🔥';
 
@@ -4218,31 +4218,33 @@ export function TikTokStyleArena({
             <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
           </div>
           <div className="relative z-[130] min-w-0 shrink-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1">
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  void handleSendMessage();
-                }
-              }}
-              placeholder="Message..."
-              aria-label="Message dans le chat du direct"
-              autoComplete="off"
-              enterKeyHint="send"
-              className="relative z-[1] w-full rounded-2xl bg-[#08080a]/65 py-2 pl-2.5 pr-10 text-[13px] font-medium tracking-tight text-white shadow-[0_8px_32px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.04)] placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_24px_rgba(59,130,246,0.22),0_8px_32px_rgba(0,0,0,0.45)]"
-            />
-            <button
-              type="button"
-              disabled={!chatInput.trim()}
-              onClick={() => void handleSendMessage()}
-              aria-label="Envoyer le message"
-              className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-xl bg-ember-500 hover:bg-ember-600 disabled:pointer-events-none disabled:opacity-35"
-            >
-              <Send className="h-3 w-3 text-white" strokeWidth={1} aria-hidden />
-            </button>
+            <div className="flex min-w-0 items-center gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    void handleSendMessage();
+                  }
+                }}
+                placeholder="Message..."
+                aria-label="Message dans le chat du direct"
+                autoComplete="off"
+                enterKeyHint="send"
+                className="min-w-0 flex-1 rounded-2xl bg-[#08080a]/65 py-2 pl-2.5 pr-3 text-[13px] font-medium tracking-tight text-white shadow-[0_8px_32px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.04)] placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_24px_rgba(59,130,246,0.22),0_8px_32px_rgba(0,0,0,0.45)]"
+              />
+              <button
+                type="button"
+                disabled={!chatInput.trim()}
+                onClick={() => void handleSendMessage()}
+                aria-label="Envoyer le message"
+                className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-xl bg-ember-500 hover:bg-ember-600 disabled:pointer-events-none disabled:opacity-35"
+              >
+                <Send className="h-3.5 w-3.5 text-white" strokeWidth={1} aria-hidden />
+              </button>
+            </div>
             <FeatureGuide
               id="arena-chat"
               title="Chat en direct"
@@ -4256,21 +4258,21 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:w-auto lg:min-w-[10.5rem] lg:max-w-[12rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:w-auto lg:min-w-[12.5rem] lg:max-w-[15rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
-            {/* Desktop : comme capture — 1 rangée de 5 + 😀 / cœur / cadeau (les 5 autres restent dans le panneau 😀) */}
+            {/* Desktop : grille 2×5 (10 réactions) + 😀 / cœur / cadeau */}
             <div
               role="toolbar"
               aria-label="Réactions rapides"
-              className="mb-0 hidden w-full shrink-0 flex-row flex-wrap justify-end gap-1 px-0.5 lg:mb-0 lg:flex lg:max-w-full"
+              className="mb-0 hidden w-full shrink-0 gap-1 px-0.5 lg:mb-0 lg:grid lg:w-[12.25rem] lg:grid-cols-5 lg:grid-rows-2 lg:justify-items-center"
             >
-              {ARENA_QUICK_REACTIONS.slice(0, 5).map((emoji) => (
+              {ARENA_QUICK_REACTIONS.map((emoji) => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => handleReaction(emoji)}
                   aria-label={`Réaction ${emoji}`}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform duration-75 hover:bg-white/10 active:scale-90 touch-manipulation"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform duration-75 hover:bg-white/10 active:scale-90 touch-manipulation"
                 >
                   <span aria-hidden>{emoji}</span>
                 </button>
