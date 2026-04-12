@@ -48,7 +48,6 @@ export function BeefCard({
 }: BeefCardProps) {
   const [hasOpenedArena, setHasOpenedArena] = useState(false);
 
-  /** `pending` + date future → affichage « À venir » (aligné sur statut scheduled). */
   const uiStatus: typeof status | 'scheduled' | 'preparing' =
     status === 'pending' && scheduled_at && new Date(scheduled_at).getTime() > Date.now()
       ? 'scheduled'
@@ -61,47 +60,48 @@ export function BeefCard({
   }, [id, status, price]);
 
   const getStatusBadge = () => {
+    const base = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider backdrop-blur-md';
     switch (uiStatus) {
       case 'live':
         return (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+          <div className={`${base} bg-red-500/15 border border-red-500/30 text-red-400`}>
             <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.2, repeat: Infinity }} className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-            <span className="text-red-400">LIVE</span>
+            LIVE
           </div>
         );
       case 'scheduled':
         return (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold" style={{ background: 'rgba(0, 229, 255, 0.1)', border: '1px solid rgba(0, 229, 255, 0.25)' }}>
-            <Calendar className="w-3 h-3 text-cyan-400" />
-            <span className="text-cyan-400">À VENIR</span>
+          <div className={`${base} bg-cyan-400/10 border border-cyan-400/25 text-cyan-400`}>
+            <Calendar className="w-3 h-3" />
+            À VENIR
           </div>
         );
       case 'replay':
         return (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold" style={{ background: 'rgba(168, 85, 247, 0.12)', border: '1px solid rgba(168, 85, 247, 0.25)' }}>
-            <Play className="w-3 h-3 text-purple-400 fill-purple-400" />
-            <span className="text-purple-400">REPLAY</span>
+          <div className={`${base} bg-purple-500/12 border border-purple-500/25 text-purple-400`}>
+            <Play className="w-3 h-3 fill-current" />
+            REPLAY
           </div>
         );
       case 'ended':
         return (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold" style={{ background: 'rgba(107, 114, 128, 0.12)', border: '1px solid rgba(107, 114, 128, 0.25)' }}>
-            <CheckCircle className="w-3 h-3 text-gray-400" />
-            <span className="text-gray-400">TERMINÉ</span>
+          <div className={`${base} bg-gray-500/12 border border-gray-500/25 text-gray-400`}>
+            <CheckCircle className="w-3 h-3" />
+            TERMINÉ
           </div>
         );
       case 'cancelled':
         return (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold" style={{ background: 'rgba(107, 114, 128, 0.12)', border: '1px solid rgba(107, 114, 128, 0.25)' }}>
-            <CheckCircle className="w-3 h-3 text-amber-500/80" />
-            <span className="text-amber-500/90">ANNULÉ</span>
+          <div className={`${base} bg-gray-500/12 border border-gray-500/25 text-amber-500/90`}>
+            <CheckCircle className="w-3 h-3" />
+            ANNULÉ
           </div>
         );
       case 'preparing':
         return (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold" style={{ background: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.25)' }}>
-            <Clock className="w-3 h-3 text-amber-400" />
-            <span className="text-amber-300">PRÉPARATION</span>
+          <div className={`${base} bg-amber-400/10 border border-amber-400/25 text-amber-300`}>
+            <Clock className="w-3 h-3" />
+            PRÉPARATION
           </div>
         );
     }
@@ -120,188 +120,152 @@ export function BeefCard({
     return '';
   };
 
+  const charSum = title.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const hueBase = charSum % 360;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
       onClick={onClick}
-      className="group card-interactive overflow-hidden"
+      className="group cursor-pointer overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.08] backdrop-blur-2xl transition-all duration-300 hover:scale-[0.98] hover:border-white/20 hover:bg-white/[0.06]"
     >
-      {/* Thumbnail */}
-      <div className="relative h-44 overflow-hidden bg-surface-3">
+      {/* Visual */}
+      <div className="relative h-48 overflow-hidden rounded-t-[2rem]">
         {thumbnail ? (
           <Image
             src={thumbnail}
             alt={title}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            className="object-cover transition-transform duration-700 group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, 384px"
           />
         ) : (
-          (() => {
-            const charSum = title.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-            const hueBase = charSum % 360;
-
-            const gradients: Record<string, string> = {
-              live: `linear-gradient(145deg, hsl(${hueBase}, 85%, 18%) 0%, hsl(${(hueBase + 30) % 360}, 75%, 12%) 50%, hsl(${(hueBase + 60) % 360}, 70%, 8%) 100%)`,
-              scheduled: `linear-gradient(145deg, hsl(${hueBase}, 60%, 15%) 0%, hsl(${(hueBase + 40) % 360}, 50%, 10%) 50%, hsl(${(hueBase + 80) % 360}, 45%, 7%) 100%)`,
-              preparing: `linear-gradient(145deg, hsl(${hueBase}, 55%, 14%) 0%, hsl(${(hueBase + 35) % 360}, 45%, 9%) 100%)`,
-              replay: `linear-gradient(145deg, hsl(${hueBase}, 50%, 14%) 0%, hsl(${(hueBase + 35) % 360}, 40%, 9%) 100%)`,
-              ended: `linear-gradient(145deg, hsl(${hueBase}, 20%, 12%) 0%, hsl(${(hueBase + 20) % 360}, 15%, 8%) 100%)`,
-            };
-
-            const excerpt = description?.trim().slice(0, 90) || '';
-            const displayExcerpt = excerpt.length >= 90 ? excerpt + '…' : excerpt;
-
-            return (
-              <div className="w-full h-full relative flex flex-col justify-end overflow-hidden p-4">
-                {/* Unique gradient per beef */}
-                <div
-                  className="absolute inset-0"
-                  style={{ background: gradients[uiStatus] || gradients.ended }}
-                />
-
-                {/* Decorative shapes */}
-                <div
-                  className="absolute -top-6 -right-6 w-28 h-28 rounded-full opacity-[0.07]"
-                  style={{ background: `radial-gradient(circle, hsl(${hueBase}, 80%, 60%), transparent 70%)` }}
-                />
-                <div
-                  className="absolute bottom-8 -left-8 w-24 h-24 rounded-full opacity-[0.05]"
-                  style={{ background: `radial-gradient(circle, hsl(${(hueBase + 120) % 360}, 70%, 55%), transparent 70%)` }}
-                />
-
-                {/* Live pulse ring */}
-                {uiStatus === 'live' && (
-                  <motion.div
-                    className="absolute top-4 right-4 w-3 h-3 rounded-full bg-red-500"
-                    animate={{ boxShadow: ['0 0 0 0 rgba(239,68,68,0.5)', '0 0 0 10px rgba(239,68,68,0)', '0 0 0 0 rgba(239,68,68,0)'] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  />
-                )}
-
-                {/* Title prominently displayed */}
-                <h4 className="relative z-[1] text-[15px] font-bold text-white leading-tight line-clamp-2 mb-1 drop-shadow-[0_1px_6px_rgba(0,0,0,0.5)]">
-                  {title}
-                </h4>
-
-                {/* Description excerpt */}
-                {displayExcerpt && (
-                  <p className="relative z-[1] text-[11px] text-white/50 leading-relaxed line-clamp-2 mb-2">
-                    {displayExcerpt}
-                  </p>
-                )}
-
-                {/* Bottom info row */}
-                <div className="relative z-[1] flex items-center gap-2">
-                  {/* Host avatar pill */}
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                    <div
-                      className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                      style={{ background: `hsl(${charSum % 360}, 65%, 45%)` }}
-                    >
-                      {(host_name || '?')[0].toUpperCase()}
-                    </div>
-                    <span className="text-[11px] text-white/70 font-medium truncate max-w-[80px]">{host_name}</span>
-                  </div>
-
-                  {/* Participants indicator */}
-                  {(participants_count ?? 0) > 0 && (
-                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                      <Users className="w-3 h-3 text-white/40" />
-                      <span className="text-[10px] text-white/50 font-medium">{participants_count}</span>
-                    </div>
-                  )}
-
-                  {/* CTA hint */}
-                  {uiStatus === 'live' && (
-                    <div className="ml-auto flex items-center gap-0.5 text-[10px] text-brand-400 font-semibold">
-                      <span>Regarder</span>
-                      <ArrowUpRight className="w-3 h-3" />
-                    </div>
-                  )}
-                  {uiStatus === 'scheduled' && (
-                    <div className="ml-auto flex items-center gap-0.5 text-[10px] text-cyan-400 font-semibold">
-                      <span>Bientôt</span>
-                      <Calendar className="w-3 h-3" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()
+          <div className="absolute inset-0">
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(145deg, hsl(${hueBase}, 65%, 16%) 0%, hsl(${(hueBase + 40) % 360}, 50%, 9%) 100%)`,
+              }}
+            />
+            <div
+              className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-[0.08]"
+              style={{ background: `radial-gradient(circle, hsl(${hueBase}, 80%, 55%), transparent 70%)` }}
+            />
+            <div
+              className="absolute bottom-6 -left-6 w-24 h-24 rounded-full opacity-[0.05]"
+              style={{ background: `radial-gradient(circle, hsl(${(hueBase + 120) % 360}, 70%, 50%), transparent 70%)` }}
+            />
+          </div>
         )}
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#111114] via-transparent to-transparent opacity-90" />
+        {/* Gradient lisibilité */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
 
-        {/* Status — top left */}
-        <div className="absolute top-3 left-3">{getStatusBadge()}</div>
+        {/* Live pulse */}
+        {uiStatus === 'live' && (
+          <motion.div
+            className="absolute top-4 right-4 w-3 h-3 rounded-full bg-red-500"
+            animate={{ boxShadow: ['0 0 0 0 rgba(239,68,68,0.5)', '0 0 0 10px rgba(239,68,68,0)', '0 0 0 0 rgba(239,68,68,0)'] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+        )}
 
-        {/* Replay : beef terminé (ou replay VOD) */}
+        {/* Badge statut */}
+        <div className="absolute top-3.5 left-3.5">{getStatusBadge()}</div>
+
+        {/* Badges contextuels (replay, prix) */}
         {(status === 'ended' || status === 'replay') && (
-          <div className="absolute top-3 right-3">
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-500/15 border border-purple-500/30 text-purple-300">
-              <Play className="w-3 h-3 text-purple-400 fill-purple-400" />
-              <span>Replay</span>
+          <div className="absolute top-3.5 right-3.5">
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 border border-purple-500/30 text-purple-300 backdrop-blur-md">
+              <Play className="w-3 h-3 fill-current" />
+              Replay
             </div>
           </div>
         )}
-
-        {/* À venir payant : prix d’entrée / suite annoncé (pas encore de visionnage) */}
         {uiStatus === 'scheduled' && (price ?? 0) > 0 && (
-          <div className="absolute top-3 right-3">
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-cyan-500/10 border border-cyan-500/25 text-cyan-200">
-              <Flame className="w-3 h-3 text-cyan-400" />
-              <span>Entrée · {price} pts</span>
+          <div className="absolute top-3.5 right-3.5">
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 border border-cyan-500/25 text-cyan-200 backdrop-blur-md">
+              <Flame className="w-3 h-3" />
+              Entrée · {price} pts
             </div>
           </div>
         )}
-
-        {/* Suite : direct en cours + payant + spectateur a déjà ouvert l’arène sur cet appareil */}
         {uiStatus === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-          <div className="absolute top-3 right-3">
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-white/10 border border-white/15 text-brand-200">
+          <div className="absolute top-3.5 right-3.5">
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-white/10 border border-white/15 text-brand-200 backdrop-blur-md">
               <Eye className="w-3 h-3 text-brand-400" />
-              <span>Suite · {price} pts</span>
+              Suite · {price} pts
             </div>
           </div>
         )}
 
-        {/* Bottom row */}
-        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+        {/* Titre + description (dans le visuel) */}
+        {!thumbnail && (
+          <div className="absolute inset-x-0 bottom-0 z-[1] flex flex-col justify-end p-5">
+            <h4 className="font-sans text-base font-bold text-white leading-snug line-clamp-2 mb-1 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+              {title}
+            </h4>
+            {description?.trim() && (
+              <p className="font-sans text-[11px] text-white/50 leading-relaxed line-clamp-2">
+                {description.trim().slice(0, 90)}{(description.trim().length > 90) ? '…' : ''}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Métriques bas — chrono / countdown + viewers */}
+        <div className="absolute bottom-3 left-4 right-4 z-[2] flex items-center justify-between">
           {uiStatus === 'scheduled' && scheduled_at ? (
             <Countdown scheduledAt={scheduled_at} />
           ) : getTimeDisplay() ? (
-            <div className="flex items-center gap-1 text-xs text-gray-400">
+            <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/60">
               <Clock className="w-3 h-3" />
               <span>{getTimeDisplay()}</span>
             </div>
           ) : <div />}
-          
-          <div className="flex items-center gap-1 text-xs text-gray-400">
+          <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/60">
             <Eye className="w-3 h-3" />
-            <span className="font-medium">{viewer_count.toLocaleString()}</span>
+            <span>{viewer_count.toLocaleString()}</span>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-4 py-3">
-        {/* Title — only below if there's a real thumbnail (otherwise it's in the card visual) */}
+      {/* Contenu sous le visuel */}
+      <div className="px-5 py-4">
         {thumbnail && (
-          <h3 className="text-sm font-semibold text-white mb-1.5 line-clamp-2 group-hover:text-brand-400 transition-colors duration-200 leading-snug">
+          <h3 className="font-sans text-[15px] font-bold text-white mb-1 line-clamp-2 leading-snug group-hover:text-brand-400 transition-colors duration-200">
             {title}
           </h3>
         )}
 
-        {/* Host — only if thumbnail (otherwise host is in the card visual) */}
-        {thumbnail && (
-          <p className="text-xs text-gray-500 mb-2.5">
-            {host_name}
-          </p>
-        )}
+        {/* Hôte */}
+        <div className="flex items-center gap-2 mb-3">
+          <div
+            className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
+            style={{ background: `hsl(${hueBase}, 55%, 42%)` }}
+          >
+            {(host_name || '?')[0].toUpperCase()}
+          </div>
+          <span className="font-sans text-xs text-white/50 font-medium truncate">{host_name}</span>
+          {(participants_count ?? 0) > 0 && (
+            <div className="ml-auto flex items-center gap-1 font-mono text-[10px] text-white/35 tracking-wider">
+              <Users className="w-3 h-3" />
+              {participants_count}
+            </div>
+          )}
+          {uiStatus === 'live' && (
+            <div className="ml-auto flex items-center gap-0.5 font-sans text-[10px] text-brand-400 font-semibold">
+              Regarder <ArrowUpRight className="w-3 h-3" />
+            </div>
+          )}
+          {uiStatus === 'scheduled' && !((participants_count ?? 0) > 0) && (
+            <div className="ml-auto flex items-center gap-0.5 font-sans text-[10px] text-cyan-400 font-semibold">
+              Bientôt <Calendar className="w-3 h-3" />
+            </div>
+          )}
+        </div>
 
         {/* Tags */}
         {tags.length > 0 && (
@@ -310,14 +274,13 @@ export function BeefCard({
               <button
                 key={idx}
                 onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
-                className="px-2 py-0.5 min-h-[32px] text-[11px] font-medium text-gray-400 hover:text-brand-400 rounded-md transition-colors"
-                style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.06)' }}
+                className="px-2.5 py-0.5 font-sans text-[11px] font-medium text-white/40 hover:text-brand-400 rounded-full bg-white/[0.04] border border-white/[0.06] transition-colors"
               >
                 #{tag}
               </button>
             ))}
             {tags.length > 3 && (
-              <span className="px-1 text-[11px] text-gray-600">+{tags.length - 3}</span>
+              <span className="px-1 font-mono text-[10px] text-white/25 tracking-wider self-center">+{tags.length - 3}</span>
             )}
           </div>
         )}

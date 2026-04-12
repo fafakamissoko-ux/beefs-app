@@ -317,37 +317,32 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#08080A]">
+    <div className="min-h-screen bg-black">
       <Suspense fallback={null}>
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
-      <div className="mx-auto max-w-6xl px-4 py-6">
+      <div className="mx-auto max-w-6xl px-4 pb-8 pt-10 sm:px-6 lg:px-8">
         {/* Active beef banner */}
         {activeBeef && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-4 overflow-hidden rounded-[2px]"
-            style={{
-              background: 'linear-gradient(135deg, rgba(0,82,255,0.12), rgba(255,77,0,0.08))',
-              border: '1px solid rgba(255,255,255,0.08)',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-            }}
+            className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-cobalt-500/12 to-ember-500/8 border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
           >
             <button
               onClick={() => router.push(`/arena/${activeBeef.id}`)}
-              className="w-full flex items-center gap-3 px-4 py-3 text-left"
+              className="w-full flex items-center gap-4 px-5 py-4 text-left"
             >
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[2px] border border-ember-500/30 bg-ember-500/15">
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-ember-500/30 bg-ember-500/15">
                 <Radio className="h-5 w-5 animate-pulse text-ember-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{activeBeef.title}</p>
-                <p className="text-xs text-gray-400">
-                  Tu es <span className="text-brand-400 font-medium">{activeBeef.role}</span> dans ce beef en cours
+                <p className="font-sans text-sm font-bold text-white truncate">{activeBeef.title}</p>
+                <p className="font-sans text-xs text-white/50">
+                  Tu es <span className="text-brand-400 font-semibold">{activeBeef.role}</span> dans ce beef en cours
                 </p>
               </div>
-              <div className="flex-shrink-0 px-4 py-1.5 rounded-lg bg-red-500 text-white text-xs font-bold">
+              <div className="flex-shrink-0 px-4 py-1.5 rounded-full bg-red-500 text-white font-mono text-[10px] font-bold uppercase tracking-wider">
                 Rejoindre
               </div>
             </button>
@@ -355,11 +350,8 @@ export default function FeedPage() {
         )}
 
         {/* Feed tabs + achat de points */}
-        <div
-          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          <div className="flex items-center gap-0">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+          <div className="inline-flex items-center gap-1 rounded-full bg-white/[0.05] p-1 backdrop-blur-md">
             {[
               { id: 'pour-vous', label: 'Pour vous', icon: TrendingUp },
               { id: 'abonnements', label: 'Abonnements', icon: Users },
@@ -367,20 +359,14 @@ export default function FeedPage() {
               <button
                 key={tab.id}
                 onClick={() => setFeedType(tab.id as any)}
-                className={`relative flex items-center gap-2 px-5 py-3 text-sm font-semibold transition-colors ${
-                  feedType === tab.id ? 'text-white' : 'text-gray-500 hover:text-gray-300'
+                className={`relative flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold transition-all duration-200 ${
+                  feedType === tab.id
+                    ? 'text-white bg-white/10 ring-1 ring-white/[0.12] shadow-[0_0_12px_rgba(0,82,255,0.12)]'
+                    : 'text-gray-500 hover:text-gray-200'
                 }`}
               >
                 <tab.icon className="w-4 h-4" />
                 <span>{tab.label}</span>
-                {feedType === tab.id && (
-                  <motion.div
-                    layoutId="feedTab"
-                    className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
-                    style={{ background: 'linear-gradient(90deg, #0052FF, #FF4D00)' }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                  />
-                )}
               </button>
             ))}
           </div>
@@ -388,7 +374,7 @@ export default function FeedPage() {
             href={hrefWithFrom('/buy-points', pathname)}
             target="_blank"
             rel="noopener noreferrer"
-            className="mb-2 inline-flex items-center justify-center gap-2 self-stretch rounded-[2px] border border-ember-500/30 px-4 py-2.5 font-mono text-sm font-semibold text-ember-400 transition-colors hover:bg-ember-500/10 hover:text-white sm:mb-3 sm:self-auto sm:justify-end"
+            className="inline-flex items-center justify-center gap-2 self-stretch rounded-full border border-ember-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-ember-400 transition-colors hover:bg-ember-500/10 hover:text-white sm:self-auto"
           >
             <Coins className="w-4 h-4 flex-shrink-0" />
             <span>Acheter des points</span>
@@ -396,19 +382,18 @@ export default function FeedPage() {
         </div>
 
         {/* Filters */}
-        <div className="mb-6 space-y-4">
-          {/* Status pills */}
-          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar relative">
+        <div className="mb-8 space-y-4">
+          {/* Status pills — ghost/glass */}
+          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
             {STATUS_FILTERS.map(s => (
               <button
                 key={s.id}
                 onClick={() => setSelectedStatus(s.id)}
-                className={`px-4 py-1.5 min-h-[36px] rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`px-4 py-1.5 rounded-full font-sans text-xs font-semibold whitespace-nowrap border transition-all duration-200 ${
                   selectedStatus === s.id
-                    ? 'text-white brand-gradient shadow-sm'
-                    : 'text-gray-500 hover:text-gray-300'
+                    ? 'text-white bg-white/10 border-white/30'
+                    : 'text-gray-500 bg-transparent border-white/[0.08] hover:text-gray-300 hover:border-white/15'
                 }`}
-                style={selectedStatus !== s.id ? { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' } : {}}
               >
                 {s.label}
               </button>
@@ -430,7 +415,7 @@ export default function FeedPage() {
                 }
               }}
               placeholder="Filtrer par tag..."
-              className="input-field pl-10 text-sm py-2.5"
+              className="input-field pl-10 text-sm py-2.5 rounded-full"
             />
           </div>
 
@@ -439,7 +424,7 @@ export default function FeedPage() {
             <div className="flex flex-wrap gap-2">
               {selectedTags.map(tag => (
                 <motion.div key={tag} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold text-white brand-gradient">
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-white brand-gradient">
                   <span>#{tag}</span>
                   <button onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))} className="hover:bg-white/20 rounded-full p-0.5">
                     <X className="w-3 h-3" />
@@ -453,14 +438,13 @@ export default function FeedPage() {
           )}
 
           {/* Trending tags */}
-          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-            <span className="text-xs text-gray-600 font-semibold uppercase tracking-wider flex-shrink-0">Trending</span>
+          <div className="flex items-center gap-2.5 overflow-x-auto hide-scrollbar pb-1">
+            <span className="font-mono text-[10px] text-white/30 font-bold uppercase tracking-[0.15em] flex-shrink-0">Trending</span>
             {trendingTags.filter(t => !selectedTags.includes(t)).slice(0, 8).map(tag => (
               <button
                 key={tag}
                 onClick={() => handleTagClick(tag)}
-                className="px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-brand-400 rounded-md whitespace-nowrap transition-colors flex-shrink-0"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
+                className="px-3 py-1 font-sans text-xs font-medium text-white/40 hover:text-brand-400 rounded-full whitespace-nowrap border border-white/[0.06] bg-white/[0.03] transition-colors flex-shrink-0"
               >
                 #{tag}
               </button>
@@ -470,47 +454,47 @@ export default function FeedPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="card overflow-hidden">
-                <div className="skeleton h-44" />
-                <div className="p-4 space-y-3">
-                  <div className="skeleton h-4 w-3/4" />
-                  <div className="skeleton h-3 w-1/2" />
+              <div key={i} className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.06]">
+                <div className="skeleton h-48 rounded-none" />
+                <div className="p-5 space-y-3">
+                  <div className="skeleton h-4 w-3/4 rounded-full" />
+                  <div className="skeleton h-3 w-1/2 rounded-full" />
                   <div className="flex gap-2">
-                    <div className="skeleton h-5 w-16 rounded-md" />
-                    <div className="skeleton h-5 w-12 rounded-md" />
+                    <div className="skeleton h-5 w-16 rounded-full" />
+                    <div className="skeleton h-5 w-12 rounded-full" />
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : beefs.length === 0 ? (
-          <div className="text-center py-24">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.03)' }}>
-              <Flame className="w-8 h-8 text-gray-700" />
+          <div className="text-center py-32">
+            <div className="w-20 h-20 mx-auto mb-5 rounded-[1.5rem] flex items-center justify-center bg-white/[0.03] border border-white/[0.06]">
+              <Flame className="w-9 h-9 text-white/20" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-1">Aucun beef en cours</h3>
-            <p className="text-sm text-gray-500 mb-6">Soyez le premier à régler un beef en live !</p>
-            <button onClick={() => setShowCreateModal(true)} className="btn-primary inline-flex items-center gap-2">
+            <h3 className="font-sans text-xl font-bold text-white mb-2">Aucun beef en cours</h3>
+            <p className="font-sans text-sm text-white/40 mb-8">Soyez le premier à régler un beef en live !</p>
+            <button onClick={() => setShowCreateModal(true)} className="btn-primary inline-flex items-center gap-2 rounded-full px-8">
               <Flame className="w-4 h-4" />
               Régler un beef
             </button>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
               {beefs.map((beef, index) => (
                 <BeefCard key={beef.id} {...beef} onClick={() => handleBeefClick(beef)} onTagClick={handleTagClick} index={index} />
               ))}
             </div>
             {hasMore && (
-              <div className="flex justify-center mt-8">
+              <div className="flex justify-center mt-12">
                 <button
                   type="button"
                   onClick={() => void loadMore()}
                   disabled={loadingMore}
-                  className="rounded-[2px] bg-white/10 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/15 disabled:opacity-50"
+                  className="rounded-full bg-white/[0.06] border border-white/[0.08] px-8 py-3 font-sans text-sm font-semibold text-white transition-all duration-200 hover:bg-white/10 hover:border-white/15 disabled:opacity-50"
                 >
                   {loadingMore ? 'Chargement…' : 'Charger plus'}
                 </button>
@@ -523,18 +507,18 @@ export default function FeedPage() {
       {/* Create modal */}
       {showCreateModal && <CreateBeefForm onSubmit={handleCreateBeef} onCancel={() => setShowCreateModal(false)} />}
 
-      {/* FAB */}
-      <div className="fixed bottom-6 right-6 z-40">
+      {/* FAB — prestige gold squircle */}
+      <div className="fixed bottom-8 right-8 z-40">
         <div className="relative">
           <motion.button
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.92 }}
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
             onClick={() => setShowCreateModal(true)}
-            className="w-14 h-14 rounded-2xl shadow-lg flex items-center justify-center text-white brand-gradient hover:shadow-glow transition-shadow"
+            className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-prestige-gold text-black shadow-2xl shadow-prestige-gold/20 transition-shadow hover:shadow-[0_0_40px_rgba(212,175,55,0.35)]"
           >
-            <Plus className="w-6 h-6" />
+            <Plus className="w-7 h-7" strokeWidth={2.5} />
           </motion.button>
           <FeatureGuide
             id="feed-create-beef"
