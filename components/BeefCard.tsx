@@ -6,12 +6,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, Clock, Users, Flame, Play, CheckCircle, Calendar, ArrowUpRight, User } from 'lucide-react';
 import { hasBeefWatchStarted } from '@/lib/beef-view-local';
 import { Countdown } from '@/components/Countdown';
+import { ProfileUserLink } from '@/components/ProfileUserLink';
 
 interface BeefCardProps {
   id: string;
   title: string;
   description?: string;
   host_name: string;
+  /** `username` en base pour lien profil (pas le seul display name). */
+  host_username?: string | null;
   status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled' | 'pending';
   created_at: string;
   scheduled_at?: string;
@@ -36,6 +39,7 @@ export function BeefCard({
   title,
   description,
   host_name,
+  host_username,
   status,
   created_at,
   scheduled_at,
@@ -264,7 +268,12 @@ export function BeefCard({
           >
             {(host_name || '?')[0].toUpperCase()}
           </div>
-          <span className="font-sans text-xs text-white/50 font-medium truncate">{host_name}</span>
+          <ProfileUserLink
+            username={host_username}
+            className="font-sans text-xs text-white/50 font-medium truncate"
+          >
+            {host_name}
+          </ProfileUserLink>
           {(participants_count ?? 0) > 0 && (
             <div className="ml-auto flex items-center gap-1 font-mono text-[10px] text-white/35 tracking-wider">
               <Users className="w-3 h-3" />
@@ -314,7 +323,12 @@ export function BeefCard({
                 >
                   {(host_name || '?')[0].toUpperCase()}
                 </div>
-                <span className="font-sans text-[11px] text-white/60 font-medium truncate max-w-[70px]">{host_name}</span>
+                <ProfileUserLink
+                  username={host_username}
+                  className="font-sans text-[11px] text-white/60 font-medium truncate max-w-[70px]"
+                >
+                  {host_name}
+                </ProfileUserLink>
               </div>
 
               {/* Challenger B — rempli ou pointillés */}

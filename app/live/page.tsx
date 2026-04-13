@@ -12,6 +12,7 @@ import { AppBackButton } from '@/components/AppBackButton';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
 import { normalizeScheduledAtForInsert } from '@/lib/beef-schedule';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
+import { ProfileUserLink } from '@/components/ProfileUserLink';
 
 // Feed logic like X/Twitter: "Pour vous" = algorithmic, "Abonnements" = chronological
 
@@ -26,6 +27,7 @@ interface Room {
   id: string;
   title: string;
   host_name: string;
+  host_username?: string | null;
   status: string;
   created_at: string;
   viewer_count?: number;
@@ -94,6 +96,7 @@ export default function LivePage() {
         id: beef.id,
         title: beef.title,
         host_name: beef.users?.display_name || beef.users?.username || 'Anonyme',
+        host_username: beef.users?.username?.trim() || null,
         status: beef.status,
         created_at: beef.created_at,
         viewer_count: beef.viewer_count || 0,
@@ -434,7 +437,12 @@ export default function LivePage() {
                 {/* Host */}
                 <div className="flex items-center gap-2 text-gray-400 mb-4">
                   <Users className="w-4 h-4" />
-                  <span className="text-sm">Par {room.host_name}</span>
+                  <span className="text-sm">
+                    Par{' '}
+                    <ProfileUserLink username={room.host_username} className="text-sm text-gray-400">
+                      {room.host_name}
+                    </ProfileUserLink>
+                  </span>
                 </div>
 
                 {/* Footer */}
@@ -488,7 +496,12 @@ export default function LivePage() {
               <div className="bg-black/50 rounded-[2px] p-4 mb-5 border border-white/10">
                 <h3 className="text-base font-bold text-white mb-2 line-clamp-2">{selectedRoom.title}</h3>
                 <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span>Par {selectedRoom.host_name}</span>
+                  <span>
+                    Par{' '}
+                    <ProfileUserLink username={selectedRoom.host_username} className="text-xs text-gray-400">
+                      {selectedRoom.host_name}
+                    </ProfileUserLink>
+                  </span>
                   <div className="flex items-center gap-1">
                     <Eye className="w-3.5 h-3.5" />
                     <span>{selectedRoom.viewer_count}</span>

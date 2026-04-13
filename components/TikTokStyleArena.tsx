@@ -27,6 +27,7 @@ import { PreJoinScreen } from './PreJoinScreen';
 import { ParticipantVideo } from './ParticipantVideo';
 import { FeatureGuide } from './FeatureGuide';
 import { ViewerListModal } from './ViewerListModal';
+import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { useDailyCall } from '@/hooks/useDailyCall';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
@@ -4197,9 +4198,13 @@ export function TikTokStyleArena({
                     onTouchEnd={canDelete ? clearLongPress : undefined}
                     onTouchMove={canDelete ? clearLongPress : undefined}
                   >
-                    <span className="block font-mono text-[9px] font-bold uppercase tracking-tight text-[#ffffff] [text-shadow:0_1px_3px_rgba(0,0,0,0.9)] sm:[text-shadow:0_1px_2px_rgba(0,0,0,0.75)]">
+                    <ProfileUserLink
+                      username={message.user_name}
+                      onArenaProfileClick={(q) => void openProfile(q, undefined)}
+                      className="block font-mono text-[9px] font-bold uppercase tracking-tight text-[#ffffff] [text-shadow:0_1px_3px_rgba(0,0,0,0.9)] sm:[text-shadow:0_1px_2px_rgba(0,0,0,0.75)]"
+                    >
                       {message.user_name}
-                    </span>
+                    </ProfileUserLink>
                     <span className="break-words text-[12px] font-medium leading-snug tracking-tight text-[#ffffff] [text-shadow:0_2px_8px_rgba(0,0,0,0.95),0_1px_2px_rgba(0,0,0,0.85)] sm:[text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
                       {message.content}
                     </span>
@@ -4643,6 +4648,10 @@ export function TikTokStyleArena({
           viewers={remoteParticipants.map(p => ({ userName: p.userName }))}
           viewerCount={liveViewerCount}
           onClose={() => setShowViewerList(false)}
+          onSelectViewer={(name) => {
+            setShowViewerList(false);
+            void openProfile(name, undefined);
+          }}
         />
       )}
 

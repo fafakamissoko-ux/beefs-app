@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck } from 'lucide-react';
@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
 import { AppBackButton } from '@/components/AppBackButton';
-import { hrefWithFrom } from '@/lib/navigation-return';
+import { ProfileUserLink } from '@/components/ProfileUserLink';
 
 interface Conversation {
   id: string;
@@ -38,7 +38,6 @@ interface Message {
 
 export default function MessagesPage() {
   const router = useRouter();
-  const pathname = usePathname();
   const { user, loading } = useAuth();
   const { toast } = useToast();
 
@@ -274,6 +273,13 @@ export default function MessagesPage() {
     }
   };
 
+  const activateRow = (fn: () => void) => (e: KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fn();
+    }
+  };
+
   const formatTime = (dateStr: string) => {
     const d = new Date(dateStr);
     const now = new Date();
@@ -338,23 +344,36 @@ export default function MessagesPage() {
                   {searchResults.length > 0 && (
                     <div className="mt-2 space-y-1">
                       {searchResults.map((u) => (
-                        <button
+                        <div
                           key={u.id}
+                          role="button"
+                          tabIndex={0}
                           onClick={() => startConversation(u)}
-                          className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-colors text-left"
+                          onKeyDown={activateRow(() => startConversation(u))}
+                          className="w-full flex cursor-pointer items-center gap-3 rounded-xl p-2.5 text-left transition-colors hover:bg-white/5"
                         >
-                          <div className="relative w-10 h-10 rounded-[1rem] bg-gradient-to-br from-brand-500 to-brand-600 flex-shrink-0 overflow-hidden">
+                          <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-[1rem] bg-gradient-to-br from-brand-500 to-brand-600">
                             {u.avatar_url ? (
                               <Image src={u.avatar_url} alt="" fill className="object-cover" sizes="40px" />
                             ) : (
                               <span className="text-white font-bold text-sm">{u.display_name?.[0]?.toUpperCase() || '?'}</span>
                             )}
                           </div>
-                          <div>
-                            <p className="font-sans text-sm font-bold text-white">{u.display_name}</p>
-                            <p className="font-mono text-[10px] text-white/35 tracking-wider">@{u.username}</p>
+                          <div className="min-w-0">
+                            <ProfileUserLink
+                              username={u.username}
+                              className="font-sans text-sm font-bold text-white"
+                            >
+                              {u.display_name}
+                            </ProfileUserLink>
+                            <ProfileUserLink
+                              username={u.username}
+                              className="font-mono text-[10px] tracking-wider text-white/35"
+                            >
+                              @{u.username}
+                            </ProfileUserLink>
                           </div>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -377,32 +396,42 @@ export default function MessagesPage() {
               </div>
             ) : (
               conversations.map((conv) => (
-                <button
+                <div
                   key={conv.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => loadMessages(conv)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/5 transition-colors text-left border-b border-white/[0.04] ${
+                  onKeyDown={activateRow(() => loadMessages(conv))}
+                  className={`flex w-full cursor-pointer items-center gap-3 border-b border-white/[0.04] px-4 py-3.5 text-left transition-colors hover:bg-white/5 ${
                     selectedConv?.id === conv.id ? 'bg-white/5' : ''
                   }`}
                 >
-                  <div className="relative w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-brand-500/80 to-brand-600/80 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                  <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-[1.25rem] bg-gradient-to-br from-brand-500/80 to-brand-600/80">
                     {conv.other_user.avatar_url ? (
                       <Image src={conv.other_user.avatar_url} alt="" fill className="object-cover" sizes="48px" />
                     ) : (
                       <span className="text-white font-bold">{conv.other_user.display_name?.[0]?.toUpperCase() || '?'}</span>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="font-sans text-sm font-bold text-white truncate">{conv.other_user.display_name}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <ProfileUserLink
+                        username={conv.other_user.username}
+                        className="min-w-0 flex-1 truncate font-sans text-sm font-bold text-white"
+                      >
+                        {conv.other_user.display_name}
+                      </ProfileUserLink>
                       {conv.last_message_at && (
-                        <span className="font-mono text-[10px] text-white/30 tracking-wider flex-shrink-0">{formatTime(conv.last_message_at)}</span>
+                        <span className="flex-shrink-0 font-mono text-[10px] tracking-wider text-white/30">
+                          {formatTime(conv.last_message_at)}
+                        </span>
                       )}
                     </div>
-                    <p className="font-sans text-xs text-white/35 truncate mt-0.5">
+                    <p className="mt-0.5 truncate font-sans text-xs text-white/35">
                       {conv.last_message_text || 'Aucun message'}
                     </p>
                   </div>
-                </button>
+                </div>
               ))
             )}
           </div>
@@ -420,20 +449,29 @@ export default function MessagesPage() {
                 >
                   <ArrowLeft className="w-5 h-5 text-white" />
                 </button>
-                <div
-                  className="flex items-center gap-3 flex-1 cursor-pointer"
-                  onClick={() => router.push(hrefWithFrom(`/profile/${selectedConv.other_user.username}`, pathname))}
-                >
-                  <div className="relative w-10 h-10 rounded-[1rem] bg-gradient-to-br from-brand-500 to-brand-600 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-[1rem] bg-gradient-to-br from-brand-500 to-brand-600">
                     {selectedConv.other_user.avatar_url ? (
                       <Image src={selectedConv.other_user.avatar_url} alt="" fill className="object-cover" sizes="40px" />
                     ) : (
-                      <span className="text-white font-bold text-sm">{selectedConv.other_user.display_name?.[0]?.toUpperCase() || '?'}</span>
+                      <span className="text-sm font-bold text-white">
+                        {selectedConv.other_user.display_name?.[0]?.toUpperCase() || '?'}
+                      </span>
                     )}
                   </div>
-                  <div>
-                    <p className="font-sans text-sm font-bold text-white">{selectedConv.other_user.display_name}</p>
-                    <p className="font-mono text-[10px] text-white/35 tracking-wider">@{selectedConv.other_user.username}</p>
+                  <div className="min-w-0">
+                    <ProfileUserLink
+                      username={selectedConv.other_user.username}
+                      className="font-sans text-sm font-bold text-white"
+                    >
+                      {selectedConv.other_user.display_name}
+                    </ProfileUserLink>
+                    <ProfileUserLink
+                      username={selectedConv.other_user.username}
+                      className="font-mono text-[10px] tracking-wider text-white/35"
+                    >
+                      @{selectedConv.other_user.username}
+                    </ProfileUserLink>
                   </div>
                 </div>
               </div>

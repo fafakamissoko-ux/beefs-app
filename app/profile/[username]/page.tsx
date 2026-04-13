@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { BeefCard } from '@/components/BeefCard';
+import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { FollowListModal } from '@/components/FollowListModal';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { AppBackButton } from '@/components/AppBackButton';
@@ -54,6 +55,7 @@ interface Beef {
   price?: number;
   viewer_count?: number;
   host_name: string;
+  host_username?: string | null;
 }
 
 export default function PublicProfilePage() {
@@ -146,9 +148,12 @@ export default function PublicProfilePage() {
         .limit(10);
 
       if (userBeefs) {
+        const hn = profileData.display_name || profileData.username;
+        const hu = profileData.username?.trim() || null;
         setBeefs(userBeefs.map(beef => ({
           ...beef,
-          host_name: profileData.display_name || profileData.username,
+          host_name: hn,
+          host_username: hu,
         })));
       }
 
@@ -175,25 +180,29 @@ export default function PublicProfilePage() {
         ),
       ];
       let medNameById: Record<string, string> = {};
+      let medUsernameById: Record<string, string> = {};
       if (medIds.length > 0) {
         const { data: mus } = await supabase
           .from('users')
           .select('id, display_name, username')
           .in('id', medIds);
-        medNameById = Object.fromEntries(
-          (mus || []).map((u: { id: string; display_name?: string; username?: string }) => [
-            u.id,
-            u.display_name || u.username || 'Médiateur',
-          ]),
-        );
+        for (const u of mus || []) {
+          const row = u as { id: string; display_name?: string; username?: string };
+          medNameById[row.id] = row.display_name || row.username || 'Médiateur';
+          const un = row.username?.trim();
+          if (un) medUsernameById[row.id] = un;
+        }
       }
       const selfName = profileData.display_name || profileData.username;
+      const selfUsername = profileData.username?.trim() || null;
       setParticipantBeefs(
         pbRaw.slice(0, 12).map((b) => {
           const mid = (b as { mediator_id?: string }).mediator_id;
           const host_name =
             !mid || mid === profileData.id ? selfName : medNameById[mid] || 'Médiateur';
-          return { ...b, host_name };
+          const host_username =
+            !mid || mid === profileData.id ? selfUsername : medUsernameById[mid] ?? null;
+          return { ...b, host_name, host_username };
         }),
       );
 
@@ -545,7 +554,12 @@ export default function PublicProfilePage() {
                     className="rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3 backdrop-blur-sm"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                      <span className="text-sm font-semibold text-white/80">{review.authorName}</span>
+                      <ProfileUserLink
+                        username={review.authorUsername}
+                        className="text-sm font-semibold text-white/80"
+                      >
+                        {review.authorName}
+                      </ProfileUserLink>
                       <span className="flex gap-0.5" aria-label={`${review.rating} sur 5`}>
                         {Array.from({ length: review.rating }).map((_, i) => (
                           <Star key={i} className="w-3.5 h-3.5 fill-prestige-gold text-prestige-gold" />
@@ -582,6 +596,7 @@ export default function PublicProfilePage() {
                   index={idx}
                   title={beef.title}
                   host_name={beef.host_name}
+                  host_username={beef.host_username}
                   status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
                   created_at={beef.created_at}
                   viewer_count={beef.viewer_count || 0}
@@ -615,6 +630,7 @@ export default function PublicProfilePage() {
                     index={idx}
                     title={beef.title}
                     host_name={beef.host_name}
+                    host_username={beef.host_username}
                     status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
                     created_at={beef.created_at}
                     viewer_count={beef.viewer_count || 0}

@@ -33,6 +33,7 @@ interface Beef {
   title: string;
   description?: string;
   host_name: string;
+  host_username?: string | null;
   mediator_id?: string;
   status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled';
   created_at: string;
@@ -220,6 +221,7 @@ export default function FeedPage() {
       let beefsWithData = (data || []).map((beef: any) => ({
         ...beef,
         host_name: beef.users?.display_name || beef.users?.username || 'Anonyme',
+        host_username: beef.users?.username?.trim() || null,
         viewer_count: beef.viewer_count || 0,
         tags: beef.tags || [],
         participants_count: beef.beef_participants?.[0]?.count || 0,

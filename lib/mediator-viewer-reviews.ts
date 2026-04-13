@@ -6,6 +6,8 @@ export type MediatorViewerReviewDisplay = {
   comment: string | null;
   created_at: string;
   authorName: string;
+  /** Pour lien profil ; null si inconnu. */
+  authorUsername: string | null;
 };
 
 type ReviewRow = {
@@ -41,9 +43,11 @@ export async function fetchMediatorViewerReviews(
     .in('id', reviewerIds);
 
   const nameById = new Map<string, string>();
+  const usernameById = new Map<string, string | null>();
   for (const u of users || []) {
     const row = u as { id: string; display_name?: string | null; username?: string | null };
     nameById.set(row.id, row.display_name?.trim() || row.username || 'Spectateur');
+    usernameById.set(row.id, row.username?.trim() || null);
   }
 
   return typed.map((r) => ({
@@ -52,5 +56,6 @@ export async function fetchMediatorViewerReviews(
     comment: r.comment,
     created_at: r.created_at,
     authorName: nameById.get(r.reviewer_id) ?? 'Spectateur',
+    authorUsername: usernameById.get(r.reviewer_id) ?? null,
   }));
 }

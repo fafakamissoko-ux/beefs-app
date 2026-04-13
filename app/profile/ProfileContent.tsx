@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { PremiumBadge, PremiumAvatarFrame } from '@/components/PremiumBadge';
 import { BeefCard } from '@/components/BeefCard';
+import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { AppBackButton } from '@/components/AppBackButton';
 import { hrefWithFrom } from '@/lib/navigation-return';
 import { useToast } from '@/components/Toast';
@@ -74,6 +75,7 @@ interface Beef {
   mediator_id?: string;
   /** Nom affiché sur BeefCard (médiateur du beef) */
   card_host_name?: string;
+  card_host_username?: string | null;
 }
 
 export default function ProfileContent() {
@@ -283,6 +285,7 @@ export default function ProfileContent() {
           const displayNameSelf = data.display_name || data.username || 'Utilisateur';
           const mediatorIds = [...new Set(mergedSorted.map((b) => b.mediator_id).filter(Boolean))] as string[];
           const mediatorMap: Record<string, string> = {};
+          const mediatorUsernameById: Record<string, string> = {};
           if (mediatorIds.length > 0) {
             const { data: mu } = await supabase
               .from('users')
@@ -290,8 +293,12 @@ export default function ProfileContent() {
               .in('id', mediatorIds);
             (mu || []).forEach((u: { id: string; display_name?: string; username?: string }) => {
               mediatorMap[u.id] = u.display_name || u.username || 'Médiateur';
+              const un = u.username?.trim();
+              if (un) mediatorUsernameById[u.id] = un;
             });
           }
+
+          const selfUsername = data.username?.trim() || null;
 
           const attachHost = (b: Beef): Beef => ({
             ...b,
@@ -299,6 +306,12 @@ export default function ProfileContent() {
               b.mediator_id === data.id
                 ? displayNameSelf
                 : (b.mediator_id && mediatorMap[b.mediator_id]) || 'Médiateur',
+            card_host_username:
+              b.mediator_id === data.id
+                ? selfUsername
+                : b.mediator_id
+                  ? mediatorUsernameById[b.mediator_id] ?? null
+                  : null,
           });
 
           const beefsParticipatedCount = new Set((participantRows || []).map((r: { beef_id: string }) => r.beef_id)).size;
@@ -826,6 +839,7 @@ export default function ProfileContent() {
                       index={idx}
                       title={beef.title}
                       host_name={beef.card_host_name || profile.display_name || profile.username || 'Utilisateur'}
+                      host_username={beef.card_host_username}
                       status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
                       created_at={beef.created_at}
                       viewer_count={beef.viewer_count || 0}
@@ -859,7 +873,12 @@ export default function ProfileContent() {
                         className="rounded-xl bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl px-4 py-3"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                          <span className="font-sans text-xs font-bold text-white/70">{review.authorName}</span>
+                          <ProfileUserLink
+                            username={review.authorUsername}
+                            className="font-sans text-xs font-bold text-white/70"
+                          >
+                            {review.authorName}
+                          </ProfileUserLink>
                           <span className="flex items-center gap-0.5 font-mono text-[10px] font-bold text-prestige-gold tracking-wider" aria-label={`${review.rating} sur 5`}>
                             {Array.from({ length: review.rating }).map((_, i) => (
                               <Star key={i} className="w-2.5 h-2.5 fill-prestige-gold text-prestige-gold" />
@@ -995,6 +1014,7 @@ export default function ProfileContent() {
                           index={idx}
                           title={beef.title}
                           host_name={beef.card_host_name || profile?.display_name || profile?.username || 'Utilisateur'}
+                          host_username={beef.card_host_username}
                           status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
                           created_at={beef.created_at}
                           viewer_count={beef.viewer_count || 0}
@@ -1068,6 +1088,7 @@ export default function ProfileContent() {
                         index={idx}
                         title={beef.title}
                         host_name={beef.card_host_name || profile?.display_name || profile?.username || 'Utilisateur'}
+                        host_username={beef.card_host_username}
                         status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
                         created_at={beef.created_at}
                         viewer_count={beef.viewer_count || 0}
@@ -1538,9 +1559,6 @@ export default function ProfileContent() {
               </button>
             </div>
             <div className="flex-1 min-h-0 p-4 overflow-y-auto max-h-[min(78vh,760px)]">
-              <p className="text-gray-500 text-xs mb-4">
-                Aperçu public : même rendu que sur <span className="text-gray-400">/profile/@{profile.username}</span> (sans outils d’édition).
-              </p>
               <div className="rounded-2xl border border-white/10 overflow-hidden bg-black/50">
                 <div
                   className="h-28 bg-cover bg-center"
@@ -1666,7 +1684,12 @@ export default function ProfileContent() {
                               className="rounded-xl bg-white/[0.04] border border-white/[0.06] px-3 py-2 backdrop-blur-xl"
                             >
                               <div className="flex items-center justify-between gap-2 mb-1">
-                                <span className="font-sans text-[10px] font-bold text-white/60">{review.authorName}</span>
+                                <ProfileUserLink
+                                  username={review.authorUsername}
+                                  className="font-sans text-[10px] font-bold text-white/60"
+                                >
+                                  {review.authorName}
+                                </ProfileUserLink>
                                 <span className="flex gap-0.5" aria-label={`${review.rating} sur 5`}>
                                   {Array.from({ length: review.rating }).map((_, i) => (
                                     <Star key={i} className="w-2 h-2 fill-prestige-gold text-prestige-gold" />

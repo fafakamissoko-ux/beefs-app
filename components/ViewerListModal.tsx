@@ -8,6 +8,8 @@ export interface ViewerListModalProps {
   viewers: Array<{ userName: string }>;
   viewerCount: number;
   onClose: () => void;
+  /** Clic sur une ligne (ex. ouvrir le profil dans l’arène). */
+  onSelectViewer?: (userName: string) => void;
 }
 
 function avatarInitials(userName: string): string {
@@ -22,7 +24,7 @@ function avatarInitials(userName: string): string {
   return trimmed.slice(0, 2).toUpperCase();
 }
 
-export function ViewerListModal({ viewers, viewerCount, onClose }: ViewerListModalProps) {
+export function ViewerListModal({ viewers, viewerCount, onClose, onSelectViewer }: ViewerListModalProps) {
   const [open, setOpen] = useState(true);
 
   const requestClose = () => setOpen(false);
@@ -76,25 +78,42 @@ export function ViewerListModal({ viewers, viewerCount, onClose }: ViewerListMod
                 </p>
               ) : (
                 <ul className="space-y-1">
-                  {viewers.map((v, i) => (
-                    <motion.li
-                      key={`${v.userName}-${i}`}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: Math.min(i * 0.03, 0.3) }}
-                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/5 transition-colors"
-                    >
-                      <div
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500/40 to-brand-600/30 border border-brand-500/30 text-sm font-bold text-white"
-                        aria-hidden
+                  {viewers.map((v, i) => {
+                    const label = v.userName || 'Anonyme';
+                    const rowClass =
+                      'flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/5 transition-colors w-full text-left';
+                    const inner = (
+                      <>
+                        <div
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500/40 to-brand-600/30 border border-brand-500/30 text-sm font-bold text-white"
+                          aria-hidden
+                        >
+                          {avatarInitials(v.userName)}
+                        </div>
+                        <span className="text-sm font-semibold text-white truncate">{label}</span>
+                      </>
+                    );
+                    return (
+                      <motion.li
+                        key={`${v.userName}-${i}`}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: Math.min(i * 0.03, 0.3) }}
                       >
-                        {avatarInitials(v.userName)}
-                      </div>
-                      <span className="text-sm font-semibold text-white truncate">
-                        {v.userName || 'Anonyme'}
-                      </span>
-                    </motion.li>
-                  ))}
+                        {onSelectViewer ? (
+                          <button
+                            type="button"
+                            onClick={() => onSelectViewer(v.userName)}
+                            className={`${rowClass} cursor-pointer`}
+                          >
+                            {inner}
+                          </button>
+                        ) : (
+                          <div className={rowClass}>{inner}</div>
+                        )}
+                      </motion.li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
