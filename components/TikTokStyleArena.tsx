@@ -2912,7 +2912,7 @@ export function TikTokStyleArena({
               </p>
               <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-brand-500 to-amber-400 transition-all duration-500"
+                  className="h-full rounded-full bg-gradient-to-r from-ember-500 to-cobalt-500 transition-all duration-500"
                   style={{
                     width: `${Math.min(100, Math.round((userPoints / Math.max(liveContinuationPrice, 1)) * 100))}%`,
                   }}
@@ -2920,7 +2920,7 @@ export function TikTokStyleArena({
               </div>
               <p className="text-center text-xs text-gray-400">
                 Ton solde :{' '}
-                <span className={userPoints >= liveContinuationPrice ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
+                <span className={userPoints >= liveContinuationPrice ? 'text-cobalt-400 font-bold' : 'text-ember-400 font-bold'}>
                   {userPoints} pts
                 </span>
                 {userPoints < liveContinuationPrice && (
@@ -2988,7 +2988,7 @@ export function TikTokStyleArena({
           >
             {/* Header */}
             <div className="space-y-2">
-              <div className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-brand-500 to-orange-500 flex items-center justify-center" aria-hidden>
+              <div className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-ember-600 to-cobalt-600 flex items-center justify-center shadow-glow" aria-hidden>
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5 13l4 4L19 7" />
                 </svg>
@@ -3004,11 +3004,11 @@ export function TikTokStyleArena({
                 <div className="text-xs text-gray-500 mt-1">Durée</div>
               </div>
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <div className="text-2xl font-bold text-blue-400">{endSummary.viewers}</div>
+                <div className="text-2xl font-bold text-cobalt-400">{endSummary.viewers}</div>
                 <div className="text-xs text-gray-500 mt-1">Spectateurs</div>
               </div>
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <div className="text-2xl font-bold text-green-400">{endSummary.messages}</div>
+                <div className="text-2xl font-bold text-ember-400">{endSummary.messages}</div>
                 <div className="text-xs text-gray-500 mt-1">Messages</div>
               </div>
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
@@ -3022,16 +3022,16 @@ export function TikTokStyleArena({
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
                 <div className="text-xs text-gray-400 mb-2">Résultat des votes</div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-blue-400 w-10 text-right">
+                  <span className="text-xs font-semibold text-cobalt-400 w-10 text-right">
                     {Math.round((endSummary.votesA / (endSummary.votesA + endSummary.votesB)) * 100)}%
                   </span>
                   <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all"
+                      className="h-full bg-gradient-to-r from-cobalt-600 to-cobalt-400 rounded-full transition-all"
                       style={{ width: `${(endSummary.votesA / (endSummary.votesA + endSummary.votesB)) * 100}%` }}
                     />
                   </div>
-                  <span className="text-xs font-semibold text-red-400 w-10">
+                  <span className="text-xs font-semibold text-ember-400 w-10">
                     {Math.round((endSummary.votesB / (endSummary.votesA + endSummary.votesB)) * 100)}%
                   </span>
                 </div>
@@ -3077,7 +3077,7 @@ export function TikTokStyleArena({
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-28 left-1/2 -translate-x-1/2 z-[100] bg-yellow-500/90 backdrop-blur-sm text-black px-4 py-2 rounded-xl flex items-center gap-3 shadow-lg"
+          className="absolute top-28 left-1/2 -translate-x-1/2 z-[100] bg-prestige-gold/90 backdrop-blur-sm text-black px-4 py-2 rounded-xl flex items-center gap-3 shadow-prestige-ring"
         >
           <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
           <div className="text-sm font-semibold text-center max-w-[min(100vw-2rem,20rem)]">
@@ -3090,7 +3090,7 @@ export function TikTokStyleArena({
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-28 left-1/2 -translate-x-1/2 z-[100] bg-white/10 backdrop-blur-sm text-white px-5 py-3 rounded-xl flex items-center gap-3 shadow-lg border border-white/10"
+          className="absolute top-28 left-1/2 -translate-x-1/2 z-[100] bg-white/10 backdrop-blur-sm text-white px-5 py-3 rounded-xl flex items-center gap-3 shadow-glow-cyan border border-white/10"
         >
           <div className="w-5 h-5 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
           <div className="text-sm font-medium">
@@ -3122,8 +3122,7 @@ export function TikTokStyleArena({
             <div className={`pointer-events-none absolute inset-0 z-0 flex h-auto flex-row gap-2 px-1 transition-shadow duration-700 ${sponsorGlow}`}>
               {/* LEFT — Participant A */}
               <motion.div
-                className={`pointer-events-auto relative h-full overflow-hidden rounded-[2rem] bg-[#08080A] transition-all duration-500 ${focusTarget === 'A' ? 'w-[80%]' : focusTarget === 'B' ? 'w-[20%]' : 'w-1/2'}`}
-                style={{ boxShadow: `inset 0 0 ${auraIntensityA}px rgba(37,99,235,${auraOpacityA})` }}
+                className={`pointer-events-auto relative h-full overflow-hidden rounded-[2rem] bg-[#08080A] transition-all duration-500 ring-inset ring-2 ring-cobalt-500/20 shadow-glow-cyan ${focusTarget === 'A' ? 'w-[80%]' : focusTarget === 'B' ? 'w-[20%]' : 'w-1/2'}`}
                 animate={
                   rematchSequence
                     ? { x: [0, -5, 5, -4, 4, -3, 3, 0], y: [0, 3, -3, 2, -2, 0], scale: 1 }
@@ -3142,10 +3141,10 @@ export function TikTokStyleArena({
                 {/* Aura gauge badge (host only) */}
                 {isHost && auraA > 0 && (
                   <div className="pointer-events-auto absolute bottom-3 left-3 z-[25] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
-                    <div className="h-1.5 rounded-full bg-blue-500 transition-all duration-300" style={{ width: `${Math.max(8, auraA * 0.5)}px` }} />
-                    <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-blue-300">{auraA}%</span>
+                    <div className="h-1.5 rounded-full bg-cobalt-500 transition-all duration-300" style={{ width: `${Math.max(8, auraA * 0.5)}px` }} />
+                    <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-cobalt-300">{auraA}%</span>
                     {auraA >= 100 && (
-                      <span className="pointer-events-none text-[8px] font-black text-blue-200 animate-pulse">PRÊT</span>
+                      <span className="pointer-events-none text-[8px] font-black text-cobalt-200 animate-pulse">PRÊT</span>
                     )}
                     {auraA >= 100 && (
                       <button
@@ -3276,15 +3275,11 @@ export function TikTokStyleArena({
                         }}
                       />
                       <motion.div
-                        className="absolute inset-0"
+                        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(255,77,0,0.28)_0%,rgba(255,77,0,0.1)_45%,transparent_70%)]"
                         animate={{
                           opacity: speakingTurnPaused ? [0.18, 0.32, 0.18] : [0.38, 0.62, 0.38],
                         }}
                         transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                        style={{
-                          background:
-                            'radial-gradient(circle at 50% 42%, rgba(255,95,0,0.28) 0%, rgba(255,55,0,0.1) 45%, transparent 70%)',
-                        }}
                       />
                     </motion.div>
                   )}
@@ -3313,7 +3308,7 @@ export function TikTokStyleArena({
                         </span>
                         {!leftPanel && (
                           <div className="mt-3 flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 backdrop-blur-md">
-                            <div className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
+                            <div className="h-2 w-2 rounded-full bg-cobalt-400 animate-pulse" />
                             <span className="text-white text-[11px] font-semibold tracking-tight">En attente...</span>
                           </div>
                         )}
@@ -3361,7 +3356,7 @@ export function TikTokStyleArena({
                       animate={{ opacity: 0 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.8 }}
-                      className="absolute inset-0 bg-blue-500/20 z-[6] pointer-events-none"
+                      className="absolute inset-0 bg-cobalt-500/20 z-[6] pointer-events-none"
                     />
                   )}
                 </AnimatePresence>
@@ -3453,14 +3448,12 @@ export function TikTokStyleArena({
                         >
                           {/* Ondes sonores discrètes — or / ambre (médiateur) */}
                           <motion.div
-                            className="absolute inset-0 rounded-full"
-                            style={{ boxShadow: '0 0 0 1px rgba(253,230,138,0.12), 0 0 28px rgba(251,191,36,0.08)' }}
+                            className="absolute inset-0 rounded-full ring-1 ring-prestige-gold/25 shadow-prestige-ring"
                             animate={{ scale: [1, 1.12, 1], opacity: [0.45, 0, 0.45] }}
                             transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                           />
                           <motion.div
-                            className="absolute inset-0 rounded-full"
-                            style={{ boxShadow: '0 0 0 1px rgba(252,211,77,0.1), 0 0 36px rgba(245,158,11,0.06)' }}
+                            className="absolute inset-0 rounded-full ring-1 ring-prestige-gold/20 shadow-glow"
                             animate={{ scale: [1, 1.2, 1], opacity: [0.35, 0, 0.35] }}
                             transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.35 }}
                           />
@@ -3491,8 +3484,7 @@ export function TikTokStyleArena({
                       type="button"
                       onClick={() => emitTapSupport('M')}
                       aria-label="Envoyer du soutien au médiateur"
-                      className={`pointer-events-auto relative h-[min(170px,32dvh)] w-[min(170px,32dvh)] shrink-0 overflow-hidden rounded-full border-4 border-yellow-300 bg-yellow-500 transition-transform active:scale-[0.98] touch-manipulation ${auraFeverMed ? 'saturate-150 brightness-110' : ''}`}
-                      style={{ boxShadow: `0 0 ${auraIntensityMed}px rgba(255,215,0,${auraOpacityMed})` }}
+                      className={`pointer-events-auto relative h-[min(170px,32dvh)] w-[min(170px,32dvh)] shrink-0 overflow-hidden rounded-full border-4 border-prestige-gold bg-prestige-gold shadow-glow ring-2 ring-prestige-gold/30 transition-transform active:scale-[0.98] touch-manipulation ${auraFeverMed ? 'saturate-150 brightness-110' : ''}`}
                     >
                       {mediatorParticipant?.videoTrack ? (
                         <ParticipantVideo
@@ -3511,9 +3503,9 @@ export function TikTokStyleArena({
                     {/* Aura gauge badge (host only) */}
                     {isHost && auraMed > 0 && (
                       <div className="pointer-events-none absolute -bottom-1 left-1/2 z-[26] flex -translate-x-1/2 items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
-                        <div className="h-1.5 rounded-full bg-yellow-400 transition-all duration-300" style={{ width: `${Math.max(8, auraMed * 0.4)}px` }} />
-                        <span className="font-mono text-[8px] font-bold tabular-nums text-yellow-200">{auraMed}%</span>
-                        {auraFeverMed && <span className="text-[8px] font-black text-yellow-100 animate-pulse">FEVER</span>}
+                        <div className="h-1.5 rounded-full bg-prestige-gold transition-all duration-300" style={{ width: `${Math.max(8, auraMed * 0.4)}px` }} />
+                        <span className="font-mono text-[8px] font-bold tabular-nums text-prestige-gold">{auraMed}%</span>
+                        {auraFeverMed && <span className="text-[8px] font-black text-prestige-gold animate-pulse">FEVER</span>}
                       </div>
                     )}
                   </div>
@@ -3535,8 +3527,7 @@ export function TikTokStyleArena({
 
               {/* RIGHT — Participant B */}
               <motion.div
-                className={`pointer-events-auto relative h-full overflow-hidden rounded-[2rem] border-l border-white/15 bg-[#08080A] transition-all duration-500 ${focusTarget === 'B' ? 'w-[80%]' : focusTarget === 'A' ? 'w-[20%]' : 'w-1/2'}`}
-                style={{ boxShadow: `inset 0 0 ${auraIntensityB}px rgba(234,88,12,${auraOpacityB})` }}
+                className={`pointer-events-auto relative h-full overflow-hidden rounded-[2rem] border-l border-white/15 bg-[#08080A] transition-all duration-500 ring-inset ring-2 ring-ember-500/25 shadow-glow ${focusTarget === 'B' ? 'w-[80%]' : focusTarget === 'A' ? 'w-[20%]' : 'w-1/2'}`}
                 animate={
                   rematchSequence
                     ? { x: [0, 5, -5, 4, -4, 3, -3, 0], y: [0, -3, 3, -2, 2, 0], scale: 1 }
@@ -3555,10 +3546,10 @@ export function TikTokStyleArena({
                 {/* Aura gauge badge (host only) */}
                 {isHost && auraB > 0 && (
                   <div className="pointer-events-auto absolute bottom-3 right-3 z-[25] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
-                    <div className="h-1.5 rounded-full bg-orange-500 transition-all duration-300" style={{ width: `${Math.max(8, auraB * 0.5)}px` }} />
-                    <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-orange-300">{auraB}%</span>
+                    <div className="h-1.5 rounded-full bg-ember-500 transition-all duration-300" style={{ width: `${Math.max(8, auraB * 0.5)}px` }} />
+                    <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-ember-300">{auraB}%</span>
                     {auraB >= 100 && (
-                      <span className="pointer-events-none text-[8px] font-black text-orange-200 animate-pulse">PRÊT</span>
+                      <span className="pointer-events-none text-[8px] font-black text-ember-200 animate-pulse">PRÊT</span>
                     )}
                     {auraB >= 100 && (
                       <button
@@ -3691,15 +3682,11 @@ export function TikTokStyleArena({
                         }}
                       />
                       <motion.div
-                        className="absolute inset-0"
+                        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(255,77,0,0.28)_0%,rgba(255,77,0,0.1)_45%,transparent_70%)]"
                         animate={{
                           opacity: speakingTurnPaused ? [0.18, 0.32, 0.18] : [0.38, 0.62, 0.38],
                         }}
                         transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                        style={{
-                          background:
-                            'radial-gradient(circle at 50% 42%, rgba(255,95,0,0.28) 0%, rgba(255,55,0,0.1) 45%, transparent 70%)',
-                        }}
                       />
                     </motion.div>
                   )}
@@ -3764,7 +3751,7 @@ export function TikTokStyleArena({
                       animate={{ opacity: 0 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.8 }}
-                      className="absolute inset-0 bg-red-500/20 z-[6] pointer-events-none"
+                      className="absolute inset-0 bg-ember-500/20 z-[6] pointer-events-none"
                     />
                   )}
                 </AnimatePresence>
@@ -3885,7 +3872,7 @@ export function TikTokStyleArena({
                 </button>
               </div>
               <div className={`absolute inset-0 flex items-center justify-center bg-cobalt-500/10 text-5xl font-black text-white/80 ${
-                speakingTurnTarget === debaters[0]?.id ? 'ring-2 ring-inset ring-green-400' : ''
+                speakingTurnTarget === debaters[0]?.id ? 'ring-2 ring-inset ring-cobalt-400' : ''
               }`}>
                 👤
               </div>
@@ -3896,14 +3883,23 @@ export function TikTokStyleArena({
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0, opacity: 0, y: -10 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                    className="absolute right-4 top-14 z-20 rounded-2xl bg-black/95 px-4 py-2 shadow-2xl backdrop-blur-xl"
-                    style={{
-                      borderWidth: '3px',
-                      borderStyle: 'solid',
-                      borderColor: speakingTurnRemaining <= 10 ? '#ef4444' : speakingTurnRemaining <= 30 ? '#fb923c' : '#4ade80'
-                    }}
+                    className={`absolute right-4 top-14 z-20 rounded-2xl bg-black/95 px-4 py-2 shadow-2xl backdrop-blur-xl border-[3px] border-solid ${
+                      speakingTurnRemaining <= 10
+                        ? 'border-ember-600'
+                        : speakingTurnRemaining <= 30
+                          ? 'border-ember-500/80'
+                          : 'border-cobalt-500/80'
+                    }`}
                   >
-                    <div className={`text-4xl font-black tabular-nums ${speakingTurnRemaining <= 10 ? 'text-red-500 animate-pulse' : speakingTurnRemaining <= 30 ? 'text-brand-400' : 'text-green-400'}`}>
+                    <div
+                      className={`text-4xl font-black tabular-nums ${
+                        speakingTurnRemaining <= 10
+                          ? 'text-ember-500 animate-pulse'
+                          : speakingTurnRemaining <= 30
+                            ? 'text-ember-400'
+                            : 'text-cobalt-400'
+                      }`}
+                    >
                       {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                     </div>
                     <div className="text-[10px] text-white/60 text-center mt-1 font-medium">Temps restant</div>
@@ -3934,7 +3930,7 @@ export function TikTokStyleArena({
               transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.3 }}
               className="relative flex flex-col items-center gap-2"
             >
-              <div className="flex h-[min(170px,32dvh)] w-[min(170px,32dvh)] shrink-0 items-center justify-center rounded-full border-4 border-yellow-300 bg-yellow-500 text-4xl shadow-[0_0_20px_rgba(255,215,0,0.8)]">
+              <div className="flex h-[min(170px,32dvh)] w-[min(170px,32dvh)] shrink-0 items-center justify-center rounded-full border-4 border-prestige-gold bg-prestige-gold text-4xl text-black shadow-glow ring-2 ring-prestige-gold/40">
                 👤
               </div>
               <button
@@ -3982,7 +3978,7 @@ export function TikTokStyleArena({
                 </button>
               </div>
               <div className={`absolute inset-0 flex items-center justify-center bg-ember-500/10 text-5xl font-black text-white/80 ${
-                speakingTurnTarget === debaters[1]?.id ? 'ring-2 ring-inset ring-green-400' : ''
+                speakingTurnTarget === debaters[1]?.id ? 'ring-2 ring-inset ring-ember-400' : ''
               }`}>
                 👤
               </div>
@@ -3993,14 +3989,23 @@ export function TikTokStyleArena({
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     exit={{ scale: 0, opacity: 0, y: -10 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                    className="absolute left-4 top-14 z-20 rounded-2xl bg-black/95 px-4 py-2 shadow-2xl backdrop-blur-xl"
-                    style={{
-                      borderWidth: '3px',
-                      borderStyle: 'solid',
-                      borderColor: speakingTurnRemaining <= 10 ? '#ef4444' : speakingTurnRemaining <= 30 ? '#fb923c' : '#4ade80'
-                    }}
+                    className={`absolute left-4 top-14 z-20 rounded-2xl bg-black/95 px-4 py-2 shadow-2xl backdrop-blur-xl border-[3px] border-solid ${
+                      speakingTurnRemaining <= 10
+                        ? 'border-ember-600'
+                        : speakingTurnRemaining <= 30
+                          ? 'border-ember-500/80'
+                          : 'border-cobalt-500/80'
+                    }`}
                   >
-                    <div className={`text-4xl font-black tabular-nums ${speakingTurnRemaining <= 10 ? 'text-red-500 animate-pulse' : speakingTurnRemaining <= 30 ? 'text-brand-400' : 'text-green-400'}`}>
+                    <div
+                      className={`text-4xl font-black tabular-nums ${
+                        speakingTurnRemaining <= 10
+                          ? 'text-ember-500 animate-pulse'
+                          : speakingTurnRemaining <= 30
+                            ? 'text-ember-400'
+                            : 'text-cobalt-400'
+                      }`}
+                    >
                       {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                     </div>
                     <div className="text-[10px] text-white/60 text-center mt-1 font-medium">Temps restant</div>

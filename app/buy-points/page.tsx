@@ -95,7 +95,7 @@ export default function BuyPointsPage() {
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-24 h-24 brand-gradient rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-brand-500/50"
+            className="w-24 h-24 brand-gradient rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-glow"
           >
             <Sparkles className="w-12 h-12 text-white" />
           </motion.div>
@@ -106,13 +106,13 @@ export default function BuyPointsPage() {
           </p>
 
           {showStripeLiveDevHint && (
-              <p className="text-amber-200/90 text-xs mt-3 px-3 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 max-w-sm mx-auto text-center leading-snug">
-                <strong className="text-amber-100">Clés Live :</strong> utilise une carte bancaire réelle.
+              <p className="text-ember-200/90 text-xs mt-3 px-3 py-2 rounded-2xl glass-prestige border border-ember-500/25 max-w-sm mx-auto text-center leading-snug">
+                <strong className="text-ember-100">Clés Live :</strong> utilise une carte bancaire réelle.
                 La carte de test 4242… ne fonctionne qu’avec des clés <strong>test</strong> (pk_test / sk_test).
               </p>
             )}
           {showStripeTestHint && (
-              <p className="text-emerald-200/90 text-xs mt-3 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 max-w-sm mx-auto text-center">
+              <p className="text-cobalt-200/90 text-xs mt-3 px-3 py-2 rounded-2xl glass-prestige border border-cobalt-500/25 max-w-sm mx-auto text-center">
                 Mode test Stripe : carte 4242 4242 4242 4242, date future, CVC au choix.
               </p>
             )}
@@ -124,10 +124,10 @@ export default function BuyPointsPage() {
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-4 inline-flex items-center gap-2 bg-yellow-500/20 border border-yellow-500/30 rounded-full px-4 py-2"
+                  className="mt-4 inline-flex items-center gap-2 glass-prestige border border-prestige-gold/35 rounded-full px-4 py-2"
                 >
                   <span className="text-2xl">🧪</span>
-                  <span className="text-yellow-400 text-sm font-bold">
+                  <span className="text-prestige-gold text-sm font-bold">
                     MODE TEST: {country.name}
                   </span>
                 </motion.div>
@@ -136,10 +136,10 @@ export default function BuyPointsPage() {
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-4 inline-flex items-center gap-2 bg-blue-500/20 border border-blue-500/30 rounded-full px-4 py-2"
+                  className="mt-4 inline-flex items-center gap-2 glass-prestige border border-cobalt-500/30 rounded-full px-4 py-2"
                 >
-                  <Globe className="w-4 h-4 text-blue-400" />
-                  <span className="text-blue-400 text-sm font-semibold">
+                  <Globe className="w-4 h-4 text-cobalt-400" />
+                  <span className="text-cobalt-300 text-sm font-semibold">
                     Prix adaptés pour {country.name}
                   </span>
                 </motion.div>
@@ -153,7 +153,7 @@ export default function BuyPointsPage() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-red-500/20 border border-red-500 rounded-2xl text-red-400 text-center"
+            className="mb-6 p-4 glass-prestige border border-ember-500/40 rounded-2xl text-ember-300 text-center"
           >
             {error}
           </motion.div>
@@ -180,13 +180,13 @@ export default function BuyPointsPage() {
                 whileTap={{ scale: 0.98 }}
                 className={`relative w-full p-6 rounded-3xl transition-all ${
                   isSelected
-                    ? 'brand-gradient shadow-2xl shadow-brand-500/50'
-                    : 'bg-gray-900 border-2 border-gray-800 hover:border-gray-700'
+                    ? 'brand-gradient shadow-2xl shadow-glow'
+                    : 'glass-prestige border-2 border-white/10 hover:border-cobalt-500/25'
                 } ${loading || countryLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {/* Popular Badge */}
                 {pack.popular && (
-                  <div className="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs font-black px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                  <div className="absolute -top-2 -right-2 bg-prestige-gold text-black text-xs font-black px-3 py-1 rounded-full flex items-center gap-1 shadow-prestige-ring">
                     <Zap className="w-3 h-3" />
                     BEST
                   </div>
@@ -206,7 +206,7 @@ export default function BuyPointsPage() {
                         {pack.points.toLocaleString()}
                       </div>
                       {pack.bonus > 0 && (
-                        <div className={`text-sm font-bold ${isSelected ? 'text-black/80' : 'text-green-400'}`}>
+                        <div className={`text-sm font-bold ${isSelected ? 'text-black/80' : 'text-prestige-gold'}`}>
                           +{pack.bonus}% bonus
                         </div>
                       )}
@@ -215,7 +215,7 @@ export default function BuyPointsPage() {
 
                   {/* Right: Price + Check */}
                   <div className="text-right">
-                    <div className={`text-2xl font-black ${isSelected ? 'text-white' : 'text-brand-400'}`}>
+                    <div className={`text-2xl font-black ${isSelected ? 'text-white' : 'text-cobalt-400'}`}>
                       {countryLoading ? (
                         <div className="animate-pulse">...</div>
                       ) : adaptedPrice ? (
@@ -234,9 +234,9 @@ export default function BuyPointsPage() {
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="mt-2 w-8 h-8 bg-white rounded-full flex items-center justify-center mx-auto"
+                        className="mt-2 w-8 h-8 bg-white rounded-full flex items-center justify-center mx-auto shadow-prestige-ring"
                       >
-                        <Check className="w-5 h-5 text-brand-500" />
+                        <Check className="w-5 h-5 text-cobalt-600" />
                       </motion.div>
                     )}
                   </div>
@@ -252,7 +252,7 @@ export default function BuyPointsPage() {
           disabled={loading || countryLoading}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="w-full brand-gradient hover:opacity-90 text-white font-black py-6 rounded-3xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-2xl shadow-brand-500/50 text-xl"
+          className="w-full brand-gradient hover:opacity-90 text-white font-black py-6 rounded-3xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-2xl shadow-glow text-xl"
         >
           {loading ? (
             <div className="flex items-center justify-center gap-3">

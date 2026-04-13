@@ -77,21 +77,21 @@ export function BeefCard({
     switch (uiStatus) {
       case 'live':
         return (
-          <div className={`${base} bg-red-500/15 border border-red-500/30 text-red-400`}>
-            <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.2, repeat: Infinity }} className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+          <div className={`${base} bg-ember-500/15 border border-ember-500/35 text-ember-400`}>
+            <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.2, repeat: Infinity }} className="w-1.5 h-1.5 bg-ember-500 rounded-full" />
             LIVE
           </div>
         );
       case 'scheduled':
         return (
-          <div className={`${base} bg-cyan-400/10 border border-cyan-400/25 text-cyan-400`}>
+          <div className={`${base} bg-cobalt-500/12 border border-cobalt-500/28 text-cobalt-400`}>
             <Calendar className="w-3 h-3" />
             À VENIR
           </div>
         );
       case 'replay':
         return (
-          <div className={`${base} bg-purple-500/12 border border-purple-500/25 text-purple-400`}>
+          <div className={`${base} bg-cobalt-500/14 border border-cobalt-500/30 text-cobalt-300`}>
             <Play className="w-3 h-3 fill-current" />
             REPLAY
           </div>
@@ -105,14 +105,14 @@ export function BeefCard({
         );
       case 'cancelled':
         return (
-          <div className={`${base} bg-gray-500/12 border border-gray-500/25 text-amber-500/90`}>
+          <div className={`${base} bg-gray-500/12 border border-gray-500/25 text-ember-400`}>
             <CheckCircle className="w-3 h-3" />
             ANNULÉ
           </div>
         );
       case 'preparing':
         return (
-          <div className={`${base} bg-amber-400/10 border border-amber-400/25 text-amber-300`}>
+          <div className={`${base} bg-prestige-gold/10 border border-prestige-gold/25 text-prestige-gold`}>
             <Clock className="w-3 h-3" />
             PRÉPARATION
           </div>
@@ -167,19 +167,14 @@ export function BeefCard({
         ) : (
           <div className="absolute inset-0">
             <div
-              className="absolute inset-0"
-              style={{
-                background: `linear-gradient(145deg, hsl(${hueBase}, 65%, 16%) 0%, hsl(${(hueBase + 40) % 360}, 50%, 9%) 100%)`,
-              }}
+              className={
+                hueBase % 2 === 0
+                  ? 'absolute inset-0 bg-gradient-to-br from-cobalt-950/90 via-surface-1 to-black'
+                  : 'absolute inset-0 bg-gradient-to-br from-ember-950/85 via-surface-1 to-black'
+              }
             />
-            <div
-              className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-[0.08]"
-              style={{ background: `radial-gradient(circle, hsl(${hueBase}, 80%, 55%), transparent 70%)` }}
-            />
-            <div
-              className="absolute bottom-6 -left-6 w-24 h-24 rounded-full opacity-[0.05]"
-              style={{ background: `radial-gradient(circle, hsl(${(hueBase + 120) % 360}, 70%, 50%), transparent 70%)` }}
-            />
+            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-cobalt-500/15 blur-3xl opacity-90" />
+            <div className="absolute bottom-6 -left-6 w-24 h-24 rounded-full bg-ember-500/12 blur-2xl opacity-80" />
           </div>
         )}
 
@@ -189,8 +184,8 @@ export function BeefCard({
         {/* Live pulse */}
         {uiStatus === 'live' && (
           <motion.div
-            className="absolute top-4 right-4 w-3 h-3 rounded-full bg-red-500"
-            animate={{ boxShadow: ['0 0 0 0 rgba(239,68,68,0.5)', '0 0 0 10px rgba(239,68,68,0)', '0 0 0 0 rgba(239,68,68,0)'] }}
+            className="absolute top-4 right-4 w-3 h-3 rounded-full bg-ember-500 shadow-glow"
+            animate={{ boxShadow: ['0 0 0 0 rgba(255,77,0,0.45)', '0 0 0 10px rgba(255,77,0,0)', '0 0 0 0 rgba(255,77,0,0)'] }}
             transition={{ duration: 2, repeat: Infinity }}
           />
         )}
@@ -201,7 +196,7 @@ export function BeefCard({
         {/* Badges contextuels (replay, prix) */}
         {(status === 'ended' || status === 'replay') && (
           <div className="absolute top-3.5 right-3.5">
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-purple-500/15 border border-purple-500/30 text-purple-300 backdrop-blur-md">
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-cobalt-500/15 border border-cobalt-500/30 text-cobalt-300 backdrop-blur-md">
               <Play className="w-3 h-3 fill-current" />
               Replay
             </div>
@@ -209,7 +204,7 @@ export function BeefCard({
         )}
         {uiStatus === 'scheduled' && (price ?? 0) > 0 && (
           <div className="absolute top-3.5 right-3.5">
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 border border-cyan-500/25 text-cyan-200 backdrop-blur-md">
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-cobalt-500/12 border border-cobalt-500/25 text-cobalt-200 backdrop-blur-md">
               <Flame className="w-3 h-3" />
               Entrée · {price} pts
             </div>
@@ -269,8 +264,9 @@ export function BeefCard({
             Médiateur
           </span>
           <div
-            className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
-            style={{ background: `hsl(${hueBase}, 55%, 42%)` }}
+            className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 ${
+              hueBase % 2 === 0 ? 'bg-cobalt-700' : 'bg-ember-800'
+            }`}
           >
             {(host_name || '?')[0].toUpperCase()}
           </div>
@@ -292,7 +288,7 @@ export function BeefCard({
             </div>
           )}
           {uiStatus === 'scheduled' && !((participants_count ?? 0) > 0) && (
-            <div className="ml-auto flex items-center gap-0.5 font-sans text-[10px] text-cyan-400 font-semibold">
+            <div className="ml-auto flex items-center gap-0.5 font-sans text-[10px] text-cobalt-400 font-semibold">
               Bientôt <Calendar className="w-3 h-3" />
             </div>
           )}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, Sun, Moon, Monitor, Type, Zap, MessageSquare, UserPlus, Gift, Flame, History, AlertCircle } from 'lucide-react';
+import { User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, LayoutTemplate, Type, Zap, MessageSquare, UserPlus, Gift, Flame, History, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -867,83 +867,13 @@ export default function SettingsPage() {
             className="card rounded-2xl p-6"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
-                <Sun className="w-5 h-5 text-orange-400" />
+              <div className="w-10 h-10 bg-cobalt-500/20 rounded-full flex items-center justify-center">
+                <LayoutTemplate className="w-5 h-5 text-cobalt-400" />
               </div>
               <h3 className="text-white font-bold text-xl">Affichage & accessibilité</h3>
             </div>
 
             <div className="space-y-6">
-              {/* Theme selector */}
-              <div className="relative">
-                <label className="block text-white font-semibold mb-3 text-sm">Thème</label>
-                <FeatureGuide
-                  id="settings-theme"
-                  title="Personnalise ton thème"
-                  description="Sombre, clair, ou automatique. En automatique, choisis entre le thème du système ou clair le jour / sombre la nuit (heure locale)."
-                  position="bottom"
-                />
-                <div className="grid grid-cols-3 gap-2" role="group" aria-label="Thème d&apos;affichage">
-                  {([
-                    { value: 'dark' as const, label: 'Sombre', icon: Moon },
-                    { value: 'light' as const, label: 'Clair', icon: Sun },
-                    { value: 'auto' as const, label: 'Automatique', icon: Monitor },
-                  ]).map(({ value, label, icon: Icon }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => updatePreferences({ theme: value })}
-                      aria-pressed={preferences.theme === value}
-                      className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
-                        preferences.theme === value
-                          ? 'brand-gradient text-white shadow-lg'
-                          : 'bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.08]'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" aria-hidden />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                {preferences.theme === 'auto' && (
-                  <div className="mt-4 pt-4 border-t border-white/[0.08]">
-                    <p className="text-gray-400 text-xs mb-3">Mode automatique</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="group" aria-label="Comportement du thème automatique">
-                      <button
-                        type="button"
-                        onClick={() => updatePreferences({ autoThemeSource: 'schedule' })}
-                        aria-pressed={preferences.autoThemeSource === 'schedule'}
-                        className={`text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                          preferences.autoThemeSource === 'schedule'
-                            ? 'bg-brand-500/25 border border-brand-500/50 text-white'
-                            : 'bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        Jour / nuit (heure locale)
-                        <span className="block text-xs font-normal text-gray-500 mt-1">
-                          Clair ~7h–20h, sombre la nuit (fuseau du navigateur).
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updatePreferences({ autoThemeSource: 'system' })}
-                        aria-pressed={preferences.autoThemeSource === 'system'}
-                        className={`text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                          preferences.autoThemeSource === 'system'
-                            ? 'bg-brand-500/25 border border-brand-500/50 text-white'
-                            : 'bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        Comme le système
-                        <span className="block text-xs font-normal text-gray-500 mt-1">
-                          Suit le réglage clair / sombre de l’appareil ou du navigateur.
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {/* Accent color */}
               <div>
                 <p id="accent-color-label" className="block text-white font-semibold mb-3 text-sm">
@@ -1008,7 +938,7 @@ export default function SettingsPage() {
                       aria-pressed={preferences.fontSize === value}
                       className={`px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
                         preferences.fontSize === value
-                          ? 'brand-gradient text-white shadow-lg'
+                          ? 'brand-gradient text-white shadow-glow'
                           : 'bg-white/[0.04] border border-white/[0.06] text-gray-400 hover:text-white hover:bg-white/[0.08]'
                       }`}
                     >
@@ -1021,7 +951,7 @@ export default function SettingsPage() {
               {/* Reduce animations toggle */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Zap className="w-5 h-5 text-yellow-400" aria-hidden />
+                  <Zap className="w-5 h-5 text-ember-400" aria-hidden />
                   <div>
                     <p id="reduce-anim-label" className="text-white font-semibold text-sm">
                       Réduire les animations
@@ -1036,7 +966,7 @@ export default function SettingsPage() {
                   aria-labelledby="reduce-anim-label"
                   onClick={() => updatePreferences({ reduceAnimations: !preferences.reduceAnimations })}
                   className={`relative w-12 h-7 rounded-full transition-all ${
-                    preferences.reduceAnimations ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10'
+                    preferences.reduceAnimations ? 'bg-cobalt-500' : 'bg-white/10'
                   }`}
                 >
                   <span
@@ -1050,7 +980,7 @@ export default function SettingsPage() {
               {/* High contrast toggle */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Eye className="w-5 h-5 text-cyan-400" aria-hidden />
+                  <Eye className="w-5 h-5 text-cobalt-400" aria-hidden />
                   <div>
                     <p id="high-contrast-label" className="text-white font-semibold text-sm">
                       Contraste élevé
@@ -1065,7 +995,7 @@ export default function SettingsPage() {
                   aria-labelledby="high-contrast-label"
                   onClick={() => updatePreferences({ highContrast: !preferences.highContrast })}
                   className={`relative w-12 h-7 rounded-full transition-all ${
-                    preferences.highContrast ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10'
+                    preferences.highContrast ? 'bg-cobalt-500' : 'bg-white/10'
                   }`}
                 >
                   <span
@@ -1086,20 +1016,20 @@ export default function SettingsPage() {
             className="card rounded-2xl p-6"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
-                <Bell className="w-5 h-5 text-green-400" />
+              <div className="w-10 h-10 bg-cobalt-500/20 rounded-full flex items-center justify-center">
+                <Bell className="w-5 h-5 text-cobalt-400" />
               </div>
               <h3 className="text-white font-bold text-xl">Notifications</h3>
             </div>
 
             <div className="space-y-4">
               {([
-                { key: 'messages' as const, icon: MessageSquare, color: 'text-blue-400', label: 'Messages privés', desc: 'Nouveaux messages reçus' },
-                { key: 'follows' as const, icon: UserPlus, color: 'text-purple-400', label: 'Abonnements', desc: 'Quand quelqu\'un te suit' },
-                { key: 'invites' as const, icon: Flame, color: 'text-orange-400', label: 'Invitations', desc: 'Invitations à des beefs' },
-                { key: 'beefs_live' as const, icon: Zap, color: 'text-red-400', label: 'Beefs en direct', desc: 'Quand un beef que tu suis passe en live' },
-                { key: 'gifts' as const, icon: Gift, color: 'text-yellow-400', label: 'Cadeaux', desc: 'Quand tu reçois un cadeau' },
-                { key: 'browser' as const, icon: Bell, color: 'text-cyan-400', label: 'Notifications navigateur', desc: 'Popups système même hors de l\'app' },
+                { key: 'messages' as const, icon: MessageSquare, color: 'text-cobalt-400', label: 'Messages privés', desc: 'Nouveaux messages reçus' },
+                { key: 'follows' as const, icon: UserPlus, color: 'text-prestige-gold', label: 'Abonnements', desc: 'Quand quelqu\'un te suit' },
+                { key: 'invites' as const, icon: Flame, color: 'text-ember-400', label: 'Invitations', desc: 'Invitations à des beefs' },
+                { key: 'beefs_live' as const, icon: Zap, color: 'text-ember-500', label: 'Beefs en direct', desc: 'Quand un beef que tu suis passe en live' },
+                { key: 'gifts' as const, icon: Gift, color: 'text-prestige-gold', label: 'Cadeaux', desc: 'Quand tu reçois un cadeau' },
+                { key: 'browser' as const, icon: Bell, color: 'text-cobalt-300', label: 'Notifications navigateur', desc: 'Popups système même hors de l\'app' },
               ]).map(({ key, icon: Icon, color, label, desc }) => (
                 <div key={key} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -1118,7 +1048,7 @@ export default function SettingsPage() {
                     aria-labelledby={`notif-pref-label-${key}`}
                     onClick={() => toggleNotifPref(key)}
                     className={`relative w-12 h-7 rounded-full transition-all ${
-                      notifPrefs[key] ? 'bg-brand-500' : 'bg-gray-300 dark:bg-white/10'
+                      notifPrefs[key] ? 'bg-cobalt-500' : 'bg-white/10'
                     }`}
                   >
                     <span
@@ -1195,7 +1125,7 @@ export default function SettingsPage() {
                   }
                 }}
                 className={`relative shrink-0 w-12 h-7 rounded-full transition-all ${
-                  mediationAccess ? 'bg-prestige-gold' : 'bg-gray-300 dark:bg-white/10'
+                  mediationAccess ? 'bg-prestige-gold' : 'bg-white/10'
                 }`}
               >
                 <span
