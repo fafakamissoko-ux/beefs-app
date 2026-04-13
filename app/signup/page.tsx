@@ -226,13 +226,17 @@ export default function SignUpPage() {
       return;
     }
 
-    const { data: bannedEmail } = await supabase
-      .from('banned_emails')
-      .select('id')
-      .eq('email', formData.email.toLowerCase())
-      .single();
+    const { data: isBanned, error: banCheckErr } = await supabase.rpc('is_email_banned', {
+      p_email: formData.email.toLowerCase(),
+    });
 
-    if (bannedEmail) {
+    if (banCheckErr || isBanned === true) {
+      if (banCheckErr) {
+        setFieldErrors({ email: 'Vérification impossible. Réessaie dans un instant.' });
+        setLoading(false);
+        focusFirstSignupError({ email: 'Vérification impossible. Réessaie dans un instant.' });
+        return;
+      }
       setFieldErrors({
         email: 'Cette adresse e-mail ne peut pas être utilisée pour créer un compte.',
       });

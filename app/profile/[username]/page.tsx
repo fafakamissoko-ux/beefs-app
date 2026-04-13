@@ -168,16 +168,29 @@ export default function PublicProfilePage() {
         setStatsShortcuts(mergeStatsShortcuts(pd.premium_settings?.statsShortcuts));
       }
 
-      // Load stats
-      const { data: followersData } = await supabase
-        .from('followers')
-        .select('id', { count: 'exact' })
-        .eq('following_id', pd.id);
-
-      const { data: followingData } = await supabase
-        .from('followers')
-        .select('id', { count: 'exact' })
-        .eq('follower_id', pd.id);
+      let followersCount = 0;
+      let followingCount = 0;
+      if (authUser) {
+        const { data: followersData } = await supabase
+          .from('followers')
+          .select('id', { count: 'exact' })
+          .eq('following_id', pd.id);
+        const { data: followingData } = await supabase
+          .from('followers')
+          .select('id', { count: 'exact' })
+          .eq('follower_id', pd.id);
+        followersCount = followersData?.length || 0;
+        followingCount = followingData?.length || 0;
+      } else {
+        const { data: fcRows, error: fcErr } = await supabase.rpc('get_public_follow_counts', {
+          p_user_id: pd.id,
+        });
+        if (!fcErr && fcRows?.length) {
+          const fc = fcRows[0] as { followers_count?: number | string; following_count?: number | string };
+          followersCount = Number(fc.followers_count ?? 0);
+          followingCount = Number(fc.following_count ?? 0);
+        }
+      }
 
       const { data: beefsData } = await supabase
         .from('beefs')
@@ -194,8 +207,8 @@ export default function PublicProfilePage() {
       setStats({
         beefs_participated: beefsParticipated,
         beefs_hosted: beefsData?.length || 0,
-        followers: followersData?.length || 0,
-        following: followingData?.length || 0,
+        followers: followersCount,
+        following: followingCount,
       });
 
       // Load user's beefs
