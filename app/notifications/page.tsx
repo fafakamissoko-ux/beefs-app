@@ -158,11 +158,12 @@ export default function NotificationsPage() {
     if (!user || markingAll) return;
     setMarkingAll(true);
     try {
+      // Aligné sur le compteur header : non lu = false OU null (pas seulement eq false).
       await supabase
         .from('notifications')
         .update({ is_read: true })
         .eq('user_id', user.id)
-        .eq('is_read', false);
+        .or('is_read.is.null,is_read.eq.false');
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, is_read: true }))
       );

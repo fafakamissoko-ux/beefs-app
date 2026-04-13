@@ -118,7 +118,7 @@ export function Header() {
 
   useEffect(() => {
     void loadUnreadCounts();
-  }, [loadUnreadCounts]);
+  }, [loadUnreadCounts, pathname]);
 
   useEffect(() => {
     const onRefresh = () => {
@@ -128,6 +128,16 @@ export function Header() {
     window.addEventListener('beefs:badges-refresh', onRefresh);
     return () => window.removeEventListener('beefs:badges-refresh', onRefresh);
   }, [loadUnreadCounts]);
+
+  /** Retour sur l’onglet / la fenêtre : resync des badges (lectures faites ailleurs, autre device, etc.) */
+  useEffect(() => {
+    if (!user) return;
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void loadUnreadCounts();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [user, loadUnreadCounts]);
 
   useEffect(() => {
     if (!user) return;

@@ -159,7 +159,7 @@ function MessagesPageInner() {
             .update({ is_read: true })
             .eq('user_id', user?.id || '')
             .eq('type', 'message')
-            .eq('is_read', false)
+            .or('is_read.is.null,is_read.eq.false')
             .filter('metadata->>conversation_id', 'eq', selectedConv.id)
             .then(() => {});
         }
@@ -199,7 +199,7 @@ function MessagesPageInner() {
         .update({ is_read: true })
         .eq('user_id', user?.id || '')
         .eq('type', 'message')
-        .eq('is_read', false)
+        .or('is_read.is.null,is_read.eq.false')
         .filter('metadata->>conversation_id', 'eq', conv.id);
 
       // Update local unread count for this conversation
