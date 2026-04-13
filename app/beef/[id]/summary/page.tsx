@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { CheckCircle, Eye, Users, Hash, User } from 'lucide-react';
+import { CheckCircle, Eye, Users, Hash, User, Star } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { AppBackButton } from '@/components/AppBackButton';
 import { hrefWithFrom } from '@/lib/navigation-return';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/Toast';
+import { ReviewMediatorModal } from '@/components/ReviewMediatorModal';
 
 const TERMINAL_STATUSES = new Set(['ended', 'replay', 'cancelled']);
 
@@ -32,10 +35,16 @@ export default function BeefSummaryPage() {
   const params = useParams();
   const router = useRouter();
   const pathname = usePathname();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const id = params.id as string;
   const [beef, setBeef] = useState<BeefRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewEligible, setReviewEligible] = useState(false);
+  const [alreadyReviewed, setAlreadyReviewed] = useState(false);
+  const [reviewCheckDone, setReviewCheckDone] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -66,6 +75,46 @@ export default function BeefSummaryPage() {
       setLoading(false);
     })();
   }, [id, router]);
+
+  const refreshReviewEligibility = useCallback(async () => {
+    if (!beef || !user) {
+      setReviewEligible(false);
+      setAlreadyReviewed(false);
+      setReviewCheckDone(true);
+      return;
+    }
+    if (user.id === beef.mediator_id) {
+      setReviewEligible(false);
+      setAlreadyReviewed(false);
+      setReviewCheckDone(true);
+      return;
+    }
+
+    const [{ data: existing }, { data: participant }] = await Promise.all([
+      supabase
+        .from('mediator_viewer_reviews')
+        .select('id')
+        .eq('beef_id', beef.id)
+        .eq('reviewer_id', user.id)
+        .maybeSingle(),
+      supabase
+        .from('beef_participants')
+        .select('id')
+        .eq('beef_id', beef.id)
+        .eq('user_id', user.id)
+        .eq('invite_status', 'accepted')
+        .maybeSingle(),
+    ]);
+
+    const isRingParticipant = !!participant;
+    setAlreadyReviewed(!!existing);
+    setReviewEligible(!isRingParticipant && !existing);
+    setReviewCheckDone(true);
+  }, [beef, user]);
+
+  useEffect(() => {
+    void refreshReviewEligibility();
+  }, [refreshReviewEligibility]);
 
   if (loading) {
     return (
@@ -159,6 +208,77 @@ export default function BeefSummaryPage() {
             <span className="text-white font-semibold">{hostName}</span>
           )}
         </div>
+
+        {/* Avis spectateur : page résumé = fin du direct (ended / replay / cancelled) */}
+        {reviewCheckDone && (
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-white">
+              <Star className="w-4 h-4 text-prestige-gold" strokeWidth={1.5} aria-hidden />
+              Ton avis sur la médiation
+            </div>
+            {!user ? (
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Connecte-toi pour laisser une note et un commentaire visible sur le profil du médiateur (une fois par
+                direct).
+              </p>
+            ) : alreadyReviewed ? (
+              <p className="text-xs text-emerald-400/90">Merci, ton avis a bien été enregistré pour ce direct.</p>
+            ) : user.id === beef.mediator_id ? (
+              <p className="text-xs text-gray-500">Tu es le médiateur de ce beef — les avis spectateurs viennent des autres.</p>
+            ) : !reviewEligible ? (
+              <p className="text-xs text-gray-500">
+                Les avis « spectateur » sont réservés aux personnes qui n’étaient pas sur le ring en tant que
+                participant accepté.
+              </p>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Tu as suivi ce direct en spectateur. Une note courte aide la communauté : l’avis apparaît dans le
+                  Livre d&apos;Or du médiateur.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setReviewModalOpen(true)}
+                  className="w-full py-2.5 rounded-xl bg-prestige-gold/90 text-black text-sm font-bold hover:bg-prestige-gold transition-colors"
+                >
+                  Noter le médiateur
+                </button>
+              </>
+            )}
+            {!user && (
+              <Link
+                href={`/login?redirect=${encodeURIComponent(`/beef/${id}/summary`)}`}
+                className="block w-full py-2.5 rounded-xl bg-white/10 text-white text-sm font-semibold text-center hover:bg-white/15 transition-colors"
+              >
+                Se connecter
+              </Link>
+            )}
+          </div>
+        )}
+
+        <ReviewMediatorModal
+          mediatorName={hostName}
+          beefTitle={beef.title}
+          open={reviewModalOpen}
+          onClose={() => setReviewModalOpen(false)}
+          onSubmit={async (rating, comment) => {
+            if (!user || !beef) return false;
+            const { error } = await supabase.from('mediator_viewer_reviews').insert({
+              beef_id: beef.id,
+              mediator_id: beef.mediator_id,
+              reviewer_id: user.id,
+              rating,
+              comment: comment.length > 0 ? comment : null,
+            });
+            if (error) {
+              toast(error.message || 'Impossible d’enregistrer l’avis', 'error');
+              return false;
+            }
+            setAlreadyReviewed(true);
+            setReviewEligible(false);
+            return true;
+          }}
+        />
 
         {beef.tags && beef.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 justify-center">

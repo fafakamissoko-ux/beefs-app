@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical } from 'lucide-react';
+import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
@@ -17,6 +17,10 @@ import { useToast } from '@/components/Toast';
 import { type StatsShortcuts, mergeStatsShortcuts } from '@/lib/profile-stats-shortcuts';
 import { MediationSummaryPublic } from '@/components/MediationSummaryPublic';
 import { resolutionStatusLabel } from '@/lib/mediation-outcome-labels';
+import {
+  fetchMediatorViewerReviews,
+  type MediatorViewerReviewDisplay,
+} from '@/lib/mediator-viewer-reviews';
 
 interface UserProfile {
   id: string;
@@ -75,6 +79,7 @@ export default function PublicProfilePage() {
   const [followLoading, setFollowLoading] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showFollowModal, setShowFollowModal] = useState<null | 'followers' | 'following'>(null);
+  const [mediatorReviews, setMediatorReviews] = useState<MediatorViewerReviewDisplay[]>([]);
 
   // Check if it's the current user's profile
   const isOwnProfile = user && profile && user.id === profile.id;
@@ -203,6 +208,9 @@ export default function PublicProfilePage() {
 
         setIsFollowing(!!followData);
       }
+
+      const viewerReviews = await fetchMediatorViewerReviews(supabase, profileData.id);
+      setMediatorReviews(viewerReviews);
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
@@ -517,6 +525,44 @@ export default function PublicProfilePage() {
             </div>
           </div>
         </div>
+
+        {(stats.beefs_hosted > 0 || mediatorReviews.length > 0) && (
+          <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl border border-gray-700 p-6 mb-6 scroll-mt-24">
+            <h2 className="text-xl font-black text-white mb-4 flex items-center gap-2">
+              <Star className="w-5 h-5 text-prestige-gold" strokeWidth={1.5} aria-hidden />
+              Livre d&apos;Or · avis spectateurs
+            </h2>
+            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+              Les spectateurs déposent un avis depuis la page résumé d&apos;un direct terminé (une fois par beef).
+            </p>
+            {mediatorReviews.length === 0 ? (
+              <p className="text-sm text-gray-500 italic">Aucun avis pour le moment.</p>
+            ) : (
+              <ul className="space-y-3">
+                {mediatorReviews.slice(0, 12).map((review) => (
+                  <li
+                    key={review.id}
+                    className="rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3 backdrop-blur-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                      <span className="text-sm font-semibold text-white/80">{review.authorName}</span>
+                      <span className="flex gap-0.5" aria-label={`${review.rating} sur 5`}>
+                        {Array.from({ length: review.rating }).map((_, i) => (
+                          <Star key={i} className="w-3.5 h-3.5 fill-prestige-gold text-prestige-gold" />
+                        ))}
+                      </span>
+                    </div>
+                    {review.comment ? (
+                      <p className="text-sm text-gray-400 italic leading-relaxed">&ldquo;{review.comment}&rdquo;</p>
+                    ) : (
+                      <p className="text-xs text-gray-600">Note sans commentaire</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Participations (autres beefs que le profil médié) */}
         {participantBeefs.length > 0 && (

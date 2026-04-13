@@ -9,7 +9,8 @@ interface ReviewMediatorModalProps {
   beefTitle: string;
   open: boolean;
   onClose: () => void;
-  onSubmit: (rating: number, comment: string) => void;
+  /** Retourne false si l’enregistrement a échoué (ex. erreur réseau / RLS). */
+  onSubmit: (rating: number, comment: string) => boolean | Promise<boolean>;
 }
 
 export function ReviewMediatorModal({
@@ -23,17 +24,28 @@ export function ReviewMediatorModal({
   const [hoveredStar, setHoveredStar] = useState(0);
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const handleSubmit = () => {
-    if (rating === 0) return;
-    onSubmit(rating, comment.trim());
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setRating(0);
-      setComment('');
-      onClose();
-    }, 1800);
+  const handleSubmit = async () => {
+    if (rating === 0 || busy) return;
+    setBusy(true);
+    try {
+      const ok = await Promise.resolve(onSubmit(rating, comment.trim()));
+      if (!ok) {
+        setBusy(false);
+        return;
+      }
+      setSubmitted(true);
+      setTimeout(() => {
+        setSubmitted(false);
+        setRating(0);
+        setComment('');
+        setBusy(false);
+        onClose();
+      }, 1800);
+    } catch {
+      setBusy(false);
+    }
   };
 
   return (
@@ -147,11 +159,12 @@ export function ReviewMediatorModal({
                     </button>
                     <button
                       type="button"
-                      onClick={handleSubmit}
-                      disabled={rating === 0}
+                      onClick={() => void handleSubmit()}
+                      disabled={rating === 0 || busy}
+                      aria-busy={busy}
                       className="rounded-full bg-prestige-gold/90 hover:bg-prestige-gold px-6 py-2.5 font-sans text-sm font-bold text-black transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      Envoyer
+                      {busy ? 'Envoi…' : 'Envoyer'}
                     </button>
                   </div>
                 </div>
