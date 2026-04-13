@@ -90,39 +90,31 @@ export function Header() {
   const loadUnreadCounts = useCallback(async () => {
     if (!user) return;
 
-    const onInvPage = pathname === '/invitations';
-    const onNotifPage = pathname === '/notifications';
-    const onMsgPage = pathname === '/messages';
-
+    // Toujours interroger la BDD (état réel). Le masquage du badge sur l’onglet actif est fait au rendu,
+    // pas en falsifiant le count — sinon après navigation le compteur reste faux (ex. refresh sur /notifications).
     const [invRes, notifRes, dmRes] = await Promise.all([
-      onInvPage
-        ? Promise.resolve({ count: 0 })
-        : supabase
-            .from('beef_invitations')
-            .select('id', { count: 'exact', head: true })
-            .eq('invitee_id', user.id)
-            .eq('status', 'sent'),
-      onNotifPage
-        ? Promise.resolve({ count: 0 })
-        : supabase
-            .from('notifications')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .eq('is_read', false),
-      onMsgPage
-        ? Promise.resolve({ count: 0 })
-        : supabase
-            .from('direct_messages')
-            .select('id, conversations!inner(participant_1, participant_2)', { count: 'exact', head: true })
-            .eq('is_read', false)
-            .neq('sender_id', user.id)
-            .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`, { referencedTable: 'conversations' }),
+      supabase
+        .from('beef_invitations')
+        .select('id', { count: 'exact', head: true })
+        .eq('invitee_id', user.id)
+        .eq('status', 'sent'),
+      supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .or('is_read.is.null,is_read.eq.false'),
+      supabase
+        .from('direct_messages')
+        .select('id, conversations!inner(participant_1, participant_2)', { count: 'exact', head: true })
+        .or('is_read.is.null,is_read.eq.false')
+        .neq('sender_id', user.id)
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`, { referencedTable: 'conversations' }),
     ]);
 
     setPendingInvitations(invRes.count ?? 0);
     setUnreadNotifications(notifRes.count ?? 0);
     setUnreadMessages(dmRes.count ?? 0);
-  }, [user, pathname]);
+  }, [user]);
 
   useEffect(() => {
     void loadUnreadCounts();
@@ -178,11 +170,26 @@ export function Header() {
 
   const navItems = [
     { href: '/feed', label: 'Accueil', icon: Home, badge: 0 },
-    { href: '/notifications', label: 'Notifications', icon: Bell, badge: unreadNotifications },
+    {
+      href: '/notifications',
+      label: 'Notifications',
+      icon: Bell,
+      badge: pathname === '/notifications' ? 0 : unreadNotifications,
+    },
     { href: '/live', label: 'Live', icon: Flame, badge: 0 },
     { href: '/points', label: 'Points', icon: Coins, badge: 0 },
-    { href: '/invitations', label: 'Invitations', icon: Mail, badge: pendingInvitations },
-    { href: '/messages', label: 'Messages', icon: MessageCircle, badge: unreadMessages },
+    {
+      href: '/invitations',
+      label: 'Invitations',
+      icon: Mail,
+      badge: pathname === '/invitations' ? 0 : pendingInvitations,
+    },
+    {
+      href: '/messages',
+      label: 'Messages',
+      icon: MessageCircle,
+      badge: pathname === '/messages' ? 0 : unreadMessages,
+    },
   ];
 
   const isActive = (href: string) => {
