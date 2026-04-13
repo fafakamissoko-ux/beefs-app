@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import { validateSignupEmail } from '@/lib/email-signup-policy';
 import { hydrateLocalPrefsFromUser } from '@/lib/sync-user-client-prefs';
 import { ensurePublicUserProfile } from '@/lib/ensure-public-user-profile';
+import { getBrowserSiteOrigin } from '@/lib/site-origin';
 import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -86,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             username,
             display_name: username,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${getBrowserSiteOrigin()}/auth/callback`,
         },
       });
 
@@ -129,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${getBrowserSiteOrigin()}/auth/callback`,
         },
       });
       return { error };
@@ -172,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${getBrowserSiteOrigin()}/auth/reset-password`,
       });
       return { error };
     } catch (error) {
