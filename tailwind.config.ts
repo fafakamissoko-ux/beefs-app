@@ -65,8 +65,10 @@ const config: Config = {
         "arena-darker": "#040405",
         "arena-gray": "#12121a",
         "prestige-gold": "#D4AF37",
-        "prestige-blue": "#3B82F6",
-        "prestige-orange": "#F97316",
+        /** Aligné Cobalt (accent 1) — ne pas utiliser le bleu Tailwind générique */
+        "prestige-blue": "#0052FF",
+        /** Aligné Ember (accent 2) */
+        "prestige-orange": "#FF4D00",
         prestige: {
           void: "#08080A",
           ink: "#0c0c0f",
