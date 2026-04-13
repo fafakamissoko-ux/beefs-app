@@ -112,12 +112,14 @@ export default function SignUpPage() {
       return;
     }
     setUsernameStatus('checking');
-    const { data } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('username', username)
-      .single();
-    setUsernameStatus(data ? 'taken' : 'available');
+    const { data: available, error } = await supabase.rpc('check_username_available', {
+      p_username: username,
+    });
+    if (error) {
+      setUsernameStatus('idle');
+      return;
+    }
+    setUsernameStatus(available === true ? 'available' : 'taken');
   }, []);
 
   const handleUsernameChange = (value: string) => {

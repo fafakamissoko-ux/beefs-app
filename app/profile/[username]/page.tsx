@@ -95,46 +95,99 @@ export default function PublicProfilePage() {
         setLoading(false);
         return;
       }
-      // Load user profile (insensible à la casse — aligné Daily / affichage)
-      const { data: profileData, error: profileError } = await supabase
-        .from('users')
-        .select('*')
-        .ilike('username', escapeForIlikeExact(usernameKey))
-        .single();
 
-      if (profileError || !profileData) {
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
+
+      let profileData: Record<string, unknown> | null = null;
+
+      if (authUser) {
+        const { data, error: profileError } = await supabase
+          .from('users')
+          .select('*')
+          .ilike('username', escapeForIlikeExact(usernameKey))
+          .single();
+        if (profileError || !data) {
+          setLoading(false);
+          return;
+        }
+        profileData = data as Record<string, unknown>;
+      } else {
+        const { data: pubRows, error: rpcError } = await supabase.rpc('get_public_profile_by_username', {
+          p_username: usernameKey,
+        });
+        if (rpcError) {
+          setLoading(false);
+          return;
+        }
+        const pub = Array.isArray(pubRows) ? pubRows[0] : pubRows;
+        if (!pub || typeof pub !== 'object') {
+          setLoading(false);
+          return;
+        }
+        const p = pub as {
+          id: string;
+          username: string;
+          display_name: string;
+          bio?: string | null;
+          avatar_url?: string | null;
+          points: number;
+          is_premium: boolean;
+          created_at: string;
+          stats_shortcuts?: unknown;
+        };
+        profileData = {
+          id: p.id,
+          username: p.username,
+          display_name: p.display_name,
+          bio: p.bio,
+          avatar_url: p.avatar_url,
+          points: p.points,
+          is_premium: p.is_premium,
+          created_at: p.created_at,
+        };
+        setStatsShortcuts(mergeStatsShortcuts(p.stats_shortcuts));
+      }
+
+      if (!profileData) {
         setLoading(false);
         return;
       }
 
-      setProfile(profileData);
+      const pd = profileData as unknown as UserProfile & {
+        id: string;
+        username: string;
+        display_name: string;
+        premium_settings?: { statsShortcuts?: unknown };
+      };
 
-      setStatsShortcuts(
-        mergeStatsShortcuts(
-          (profileData as { premium_settings?: { statsShortcuts?: unknown } }).premium_settings?.statsShortcuts,
-        ),
-      );
+      setProfile(pd);
+
+      if (authUser) {
+        setStatsShortcuts(mergeStatsShortcuts(pd.premium_settings?.statsShortcuts));
+      }
 
       // Load stats
       const { data: followersData } = await supabase
         .from('followers')
         .select('id', { count: 'exact' })
-        .eq('following_id', profileData.id);
+        .eq('following_id', pd.id);
 
       const { data: followingData } = await supabase
         .from('followers')
         .select('id', { count: 'exact' })
-        .eq('follower_id', profileData.id);
+        .eq('follower_id', pd.id);
 
       const { data: beefsData } = await supabase
         .from('beefs')
         .select('id', { count: 'exact' })
-        .eq('mediator_id', profileData.id);
+        .eq('mediator_id', pd.id);
 
       const { data: partRows } = await supabase
         .from('beef_participants')
         .select('beef_id')
-        .eq('user_id', profileData.id);
+        .eq('user_id', pd.id);
 
       const beefsParticipated = new Set((partRows || []).map((r: { beef_id: string }) => r.beef_id)).size;
 
@@ -149,13 +202,13 @@ export default function PublicProfilePage() {
       const { data: userBeefs, error: beefsError } = await supabase
         .from('beefs')
         .select('*')
-        .eq('mediator_id', profileData.id)
+        .eq('mediator_id', pd.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
       if (userBeefs) {
-        const hn = profileData.display_name || profileData.username;
-        const hu = profileData.username?.trim() || null;
+        const hn = pd.display_name || pd.username;
+        const hu = pd.username.trim() || null;
         setBeefs(userBeefs.map(beef => ({
           ...beef,
           host_name: hn,
@@ -166,7 +219,7 @@ export default function PublicProfilePage() {
       const { data: partWithBeefs } = await supabase
         .from('beef_participants')
         .select('beef_id, beefs(*)')
-        .eq('user_id', profileData.id);
+        .eq('user_id', pd.id);
 
       const pbRaw: Beef[] = [];
       const seenPb = new Set<string>();
@@ -182,7 +235,7 @@ export default function PublicProfilePage() {
         ...new Set(
           pbRaw
             .map((b) => (b as { mediator_id?: string }).mediator_id)
-            .filter((id): id is string => !!id && id !== profileData.id),
+            .filter((id): id is string => !!id && id !== pd.id),
         ),
       ];
       let medNameById: Record<string, string> = {};
@@ -199,32 +252,32 @@ export default function PublicProfilePage() {
           if (un) medUsernameById[row.id] = un;
         }
       }
-      const selfName = profileData.display_name || profileData.username;
-      const selfUsername = profileData.username?.trim() || null;
+      const selfName = pd.display_name || pd.username;
+      const selfUsername = pd.username.trim() || null;
       setParticipantBeefs(
         pbRaw.slice(0, 12).map((b) => {
           const mid = (b as { mediator_id?: string }).mediator_id;
           const host_name =
-            !mid || mid === profileData.id ? selfName : medNameById[mid] || 'Médiateur';
+            !mid || mid === pd.id ? selfName : medNameById[mid] || 'Médiateur';
           const host_username =
-            !mid || mid === profileData.id ? selfUsername : medUsernameById[mid] ?? null;
+            !mid || mid === pd.id ? selfUsername : medUsernameById[mid] ?? null;
           return { ...b, host_name, host_username };
         }),
       );
 
       // Check if current user follows this profile
-      if (user && user.id !== profileData.id) {
+      if (user && user.id !== pd.id) {
         const { data: followData } = await supabase
           .from('followers')
           .select('id')
           .eq('follower_id', user.id)
-          .eq('following_id', profileData.id)
+          .eq('following_id', pd.id)
           .maybeSingle();
 
         setIsFollowing(!!followData);
       }
 
-      const viewerReviews = await fetchMediatorViewerReviews(supabase, profileData.id);
+      const viewerReviews = await fetchMediatorViewerReviews(supabase, pd.id);
       setMediatorReviews(viewerReviews);
     } catch (error) {
       console.error('Error loading profile:', error);

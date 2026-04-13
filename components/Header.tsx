@@ -188,7 +188,7 @@ export function Header() {
 
             {/* Desktop Nav — liens app uniquement si connecté (sinon préfetch RSC ×6 → échecs Brave / Safari / réseau) */}
             <nav className="hidden md:flex items-center gap-1 relative z-[5] min-w-0">
-              <GlobalSearchBar />
+              {user && <GlobalSearchBar />}
               {user &&
                 navItems.map((item) => {
                   const Icon = item.icon;
@@ -324,7 +324,7 @@ export function Header() {
 
             {/* Mobile */}
             <div className="flex md:hidden items-center gap-1.5">
-              <GlobalSearchBar />
+              {user && <GlobalSearchBar />}
               {user && (
                 <Link href={hrefWithFrom('/create', pathname)} prefetch className="p-2 text-brand-400">
                   <Plus className="w-5 h-5" />

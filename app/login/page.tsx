@@ -53,41 +53,52 @@ function LoginPageContent() {
     setFieldErrors({});
     setLoading(true);
 
-    let email = identifier;
-
-    // If not an email, look up by username (case-insensitive)
-    if (!identifier.includes('@')) {
-      const { data } = await supabase
-        .from('users')
-        .select('email')
-        .ilike('username', identifier)
-        .single();
-
-      if (!data?.email) {
-        setFieldErrors({ identifier: 'Utilisateur introuvable.' });
-        setLoading(false);
-        focusLoginField('identifier');
-        return;
-      }
-      email = data.email;
+    const trimmedId = identifier.trim();
+    if (!trimmedId) {
+      setFieldErrors({ identifier: 'Indique un pseudo ou une adresse e-mail.' });
+      setLoading(false);
+      focusLoginField('identifier');
+      return;
     }
 
-    // Check if user is banned
-    const { data: userData } = await supabase
-      .from('users')
-      .select('is_banned, banned_until, ban_reason')
-      .ilike('email', email)
-      .single();
+    const { data: preRows, error: preErr } = await supabase.rpc('login_precheck', {
+      p_identifier: trimmedId,
+    });
 
-    if (userData?.is_banned) {
-      const isPermanent = !userData.banned_until;
-      const isStillBanned = isPermanent || new Date(userData.banned_until) > new Date();
+    if (preErr) {
+      setFieldErrors({ identifier: 'Impossible de vérifier le compte. Réessaie dans un instant.' });
+      setLoading(false);
+      focusLoginField('identifier');
+      return;
+    }
+
+    const pre = Array.isArray(preRows) ? preRows[0] : preRows;
+    const row = pre as
+      | {
+          found?: boolean;
+          email?: string | null;
+          is_banned?: boolean | null;
+          banned_until?: string | null;
+          ban_reason?: string | null;
+        }
+      | undefined;
+
+    if (!row?.found || !row.email) {
+      setFieldErrors({ identifier: 'Utilisateur introuvable.' });
+      setLoading(false);
+      focusLoginField('identifier');
+      return;
+    }
+
+    if (row.is_banned) {
+      const isPermanent = !row.banned_until;
+      const isStillBanned = isPermanent || new Date(row.banned_until as string) > new Date();
       if (isStillBanned) {
         const banMsg = isPermanent
           ? 'Compte suspendu définitivement.'
-          : `Compte suspendu jusqu'au ${new Date(userData.banned_until).toLocaleDateString('fr-FR')}.`;
+          : `Compte suspendu jusqu'au ${new Date(row.banned_until as string).toLocaleDateString('fr-FR')}.`;
         setFieldErrors({
-          identifier: `${banMsg}${userData.ban_reason ? ` Raison : ${userData.ban_reason}` : ''}`,
+          identifier: `${banMsg}${row.ban_reason ? ` Raison : ${row.ban_reason}` : ''}`,
         });
         setLoading(false);
         focusLoginField('identifier');
@@ -95,7 +106,7 @@ function LoginPageContent() {
       }
     }
 
-    const { error: signInError } = await signIn(email, password);
+    const { error: signInError } = await signIn(row.email, password);
     if (signInError) {
       setFieldErrors({
         password: 'Identifiant ou mot de passe incorrect.',
