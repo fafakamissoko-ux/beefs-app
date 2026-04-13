@@ -29,6 +29,16 @@ function LoginPageContent() {
     if (user) router.push(searchParams.get('redirect') || '/feed');
   }, [user, router, searchParams]);
 
+  useEffect(() => {
+    const q = searchParams.get('error');
+    if (!q) return;
+    const msg =
+      q === 'verification_failed'
+        ? 'La vérification a échoué. Réessaie avec Google ou par e-mail.'
+        : decodeURIComponent(q.replace(/\+/g, ' '));
+    setFieldErrors((p) => ({ ...p, oauth: msg }));
+  }, [searchParams]);
+
   const focusLoginField = useCallback((key: 'identifier' | 'password') => {
     requestAnimationFrame(() => {
       const id = key === 'identifier' ? 'login-identifier' : 'login-password';

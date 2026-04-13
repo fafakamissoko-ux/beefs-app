@@ -94,10 +94,12 @@ Les secrets sont pris en compte au prochain cold start des fonctions ; inutile d
 
 | Symptôme | Piste |
 |----------|--------|
+| **« Unexpected status code returned from hook: 500 »** (inscription / Google) | Souvent : **`disposable-domains.json` absent** du bundle Edge (fichier gitignoré, déploiement sans `npm run sync-disposable-domains`). Le code charge désormais la liste en **paresseux** et ne plante plus ; en prod, lance quand même `npm run sync-disposable-domains` puis `supabase functions deploy before-user-created` pour réactiver le blocage des e-mails jetables. |
 | Toute inscription échoue (« Vérification du hook impossible ») | Secret incorrect ou absent : revérifie `BEFORE_USER_CREATED_HOOK_SECRET` (copier-coller complet `v1,whsec_...`). |
 | Le hook ne semble jamais appelé | Hook non enregistré ou mauvaise URL dans Authentication → Hooks. |
 | Erreur 401 sur l’URL de la fonction | Redéploie avec `verify_jwt = false` (voir `supabase/config.toml`). |
 | Liste jetable vide / ancienne | Relance `npm run sync-disposable-domains` puis redéploie la fonction. |
+| **Google OAuth** échoue après redirection | Vérifie **URL de callback** dans Supabase (Auth → URL) : `https://<ton-domaine>/auth/callback` ; dans Google Cloud Console, **URI de redirection autorisés** identiques. Côté app, `/auth/callback` appelle `exchangeCodeForSession` puis redirige vers le feed. |
 
 ---
 

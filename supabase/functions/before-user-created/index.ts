@@ -9,15 +9,35 @@
  */
 import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0';
 
-const DISPOSABLE = new Set(
-  (
-    JSON.parse(
-      Deno.readTextFileSync(new URL('./disposable-domains.json', import.meta.url)),
-    ) as string[]
-  ).map((d) => d.toLowerCase()),
-);
+/**
+ * Chargement paresseux : si `disposable-domains.json` est absent du bundle (déploiement sans
+ * `npm run sync-disposable-domains`), un import au top-level provoquait un crash → hook HTTP 500
+ * et message « Unexpected status code returned from hook: 500 » côté client.
+ */
+let disposableCache: Set<string> | null = null;
+let disposableLoadErrorLogged = false;
+
+function getDisposableDomains(): Set<string> {
+  if (disposableCache !== null) return disposableCache;
+  try {
+    const raw = Deno.readTextFileSync(new URL('./disposable-domains.json', import.meta.url));
+    const arr = JSON.parse(raw) as string[];
+    disposableCache = new Set(arr.map((d) => String(d).toLowerCase()));
+  } catch (e) {
+    if (!disposableLoadErrorLogged) {
+      console.error(
+        '[before-user-created] disposable-domains.json absent ou invalide — filtre jetables désactivé. Lance `npm run sync-disposable-domains` puis redéploie la fonction.',
+        e,
+      );
+      disposableLoadErrorLogged = true;
+    }
+    disposableCache = new Set();
+  }
+  return disposableCache;
+}
 
 function isDisposableEmail(email: string): boolean {
+  const DISPOSABLE = getDisposableDomains();
   const at = email.lastIndexOf('@');
   if (at < 1) return false;
   const domain = email.slice(at + 1).toLowerCase().trim();
@@ -35,6 +55,13 @@ type HookUser = {
   phone?: string | null;
   app_metadata?: { provider?: string; providers?: string[] };
 };
+
+function isGoogleOAuthUser(user: HookUser): boolean {
+  const meta = user.app_metadata ?? {};
+  const primary = typeof meta.provider === 'string' ? meta.provider : '';
+  const provs = Array.isArray(meta.providers) ? meta.providers : [];
+  return primary === 'google' || provs.includes('google');
+}
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
@@ -58,6 +85,12 @@ Deno.serve(async (req) => {
     }
 
     const email = (user.email ?? '').trim();
+
+    // OAuth Google : le payload du hook peut arriver sans e-mail exploitable selon la version / timing ;
+    // on laisse GoTrue finaliser le profil plutôt que de renvoyer 400 et bloquer « Continuer avec Google ».
+    if ((!email || !email.includes('@')) && isGoogleOAuthUser(user)) {
+      return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
 
     // Inscription par e-mail obligatoire : pas de compte « téléphone seul » tant que le flux SMS n’est pas voulu en prod.
     // Pour autoriser uniquement le SMS plus tard : if (user.phone && !email) return new Response("{}", { status: 200, ... });
