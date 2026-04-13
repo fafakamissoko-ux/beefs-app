@@ -65,12 +65,13 @@ export function ProfileUserLink({
         type="button"
         title={label}
         aria-label={label}
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
           onArenaProfileClick(q);
         }}
-        className={`inline max-w-full truncate bg-transparent p-0 text-left font-inherit text-inherit border-0 cursor-pointer hover:underline hover:decoration-white/40 underline-offset-2 ${className}`}
+        className={`relative z-[1] inline max-w-full truncate bg-transparent p-0 text-left font-inherit text-inherit border-0 cursor-pointer hover:underline hover:decoration-white/40 underline-offset-2 ${className}`}
       >
         {display}
       </button>
@@ -92,8 +93,9 @@ export function ProfileUserLink({
       href={href}
       title={label}
       aria-label={label}
+      onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
-      className={`inline max-w-full truncate hover:underline hover:decoration-white/40 underline-offset-2 ${className}`}
+      className={`relative z-[1] inline max-w-full truncate hover:underline hover:decoration-white/40 underline-offset-2 ${className}`}
     >
       {display}
     </Link>

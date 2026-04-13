@@ -22,6 +22,7 @@ import {
   fetchMediatorViewerReviews,
   type MediatorViewerReviewDisplay,
 } from '@/lib/mediator-viewer-reviews';
+import { escapeForIlikeExact } from '@/lib/ilike-exact';
 
 interface UserProfile {
   id: string;
@@ -89,11 +90,16 @@ export default function PublicProfilePage() {
   const loadProfile = useCallback(async () => {
     setLoading(true);
     try {
-      // Load user profile
+      const usernameKey = decodeURIComponent(String(username || '')).trim();
+      if (!usernameKey) {
+        setLoading(false);
+        return;
+      }
+      // Load user profile (insensible à la casse — aligné Daily / affichage)
       const { data: profileData, error: profileError } = await supabase
         .from('users')
         .select('*')
-        .eq('username', username)
+        .ilike('username', escapeForIlikeExact(usernameKey))
         .single();
 
       if (profileError || !profileData) {

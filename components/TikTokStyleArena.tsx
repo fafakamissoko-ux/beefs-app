@@ -35,6 +35,7 @@ import { sanitizeMessage } from '@/lib/security';
 import { DEFAULT_FREE_PREVIEW_MINUTES, viewerNeedsContinuationPay } from '@/lib/beef-preview';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
+import { escapeForIlikeExact } from '@/lib/ilike-exact';
 import { ARENA_QUICK_REACTIONS } from '@/lib/arena-quick-reactions';
 import {
   buildParticipantAliasSet,
@@ -2463,20 +2464,22 @@ export function TikTokStyleArena({
       data = d as UserRow | null;
     }
     if (!data && username) {
+      const term = escapeForIlikeExact(username.trim());
       const { data: d } = await supabase
         .from('users')
         .select('id, username, display_name, bio, created_at')
-        .eq('username', username)
+        .ilike('username', term)
         .maybeSingle();
       data = d as UserRow | null;
     }
     if (!data && username) {
-      const { data: d } = await supabase
+      const term = escapeForIlikeExact(username.trim());
+      const { data: rows } = await supabase
         .from('users')
         .select('id, username, display_name, bio, created_at')
-        .eq('display_name', username)
-        .maybeSingle();
-      data = d as UserRow | null;
+        .ilike('display_name', term)
+        .limit(1);
+      data = (rows?.[0] as UserRow | undefined) ?? null;
     }
 
     if (!data) {
