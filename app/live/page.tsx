@@ -41,7 +41,7 @@ interface Room {
 
 export default function LivePage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [liveRooms, setLiveRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,6 +126,12 @@ export default function LivePage() {
   }, [feedType, followingIds]);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.replace('/login');
+      return;
+    }
+
     void loadLiveRooms();
 
     const channel = supabase
@@ -137,7 +143,7 @@ export default function LivePage() {
       .subscribe();
 
     return () => { channel.unsubscribe(); };
-  }, [feedType, followingIds, loadLiveRooms]);
+  }, [authLoading, user, feedType, followingIds, loadLiveRooms, router]);
 
   const handleCreateBeef = async (beefData: any) => {
     if (!user) {
@@ -272,6 +278,14 @@ export default function LivePage() {
       setPurchaseLoading(false);
     }
   };
+
+  if (authLoading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+      </div>
+    );
+  }
 
   const categories = [
     { id: 'tech', label: 'Tech', icon: '💻' },

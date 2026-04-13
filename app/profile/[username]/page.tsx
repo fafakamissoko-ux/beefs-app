@@ -59,6 +59,30 @@ interface Beef {
   host_username?: string | null;
 }
 
+/** Lignes renvoyées par get_public_profile_beefs_payload (hors champs médiateur extra). */
+function beefFromPublicRpcRow(
+  b: Record<string, unknown>,
+  host_name: string,
+  host_username: string | null,
+): Beef {
+  return {
+    id: String(b.id),
+    title: String(b.title ?? ''),
+    description: typeof b.description === 'string' ? b.description : undefined,
+    status: (typeof b.status === 'string' ? b.status : 'ended') as Beef['status'],
+    resolution_status: (b.resolution_status as string | null) ?? null,
+    mediation_summary: (b.mediation_summary as string | null) ?? null,
+    tags: Array.isArray(b.tags) ? (b.tags as string[]) : undefined,
+    scheduled_at: typeof b.scheduled_at === 'string' ? b.scheduled_at : undefined,
+    created_at: String(b.created_at ?? ''),
+    is_premium: Boolean(b.is_premium),
+    price: Number(b.price ?? 0),
+    viewer_count: Number(b.viewer_count ?? 0),
+    host_name,
+    host_username,
+  };
+}
+
 export default function PublicProfilePage() {
   const params = useParams();
   const router = useRouter();
@@ -190,6 +214,52 @@ export default function PublicProfilePage() {
           followersCount = Number(fc.followers_count ?? 0);
           followingCount = Number(fc.following_count ?? 0);
         }
+      }
+
+      if (!authUser) {
+        const { data: bundleJson, error: bundleErr } = await supabase.rpc('get_public_profile_beefs_payload', {
+          p_profile_user_id: pd.id,
+        });
+        if (bundleErr) {
+          console.error('[profile] get_public_profile_beefs_payload', bundleErr);
+        }
+        const bundle = (bundleJson as Record<string, unknown> | null) ?? {};
+        const hosted = Array.isArray(bundle.hosted) ? bundle.hosted : [];
+        const participated = Array.isArray(bundle.participated) ? bundle.participated : [];
+        const hn = pd.display_name || pd.username;
+        const hu = pd.username.trim() || null;
+
+        setStats({
+          beefs_participated: Number(bundle.participated_count ?? 0),
+          beefs_hosted: Number(bundle.hosted_count ?? 0),
+          followers: followersCount,
+          following: followingCount,
+        });
+
+        setBeefs(
+          hosted.map((row) => beefFromPublicRpcRow(row as Record<string, unknown>, hn, hu)),
+        );
+
+        setParticipantBeefs(
+          participated.slice(0, 12).map((row) => {
+            const r = row as Record<string, unknown>;
+            const mid = r.mediator_id as string | undefined;
+            const medUn =
+              typeof r.mediator_username === 'string' ? r.mediator_username.trim() : '';
+            const medDn =
+              typeof r.mediator_display_name === 'string' ? r.mediator_display_name.trim() : '';
+            const isSelf = !mid || mid === pd.id;
+            return beefFromPublicRpcRow(
+              r,
+              isSelf ? hn : medDn || medUn || 'Médiateur',
+              isSelf ? hu : medUn || null,
+            );
+          }),
+        );
+
+        const viewerReviewsGuest = await fetchMediatorViewerReviews(supabase, pd.id);
+        setMediatorReviews(viewerReviewsGuest);
+        return;
       }
 
       const { data: beefsData } = await supabase

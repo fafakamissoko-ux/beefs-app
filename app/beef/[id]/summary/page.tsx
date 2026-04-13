@@ -50,22 +50,68 @@ export default function BeefSummaryPage() {
     if (!id) return;
 
     (async () => {
-      const { data, error } = await supabase
-        .from('beefs')
-        .select('id, title, subject, description, status, created_at, started_at, ended_at, viewer_count, tags, mediator_id, users!beefs_mediator_id_fkey(username, display_name)')
-        .eq('id', id)
-        .maybeSingle();
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
 
-      if (error || !data) {
+      if (authUser) {
+        const { data, error } = await supabase
+          .from('beefs')
+          .select(
+            'id, title, subject, description, status, created_at, started_at, ended_at, viewer_count, tags, mediator_id, users!beefs_mediator_id_fkey(username, display_name)',
+          )
+          .eq('id', id)
+          .maybeSingle();
+
+        if (error || !data) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+
+        const raw = data as typeof data & { users?: MediatorUser | MediatorUser[] | null };
+        const u = raw.users;
+        const mediator = Array.isArray(u) ? u[0] : u;
+        const row: BeefRow = { ...raw, users: mediator ?? null };
+        if (!TERMINAL_STATUSES.has(row.status)) {
+          router.replace(`/arena/${id}`);
+          return;
+        }
+
+        setBeef(row);
+        setLoading(false);
+        return;
+      }
+
+      const { data: j, error: rpcErr } = await supabase.rpc('get_public_terminal_beef_summary', {
+        p_beef_id: id,
+      });
+
+      if (rpcErr || j == null) {
         setNotFound(true);
         setLoading(false);
         return;
       }
 
-      const raw = data as typeof data & { users?: MediatorUser | MediatorUser[] | null };
-      const u = raw.users;
-      const mediator = Array.isArray(u) ? u[0] : u;
-      const row: BeefRow = { ...raw, users: mediator ?? null };
+      const o = j as Record<string, unknown>;
+      const row: BeefRow = {
+        id: String(o.id),
+        title: String(o.title ?? ''),
+        subject: typeof o.subject === 'string' ? o.subject : undefined,
+        description: (o.description as string | null) ?? null,
+        status: String(o.status ?? ''),
+        created_at: String(o.created_at ?? ''),
+        started_at: (o.started_at as string | null) ?? null,
+        ended_at: (o.ended_at as string | null) ?? null,
+        viewer_count: o.viewer_count != null ? Number(o.viewer_count) : null,
+        tags: Array.isArray(o.tags) ? (o.tags as string[]) : null,
+        mediator_id: String(o.mediator_id ?? ''),
+        users: {
+          username: String(o.mediator_username ?? ''),
+          display_name: (o.mediator_display_name as string | null) ?? null,
+        },
+      };
+
       if (!TERMINAL_STATUSES.has(row.status)) {
         router.replace(`/arena/${id}`);
         return;
