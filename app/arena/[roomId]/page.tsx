@@ -85,11 +85,7 @@ export default function ArenaPage() {
     setDailyRoomUrl(null);
 
     const loadRoomData = async () => {
-      const { data: beef } = await supabase
-        .from('beefs')
-        .select('*, users!beefs_mediator_id_fkey(username, display_name, avatar_url)')
-        .eq('id', roomId)
-        .single();
+      const { data: beef } = await supabase.from('beefs').select('*').eq('id', roomId).single();
 
       if (cancelled) return;
 
@@ -111,11 +107,18 @@ export default function ArenaPage() {
         .maybeSingle();
       setHasPaidContinuation(!!accessRow);
 
+      const { fetchUserPublicByIds, displayNameFromPublicRow } = await import('@/lib/fetch-user-public-profile');
+      const medRow =
+        beef.mediator_id
+          ? (await fetchUserPublicByIds(supabase, [beef.mediator_id], 'id, username, display_name, avatar_url')).get(
+              beef.mediator_id,
+            )
+          : undefined;
+
       if (beef.status === 'ended' || beef.status === 'cancelled' || beef.status === 'replay') {
-        const med = beef.users as any;
         setBeefEndedInfo({
           title: beef.title || 'Beef',
-          host_name: med?.display_name || med?.username || 'Médiateur',
+          host_name: displayNameFromPublicRow(medRow, 'Médiateur'),
           started_at: beef.started_at,
           ended_at: beef.ended_at,
         });
@@ -123,10 +126,9 @@ export default function ArenaPage() {
         return;
       }
 
-      const mediator = beef.users as any;
       setHost({
         id: beef.mediator_id,
-        name: mediator?.display_name || mediator?.username || 'Médiateur',
+        name: displayNameFromPublicRow(medRow, 'Médiateur'),
         isHost: true,
         videoEnabled: true,
         audioEnabled: true,

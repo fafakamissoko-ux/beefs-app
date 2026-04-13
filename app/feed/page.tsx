@@ -207,7 +207,7 @@ export default function FeedPage() {
       setLoading(true);
       let query = supabase
         .from('beefs')
-        .select('*, users!beefs_mediator_id_fkey(username, display_name), beef_participants(count)')
+        .select('*, beef_participants(count)')
         .order('feed_position', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(fetchLimit);
@@ -224,6 +224,13 @@ export default function FeedPage() {
       const beefIds = beefList.map((b: { id: string }) => b.id);
       const challengerANameByBeef: Record<string, string> = {};
       const challengerBNameByBeef: Record<string, string> = {};
+
+      const publicIds = new Set<string>();
+      for (const b of beefList as { mediator_id?: string | null }[]) {
+        if (b.mediator_id) publicIds.add(b.mediator_id);
+      }
+
+      let feedPublicMap = new Map<string, import('@/lib/fetch-user-public-profile').UserPublicProfileRow>();
 
       if (beefIds.length > 0) {
         const mediatorByBeef = new Map<string, string | null | undefined>(
@@ -249,10 +256,17 @@ export default function FeedPage() {
 
         const { data: partRows, error: partErr } = await supabase
           .from('beef_participants')
-          .select(
-            'beef_id, user_id, invite_status, created_at, is_main, role, users(display_name, username)',
-          )
+          .select('beef_id, user_id, invite_status, created_at, is_main, role')
           .in('beef_id', beefIds);
+
+        if (!partErr && partRows) {
+          for (const row of partRows as { user_id: string }[]) {
+            if (row.user_id) publicIds.add(row.user_id);
+          }
+        }
+
+        const { fetchUserPublicByIds, displayNameFromPublicRow } = await import('@/lib/fetch-user-public-profile');
+        feedPublicMap = await fetchUserPublicByIds(supabase, [...publicIds], 'id, username, display_name');
 
         if (!partErr && partRows) {
           type PartRow = {
@@ -262,10 +276,6 @@ export default function FeedPage() {
             created_at: string;
             is_main: boolean | null;
             role: string | null;
-            users:
-              | { display_name: string | null; username: string | null }
-              | { display_name: string | null; username: string | null }[]
-              | null;
           };
           const byBeef = new Map<string, PartRow[]>();
           for (const row of partRows as PartRow[]) {
@@ -273,19 +283,7 @@ export default function FeedPage() {
             list.push(row);
             byBeef.set(row.beef_id, list);
           }
-          const packName = (
-            u:
-              | { display_name: string | null; username: string | null }
-              | { display_name: string | null; username: string | null }[]
-              | null,
-          ) => {
-            const pack = Array.isArray(u) ? u[0] : u;
-            return (
-              (pack?.display_name && String(pack.display_name).trim()) ||
-              (pack?.username && String(pack.username).trim()) ||
-              ''
-            );
-          };
+          const packName = (userId: string) => displayNameFromPublicRow(feedPublicMap.get(userId), '');
           for (const beef of beefList as { id: string; mediator_id?: string | null }[]) {
             const mid = beef.mediator_id;
             const rows = byBeef.get(beef.id) || [];
@@ -305,8 +303,8 @@ export default function FeedPage() {
               if (ma !== mb) return ma - mb;
               return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
             });
-            const first = packName(eligible[0]?.users ?? null);
-            const second = packName(eligible[1]?.users ?? null);
+            const first = packName(eligible[0]?.user_id ?? '');
+            const second = packName(eligible[1]?.user_id ?? '');
             if (first) challengerANameByBeef[beef.id] = first;
             if (second) challengerBNameByBeef[beef.id] = second;
           }
@@ -314,12 +312,15 @@ export default function FeedPage() {
       }
 
       const rawCount = beefList.length;
+      const { displayNameFromPublicRow: dnFromMap } = await import('@/lib/fetch-user-public-profile');
+
       let beefsWithData = beefList.map((beef: any) => {
-        const hostN = beef.users?.display_name || beef.users?.username || 'Anonyme';
+        const med = beef.mediator_id ? feedPublicMap.get(beef.mediator_id) : undefined;
+        const hostN = dnFromMap(med, 'Anonyme');
         return {
           ...beef,
           host_name: hostN,
-          host_username: beef.users?.username?.trim() || null,
+          host_username: med?.username?.trim() || null,
           mediator_name: hostN,
           viewer_count: beef.viewer_count || 0,
           tags: beef.tags || [],

@@ -127,16 +127,29 @@ export default function PublicProfilePage() {
       let profileData: Record<string, unknown> | null = null;
 
       if (authUser) {
-        const { data, error: profileError } = await supabase
-          .from('users')
+        const { data: pubRow, error: pubErr } = await supabase
+          .from('user_public_profile')
           .select('*')
           .ilike('username', escapeForIlikeExact(usernameKey))
-          .single();
-        if (profileError || !data) {
+          .maybeSingle();
+        if (pubErr || !pubRow) {
           setLoading(false);
           return;
         }
-        profileData = data as Record<string, unknown>;
+        if (authUser.id === pubRow.id) {
+          const { data: full, error: fullErr } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', authUser.id)
+            .single();
+          if (fullErr || !full) {
+            setLoading(false);
+            return;
+          }
+          profileData = full as Record<string, unknown>;
+        } else {
+          profileData = pubRow as Record<string, unknown>;
+        }
       } else {
         const { data: pubRows, error: rpcError } = await supabase.rpc('get_public_profile_by_username', {
           p_username: usernameKey,
@@ -325,7 +338,7 @@ export default function PublicProfilePage() {
       let medUsernameById: Record<string, string> = {};
       if (medIds.length > 0) {
         const { data: mus } = await supabase
-          .from('users')
+          .from('user_public_profile')
           .select('id, display_name, username')
           .in('id', medIds);
         for (const u of mus || []) {

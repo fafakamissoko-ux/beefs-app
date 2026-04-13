@@ -89,7 +89,10 @@ function MessagesPageInner() {
       }
 
       const otherIds = convs.map(c => c.participant_1 === user.id ? c.participant_2 : c.participant_1);
-      const { data: users } = await supabase.from('users').select('id, username, display_name, avatar_url').in('id', otherIds);
+      const { data: users } = await supabase
+        .from('user_public_profile')
+        .select('id, username, display_name, avatar_url')
+        .in('id', otherIds);
       const userMap = new Map((users || []).map(u => [u.id, u]));
 
       // Count unread messages per conversation
@@ -252,7 +255,7 @@ function MessagesPageInner() {
     setSearching(true);
     try {
       const { data } = await supabase
-        .from('users')
+        .from('user_public_profile')
         .select('id, username, display_name, avatar_url')
         .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
         .neq('id', user?.id || '')
@@ -326,7 +329,7 @@ function MessagesPageInner() {
     void (async () => {
       try {
         const { data: otherUser, error } = await supabase
-          .from('users')
+          .from('user_public_profile')
           .select('id, username, display_name, avatar_url')
           .eq('id', withId)
           .maybeSingle();

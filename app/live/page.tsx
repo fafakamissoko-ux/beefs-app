@@ -13,6 +13,7 @@ import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
 import { normalizeScheduledAtForInsert } from '@/lib/beef-schedule';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
+import { fetchUserPublicByIds, displayNameFromPublicRow } from '@/lib/fetch-user-public-profile';
 
 // Feed logic like X/Twitter: "Pour vous" = algorithmic, "Abonnements" = chronological
 
@@ -84,31 +85,34 @@ export default function LivePage() {
 
   const loadLiveRooms = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('beefs')
-        .select('*, users!beefs_mediator_id_fkey(username, display_name)')
-        .eq('status', 'live')
-        .limit(50);
+      const { data, error } = await supabase.from('beefs').select('*').eq('status', 'live').limit(50);
 
       if (error) throw error;
 
-      let rooms: Room[] = (data || []).map((beef: any) => ({
+      const rawList = data || [];
+      const medIds = [...new Set(rawList.map((b: { mediator_id?: string }) => b.mediator_id).filter(Boolean))] as string[];
+      const medMap = await fetchUserPublicByIds(supabase, medIds, 'id, username, display_name');
+
+      let rooms: Room[] = rawList.map((beef: any) => {
+        const m = beef.mediator_id ? medMap.get(beef.mediator_id) : undefined;
+        return {
         id: beef.id,
         title: beef.title,
-        host_name: beef.users?.display_name || beef.users?.username || 'Anonyme',
-        host_username: beef.users?.username?.trim() || null,
+        host_name: displayNameFromPublicRow(m, 'Anonyme'),
+        host_username: m?.username?.trim() || null,
         status: beef.status,
         created_at: beef.created_at,
         viewer_count: beef.viewer_count || 0,
         category: beef.tags?.[0] || 'général',
         is_premium: false,
         price: beef.price || 0,
-      }));
+      };
+      });
 
       if (feedType === 'abonnements') {
         const followSet = new Set(followingIds);
         rooms = rooms.filter((r: any) => {
-          const beef = (data || []).find((b: any) => b.id === r.id);
+          const beef = rawList.find((b: any) => b.id === r.id);
           return beef && followSet.has(beef.mediator_id);
         });
         rooms.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

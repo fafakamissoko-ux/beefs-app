@@ -288,7 +288,7 @@ export default function ProfileContent() {
           const mediatorUsernameById: Record<string, string> = {};
           if (mediatorIds.length > 0) {
             const { data: mu } = await supabase
-              .from('users')
+              .from('user_public_profile')
               .select('id, display_name, username')
               .in('id', mediatorIds);
             (mu || []).forEach((u: { id: string; display_name?: string; username?: string }) => {

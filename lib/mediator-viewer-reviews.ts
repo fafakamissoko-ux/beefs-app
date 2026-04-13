@@ -18,7 +18,7 @@ type ReviewRow = {
   reviewer_id: string;
 };
 
-/** Avis spectateurs pour le profil médiateur (noms résolus via users). */
+/** Avis spectateurs pour le profil médiateur (noms résolus via user_public_profile). */
 export async function fetchMediatorViewerReviews(
   supabase: SupabaseClient,
   mediatorId: string,
@@ -38,7 +38,7 @@ export async function fetchMediatorViewerReviews(
   const typed = rows as ReviewRow[];
   const reviewerIds = [...new Set(typed.map((r) => r.reviewer_id))];
   const { data: users } = await supabase
-    .from('users')
+    .from('user_public_profile')
     .select('id, display_name, username')
     .in('id', reviewerIds);
 

@@ -2419,7 +2419,7 @@ export function TikTokStyleArena({
 
     // Find user in DB
     const { data: foundUser } = await supabase
-      .from('users')
+      .from('user_public_profile')
       .select('id, username, display_name')
       .or(`username.eq.${username},display_name.eq.${username}`)
       .limit(1)
@@ -2475,7 +2475,7 @@ export function TikTokStyleArena({
 
     // Fetch user info for local debaters list
     const { data: invitedUser } = await supabase
-      .from('users')
+      .from('user_public_profile')
       .select('id, username, display_name')
       .eq('id', invitedUserId)
       .single();
@@ -2524,7 +2524,7 @@ export function TikTokStyleArena({
 
     if (knownUserId && isValidArenaUserId(knownUserId)) {
       const { data: d } = await supabase
-        .from('users')
+        .from('user_public_profile')
         .select('id, username, display_name, bio, created_at, avatar_url, points')
         .eq('id', knownUserId)
         .maybeSingle();
@@ -2533,7 +2533,7 @@ export function TikTokStyleArena({
     if (!data && username) {
       const term = escapeForIlikeExact(username.trim());
       const { data: d } = await supabase
-        .from('users')
+        .from('user_public_profile')
         .select('id, username, display_name, bio, created_at, avatar_url, points')
         .ilike('username', term)
         .maybeSingle();
@@ -2542,7 +2542,7 @@ export function TikTokStyleArena({
     if (!data && username) {
       const term = escapeForIlikeExact(username.trim());
       const { data: rows } = await supabase
-        .from('users')
+        .from('user_public_profile')
         .select('id, username, display_name, bio, created_at, avatar_url, points')
         .ilike('display_name', term)
         .limit(1);

@@ -58,7 +58,7 @@ export default function BeefSummaryPage() {
         const { data, error } = await supabase
           .from('beefs')
           .select(
-            'id, title, subject, description, status, created_at, started_at, ended_at, viewer_count, tags, mediator_id, users!beefs_mediator_id_fkey(username, display_name)',
+            'id, title, subject, description, status, created_at, started_at, ended_at, viewer_count, tags, mediator_id',
           )
           .eq('id', id)
           .maybeSingle();
@@ -69,10 +69,13 @@ export default function BeefSummaryPage() {
           return;
         }
 
-        const raw = data as typeof data & { users?: MediatorUser | MediatorUser[] | null };
-        const u = raw.users;
-        const mediator = Array.isArray(u) ? u[0] : u;
-        const row: BeefRow = { ...raw, users: mediator ?? null };
+        const { fetchUserPublicByIds } = await import('@/lib/fetch-user-public-profile');
+        const mid = data.mediator_id as string | undefined;
+        const pub = mid ? (await fetchUserPublicByIds(supabase, [mid], 'id, username, display_name')).get(mid) : undefined;
+        const mediator: MediatorUser | null = pub
+          ? { username: pub.username, display_name: pub.display_name }
+          : null;
+        const row: BeefRow = { ...(data as BeefRow), users: mediator };
         if (!TERMINAL_STATUSES.has(row.status)) {
           router.replace(`/arena/${id}`);
           return;

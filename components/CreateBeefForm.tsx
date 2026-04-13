@@ -155,7 +155,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
     setSearching(true);
     try {
       const { data, error } = await supabase
-        .from('users')
+        .from('user_public_profile')
         .select('id, username, display_name, avatar_url')
         .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
         .neq('id', user?.id) // Don't show current user (mediator)

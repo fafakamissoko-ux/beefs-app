@@ -86,12 +86,12 @@ export function MediatorInviteInline({
     try {
       const [byUsername, byDisplayName] = await Promise.all([
         supabase
-          .from('users')
+          .from('user_public_profile')
           .select('id, username, display_name, avatar_url')
           .ilike('username', pattern)
           .limit(20),
         supabase
-          .from('users')
+          .from('user_public_profile')
           .select('id, username, display_name, avatar_url')
           .ilike('display_name', pattern)
           .limit(20),

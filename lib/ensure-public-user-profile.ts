@@ -35,8 +35,13 @@ export async function ensurePublicUserProfile(supabase: SupabaseClient, user: Us
     const display_name =
       str('display_name') || str('full_name') || str('name') || username;
 
-    const { data: clash } = await supabase.from('users').select('id').eq('username', username).maybeSingle();
-    if (clash) username = `${username.slice(0, 20)}_${user.id.slice(0, 6)}`;
+    const { data: available, error: availErr } = await supabase.rpc('check_username_available', {
+      p_username: username,
+    });
+    if (availErr) {
+      console.warn('[ensurePublicUserProfile] check_username_available', availErr.message);
+    }
+    if (available !== true) username = `${username.slice(0, 20)}_${user.id.slice(0, 6)}`;
 
     const { error } = await supabase.from('users').insert({
       id: user.id,
