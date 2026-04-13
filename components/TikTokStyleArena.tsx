@@ -50,8 +50,6 @@ import {
   pushFlyingReaction,
   type FlyingReactionEntry,
 } from './FlyingReactionsLayer';
-import { PointTrigger } from './PointTrigger';
-import { ChallengerSupportHalo } from './ChallengerSupportHalo';
 import { MediatorSupportHalo } from './MediatorSupportHalo';
 import { useArenaPulseVoicesStore } from '@/lib/stores/arenaPulseVoicesStore';
 import { useArenaVerdictStore } from '@/lib/stores/arenaVerdictStore';
@@ -238,6 +236,8 @@ export function TikTokStyleArena({
   const challengersEverJoinedRef = useRef(false);
   /** Évite de spammer le toast « challengers partis » tant que la room reste vide */
   const challengersAllLeftNotifiedRef = useRef(false);
+  /** Sync DB status → live quand la salle est active (sans attendre « Démarrer le chrono »). */
+  const autoLiveSyncedRef = useRef(false);
   const [userPoints, setUserPoints] = useState(0);
   const [profileFollowsTarget, setProfileFollowsTarget] = useState(false);
 
@@ -953,6 +953,7 @@ export function TikTokStyleArena({
 
   useEffect(() => {
     challengersEverJoinedRef.current = false;
+    autoLiveSyncedRef.current = false;
   }, [roomId]);
 
   // Track when mediator has actually connected at least once
@@ -1494,6 +1495,34 @@ export function TikTokStyleArena({
 
   // ── HYBRID LIVE SYNC: Broadcast (instant) + Polling (fallback) ──
   const [liveConnected, setLiveConnected] = useState(false);
+
+  useEffect(() => {
+    if (!isHost || !isJoined || !liveConnected || beefEnded || !roomId) return;
+    if (autoLiveSyncedRef.current) return;
+    if (remoteParticipants.length < 1) return;
+
+    let cancelled = false;
+    void (async () => {
+      const { data: row } = await supabase
+        .from('beefs')
+        .select('status')
+        .eq('id', roomId)
+        .maybeSingle();
+      if (cancelled || !row) return;
+      const s = String((row as { status?: string }).status ?? '');
+      if (s !== 'pending' && s !== 'ready') return;
+      const { error } = await supabase
+        .from('beefs')
+        .update({ status: 'live' })
+        .eq('id', roomId)
+        .in('status', ['pending', 'ready']);
+      if (!error) autoLiveSyncedRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isHost, isJoined, liveConnected, beefEnded, roomId, remoteParticipants.length]);
+
   const seenMsgKeys = useRef(new Set<string>());
 
   const addRemoteMessage = useCallback((msgUserName: string, content: string, initial?: string, dbId?: string) => {
@@ -3062,7 +3091,7 @@ export function TikTokStyleArena({
                     )}
                   </div>
                 )}
-                <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start justify-between gap-2">
+                <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start justify-start gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3073,18 +3102,6 @@ export function TikTokStyleArena({
                   >
                     {leftPanelName} ({pulseVoicesA})
                   </button>
-                  {userRole === 'viewer' && (
-                    <div className="pointer-events-auto relative flex shrink-0 items-center justify-center">
-                      <ChallengerSupportHalo side="A" burstKey={supportBurst.A} leader={impactLeader === 'A'} />
-                      <PointTrigger
-                        count={pulseVoicesA}
-                        onPulse={() => handlePulseVoice('A')}
-                        interactive
-                        hideImpactCount
-                        aria-label="Envoyer une voix pour ce challenger"
-                      />
-                    </div>
-                  )}
                 </div>
                 <AnimatePresence>
                   {leftNeonAudio && (
@@ -3287,8 +3304,26 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                {/* Bas dalle : capsule challenger (desktop) + micro/cam au-dessus — z élevé, vidéo locale sans pointer-events */}
-                <div className="absolute bottom-3 right-3 z-[100] flex max-w-[min(12rem,calc(50%-0.5rem))] flex-col-reverse items-end gap-2">
+                {/* Bas dalle : pseudo centré + micro/cam en dessous (challenger local) */}
+                <div className="absolute bottom-3 left-1/2 z-[100] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null);
+                    }}
+                    className="glass-prestige flex max-w-full touch-manipulation items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3"
+                  >
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold uppercase text-white"
+                      aria-hidden
+                    >
+                      {leftPanelName.trim().startsWith('En attente') ? '—' : (leftPanelName.charAt(0) || '?').toUpperCase()}
+                    </span>
+                    <span className="max-w-[150px] truncate text-left font-sans text-sm font-bold text-white" title={leftPanelName}>
+                      {leftPanelName}
+                    </span>
+                  </button>
                   {leftPanelIsLocal && !isViewer && (
                     <div className="flex gap-1.5">
                       <button
@@ -3325,24 +3360,6 @@ export function TikTokStyleArena({
                       </button>
                     </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null);
-                    }}
-                    className="glass-prestige hidden max-w-full touch-manipulation items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 lg:flex"
-                  >
-                    <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold uppercase text-white"
-                      aria-hidden
-                    >
-                      {leftPanelName.trim().startsWith('En attente') ? '—' : (leftPanelName.charAt(0) || '?').toUpperCase()}
-                    </span>
-                    <span className="max-w-[150px] truncate text-left font-sans text-sm font-bold text-white" title={leftPanelName}>
-                      {leftPanelName}
-                    </span>
-                  </button>
                 </div>
               </motion.div>
 
@@ -3488,20 +3505,8 @@ export function TikTokStyleArena({
                   </div>
                 )}
                 <div
-                  className={`pointer-events-none absolute right-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start gap-2 ${userRole === 'viewer' ? 'justify-between' : 'justify-end'}`}
+                  className="pointer-events-none absolute right-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start justify-end gap-2"
                 >
-                  {userRole === 'viewer' && (
-                    <div className="pointer-events-auto relative flex shrink-0 items-center justify-center">
-                      <ChallengerSupportHalo side="B" burstKey={supportBurst.B} leader={impactLeader === 'B'} />
-                      <PointTrigger
-                        count={pulseVoicesB}
-                        onPulse={() => handlePulseVoice('B')}
-                        interactive
-                        hideImpactCount
-                        aria-label="Envoyer une voix pour ce challenger"
-                      />
-                    </div>
-                  )}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3702,7 +3707,25 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                <div className="absolute bottom-3 left-3 z-[100] flex max-w-[min(12rem,calc(50%-0.5rem))] flex-col-reverse items-start gap-2">
+                <div className="absolute bottom-3 left-1/2 z-[100] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
+                    }}
+                    className="glass-prestige flex max-w-full touch-manipulation items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3"
+                  >
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold uppercase text-white"
+                      aria-hidden
+                    >
+                      {rightPanelName.trim().startsWith('En attente') ? '—' : (rightPanelName.charAt(0) || '?').toUpperCase()}
+                    </span>
+                    <span className="max-w-[150px] truncate text-left font-sans text-sm font-bold text-white" title={rightPanelName}>
+                      {rightPanelName}
+                    </span>
+                  </button>
                   {rightPanelIsLocal && !isViewer && (
                     <div className="flex gap-1.5">
                       <button
@@ -3739,24 +3762,6 @@ export function TikTokStyleArena({
                       </button>
                     </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
-                    }}
-                    className="glass-prestige hidden max-w-full touch-manipulation items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 lg:flex"
-                  >
-                    <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold uppercase text-white"
-                      aria-hidden
-                    >
-                      {rightPanelName.trim().startsWith('En attente') ? '—' : (rightPanelName.charAt(0) || '?').toUpperCase()}
-                    </span>
-                    <span className="max-w-[150px] truncate text-left font-sans text-sm font-bold text-white" title={rightPanelName}>
-                      {rightPanelName}
-                    </span>
-                  </button>
                 </div>
               </motion.div>
 
@@ -3800,7 +3805,7 @@ export function TikTokStyleArena({
           <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
           {debaters[0] ? (
             <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]">
-              <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-2rem)] items-start justify-between gap-2">
+              <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-2rem)] items-start justify-start gap-2">
                 <button
                   type="button"
                   onClick={() => void openProfile(debaters[0].name, debaters[0].id)}
@@ -3808,18 +3813,6 @@ export function TikTokStyleArena({
                 >
                   {debaters[0].name} ({pulseVoicesA})
                 </button>
-                {userRole === 'viewer' && (
-                  <div className="pointer-events-auto relative flex shrink-0 items-center justify-center">
-                    <ChallengerSupportHalo side="A" burstKey={supportBurst.A} leader={impactLeader === 'A'} />
-                    <PointTrigger
-                      count={pulseVoicesA}
-                      onPulse={() => handlePulseVoice('A')}
-                      interactive
-                      hideImpactCount
-                      aria-label="Envoyer une voix pour ce challenger"
-                    />
-                  </div>
-                )}
               </div>
               <div className={`absolute inset-0 flex items-center justify-center bg-cobalt-500/10 text-5xl font-black text-white/80 ${
                 speakingTurnTarget === debaters[0]?.id ? 'ring-2 ring-inset ring-green-400' : ''
@@ -3909,21 +3902,7 @@ export function TikTokStyleArena({
 
           {debaters[1] ? (
             <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden border-l border-white/20 bg-[#08080A]">
-              <div
-                className={`pointer-events-none absolute right-4 top-4 z-[22] flex w-[calc(100%-2rem)] items-start gap-2 ${userRole === 'viewer' ? 'justify-between' : 'justify-end'}`}
-              >
-                {userRole === 'viewer' && (
-                  <div className="pointer-events-auto relative flex shrink-0 items-center justify-center">
-                    <ChallengerSupportHalo side="B" burstKey={supportBurst.B} leader={impactLeader === 'B'} />
-                    <PointTrigger
-                      count={pulseVoicesB}
-                      onPulse={() => handlePulseVoice('B')}
-                      interactive
-                      hideImpactCount
-                      aria-label="Envoyer une voix pour ce challenger"
-                    />
-                  </div>
-                )}
+              <div className="pointer-events-none absolute right-4 top-4 z-[22] flex w-[calc(100%-2rem)] items-start justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => void openProfile(debaters[1].name, debaters[1].id)}
@@ -4015,6 +3994,10 @@ export function TikTokStyleArena({
               </div>
             ) : isJoined && !timerActive && isHost ? (
               <span className="font-mono text-[9px] uppercase tracking-wider text-white/50">Pas de chrono</span>
+            ) : isJoined && !timerActive && !isHost ? (
+              <span className="max-w-[14rem] font-mono text-[9px] uppercase leading-tight tracking-wider text-white/45">
+                Chrono au lancement (médiateur)
+              </span>
             ) : null}
           </div>
         </div>

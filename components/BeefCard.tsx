@@ -15,7 +15,7 @@ interface BeefCardProps {
   host_name: string;
   /** `username` en base pour lien profil (pas le seul display name). */
   host_username?: string | null;
-  status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled' | 'pending';
+  status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled' | 'pending' | 'ready';
   created_at: string;
   scheduled_at?: string;
   viewer_count?: number;
@@ -25,6 +25,7 @@ interface BeefCardProps {
   thumbnail?: string;
   duration?: number;
   participants_count?: number;
+  challenger_a_name?: string | null;
   challenger_b_name?: string | null;
   mediator_name?: string | null;
   onClick: () => void;
@@ -49,6 +50,7 @@ export function BeefCard({
   thumbnail,
   duration,
   participants_count,
+  challenger_a_name,
   challenger_b_name,
   mediator_name,
   onClick,
@@ -62,7 +64,7 @@ export function BeefCard({
   const uiStatus: typeof status | 'scheduled' | 'preparing' =
     status === 'pending' && scheduled_at && new Date(scheduled_at).getTime() > Date.now()
       ? 'scheduled'
-      : status === 'pending'
+      : status === 'pending' || status === 'ready'
         ? 'preparing'
         : status;
 
@@ -134,7 +136,8 @@ export function BeefCard({
   const charSum = title.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const hueBase = charSum % 360;
 
-  const isManifesto = uiStatus === 'preparing' && (!challenger_b_name || !mediator_name);
+  const isManifesto = uiStatus === 'preparing';
+  const mediatorSlotName = (mediator_name?.trim() || host_name?.trim() || '') || null;
   const isReplay = status === 'ended' || status === 'replay';
 
   return (
@@ -315,21 +318,29 @@ export function BeefCard({
           <div className="mt-4 pt-3 border-t border-white/[0.06]">
             <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2.5">Participants</p>
             <div className="flex items-center gap-2">
-              {/* Host — toujours rempli */}
-              <div className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] px-2.5 py-1">
-                <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
-                  style={{ background: `hsl(${hueBase}, 55%, 42%)` }}
-                >
-                  {(host_name || '?')[0].toUpperCase()}
+              {/* Challenger A — premier ring (pas le médiateur) */}
+              {challenger_a_name ? (
+                <div className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] px-2.5 py-1">
+                  <div className="w-5 h-5 rounded-full bg-cobalt-500/30 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                    {challenger_a_name[0].toUpperCase()}
+                  </div>
+                  <span className="font-sans text-[11px] text-white/60 font-medium truncate max-w-[70px]">
+                    {challenger_a_name}
+                  </span>
                 </div>
-                <ProfileUserLink
-                  username={host_username}
-                  className="font-sans text-[11px] text-white/60 font-medium truncate max-w-[70px]"
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onApply?.();
+                  }}
+                  className="flex items-center gap-1.5 rounded-full border border-dashed border-white/20 px-2.5 py-1 hover:border-brand-400/40 hover:bg-brand-500/5 transition-colors"
                 >
-                  {host_name}
-                </ProfileUserLink>
-              </div>
+                  <User className="w-4 h-4 text-white/20" />
+                  <span className="font-sans text-[11px] text-white/30 italic">Challenger</span>
+                </button>
+              )}
 
               {/* Challenger B — rempli ou pointillés */}
               {challenger_b_name ? (
@@ -350,13 +361,18 @@ export function BeefCard({
                 </button>
               )}
 
-              {/* Médiateur — rempli ou pointillés */}
-              {mediator_name ? (
+              {/* Médiateur — slot or (host = médiateur sur le feed si mediator_name absent) */}
+              {mediatorSlotName ? (
                 <div className="flex items-center gap-1.5 rounded-full bg-prestige-gold/8 border border-prestige-gold/20 px-2.5 py-1">
                   <div className="w-5 h-5 rounded-full bg-prestige-gold/25 flex items-center justify-center text-[9px] font-bold text-prestige-gold shrink-0">
-                    {mediator_name[0].toUpperCase()}
+                    {mediatorSlotName[0].toUpperCase()}
                   </div>
-                  <span className="font-sans text-[11px] text-prestige-gold/70 font-medium truncate max-w-[70px]">{mediator_name}</span>
+                  <ProfileUserLink
+                    username={host_username}
+                    className="font-sans text-[11px] text-prestige-gold/70 font-medium truncate max-w-[70px]"
+                  >
+                    {mediator_name?.trim() ? mediator_name : host_name}
+                  </ProfileUserLink>
                 </div>
               ) : (
                 <button
