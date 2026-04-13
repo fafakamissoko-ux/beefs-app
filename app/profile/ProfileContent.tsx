@@ -1543,8 +1543,10 @@ export default function ProfileContent() {
                 />
                 <div className="px-5 pb-5 -mt-12 relative">
                   <div
-                    className="relative w-24 h-24 rounded-full border-4 border-[#0f0f0f] overflow-hidden bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-3xl font-black text-white"
-                    style={{ borderColor: profile.accent_color || '#E83A14' }}
+                    className={`relative w-24 h-24 rounded-[1.5rem] border-4 border-[#0f0f0f] overflow-hidden bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-3xl font-black text-white ${
+                      profile.is_premium ? 'shadow-[0_0_20px_rgba(212,175,55,0.35)]' : ''
+                    }`}
+                    style={{ borderColor: profile.is_premium ? '#D4AF37' : profile.accent_color || '#E83A14' }}
                   >
                     {profile.avatar_url ? (
                       <Image src={profile.avatar_url} alt="" fill className="object-cover" sizes="96px" />
@@ -1552,11 +1554,27 @@ export default function ProfileContent() {
                       profile.username[0].toUpperCase()
                     )}
                   </div>
-                  <h3 className="text-xl font-black text-white mt-3">{profile.display_name}</h3>
+                  <h3 className="font-sans text-xl font-black text-white mt-3">{profile.display_name}</h3>
                   <p className="text-gray-500 text-sm">@{profile.username}</p>
+                  {stats.beefs_resolved >= 3 && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="font-mono text-sm font-bold text-prestige-gold tabular-nums tracking-wider">
+                        ✦ {(stats.beefs_resolved / Math.max(stats.beefs_hosted, 1) * 100).toFixed(0)}
+                      </span>
+                      <span className="font-sans text-[10px] font-bold uppercase tracking-[0.12em] text-prestige-gold/50">
+                        Indice de Sagesse
+                      </span>
+                    </div>
+                  )}
                   {profile.bio ? (
                     <p className="text-gray-300 text-sm mt-3 whitespace-pre-wrap line-clamp-6">{profile.bio}</p>
                   ) : null}
+                  <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 backdrop-blur-xl">
+                    <p className="font-sans text-[10px] font-bold uppercase tracking-[0.15em] text-white/40">Points totaux</p>
+                    <p className="font-mono text-2xl font-black text-prestige-gold tabular-nums">
+                      {profile.points.toLocaleString('fr-FR')}
+                    </p>
+                  </div>
                   <div className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-sm">
                     {statsShortcuts.participations ? (
                       <button
@@ -1619,6 +1637,30 @@ export default function ProfileContent() {
                       </span>
                     )}
                   </div>
+                  {stats.beefs_resolved > 0 && (
+                    <div className="mt-5 pt-4 border-t border-white/[0.08]">
+                      <h4 className="font-sans text-xs font-bold text-white mb-2 flex items-center gap-2">
+                        <Star className="w-3.5 h-3.5 text-prestige-gold" aria-hidden />
+                        Livre d&apos;Or
+                      </h4>
+                      {mediatorReviews.length === 0 ? (
+                        <p className="font-sans text-xs text-white/25 italic">Aucun avis pour le moment</p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {mediatorReviews.slice(0, 3).map((review) => (
+                            <li
+                              key={review.id}
+                              className="rounded-xl bg-white/[0.04] border border-white/[0.06] px-3 py-2 backdrop-blur-xl"
+                            >
+                              <p className="font-sans text-xs text-white/40 font-light italic leading-relaxed">
+                                &ldquo;{review.comment}&rdquo;
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               <p className="text-center mt-4">

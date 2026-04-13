@@ -179,7 +179,7 @@ export function Header() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between h-14">
             {/* Logo — invités : accueil splash pour éviter préchargement /feed (RSC) sur login, onboarding, etc. */}
-            <Link href={user ? '/feed' : '/'} className="flex items-center gap-2.5 group flex-shrink-0">
+            <Link href={user ? '/feed' : '/'} className="relative z-[5] flex items-center gap-2.5 group flex-shrink-0">
               <BeefLogo size={32} className="transition-transform group-hover:scale-105" />
               <span className="hidden sm:block text-xl font-extrabold text-gradient tracking-tight">
                 Beefs
@@ -187,7 +187,7 @@ export function Header() {
             </Link>
 
             {/* Desktop Nav — liens app uniquement si connecté (sinon préfetch RSC ×6 → échecs Brave / Safari / réseau) */}
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-1 relative z-[5] min-w-0">
               <GlobalSearchBar />
               {user &&
                 navItems.map((item) => {
@@ -227,7 +227,7 @@ export function Header() {
             </nav>
 
             {/* Right */}
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2 relative z-[5] shrink-0">
               {user ? (
                 <>
                   <Link

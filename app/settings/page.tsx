@@ -12,6 +12,9 @@ import { FeatureGuide } from '@/components/FeatureGuide';
 import { AppBackButton } from '@/components/AppBackButton';
 import { PASSWORD_POLICY_SHORT_HINT, validatePasswordPolicy } from '@/lib/password-policy';
 
+/** Préférence locale : prépare l’affichage des outils médiateur (pas de droit serveur à ce stade). */
+const MEDIATION_ACCESS_STORAGE_KEY = 'beefs_mediation_access';
+
 type PasswordFieldKey = 'current' | 'new' | 'confirm' | 'otp';
 
 function focusFirstPasswordFieldError(errors: Partial<Record<PasswordFieldKey, string>>) {
@@ -137,6 +140,11 @@ export default function SettingsPage() {
       const saved = localStorage.getItem('beefs_notif_prefs');
       if (saved) setNotifPrefs(JSON.parse(saved));
     } catch {}
+    try {
+      setMediationAccess(localStorage.getItem(MEDIATION_ACCESS_STORAGE_KEY) === 'true');
+    } catch {
+      setMediationAccess(false);
+    }
   }, [user, router, loadProfile]);
 
   useEffect(() => {
@@ -1161,18 +1169,32 @@ export default function SettingsPage() {
                 <p className="font-sans text-xs text-white/40">Débloque les outils de médiation sans changer ton profil public</p>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <div>
+            <p className="font-sans text-xs text-white/45 leading-relaxed mb-4 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2.5">
+              Ce réglage est <span className="text-white/70 font-semibold">sauvegardé sur cet appareil</span> (navigateur). Il indique
+              que tu veux voir les parcours et outils « médiation » dans l&apos;app dès qu&apos;ils seront reliés au produit.{' '}
+              <span className="text-white/55">Il ne donne pas encore de privilège côté serveur</span> : les vrais droits
+              (hôte, médiateur d&apos;un beef, etc.) viennent des rôles sur chaque session.
+            </p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <p id="mediation-access-label" className="font-sans text-sm text-white/60">Activer l&apos;accès médiateur</p>
-                <p className="font-mono text-[10px] text-white/25 tracking-wider mt-0.5">Aucun badge public ne sera affiché</p>
+                <p className="font-mono text-[10px] text-white/25 tracking-wider mt-0.5">Aucun badge public · état : {mediationAccess ? 'activé localement' : 'désactivé'}</p>
               </div>
               <button
                 type="button"
                 role="switch"
                 aria-checked={mediationAccess}
                 aria-labelledby="mediation-access-label"
-                onClick={() => setMediationAccess(!mediationAccess)}
-                className={`relative w-12 h-7 rounded-full transition-all ${
+                onClick={() => {
+                  const next = !mediationAccess;
+                  setMediationAccess(next);
+                  try {
+                    localStorage.setItem(MEDIATION_ACCESS_STORAGE_KEY, next ? 'true' : 'false');
+                  } catch {
+                    /* ignore quota / private mode */
+                  }
+                }}
+                className={`relative shrink-0 w-12 h-7 rounded-full transition-all ${
                   mediationAccess ? 'bg-prestige-gold' : 'bg-gray-300 dark:bg-white/10'
                 }`}
               >

@@ -145,8 +145,9 @@ export function GlobalSearchBar() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60]"
+              className="fixed left-0 right-0 top-14 bottom-0 bg-black/50 backdrop-blur-sm z-modal-backdrop"
               onClick={() => setIsOpen(false)}
+              aria-hidden
             />
 
             {/* Search Panel */}
@@ -154,7 +155,7 @@ export function GlobalSearchBar() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed top-[50%] -translate-y-1/2 left-4 right-20 md:left-1/2 md:-translate-x-1/2 md:right-auto w-auto md:w-[500px] md:top-24 md:translate-y-0 bg-gray-900 rounded-xl border border-gray-700 shadow-2xl z-[70] overflow-hidden max-h-[80vh] md:max-h-[75vh]"
+              className="fixed top-[50%] -translate-y-1/2 left-4 right-20 md:left-1/2 md:-translate-x-1/2 md:right-auto w-auto md:w-[500px] md:top-24 md:translate-y-0 bg-gray-900 rounded-xl border border-gray-700 shadow-2xl z-modal overflow-hidden max-h-[80vh] md:max-h-[75vh]"
             >
               {/* Tabs */}
               <div className="flex items-center border-b border-gray-800">

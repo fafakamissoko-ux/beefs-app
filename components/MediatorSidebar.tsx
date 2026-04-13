@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -173,48 +174,53 @@ export function MediatorSidebar({
     }
   }, [announceEditorOpen, announcementText]);
 
-  return (
-    <AnimatePresence>
-      {open && (
-        <>
-          {/* Backdrop */}
-          <motion.button
-            type="button"
-            aria-label="Fermer le command deck"
-            className="fixed inset-0 z-[130] bg-black/50 backdrop-blur-[2px]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
+  const deck =
+    typeof document !== 'undefined'
+      ? createPortal(
+          <AnimatePresence>
+            {open && (
+              <>
+                {/* Backdrop — portail body pour éviter les conflits d’empilement dans l’arène */}
+                <motion.button
+                  type="button"
+                  aria-label="Fermer le command deck"
+                  className="fixed inset-0 z-modal-backdrop bg-black/50 backdrop-blur-[2px]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={onClose}
+                />
 
-          {/* Bottom Sheet */}
-          <motion.aside
-            role="dialog"
-            aria-label="Command Deck"
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 32, stiffness: 380 }}
-            className="fixed inset-x-0 bottom-0 z-[131] mx-auto flex max-h-[min(88dvh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-t-[2.5rem] border-t border-white/10 bg-[#08080A]/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-24px_64px_rgba(0,0,0,0.6)] backdrop-blur-3xl"
-          >
-            {/* Drag handle */}
-            <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-white/20" />
+                {/* Bottom Sheet */}
+                <motion.aside
+                  role="dialog"
+                  aria-label="Command Deck"
+                  initial={{ y: '100%' }}
+                  animate={{ y: 0 }}
+                  exit={{ y: '100%' }}
+                  transition={{ type: 'spring', damping: 32, stiffness: 380 }}
+                  className="fixed inset-x-0 bottom-0 z-modal mx-auto flex max-h-[min(88dvh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-t-[2.5rem] border-t border-white/10 bg-[#08080A]/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-24px_64px_rgba(0,0,0,0.6)] backdrop-blur-3xl"
+                >
+                  {/* Drag handle */}
+                  <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-white/20" />
 
-            {/* Header */}
-            <div className="flex shrink-0 items-center justify-between gap-3 pb-3">
-              <span className="font-mono text-xs font-bold tracking-tight text-white/90">
-                Command Deck
-              </span>
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[2.5rem] border border-white/10 bg-white/5 text-white backdrop-blur-3xl hover:bg-white/10"
-                aria-label="Fermer"
-              >
-                <X className="h-4 w-4" strokeWidth={1} />
-              </button>
-            </div>
+                  {/* Header */}
+                  <div className="relative z-10 flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
+                    <span className="font-mono text-xs font-bold tracking-tight text-white/90">
+                      Command Deck
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClose();
+                      }}
+                      className="relative z-20 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white shadow-sm backdrop-blur-3xl hover:bg-white/15"
+                      aria-label="Fermer"
+                    >
+                      <X className="h-4 w-4" strokeWidth={1} />
+                    </button>
+                  </div>
 
             {/* Launch beef (pre-timer) */}
             {!timerActive && (
@@ -799,8 +805,12 @@ export function MediatorSidebar({
               )}
             </div>
           </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
-  );
+              </>
+            )}
+          </AnimatePresence>,
+          document.body,
+        )
+      : null;
+
+  return <>{deck}</>;
 }
