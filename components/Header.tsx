@@ -47,6 +47,13 @@ function parseBadgeCount(data: unknown): number {
   return 0;
 }
 
+/** Nombre exact sur le badge (plus de « 9+ » trompeur pour 10–99). */
+function formatNavBadgeCount(count: number): string {
+  const n = Math.max(0, Math.floor(count));
+  if (n > 999) return '999+';
+  return String(n);
+}
+
 function hideGlobalSearchOnPath(pathname: string | null): boolean {
   if (!pathname) return false;
   if (
@@ -100,8 +107,7 @@ export function Header() {
   const loadUnreadCounts = useCallback(async () => {
     if (!user) return;
 
-    // Toujours interroger la BDD (état réel). Le masquage du badge sur l’onglet actif est fait au rendu,
-    // pas en falsifiant le count — sinon après navigation le compteur reste faux (ex. refresh sur /notifications).
+    // Toujours interroger la BDD (état réel). Badges nav alignés avec les pages correspondantes.
     const [invRes, notifRpc, dmRpc] = await Promise.all([
       supabase
         .from('beef_invitations')
@@ -206,7 +212,7 @@ export function Header() {
       href: '/notifications',
       label: 'Notifications',
       icon: Bell,
-      badge: pathname === '/notifications' ? 0 : unreadNotifications,
+      badge: unreadNotifications,
     },
     { href: '/live', label: 'Live', icon: Flame, badge: 0 },
     { href: '/points', label: 'Points', icon: Coins, badge: 0 },
@@ -214,13 +220,13 @@ export function Header() {
       href: '/invitations',
       label: 'Invitations',
       icon: Mail,
-      badge: pathname === '/invitations' ? 0 : pendingInvitations,
+      badge: pendingInvitations,
     },
     {
       href: '/messages',
       label: 'Messages',
       icon: MessageCircle,
-      badge: pathname === '/messages' ? 0 : unreadMessages,
+      badge: unreadMessages,
     },
   ];
 
@@ -273,7 +279,7 @@ export function Header() {
                         <Icon className={`w-[18px] h-[18px] ${active && (item.href === '/live' || item.href === '/points') ? 'text-brand-400' : ''}`} />
                         {item.badge > 0 && (
                           <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 flex items-center justify-center px-1 text-[10px] font-bold text-white rounded-full bg-red-500">
-                            {item.badge > 9 ? '9+' : item.badge}
+                            {formatNavBadgeCount(item.badge)}
                           </span>
                         )}
                       </div>
@@ -439,7 +445,7 @@ export function Header() {
                           <Icon className="w-5 h-5" />
                           {item.badge > 0 && (
                             <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 flex items-center justify-center px-0.5 text-[9px] font-bold text-white rounded-full bg-red-500">
-                              {item.badge > 9 ? '9+' : item.badge}
+                              {formatNavBadgeCount(item.badge)}
                             </span>
                           )}
                         </div>

@@ -17,6 +17,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppBackButton } from '@/components/AppBackButton';
 import { useToast } from '@/components/Toast';
+import { isNotificationUnread } from '@/lib/notification-unread';
 
 type NotificationType =
   | 'follow'
@@ -97,10 +98,15 @@ export default function NotificationsPage() {
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(5000);
 
       if (error) throw error;
       setNotifications((data ?? []) as AppNotification[]);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
+      }
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
       setNotifications([]);
@@ -238,7 +244,7 @@ export default function NotificationsPage() {
 
   if (!user) return null;
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const unreadCount = notifications.filter(isNotificationUnread).length;
 
   return (
     <div className="min-h-screen bg-black">
@@ -298,7 +304,7 @@ export default function NotificationsPage() {
             <AnimatePresence initial={false}>
               {notifications.map((n, i) => {
                 const { icon: Icon, color, bg } = ICON_MAP[n.type];
-                const unread = !n.is_read;
+                const unread = isNotificationUnread(n);
                 return (
                   <motion.button
                     key={n.id}
