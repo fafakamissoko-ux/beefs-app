@@ -90,37 +90,52 @@ export function Header() {
   const loadUnreadCounts = useCallback(async () => {
     if (!user) return;
 
+    const onInvPage = pathname === '/invitations';
+    const onNotifPage = pathname === '/notifications';
+    const onMsgPage = pathname === '/messages';
+
     const [invRes, notifRes, dmRes] = await Promise.all([
-      supabase
-        .from('beef_invitations')
-        .select('id', { count: 'exact', head: true })
-        .eq('invitee_id', user.id)
-        .in('status', ['sent', 'seen']),
-      supabase
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false),
-      supabase
-        .from('direct_messages')
-        .select('id, conversations!inner(participant_1, participant_2)', { count: 'exact', head: true })
-        .eq('is_read', false)
-        .neq('sender_id', user.id)
-        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`, { referencedTable: 'conversations' }),
+      onInvPage
+        ? Promise.resolve({ count: 0 })
+        : supabase
+            .from('beef_invitations')
+            .select('id', { count: 'exact', head: true })
+            .eq('invitee_id', user.id)
+            .eq('status', 'sent'),
+      onNotifPage
+        ? Promise.resolve({ count: 0 })
+        : supabase
+            .from('notifications')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('is_read', false),
+      onMsgPage
+        ? Promise.resolve({ count: 0 })
+        : supabase
+            .from('direct_messages')
+            .select('id, conversations!inner(participant_1, participant_2)', { count: 'exact', head: true })
+            .eq('is_read', false)
+            .neq('sender_id', user.id)
+            .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`, { referencedTable: 'conversations' }),
     ]);
 
-    setPendingInvitations(invRes.count || 0);
-    setUnreadNotifications(notifRes.count || 0);
-    setUnreadMessages(dmRes.count || 0);
-  }, [user]);
+    setPendingInvitations(invRes.count ?? 0);
+    setUnreadNotifications(notifRes.count ?? 0);
+    setUnreadMessages(dmRes.count ?? 0);
+  }, [user, pathname]);
 
   useEffect(() => {
-    loadUnreadCounts();
+    void loadUnreadCounts();
+  }, [loadUnreadCounts]);
 
-    if (pathname === '/invitations') setPendingInvitations(0);
-    if (pathname === '/notifications') setUnreadNotifications(0);
-    if (pathname === '/messages') setUnreadMessages(0);
-  }, [loadUnreadCounts, pathname]);
+  useEffect(() => {
+    const onRefresh = () => {
+      void loadUnreadCounts();
+    };
+    if (typeof window === 'undefined') return;
+    window.addEventListener('beefs:badges-refresh', onRefresh);
+    return () => window.removeEventListener('beefs:badges-refresh', onRefresh);
+  }, [loadUnreadCounts]);
 
   useEffect(() => {
     if (!user) return;
@@ -131,7 +146,7 @@ export function Header() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'beef_invitations', filter: `invitee_id=eq.${user.id}` },
         () => {
-          setPendingInvitations(prev => prev + 1);
+          void loadUnreadCounts();
           toast('Nouvelle invitation reçue !', 'info');
         }
       )
@@ -145,12 +160,7 @@ export function Header() {
           const prefKey = typeMap[n.type || ''];
           if (prefKey && prefs[prefKey] === false) return;
 
-          if (pathname !== '/notifications') {
-            setUnreadNotifications(prev => prev + 1);
-          }
-          if (n.type === 'message' && pathname !== '/messages') {
-            setUnreadMessages(prev => prev + 1);
-          }
+          void loadUnreadCounts();
           showBrowserNotification(n.title || 'Beefs', n.body || '');
         }
       )

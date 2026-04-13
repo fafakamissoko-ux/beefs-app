@@ -289,9 +289,11 @@ export default function FeedPage() {
             const rows = byBeef.get(beef.id) || [];
             const invited = mediatorInviteeIdsByBeef.get(beef.id);
             const nonMed = rows.filter((r) => r.user_id !== mid && r.role !== 'witness');
+            // Inclure les « pending » dès qu’ils sont dans beef_participants : les spectateurs ne voient
+            // pas les lignes beef_invitations (RLS), donc invited serait vide sans ce cas.
             const eligible = nonMed.filter((r) => {
               if (r.invite_status === 'declined') return false;
-              if (r.invite_status === 'accepted') return true;
+              if (r.invite_status === 'accepted' || r.invite_status === 'pending') return true;
               return invited?.has(r.user_id) ?? false;
             });
             eligible.sort((a, b) => {

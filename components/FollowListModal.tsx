@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
+import { fetchUserPublicByIds, displayNameFromPublicRow } from '@/lib/fetch-user-public-profile';
 
 type ListType = 'followers' | 'following';
 
@@ -41,42 +42,42 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
       if (type === 'followers') {
         const { data, error } = await supabase
           .from('followers')
-          .select(
-            'follower_id, users!followers_follower_id_fkey(id, username, display_name, avatar_url)'
-          )
+          .select('follower_id')
           .eq('following_id', userId)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        const list: ListedUser[] = (data || [])
-          .map((r: any) => r.users)
-          .filter(Boolean)
-          .map((u: any) => ({
-            id: u.id,
-            username: u.username,
-            display_name: u.display_name || u.username,
-            avatar_url: u.avatar_url ?? null,
-          }));
+        const followerIds = (data || []).map((r: { follower_id: string }) => r.follower_id).filter(Boolean);
+        const pubMap = await fetchUserPublicByIds(supabase, followerIds, 'id, username, display_name, avatar_url');
+        const list: ListedUser[] = followerIds.map((id) => {
+          const u = pubMap.get(id);
+          return {
+            id,
+            username: u?.username ?? 'user',
+            display_name: displayNameFromPublicRow(u, u?.username ?? 'Utilisateur'),
+            avatar_url: u?.avatar_url ?? null,
+          };
+        });
         setRows(list);
       } else {
         const { data, error } = await supabase
           .from('followers')
-          .select(
-            'following_id, users!followers_following_id_fkey(id, username, display_name, avatar_url)'
-          )
+          .select('following_id')
           .eq('follower_id', userId)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        const list: ListedUser[] = (data || [])
-          .map((r: any) => r.users)
-          .filter(Boolean)
-          .map((u: any) => ({
-            id: u.id,
-            username: u.username,
-            display_name: u.display_name || u.username,
-            avatar_url: u.avatar_url ?? null,
-          }));
+        const followingIdsList = (data || []).map((r: { following_id: string }) => r.following_id).filter(Boolean);
+        const pubMap = await fetchUserPublicByIds(supabase, followingIdsList, 'id, username, display_name, avatar_url');
+        const list: ListedUser[] = followingIdsList.map((id) => {
+          const u = pubMap.get(id);
+          return {
+            id,
+            username: u?.username ?? 'user',
+            display_name: displayNameFromPublicRow(u, u?.username ?? 'Utilisateur'),
+            avatar_url: u?.avatar_url ?? null,
+          };
+        });
         setRows(list);
       }
     } catch (e) {

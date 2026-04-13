@@ -166,6 +166,9 @@ export default function NotificationsPage() {
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, is_read: true }))
       );
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
+      }
     } finally {
       setMarkingAll(false);
     }
@@ -180,7 +183,28 @@ export default function NotificationsPage() {
       setNotifications((prev) =>
         prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))
       );
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
+      }
     }
+
+    // Invité mais pas encore accepté : l’arène ouvre en spectateur ; on envoie vers les invitations.
+    if (n.type === 'beef_live' && user?.id && n.metadata && typeof n.metadata === 'object') {
+      const beefId = (n.metadata as Record<string, unknown>).beef_id;
+      if (typeof beefId === 'string' && beefId.length > 0) {
+        const { data: part } = await supabase
+          .from('beef_participants')
+          .select('invite_status')
+          .eq('beef_id', beefId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (part?.invite_status === 'pending') {
+          router.push('/invitations');
+          return;
+        }
+      }
+    }
+
     if (n.link) router.push(n.link);
   };
 

@@ -206,6 +206,10 @@ function MessagesPageInner() {
       setConversations(prev =>
         prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c)
       );
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
+      }
     } catch (err) {
       console.error('Error loading messages:', err);
     } finally {

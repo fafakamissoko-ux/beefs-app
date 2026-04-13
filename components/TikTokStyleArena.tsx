@@ -1058,34 +1058,37 @@ export function TikTokStyleArena({
     }
   }, [isHost, endBeef]);
 
-  // Load beef participants from Supabase to map roles
+  // Load beef participants from Supabase to map roles (noms via user_public_profile, pas users)
   useEffect(() => {
     const loadParticipants = async () => {
       const { data } = await supabase
         .from('beef_participants')
-        .select('user_id, role, is_main, users!beef_participants_user_id_fkey(username, display_name)')
+        .select('user_id, role, is_main')
         .eq('beef_id', roomId);
 
-      if (data) {
-        const roles: Record<string, BeefParticipantRowMeta> = {};
-        data.forEach((p) => {
-          const row = p as {
-            user_id: string;
-            role: string;
-            users?: { username?: string; display_name?: string } | { username?: string; display_name?: string }[] | null;
-          };
-          const u = Array.isArray(row.users) ? row.users[0] : row.users;
-          const dn = (u?.display_name ?? '').trim();
-          const un = (u?.username ?? '').trim();
-          const name = dn || un || 'Participant';
-          roles[row.user_id] = {
-            role: row.role,
-            name,
-            matchAliases: buildParticipantAliasSet(u?.display_name, u?.username, name),
-          };
-        });
-        setParticipantRoles(roles);
+      if (!data?.length) {
+        setParticipantRoles({});
+        return;
       }
+
+      const { fetchUserPublicByIds } = await import('@/lib/fetch-user-public-profile');
+      const ids = data.map((p) => p.user_id).filter(Boolean);
+      const pubMap = await fetchUserPublicByIds(supabase, ids, 'id, username, display_name');
+
+      const roles: Record<string, BeefParticipantRowMeta> = {};
+      data.forEach((p) => {
+        const row = p as { user_id: string; role: string };
+        const u = pubMap.get(row.user_id);
+        const dn = (u?.display_name ?? '').trim();
+        const un = (u?.username ?? '').trim();
+        const name = dn || un || 'Participant';
+        roles[row.user_id] = {
+          role: row.role,
+          name,
+          matchAliases: buildParticipantAliasSet(u?.display_name, u?.username, name),
+        };
+      });
+      setParticipantRoles(roles);
     };
     loadParticipants();
   }, [roomId]);
