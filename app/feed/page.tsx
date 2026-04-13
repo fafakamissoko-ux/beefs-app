@@ -422,18 +422,18 @@ export default function FeedPage() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#08080A]">
+      <div className="flex min-h-dvh items-center justify-center bg-[#08080A]">
         <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-dvh bg-black">
       <Suspense fallback={null}>
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
-      <div className="mx-auto max-w-6xl px-4 pb-8 pt-10 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-full px-4 pb-8 pt-10 sm:px-6">
         {/* Active beef banner */}
         {activeBeef && (
           <motion.div
@@ -472,7 +472,7 @@ export default function FeedPage() {
               <button
                 key={tab.id}
                 onClick={() => setFeedType(tab.id as any)}
-                className={`relative flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold transition-all duration-200 ${
+                className={`relative flex min-h-[44px] items-center gap-2 rounded-full px-5 py-2 text-sm font-bold transition-all duration-200 ${
                   feedType === tab.id
                     ? 'text-white bg-white/10 ring-1 ring-white/[0.12] shadow-[0_0_12px_rgba(0,82,255,0.12)]'
                     : 'text-gray-500 hover:text-gray-200'
@@ -487,7 +487,7 @@ export default function FeedPage() {
             href={hrefWithFrom('/buy-points', pathname)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 self-stretch rounded-full border border-ember-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-ember-400 transition-colors hover:bg-ember-500/10 hover:text-white sm:self-auto"
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 self-stretch rounded-full border border-ember-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-ember-400 transition-colors hover:bg-ember-500/10 hover:text-white sm:self-auto"
           >
             <Coins className="w-4 h-4 flex-shrink-0" />
             <span>Acheter des points</span>
@@ -502,7 +502,7 @@ export default function FeedPage() {
               <button
                 key={s.id}
                 onClick={() => setSelectedStatus(s.id)}
-                className={`px-4 py-1.5 rounded-full font-sans text-xs font-semibold whitespace-nowrap border transition-all duration-200 ${
+                className={`inline-flex min-h-[44px] items-center px-4 py-1.5 rounded-full font-sans text-xs font-semibold whitespace-nowrap border transition-all duration-200 ${
                   selectedStatus === s.id
                     ? 'text-white bg-white/10 border-white/30'
                     : 'text-gray-500 bg-transparent border-white/[0.08] hover:text-gray-300 hover:border-white/15'
@@ -557,7 +557,7 @@ export default function FeedPage() {
               <button
                 key={tag}
                 onClick={() => handleTagClick(tag)}
-                className="px-3 py-1 font-sans text-xs font-medium text-white/40 hover:text-brand-400 rounded-full whitespace-nowrap border border-white/[0.06] bg-white/[0.03] transition-colors flex-shrink-0"
+                className="inline-flex min-h-[44px] flex-shrink-0 items-center rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1 font-sans text-xs font-medium text-white/40 whitespace-nowrap transition-colors hover:text-brand-400"
               >
                 #{tag}
               </button>

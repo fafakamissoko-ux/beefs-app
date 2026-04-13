@@ -250,7 +250,7 @@ export default function ArenaPage() {
       : 0;
 
     return (
-      <div className="fixed inset-0 bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col items-center justify-center p-6">
+      <div className="fixed inset-0 z-40 flex min-h-dvh flex-col items-center justify-center bg-gradient-to-b from-gray-950 via-gray-900 to-black p-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -290,7 +290,7 @@ export default function ArenaPage() {
 
   if (!userId || !userName) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
+      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black">
         <div className="text-white text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto mb-4" />
           <p>Chargement...</p>
@@ -301,7 +301,7 @@ export default function ArenaPage() {
 
   if (!beefEndedInfo && !arenaReady) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
+      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black">
         <div className="text-white text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto mb-4" />
           <p>Chargement de l’arène…</p>
@@ -311,7 +311,7 @@ export default function ArenaPage() {
   }
 
   return (
-    <div className="fixed inset-0 top-16">
+    <div className="fixed left-1/2 top-14 z-40 h-[calc(100dvh-3.5rem)] w-full max-w-md -translate-x-1/2 overflow-hidden">
       <TikTokStyleArena
         host={host}
         roomId={roomId}

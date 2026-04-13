@@ -4032,7 +4032,7 @@ export function TikTokStyleArena({
         )}
 
       {/* ── Header fixe : annonce puis chrono / LIVE (pile unique, mobile + desktop) ── */}
-      <div className="pointer-events-none fixed left-0 right-0 top-14 z-[60] flex w-full flex-col">
+      <div className="pointer-events-none fixed left-1/2 top-14 z-[60] flex w-full max-w-md -translate-x-1/2 flex-col">
         {arenaHasAnnouncement && (
           <div className="pointer-events-none shrink-0 border-b border-white/10 bg-black/65 px-3 py-2 backdrop-blur-md">
             <p className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white">

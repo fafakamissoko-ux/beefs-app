@@ -68,7 +68,9 @@ function hideGlobalSearchOnPath(pathname: string | null): boolean {
   return false;
 }
 
-export function Header() {
+export type HeaderShell = 'phone' | 'full';
+
+export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [pendingInvitations, setPendingInvitations] = useState(0);
@@ -246,8 +248,14 @@ export function Header() {
       {user && !pathname?.startsWith('/admin') && (
         <BeefNotificationToasts userId={user.id} />
       )}
-      <header className="fixed left-0 right-0 top-0 z-header border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4">
+      <header
+        className={
+          shell === 'phone'
+            ? 'fixed left-1/2 top-0 z-header w-full max-w-md -translate-x-1/2 border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl'
+            : 'fixed left-0 right-0 top-0 z-header border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl'
+        }
+      >
+        <div className={shell === 'phone' ? 'mx-auto w-full px-4' : 'mx-auto max-w-7xl px-4'}>
           <div className="flex items-center justify-between h-14">
             {/* Logo — invités : accueil splash pour éviter préchargement /feed (RSC) sur login, onboarding, etc. */}
             <Link href={user ? '/feed' : '/'} className="relative z-[5] flex items-center gap-2.5 group flex-shrink-0">

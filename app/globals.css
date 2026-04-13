@@ -100,7 +100,7 @@
   }
 
   .btn-primary {
-    @apply px-5 py-2.5 text-white font-semibold rounded-[2px] transition-all duration-200 active:scale-[0.97] shadow-sm;
+    @apply inline-flex min-h-[44px] items-center justify-center px-5 py-2.5 text-white font-semibold rounded-[2px] transition-all duration-200 active:scale-[0.97] shadow-sm;
     background: linear-gradient(135deg, #ff4d00, #cc3d00);
   }
   .btn-primary:hover {
@@ -120,7 +120,7 @@
   }
 
   .btn-secondary {
-    @apply px-5 py-2.5 text-white font-semibold rounded-[2px] transition-all duration-200 active:scale-[0.97];
+    @apply inline-flex min-h-[44px] items-center justify-center px-5 py-2.5 text-white font-semibold rounded-[2px] transition-all duration-200 active:scale-[0.97];
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
@@ -138,6 +138,21 @@
   .btn-secondary[aria-busy="true"] {
     pointer-events: none;
     animation: pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .btn-ghost {
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-[2px] px-5 py-2.5 font-semibold text-white/90 transition-all duration-200 active:scale-[0.97];
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+  .btn-ghost:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none !important;
   }
 
   .input-field {
