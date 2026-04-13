@@ -46,6 +46,7 @@ interface Beef {
   duration?: number;
   engagement_score?: number;
   participants_count?: number;
+  challenger_a_name?: string | null;
 }
 
 const STATUS_FILTERS = [
@@ -217,14 +218,63 @@ export default function FeedPage() {
       const { data, error } = await query;
       if (error) throw error;
 
-      const rawCount = (data || []).length;
-      let beefsWithData = (data || []).map((beef: any) => ({
+      const beefList = data || [];
+      const beefIds = beefList.map((b: { id: string }) => b.id);
+      const challengerANameByBeef: Record<string, string> = {};
+
+      if (beefIds.length > 0) {
+        const { data: partRows, error: partErr } = await supabase
+          .from('beef_participants')
+          .select('beef_id, user_id, invite_status, created_at, users(display_name, username)')
+          .in('beef_id', beefIds);
+
+        if (!partErr && partRows) {
+          type PartRow = {
+            beef_id: string;
+            user_id: string;
+            invite_status: string | null;
+            created_at: string;
+            users:
+              | { display_name: string | null; username: string | null }
+              | { display_name: string | null; username: string | null }[]
+              | null;
+          };
+          const byBeef = new Map<string, PartRow[]>();
+          for (const row of partRows as PartRow[]) {
+            const list = byBeef.get(row.beef_id) || [];
+            list.push(row);
+            byBeef.set(row.beef_id, list);
+          }
+          for (const beef of beefList as { id: string; mediator_id?: string | null }[]) {
+            const mid = beef.mediator_id;
+            const rows = byBeef.get(beef.id) || [];
+            const nonMed = rows.filter((r) => r.user_id !== mid);
+            nonMed.sort((a, b) => {
+              const ra = a.invite_status === 'accepted' ? 0 : 1;
+              const rb = b.invite_status === 'accepted' ? 0 : 1;
+              if (ra !== rb) return ra - rb;
+              return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+            });
+            const u = nonMed[0]?.users;
+            const pack = Array.isArray(u) ? u[0] : u;
+            const name =
+              (pack?.display_name && String(pack.display_name).trim()) ||
+              (pack?.username && String(pack.username).trim()) ||
+              '';
+            if (name) challengerANameByBeef[beef.id] = name;
+          }
+        }
+      }
+
+      const rawCount = beefList.length;
+      let beefsWithData = beefList.map((beef: any) => ({
         ...beef,
         host_name: beef.users?.display_name || beef.users?.username || 'Anonyme',
         host_username: beef.users?.username?.trim() || null,
         viewer_count: beef.viewer_count || 0,
         tags: beef.tags || [],
         participants_count: beef.beef_participants?.[0]?.count || 0,
+        challenger_a_name: challengerANameByBeef[beef.id] ?? null,
       }));
 
       if (selectedStatus === 'scheduled') {

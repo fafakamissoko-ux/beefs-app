@@ -3,6 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Eye,
@@ -20,6 +21,8 @@ import {
   Pause,
   Share2,
   Sliders,
+  Calendar,
+  Flame,
 } from 'lucide-react';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { ChatPanel } from './ChatPanel';
@@ -156,15 +159,16 @@ interface UserProfile {
   id: string;
   username: string;
   displayName: string;
-  avatar?: string;
+  avatarUrl: string | null;
   bio?: string;
   isPrivate: boolean;
   joinedDate: string;
   stats: {
-    debates: number;
-    wins: number;
+    mediations: number;
+    participations: number;
     followers: number;
     following: number;
+    points: number;
   };
 }
 
@@ -2481,13 +2485,21 @@ export function TikTokStyleArena({
       return;
     }
 
-    type UserRow = { id: string; username: string; display_name: string | null; bio: string | null; created_at: string };
+    type UserRow = {
+      id: string;
+      username: string;
+      display_name: string | null;
+      bio: string | null;
+      created_at: string;
+      avatar_url: string | null;
+      points: number | null;
+    };
     let data: UserRow | null = null;
 
     if (knownUserId && isValidArenaUserId(knownUserId)) {
       const { data: d } = await supabase
         .from('users')
-        .select('id, username, display_name, bio, created_at')
+        .select('id, username, display_name, bio, created_at, avatar_url, points')
         .eq('id', knownUserId)
         .maybeSingle();
       data = d as UserRow | null;
@@ -2496,7 +2508,7 @@ export function TikTokStyleArena({
       const term = escapeForIlikeExact(username.trim());
       const { data: d } = await supabase
         .from('users')
-        .select('id, username, display_name, bio, created_at')
+        .select('id, username, display_name, bio, created_at, avatar_url, points')
         .ilike('username', term)
         .maybeSingle();
       data = d as UserRow | null;
@@ -2505,7 +2517,7 @@ export function TikTokStyleArena({
       const term = escapeForIlikeExact(username.trim());
       const { data: rows } = await supabase
         .from('users')
-        .select('id, username, display_name, bio, created_at')
+        .select('id, username, display_name, bio, created_at, avatar_url, points')
         .ilike('display_name', term)
         .limit(1);
       data = (rows?.[0] as UserRow | undefined) ?? null;
@@ -2526,6 +2538,17 @@ export function TikTokStyleArena({
       .select('*', { count: 'exact', head: true })
       .eq('mediator_id', data.id);
 
+    const { count: followingCount } = await supabase
+      .from('followers')
+      .select('*', { count: 'exact', head: true })
+      .eq('follower_id', data.id);
+
+    const { data: partRows } = await supabase
+      .from('beef_participants')
+      .select('beef_id')
+      .eq('user_id', data.id);
+    const participations = new Set((partRows || []).map((r: { beef_id: string }) => r.beef_id)).size;
+
     const { data: myFollow } = userId
       ? await supabase
           .from('followers')
@@ -2539,14 +2562,16 @@ export function TikTokStyleArena({
       id: data.id,
       username: data.username,
       displayName: data.display_name || data.username,
+      avatarUrl: data.avatar_url ?? null,
       bio: data.bio || '',
       isPrivate: false,
       joinedDate: data.created_at?.split('T')[0] || '',
       stats: {
-        debates: debateCount ?? 0,
-        wins: 0,
+        mediations: debateCount ?? 0,
+        participations,
         followers: followerCount ?? 0,
-        following: 0,
+        following: followingCount ?? 0,
+        points: data.points ?? 0,
       },
     };
     profileCache.current[data.id] = profile;
@@ -4526,57 +4551,80 @@ export function TikTokStyleArena({
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-gradient-to-b from-gray-900 to-black border border-white/20 rounded-xl max-w-md w-full overflow-hidden shadow-2xl"
+              className="relative max-w-md w-full overflow-hidden rounded-3xl border border-gray-700 bg-gradient-to-br from-gray-800/50 to-gray-900/50 shadow-2xl"
             >
-              {/* Header with gradient */}
-              <div className="relative bg-gradient-to-r from-cobalt-600 via-ember-500 to-cobalt-500 p-6">
-                <button
-                  onClick={() => setShowProfile(false)}
-                  className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-1"
-                >
-                  <X className="w-5 h-5 text-white" strokeWidth={1} />
-                </button>
-                <div className="flex flex-col items-center">
-                  <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-4xl mb-3 border-2 border-white/30">
-                    {selectedProfile.avatar || selectedProfile.displayName[0].toUpperCase()}
-                  </div>
-                  <h2 className="text-white font-black text-xl">{selectedProfile.displayName}</h2>
-                  <p className="text-white/80 text-sm">@{selectedProfile.username}</p>
-                </div>
+              <button
+                type="button"
+                onClick={() => setShowProfile(false)}
+                className="absolute right-3 top-3 z-10 rounded-full p-1.5 text-white transition-colors hover:bg-white/15"
+                aria-label="Fermer"
+              >
+                <X className="h-5 w-5" strokeWidth={1.5} />
+              </button>
+
+              <div className="relative h-28 bg-gradient-to-r from-brand-500/20 via-brand-400/20 to-brand-600/20">
+                <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10" />
               </div>
 
-              {/* Content */}
-              <div className="p-6 space-y-4">
-                {/* Bio */}
-                {selectedProfile.bio && (
-                  <div>
-                    <p className="text-white/90 text-sm text-center">{selectedProfile.bio}</p>
-                  </div>
-                )}
-
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
-                    <div className="text-2xl font-black text-white">{selectedProfile.stats.debates}</div>
-                    <div className="text-xs text-white/60">Débats</div>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
-                    <div className="text-2xl font-black text-green-400">{selectedProfile.stats.wins}</div>
-                    <div className="text-xs text-white/60">Victoires</div>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
-                    <div className="text-2xl font-black text-ember-400">{selectedProfile.stats.followers}</div>
-                    <div className="text-xs text-white/60">Abonnés</div>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
-                    <div className="text-2xl font-black text-blue-400">{selectedProfile.stats.following}</div>
-                    <div className="text-xs text-white/60">Abonnements</div>
+              <div className="relative px-6 pb-6 -mt-12">
+                <div className="mb-4 flex justify-center">
+                  <div className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-gray-900 bg-gradient-to-br from-gray-700 to-gray-800 text-3xl font-black text-white">
+                    {selectedProfile.avatarUrl ? (
+                      <Image
+                        src={selectedProfile.avatarUrl}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="96px"
+                      />
+                    ) : (
+                      selectedProfile.displayName[0]?.toUpperCase() || '?'
+                    )}
                   </div>
                 </div>
 
-                {/* Member since */}
-                <div className="text-center text-white/40 text-xs">
-                  Membre depuis {new Date(selectedProfile.joinedDate).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                <div className="mb-3 text-center">
+                  <h2 className="font-sans text-2xl font-black text-white">{selectedProfile.displayName}</h2>
+                  <p className="text-sm text-gray-400">@{selectedProfile.username}</p>
+                </div>
+
+                {selectedProfile.bio ? (
+                  <p className="mb-4 text-center text-sm text-gray-300">{selectedProfile.bio}</p>
+                ) : null}
+
+                <div className="mb-4 flex flex-wrap justify-center gap-x-6 gap-y-2">
+                  <div className="text-center">
+                    <span className="text-2xl font-black text-white">{selectedProfile.stats.participations}</span>
+                    <span className="ml-1 text-sm text-gray-400">Participations</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-2xl font-black text-white">{selectedProfile.stats.mediations}</span>
+                    <span className="ml-1 text-sm text-gray-400">Médiations</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-2xl font-black text-white">{selectedProfile.stats.followers}</span>
+                    <span className="ml-1 text-sm text-gray-400">Abonnés</span>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-2xl font-black text-white">{selectedProfile.stats.following}</span>
+                    <span className="ml-1 text-sm text-gray-400">Abonnements</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Flame className="h-5 w-5 shrink-0 text-brand-400" />
+                    <span className="text-2xl font-black text-white">{selectedProfile.stats.points}</span>
+                    <span className="text-sm text-gray-400">Points</span>
+                  </div>
+                </div>
+
+                <div className="mb-5 flex items-center justify-center gap-2 text-sm text-gray-400">
+                  <Calendar className="h-4 w-4 shrink-0" />
+                  <span>
+                    Membre depuis{' '}
+                    {new Date(selectedProfile.joinedDate).toLocaleDateString('fr-FR', {
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </span>
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -4585,25 +4633,27 @@ export function TikTokStyleArena({
                       <button
                         type="button"
                         onClick={() => void toggleFollowProfileTarget()}
-                        className={`flex-1 font-bold py-2.5 rounded-xl transition-colors ${
+                        className={`flex-1 rounded-lg py-2.5 font-bold transition-colors ${
                           profileFollowsTarget
-                            ? 'bg-white/15 text-white border border-white/25 hover:bg-white/25'
-                            : 'bg-gradient-to-r from-ember-500 to-cobalt-500 text-white hover:from-ember-400 hover:to-cobalt-400'
+                            ? 'border border-white/25 bg-white/10 text-white hover:bg-white/20'
+                            : 'brand-gradient text-black hover:opacity-90'
                         }`}
                       >
                         {profileFollowsTarget ? 'Abonné ✓' : 'Suivre'}
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowProfile(false);
-                        router.push('/messages');
-                      }}
-                      className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-2.5 rounded-xl border border-white/20"
-                    >
-                      Message
-                    </button>
+                    {userId && selectedProfile.id !== userId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowProfile(false);
+                          router.push(`/messages?with=${encodeURIComponent(selectedProfile.id)}`);
+                        }}
+                        className="flex-1 rounded-lg border border-white/10 bg-white/5 py-2.5 font-bold text-white transition-colors hover:bg-white/10"
+                      >
+                        Message
+                      </button>
+                    )}
                   </div>
                   {userId && selectedProfile.id !== userId && (
                     <button

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback, Suspense, type KeyboardEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck } from 'lucide-react';
@@ -36,8 +36,19 @@ interface Message {
   is_read: boolean;
 }
 
-export default function MessagesPage() {
+const DM_WITH_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type UserSearchRow = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+function MessagesPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading } = useAuth();
   const { toast } = useToast();
 
@@ -49,9 +60,10 @@ export default function MessagesPage() {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [showNewConv, setShowNewConv] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<UserSearchRow[]>([]);
   const [searching, setSearching] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const deepLinkTargetRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -142,7 +154,7 @@ export default function MessagesPage() {
     return () => { supabase.removeChannel(channel); };
   }, [selectedConv, user]);
 
-  const loadMessages = async (conv: Conversation) => {
+  const loadMessages = useCallback(async (conv: Conversation) => {
     setSelectedConv(conv);
     setLoadingMsgs(true);
     try {
@@ -184,7 +196,7 @@ export default function MessagesPage() {
     } finally {
       setLoadingMsgs(false);
     }
-  };
+  }, [user?.id]);
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConv || !user) return;
@@ -241,7 +253,7 @@ export default function MessagesPage() {
     }
   };
 
-  const startConversation = async (otherUser: any) => {
+  const startConversation = async (otherUser: UserSearchRow) => {
     if (!user) return;
     try {
       const { data: convId } = await supabase.rpc('get_or_create_conversation', {
@@ -250,20 +262,27 @@ export default function MessagesPage() {
       });
 
       if (convId) {
+        const cid = String(convId);
+        const peer: Conversation['other_user'] = {
+          id: otherUser.id,
+          username: otherUser.username,
+          display_name: otherUser.display_name || otherUser.username || 'Utilisateur',
+          avatar_url: otherUser.avatar_url,
+        };
         const conv: Conversation = {
-          id: convId,
-          participant_1: user.id < otherUser.id ? user.id : otherUser.id,
-          participant_2: user.id < otherUser.id ? otherUser.id : user.id,
+          id: cid,
+          participant_1: user.id < peer.id ? user.id : peer.id,
+          participant_2: user.id < peer.id ? peer.id : user.id,
           last_message_text: null,
           last_message_at: null,
-          other_user: otherUser,
+          other_user: peer,
           unread_count: 0,
         };
         setConversations(prev => {
-          const exists = prev.find(c => c.id === convId);
+          const exists = prev.find(c => c.id === cid);
           return exists ? prev : [conv, ...prev];
         });
-        loadMessages(conv);
+        void loadMessages(conv);
         setShowNewConv(false);
         setSearchQuery('');
         setSearchResults([]);
@@ -272,6 +291,70 @@ export default function MessagesPage() {
       toast('Erreur lors de la création de la conversation', 'error');
     }
   };
+
+  useEffect(() => {
+    if (loading || !user) return;
+    const raw = searchParams.get('with');
+    if (!raw) {
+      deepLinkTargetRef.current = null;
+      return;
+    }
+    const withId = raw.trim();
+    if (!DM_WITH_UUID_RE.test(withId) || withId === user.id) {
+      router.replace('/messages', { scroll: false });
+      return;
+    }
+    if (deepLinkTargetRef.current === withId) return;
+    deepLinkTargetRef.current = withId;
+    router.replace('/messages', { scroll: false });
+
+    void (async () => {
+      try {
+        const { data: otherUser, error } = await supabase
+          .from('users')
+          .select('id, username, display_name, avatar_url')
+          .eq('id', withId)
+          .maybeSingle();
+        if (error || !otherUser) {
+          toast('Utilisateur introuvable', 'error');
+          return;
+        }
+        const peer: Conversation['other_user'] = {
+          id: otherUser.id,
+          username: otherUser.username,
+          display_name: otherUser.display_name || otherUser.username || 'Utilisateur',
+          avatar_url: otherUser.avatar_url,
+        };
+        const { data: convId, error: rpcErr } = await supabase.rpc('get_or_create_conversation', {
+          user_a: user.id,
+          user_b: peer.id,
+        });
+        if (rpcErr || !convId) {
+          toast('Impossible d’ouvrir la conversation', 'error');
+          return;
+        }
+        const cid = String(convId);
+        const conv: Conversation = {
+          id: cid,
+          participant_1: user.id < peer.id ? user.id : peer.id,
+          participant_2: user.id < peer.id ? peer.id : user.id,
+          last_message_text: null,
+          last_message_at: null,
+          other_user: peer,
+          unread_count: 0,
+        };
+        setConversations(prev => {
+          const exists = prev.find(c => c.id === cid);
+          return exists ? prev : [conv, ...prev];
+        });
+        await loadMessages(conv);
+      } catch {
+        toast('Impossible d’ouvrir la conversation', 'error');
+      } finally {
+        deepLinkTargetRef.current = null;
+      }
+    })();
+  }, [loading, user, searchParams, router, toast, loadMessages]);
 
   const activateRow = (fn: () => void) => (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -553,5 +636,19 @@ export default function MessagesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-black">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+        </div>
+      }
+    >
+      <MessagesPageInner />
+    </Suspense>
   );
 }
