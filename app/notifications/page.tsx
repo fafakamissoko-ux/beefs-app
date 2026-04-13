@@ -16,6 +16,7 @@ import {
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppBackButton } from '@/components/AppBackButton';
+import { useToast } from '@/components/Toast';
 
 type NotificationType =
   | 'follow'
@@ -76,6 +77,7 @@ function SkeletonCard() {
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,12 +160,19 @@ export default function NotificationsPage() {
     if (!user || markingAll) return;
     setMarkingAll(true);
     try {
-      // Aligné sur le compteur header : non lu = false OU null (pas seulement eq false).
-      await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', user.id)
-        .or('is_read.is.null,is_read.eq.false');
+      const { error: rpcErr } = await supabase.rpc('mark_all_notifications_read');
+      if (rpcErr) {
+        const { error: upErr } = await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', user.id)
+          .or('is_read.is.null,is_read.eq.false');
+        if (upErr) {
+          console.error('[notifications] markAllRead', rpcErr, upErr);
+          toast('Impossible de tout marquer comme lu. Réessaie dans un instant.', 'error');
+          return;
+        }
+      }
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, is_read: true }))
       );
@@ -177,10 +186,17 @@ export default function NotificationsPage() {
 
   const handleRowClick = async (n: AppNotification) => {
     if (!n.is_read) {
-      await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', n.id);
+      const { error: rpcErr } = await supabase.rpc('mark_notification_read', { p_id: n.id });
+      if (rpcErr && user) {
+        const { error: upErr } = await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('id', n.id)
+          .eq('user_id', user.id);
+        if (upErr) {
+          console.error('[notifications] mark one read', rpcErr, upErr);
+        }
+      }
       setNotifications((prev) =>
         prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))
       );

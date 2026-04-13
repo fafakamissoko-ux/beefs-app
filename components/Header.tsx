@@ -37,6 +37,16 @@ function showBrowserNotification(title: string, body: string) {
 }
 
 /** Connexion / inscription / auth : pas de recherche (même si une session JWT résiduelle rend `user` truthy). */
+/** Réponse RPC count(*) (PostgREST peut renvoyer number | string). */
+function parseBadgeCount(data: unknown): number {
+  if (typeof data === 'number' && Number.isFinite(data)) return Math.max(0, Math.floor(data));
+  if (typeof data === 'string') {
+    const p = parseInt(data, 10);
+    return Number.isFinite(p) ? Math.max(0, p) : 0;
+  }
+  return 0;
+}
+
 function hideGlobalSearchOnPath(pathname: string | null): boolean {
   if (!pathname) return false;
   if (
@@ -112,8 +122,7 @@ export function Header() {
         .or('is_read.is.null,is_read.eq.false');
       setUnreadNotifications(fb.count ?? 0);
     } else {
-      const n = notifRpc.data;
-      setUnreadNotifications(typeof n === 'number' ? n : Number(n) || 0);
+      setUnreadNotifications(parseBadgeCount(notifRpc.data));
     }
 
     if (dmRpc.error) {
@@ -125,8 +134,7 @@ export function Header() {
         .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`, { referencedTable: 'conversations' });
       setUnreadMessages(fb.count ?? 0);
     } else {
-      const n = dmRpc.data;
-      setUnreadMessages(typeof n === 'number' ? n : Number(n) || 0);
+      setUnreadMessages(parseBadgeCount(dmRpc.data));
     }
   }, [user]);
 
