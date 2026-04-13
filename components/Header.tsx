@@ -36,6 +36,21 @@ function showBrowserNotification(title: string, body: string) {
   }
 }
 
+/** Connexion / inscription / auth : pas de recherche (même si une session JWT résiduelle rend `user` truthy). */
+function hideGlobalSearchOnPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname === '/forgot-password' ||
+    pathname === '/onboarding'
+  ) {
+    return true;
+  }
+  if (pathname.startsWith('/auth/')) return true;
+  return false;
+}
+
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -46,6 +61,7 @@ export function Header() {
   const router = useRouter();
   const { user, userRole, signOut } = useAuth();
   const { toast } = useToast();
+  const showGlobalSearch = Boolean(user) && !hideGlobalSearchOnPath(pathname);
 
   useEffect(() => {
     setUserMenuOpen(false);
@@ -188,7 +204,7 @@ export function Header() {
 
             {/* Desktop Nav — liens app uniquement si connecté (sinon préfetch RSC ×6 → échecs Brave / Safari / réseau) */}
             <nav className="hidden md:flex items-center gap-1 relative z-[5] min-w-0">
-              {user && <GlobalSearchBar />}
+              {showGlobalSearch && <GlobalSearchBar />}
               {user &&
                 navItems.map((item) => {
                   const Icon = item.icon;
@@ -324,7 +340,7 @@ export function Header() {
 
             {/* Mobile */}
             <div className="flex md:hidden items-center gap-1.5">
-              {user && <GlobalSearchBar />}
+              {showGlobalSearch && <GlobalSearchBar />}
               {user && (
                 <Link href={hrefWithFrom('/create', pathname)} prefetch className="p-2 text-brand-400">
                   <Plus className="w-5 h-5" />
