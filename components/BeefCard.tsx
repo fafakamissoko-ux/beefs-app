@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
-import { Eye, Clock, Users, Flame, Play, CheckCircle, Calendar, ArrowUpRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, Clock, Users, Flame, Play, CheckCircle, Calendar, ArrowUpRight, User } from 'lucide-react';
 import { hasBeefWatchStarted } from '@/lib/beef-view-local';
 import { Countdown } from '@/components/Countdown';
 
@@ -22,9 +22,12 @@ interface BeefCardProps {
   thumbnail?: string;
   duration?: number;
   participants_count?: number;
+  challenger_b_name?: string | null;
+  mediator_name?: string | null;
   onClick: () => void;
   onTagClick?: (tag: string) => void;
   onNotifyClick?: () => void;
+  onApply?: () => void;
   index: number;
 }
 
@@ -42,11 +45,15 @@ export function BeefCard({
   thumbnail,
   duration,
   participants_count,
+  challenger_b_name,
+  mediator_name,
   onClick,
   onTagClick,
+  onApply,
   index,
 }: BeefCardProps) {
   const [hasOpenedArena, setHasOpenedArena] = useState(false);
+  const [replayHover, setReplayHover] = useState(false);
 
   const uiStatus: typeof status | 'scheduled' | 'preparing' =
     status === 'pending' && scheduled_at && new Date(scheduled_at).getTime() > Date.now()
@@ -123,13 +130,22 @@ export function BeefCard({
   const charSum = title.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const hueBase = charSum % 360;
 
+  const isManifesto = uiStatus === 'preparing' && (!challenger_b_name || !mediator_name);
+  const isReplay = status === 'ended' || status === 'replay';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
       onClick={onClick}
-      className="group cursor-pointer overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.08] backdrop-blur-2xl transition-all duration-300 hover:scale-[0.98] hover:border-white/20 hover:bg-white/[0.06]"
+      onMouseEnter={() => isReplay && setReplayHover(true)}
+      onMouseLeave={() => setReplayHover(false)}
+      className={`group relative cursor-pointer overflow-hidden rounded-[2rem] bg-white/[0.04] border backdrop-blur-2xl transition-all duration-300 hover:scale-[0.98] hover:bg-white/[0.06] ${
+        isManifesto
+          ? 'border-dashed border-white/15 hover:border-prestige-gold/30'
+          : 'border-white/[0.08] hover:border-white/20'
+      }`}
     >
       {/* Visual */}
       <div className="relative h-48 overflow-hidden rounded-t-[2rem]">
@@ -284,7 +300,88 @@ export function BeefCard({
             )}
           </div>
         )}
+
+        {/* Mode Manifeste — slots dynamiques pour les beefs en préparation */}
+        {isManifesto && (
+          <div className="mt-4 pt-3 border-t border-white/[0.06]">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2.5">Participants</p>
+            <div className="flex items-center gap-2">
+              {/* Host — toujours rempli */}
+              <div className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] px-2.5 py-1">
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
+                  style={{ background: `hsl(${hueBase}, 55%, 42%)` }}
+                >
+                  {(host_name || '?')[0].toUpperCase()}
+                </div>
+                <span className="font-sans text-[11px] text-white/60 font-medium truncate max-w-[70px]">{host_name}</span>
+              </div>
+
+              {/* Challenger B — rempli ou pointillés */}
+              {challenger_b_name ? (
+                <div className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] px-2.5 py-1">
+                  <div className="w-5 h-5 rounded-full bg-cobalt-500/30 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                    {challenger_b_name[0].toUpperCase()}
+                  </div>
+                  <span className="font-sans text-[11px] text-white/60 font-medium truncate max-w-[70px]">{challenger_b_name}</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onApply?.(); }}
+                  className="flex items-center gap-1.5 rounded-full border border-dashed border-white/20 px-2.5 py-1 hover:border-brand-400/40 hover:bg-brand-500/5 transition-colors"
+                >
+                  <User className="w-4 h-4 text-white/20" />
+                  <span className="font-sans text-[11px] text-white/30 italic">Challenger</span>
+                </button>
+              )}
+
+              {/* Médiateur — rempli ou pointillés */}
+              {mediator_name ? (
+                <div className="flex items-center gap-1.5 rounded-full bg-prestige-gold/8 border border-prestige-gold/20 px-2.5 py-1">
+                  <div className="w-5 h-5 rounded-full bg-prestige-gold/25 flex items-center justify-center text-[9px] font-bold text-prestige-gold shrink-0">
+                    {mediator_name[0].toUpperCase()}
+                  </div>
+                  <span className="font-sans text-[11px] text-prestige-gold/70 font-medium truncate max-w-[70px]">{mediator_name}</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onApply?.(); }}
+                  className="flex items-center gap-1.5 rounded-full border border-dashed border-prestige-gold/20 px-2.5 py-1 hover:border-prestige-gold/40 hover:bg-prestige-gold/5 transition-colors"
+                >
+                  <User className="w-4 h-4 text-prestige-gold/20" />
+                  <span className="font-sans text-[11px] text-prestige-gold/30 italic">Médiateur</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Overlay Replay — hover preview pour les beefs terminés */}
+      {isReplay && (
+        <AnimatePresence>
+          {replayHover && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 z-[3] rounded-[2rem] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.8 }}
+                className="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-md"
+              >
+                <Play className="w-7 h-7 text-white fill-white ml-1" />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
     </motion.div>
   );
 }

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Flame, X, Plus, Hash, Radio, Coins } from 'lucide-react';
+import { TrendingUp, Users, Flame, X, Plus, Hash, Radio, Coins, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { BeefCard } from '@/components/BeefCard';
 import dynamic from 'next/dynamic';
@@ -71,7 +71,7 @@ export default function FeedPage() {
   const { user } = useAuth();
   const [beefs, setBeefs] = useState<Beef[]>([]);
   const [loading, setLoading] = useState(true);
-  const [feedType, setFeedType] = useState<'pour-vous' | 'abonnements'>('pour-vous');
+  const [feedType, setFeedType] = useState<'pour-vous' | 'abonnements' | 'manifestes'>('pour-vous');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -239,7 +239,12 @@ export default function FeedPage() {
         beefsWithData = beefsWithData.filter((beef: any) => beef.tags?.some((tag: string) => selectedTags.includes(tag)));
       }
 
-      if (feedType === 'abonnements') {
+      if (feedType === 'manifestes') {
+        beefsWithData = beefsWithData.filter(
+          (beef: any) => beef.status === 'pending'
+        );
+        beefsWithData.sort(compareFeedOrder);
+      } else if (feedType === 'abonnements') {
         const followingSet = new Set(followingIds);
         beefsWithData = beefsWithData.filter(
           (beef: any) => beef.mediator_id && followingSet.has(beef.mediator_id)
@@ -355,6 +360,7 @@ export default function FeedPage() {
             {[
               { id: 'pour-vous', label: 'Pour vous', icon: TrendingUp },
               { id: 'abonnements', label: 'Abonnements', icon: Users },
+              { id: 'manifestes', label: 'Manifestes', icon: FileText },
             ].map(tab => (
               <button
                 key={tab.id}

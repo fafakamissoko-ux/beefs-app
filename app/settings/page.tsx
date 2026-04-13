@@ -74,6 +74,7 @@ export default function SettingsPage() {
   });
   
   const [accentColor, setAccentColor] = useState('#E83A14');
+  const [mediationAccess, setMediationAccess] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState({
     messages: true,
     follows: true,
@@ -1142,6 +1143,46 @@ export default function SettingsPage() {
             >
               Réinitialiser les guides
             </button>
+          </motion.div>
+
+          {/* Accès Médiation */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="rounded-2xl bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] p-6"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-prestige-gold/15 rounded-xl flex items-center justify-center">
+                <Shield className="w-5 h-5 text-prestige-gold" />
+              </div>
+              <div>
+                <h3 className="font-sans text-lg font-bold text-white">Accès Médiation</h3>
+                <p className="font-sans text-xs text-white/40">Débloque les outils de médiation sans changer ton profil public</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p id="mediation-access-label" className="font-sans text-sm text-white/60">Activer l&apos;accès médiateur</p>
+                <p className="font-mono text-[10px] text-white/25 tracking-wider mt-0.5">Aucun badge public ne sera affiché</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={mediationAccess}
+                aria-labelledby="mediation-access-label"
+                onClick={() => setMediationAccess(!mediationAccess)}
+                className={`relative w-12 h-7 rounded-full transition-all ${
+                  mediationAccess ? 'bg-prestige-gold' : 'bg-gray-300 dark:bg-white/10'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
+                    mediationAccess ? 'translate-x-5' : ''
+                  }`}
+                />
+              </button>
+            </div>
           </motion.div>
 
           {/* Danger Zone */}

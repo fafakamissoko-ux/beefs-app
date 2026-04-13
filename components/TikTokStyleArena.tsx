@@ -937,6 +937,13 @@ export function TikTokStyleArena({
   const auraIntensityMed = Math.round(20 + (auraMed / 100) * 50);
   const auraOpacityMed = (0.3 + (auraMed / 100) * 0.7).toFixed(2);
 
+  /** Aura prestige-gold — cadre sponsor : les gains remontent au Host quand un soutien financier est détecté.
+   *  TODO: brancher sur l'événement gift broadcast ; pour l'instant, activé par l'aura A ou B > 60. */
+  const sponsorAuraActive = auraA > 60 || auraB > 60;
+  const sponsorGlow = sponsorAuraActive
+    ? 'shadow-[0_0_32px_rgba(212,175,55,0.25),inset_0_0_18px_rgba(212,175,55,0.08)]'
+    : '';
+
   /** Pas de bulles « onboarding » quand la salle est déjà active ou pendant la connexion Daily */
   const featureGuideSuppress =
     isJoining ||
@@ -3009,7 +3016,7 @@ export function TikTokStyleArena({
             className={`relative z-[50] pointer-events-none h-[60%] w-full shrink-0 overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
           >
             {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
-            <div className="pointer-events-none absolute inset-0 z-0 flex h-auto flex-row gap-2 px-1">
+            <div className={`pointer-events-none absolute inset-0 z-0 flex h-auto flex-row gap-2 px-1 transition-shadow duration-700 ${sponsorGlow}`}>
               {/* LEFT — Participant A */}
               <motion.div
                 className={`pointer-events-auto relative h-full overflow-hidden rounded-[2rem] bg-[#08080A] transition-all duration-500 ${focusTarget === 'A' ? 'w-[80%]' : focusTarget === 'B' ? 'w-[20%]' : 'w-1/2'}`}

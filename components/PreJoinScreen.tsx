@@ -2,15 +2,32 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Video, VideoOff, ChevronDown } from 'lucide-react';
+import { MutinyProtocol } from './MutinyProtocol';
 
 interface PreJoinScreenProps {
   userName: string;
   /** Flux déjà autorisé par l’utilisateur — transmis à Daily pour éviter un 2ᵉ getUserMedia sans geste (iOS / Brave). */
   onJoin: (preAcquiredMedia: MediaStream | null) => void;
   viewerMode?: boolean;
+  mediatorName?: string;
+  currentUserSlot?: 'A' | 'B';
+  otherPartyInitiatedMutiny?: boolean;
+  onMutinyInitiate?: () => void;
+  onMutinyConfirm?: () => void;
+  onMutinyRefuse?: () => void;
 }
 
-export function PreJoinScreen({ userName, onJoin, viewerMode = false }: PreJoinScreenProps) {
+export function PreJoinScreen({
+  userName,
+  onJoin,
+  viewerMode = false,
+  mediatorName,
+  currentUserSlot,
+  otherPartyInitiatedMutiny,
+  onMutinyInitiate,
+  onMutinyConfirm,
+  onMutinyRefuse,
+}: PreJoinScreenProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   /** True si le MediaStream a été passé à Daily — ne pas stopper les pistes au démontage. */
@@ -264,6 +281,25 @@ export function PreJoinScreen({ userName, onJoin, viewerMode = false }: PreJoinS
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             )}
+          </div>
+        )}
+
+        {/* Mutiny Protocol — challengers only, pre-live */}
+        {mediatorName && currentUserSlot && onMutinyInitiate && onMutinyConfirm && onMutinyRefuse && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-sans text-xs text-white/40">
+                Médiateur : <span className="font-bold text-white/60">{mediatorName}</span>
+              </p>
+            </div>
+            <MutinyProtocol
+              mediatorName={mediatorName}
+              currentUserSlot={currentUserSlot}
+              otherPartyInitiated={otherPartyInitiatedMutiny}
+              onInitiate={onMutinyInitiate}
+              onConfirm={onMutinyConfirm}
+              onRefuse={onMutinyRefuse}
+            />
           </div>
         )}
 

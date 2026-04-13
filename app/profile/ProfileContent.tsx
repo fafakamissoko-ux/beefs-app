@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Edit, Share2, Settings, TrendingUp, Users, MessageCircle, Trophy, Crown, Flame, Upload, X, Check, ArrowLeft, Clock, Wallet, Euro, ChevronDown, AlertCircle, Eye } from 'lucide-react';
+import { Camera, Edit, Share2, Settings, TrendingUp, Users, MessageCircle, Trophy, Crown, Flame, Upload, X, Check, ArrowLeft, Clock, Wallet, Euro, ChevronDown, AlertCircle, Eye, Star } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
@@ -109,6 +109,7 @@ export default function ProfileContent() {
   const [withdrawalLoading, setWithdrawalLoading] = useState(false);
   const [withdrawalError, setWithdrawalError] = useState<string>('');
   const [withdrawalHistory, setWithdrawalHistory] = useState<any[]>([]);
+  const [mediatorReviews] = useState<{ id: string; authorName: string; rating: number; comment?: string }[]>([]);
   // Email + phone selectors
   const [showEmailSuggestions, setShowEmailSuggestions] = useState(false);
   const [phoneCountryCode, setPhoneCountryCode] = useState('+33');
@@ -737,6 +738,15 @@ export default function ProfileContent() {
                 <h1 className="font-sans text-3xl font-black text-white">{profile.display_name}</h1>
               </div>
               <p className="text-gray-400 text-sm">@{profile.username}</p>
+              {/* Wisdom Index — affiché après 3+ médiations réussies */}
+              {stats.beefs_resolved >= 3 && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="font-mono text-sm font-bold text-prestige-gold tabular-nums tracking-wider">
+                    ✦ {(stats.beefs_resolved / Math.max(stats.beefs_hosted, 1) * 100).toFixed(0)}
+                  </span>
+                  <span className="font-sans text-[10px] font-bold uppercase tracking-[0.12em] text-prestige-gold/50">Indice de Sagesse</span>
+                </div>
+              )}
             </div>
 
             {profile.bio && (
@@ -759,12 +769,12 @@ export default function ProfileContent() {
 
             {/* Stats — raccourcis optionnels par ligne (voir cases ci‑dessous) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-              {([
-                { key: 'participations' as const, value: stats.beefs_participated, label: 'Participations', shortcut: statsShortcuts.participations, action: goStatsParticipations },
-                { key: 'mediations' as const, value: stats.beefs_hosted, label: 'Médiations', shortcut: statsShortcuts.mediations, action: goStatsMediations },
-                { key: 'followers' as const, value: stats.followers, label: 'Abonnés', shortcut: statsShortcuts.followers, action: goStatsFollowers },
-                { key: 'following' as const, value: stats.following, label: 'Abonnements', shortcut: statsShortcuts.following, action: goStatsFollowing },
-              ] as const).map((s) => {
+              {[
+                { key: 'participations', value: stats.beefs_participated, label: 'Participations', shortcut: statsShortcuts.participations, action: goStatsParticipations },
+                { key: 'mediations', value: stats.beefs_hosted, label: 'Médiations', shortcut: statsShortcuts.mediations, action: goStatsMediations },
+                { key: 'followers', value: stats.followers, label: 'Abonnés', shortcut: statsShortcuts.followers, action: goStatsFollowers },
+                { key: 'following', value: stats.following, label: 'Abonnements', shortcut: statsShortcuts.following, action: goStatsFollowing },
+              ].map((s) => {
                 const inner = (
                   <>
                     <span className="font-mono text-2xl font-black text-white tabular-nums">{s.value}</span>
@@ -819,6 +829,40 @@ export default function ProfileContent() {
                       onClick={() => router.push(`/arena/${beef.id}`)}
                     />
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Livre d'Or — avis des challengers précédents (visible si médiations réussies) */}
+            {stats.beefs_resolved > 0 && (
+              <div className="mt-6 pt-6 border-t border-white/[0.06]">
+                <h2 className="font-sans text-sm font-bold text-white mb-3 flex items-center gap-2">
+                  <Star className="w-4 h-4 text-prestige-gold" />
+                  Livre d&apos;Or
+                </h2>
+                <div className="space-y-2.5">
+                  {mediatorReviews.length === 0 ? (
+                    <p className="font-sans text-xs text-white/25 italic">Aucun avis pour le moment</p>
+                  ) : (
+                    mediatorReviews.slice(0, 5).map((review) => (
+                      <div
+                        key={review.id}
+                        className="rounded-xl bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl px-4 py-3"
+                      >
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="font-sans text-xs font-bold text-white/70">{review.authorName}</span>
+                          <span className="flex items-center gap-0.5 font-mono text-[10px] font-bold text-prestige-gold tracking-wider">
+                            {Array.from({ length: review.rating }).map((_, i) => (
+                              <Star key={i} className="w-2.5 h-2.5 fill-prestige-gold text-prestige-gold" />
+                            ))}
+                          </span>
+                        </div>
+                        {review.comment && (
+                          <p className="font-sans text-xs text-white/40 font-light italic leading-relaxed">&ldquo;{review.comment}&rdquo;</p>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
