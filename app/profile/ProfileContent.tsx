@@ -1284,7 +1284,7 @@ export default function ProfileContent() {
                         />
                         {/* Autocomplete suggestions */}
                         {showEmailSuggestions && getEmailSuggestions(withdrawalFields.paypalEmail || '').length > 0 && (
-                          <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-[2px] shadow-2xl z-50 py-1 overflow-hidden">
+                          <div className="absolute left-0 right-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-[2px] shadow-2xl z-dropdown py-1 overflow-hidden">
                             {getEmailSuggestions(withdrawalFields.paypalEmail || '').map((suggestion, i) => (
                               <button
                                 key={i}
@@ -1325,7 +1325,7 @@ export default function ProfileContent() {
                               <ChevronDown className="w-3 h-3 text-gray-400" />
                             </button>
                             {showCountryDropdown && (
-                              <div className="absolute left-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-[2px] shadow-2xl z-50 w-56 py-1 max-h-72 overflow-y-auto">
+                              <div className="absolute left-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-[2px] shadow-2xl z-dropdown w-56 py-1 max-h-72 overflow-y-auto">
                                 {COUNTRY_CODES.map((c, i) => (
                                   <button
                                     key={i}

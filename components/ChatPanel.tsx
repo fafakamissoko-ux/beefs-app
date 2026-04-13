@@ -176,7 +176,7 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
             MESSAGES ÉPINGLÉS
           </div>
           {pinnedMessages.map((msg) => (
-            <div key={msg.id} className="frosted-titanium rounded-lg px-2 py-1.5">
+            <div key={msg.id} className="frosted-titanium rounded-[2rem] px-2 py-1.5">
               <div className="text-xs font-medium text-white/55">{msg.display_name || msg.username}</div>
               <div className="text-sm font-medium tracking-tight text-white/95">{msg.content}</div>
             </div>
@@ -232,7 +232,7 @@ function ChatMessage({ message }: { message: Message }) {
       className="space-y-1"
     >
       <div className="text-xs font-semibold text-white/50">{message.display_name || message.username}</div>
-      <div className="frosted-titanium rounded-lg px-3 py-2 text-sm font-medium tracking-tight text-white/95">
+      <div className="frosted-titanium rounded-[2rem] px-3 py-2 text-sm font-medium tracking-tight text-white/95">
         {message.content}
       </div>
     </motion.div>
@@ -248,7 +248,7 @@ function TikTokChatMessage({ message }: { message: Message }) {
       transition={{ duration: 0.4, type: 'spring', stiffness: 300, damping: 25 }}
       className="mb-2"
     >
-      <div className="frosted-titanium inline-flex max-w-[85%] items-baseline gap-1.5 rounded-2xl px-3.5 py-2 shadow-xl">
+      <div className="frosted-titanium inline-flex max-w-[85%] items-baseline gap-1.5 rounded-[2rem] px-3.5 py-2 shadow-glow">
         <span className="bg-gradient-to-r from-ember-400 via-ember-500 to-cobalt-400 bg-clip-text text-xs font-extrabold tracking-tight text-transparent drop-shadow">
           {message.display_name || message.username}
         </span>
@@ -272,7 +272,7 @@ function CommentsStyleMessage({ message }: { message: Message }) {
     >
       {/* Avatar with gradient border */}
       <motion.div 
-        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt-500 to-ember-500 p-0.5 shadow-lg"
+        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt-500 to-ember-500 p-0.5 shadow-glow"
         whileHover={{ scale: 1.05 }}
       >
         {message.avatar_url ? (

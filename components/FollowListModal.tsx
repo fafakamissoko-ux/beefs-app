@@ -170,9 +170,13 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-        onClick={onClose}
+        className="fixed inset-0 z-modal flex items-center justify-center p-4"
       >
+        <div
+          className="absolute inset-0 z-modal-backdrop bg-black/80 backdrop-blur-sm"
+          aria-hidden
+          onClick={onClose}
+        />
         <motion.div
           role="dialog"
           aria-labelledby="follow-list-title"
@@ -180,7 +184,7 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.94, opacity: 0, y: 12 }}
           transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-          className="card w-full max-w-md max-h-[min(70vh,520px)] flex flex-col bg-black border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+          className="relative z-modal card w-full max-w-md max-h-[min(70vh,520px)] flex flex-col bg-black border border-white/10 rounded-[2rem] shadow-modal overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
@@ -211,7 +215,7 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.04, type: 'spring', stiffness: 400, damping: 28 }}
-                  className="card flex items-center gap-3 p-3 rounded-xl bg-black border border-white/10 hover:border-white/15 transition-colors"
+                  className="card flex items-center gap-3 p-3 rounded-[2rem] bg-black border border-white/10 hover:border-white/15 transition-colors"
                 >
                   <button
                     type="button"

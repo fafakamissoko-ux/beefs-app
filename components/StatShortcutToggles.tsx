@@ -21,7 +21,7 @@ type Props = {
  */
 export function StatShortcutToggles({ value, onChange }: Props) {
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-transparent p-4 sm:p-5">
+    <div className="rounded-[2rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-transparent p-4 sm:p-5">
       <div className="mb-4">
         <p className="text-white font-semibold text-sm">Liens sur les chiffres</p>
         <p className="text-gray-500 text-xs mt-1 leading-relaxed">
@@ -50,7 +50,7 @@ export function StatShortcutToggles({ value, onChange }: Props) {
                 }`}
               >
                 <span
-                  className={`pointer-events-none absolute top-1 left-1 h-6 w-6 rounded-full bg-white shadow-md transition-transform duration-200 ease-out ${
+                  className={`pointer-events-none absolute top-1 left-1 h-6 w-6 rounded-full bg-white shadow-glow transition-transform duration-200 ease-out ${
                     checked ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />

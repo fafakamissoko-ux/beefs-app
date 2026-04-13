@@ -290,7 +290,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="bg-surface-2 rounded-2xl p-6 w-full border-2 border-brand-500/50 shadow-2xl"
+          className="bg-surface-2 rounded-[2rem] p-6 w-full border-2 border-brand-500/50 shadow-modal"
         >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -348,7 +348,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                 value={beefData.title}
                 onChange={(e) => { updateData('title', e.target.value); setFieldErrors(p => { const n = {...p}; delete n.title; return n; }); }}
                 placeholder="Ex: Idée de startup volée, Conflit d'associés, Argent non remboursé..."
-                className={`w-full bg-white/[0.04] border rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors ${fieldErrors.title ? 'border-red-500' : 'border-white/[0.06] focus:border-brand-500'}`}
+                className={`w-full bg-white/[0.04] border rounded-[2rem] px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors ${fieldErrors.title ? 'border-red-500' : 'border-white/[0.06] focus:border-brand-500'}`}
                 maxLength={100}
               />
               {fieldErrors.title
@@ -368,7 +368,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
               {/* Tag Input */}
               <div className="relative">
                 <div className="flex gap-2">
-                    <div className="flex flex-wrap gap-2 bg-white/[0.04] border border-white/[0.06] rounded-xl p-2 min-h-[44px] flex-1">
+                    <div className="flex flex-wrap gap-2 bg-white/[0.04] border border-white/[0.06] rounded-[2rem] p-2 min-h-[44px] flex-1">
                     {/* Display added tags */}
                     {beefData.tags.map((tag) => (
                       <motion.div
@@ -476,7 +476,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                     searchUsers(e.target.value);
                   }}
                   placeholder="Rechercher un utilisateur..."
-                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-4 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
+                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-[2rem] pl-10 pr-4 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
                 />
                 {searching && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -487,7 +487,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
 
               {/* Search Results */}
               {searchResults.length > 0 && (
-                <div className="mt-2 bg-black/60 border border-gray-700 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                <div className="mt-2 bg-black/60 border border-gray-700 rounded-[2rem] overflow-hidden max-h-48 overflow-y-auto">
                   {searchResults.map((result) => (
                     <button
                       key={result.id}
@@ -518,7 +518,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                   {beefData.participants.map((participant) => (
                     <div
                       key={participant.user_id}
-                      className="flex items-center gap-2 p-2 bg-black/40 border border-gray-700 rounded-lg"
+                      className="flex items-center gap-2 p-2 bg-black/40 border border-gray-700 rounded-[2rem]"
                     >
                       <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white font-bold text-sm">
                         {participant.display_name[0].toUpperCase()}
@@ -579,7 +579,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                 onChange={(e) => { updateData('description', e.target.value); setFieldErrors(p => { const n = {...p}; delete n.description; return n; }); }}
                 placeholder="Décrivez le conflit : Que s'est-il passé ? Quels sont les enjeux ? Qu'attendez-vous de cette médiation ?"
                 rows={10}
-                className={`w-full bg-white/[0.04] border rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors resize-y ${fieldErrors.description ? 'border-red-500' : 'border-white/[0.06] focus:border-brand-500'}`}
+                className={`w-full bg-white/[0.04] border rounded-[2rem] px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors resize-y ${fieldErrors.description ? 'border-red-500' : 'border-white/[0.06] focus:border-brand-500'}`}
                 maxLength={1000}
               />
               <div className="flex items-center justify-between mt-2">
@@ -600,7 +600,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
               </div>
             </div>
 
-            <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-3">
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-[2rem] p-3">
               <p className="text-gray-300 text-sm leading-relaxed">
                 Après les premières minutes gratuites en direct, les spectateurs peuvent débloquer la suite avec des points.
                 Ton palier actuel pour ce beef :{' '}
@@ -612,7 +612,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
             </div>
 
             {/* Planification : une seule zone, choix explicite (évite min UTC + doublon étape 1 / mobile) */}
-            <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-xl p-3 space-y-3">
+            <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-[2rem] p-3 space-y-3">
               <div className="flex items-center gap-2 text-white font-semibold text-sm">
                 <Calendar className="w-4 h-4 text-cyan-400 shrink-0" aria-hidden />
                 Démarrage du beef
@@ -676,7 +676,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                             return n;
                           });
                         }}
-                        className="w-full mt-1 bg-black/40 border border-white/[0.12] rounded-xl px-3 py-2.5 text-white text-base focus:outline-none focus:border-cyan-500 transition-colors min-h-[44px]"
+                        className="w-full mt-1 bg-black/40 border border-white/[0.12] rounded-[2rem] px-3 py-2.5 text-white text-base focus:outline-none focus:border-cyan-500 transition-colors min-h-[44px]"
                       />
                     )}
                   </span>
@@ -688,7 +688,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
             </div>
 
             {/* Summary */}
-            <div className="bg-brand-500/10 border border-brand-500/30 rounded-xl p-3">
+            <div className="bg-brand-500/10 border border-brand-500/30 rounded-[2rem] p-3">
               <p className="text-brand-400 font-bold mb-2 text-sm">📋 Récapitulatif</p>
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between">
@@ -723,7 +723,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
 
         {/* Field errors summary — only show non-empty errors */}
         {Object.values(fieldErrors).some(e => e) && (
-          <div className="mt-4 p-3 bg-red-500/10 border border-red-500/40 rounded-xl space-y-1">
+          <div className="mt-4 p-3 bg-red-500/10 border border-red-500/40 rounded-[2rem] space-y-1">
             {Object.values(fieldErrors).filter(e => e).map((err, i) => (
               <p key={i} className="text-red-400 text-xs flex items-start gap-1.5">
                 <span className="mt-0.5">⚠️</span>
@@ -738,7 +738,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
           {step > 1 && (
             <button
               onClick={() => { setStep(step - 1); setFieldErrors({}); }}
-              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 rounded-[2rem] transition-colors text-sm"
             >
               ← Retour
             </button>
@@ -746,7 +746,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
           {step < 3 ? (
             <button
               onClick={handleNext}
-              className="flex-1 brand-gradient hover:opacity-90 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-lg"
+              className="flex-1 brand-gradient hover:opacity-90 text-white font-bold py-3 rounded-[2rem] transition-all flex items-center justify-center gap-2 text-sm shadow-glow"
             >
               Continuer
               <ArrowRight className="w-4 h-4" />
@@ -755,7 +755,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="flex-1 brand-gradient hover:opacity-90 disabled:opacity-60 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-lg"
+              className="flex-1 brand-gradient hover:opacity-90 disabled:opacity-60 text-white font-bold py-3 rounded-[2rem] transition-all flex items-center justify-center gap-2 text-sm shadow-glow"
             >
               {loading ? (
                 <>
@@ -772,7 +772,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
           )}
         </div>
 
-        <div className="mt-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+        <div className="mt-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded-[2rem]">
           <p className="text-blue-400 text-xs">
             💡 <strong>Champs obligatoires:</strong> Titre (étape 1), Tags (étape 1), Description 50+ caractères (étape 3).
           </p>

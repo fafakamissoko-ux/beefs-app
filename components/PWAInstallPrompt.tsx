@@ -148,11 +148,11 @@ export function PWAInstallPrompt() {
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 50 }}
-        className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[90] max-h-[min(85vh,480px)] overflow-y-auto"
+        className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-modal max-h-[min(85vh,480px)] overflow-y-auto"
         role="region"
         aria-labelledby="pwa-install-title"
       >
-        <div className="relative card border border-brand-500/30 rounded-xl p-4 shadow-2xl">
+        <div className="relative card border border-brand-500/30 rounded-[2rem] p-4 shadow-modal">
           {/* Close button */}
           <button
             type="button"

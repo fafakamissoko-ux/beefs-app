@@ -22,7 +22,7 @@ export function VerdictConfettiBurst({ active }: { active: boolean }) {
     <AnimatePresence>
       {active && (
         <motion.div
-          className="pointer-events-none fixed inset-0 z-[200] flex items-end justify-center overflow-hidden"
+          className="pointer-events-none fixed inset-0 z-toast flex items-end justify-center overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -67,7 +67,7 @@ export function RematchVerdictOverlay({
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="pointer-events-auto fixed inset-0 z-[190] flex flex-col items-center justify-center bg-black/88 px-4 backdrop-blur-md"
+          className="pointer-events-auto fixed inset-0 z-gate flex flex-col items-center justify-center bg-black/88 px-4 backdrop-blur-md"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
