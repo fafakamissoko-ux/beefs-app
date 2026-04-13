@@ -47,6 +47,8 @@ interface Beef {
   engagement_score?: number;
   participants_count?: number;
   challenger_a_name?: string | null;
+  challenger_b_name?: string | null;
+  mediator_name?: string | null;
 }
 
 const STATUS_FILTERS = [
@@ -221,11 +223,35 @@ export default function FeedPage() {
       const beefList = data || [];
       const beefIds = beefList.map((b: { id: string }) => b.id);
       const challengerANameByBeef: Record<string, string> = {};
+      const challengerBNameByBeef: Record<string, string> = {};
 
       if (beefIds.length > 0) {
+        const mediatorByBeef = new Map<string, string | null | undefined>(
+          (beefList as { id: string; mediator_id?: string | null }[]).map((b) => [b.id, b.mediator_id]),
+        );
+
+        const { data: inviteRows } = await supabase
+          .from('beef_invitations')
+          .select('beef_id, invitee_id, inviter_id, status')
+          .in('beef_id', beefIds)
+          .in('status', ['sent', 'seen', 'accepted']);
+
+        const mediatorInviteeIdsByBeef = new Map<string, Set<string>>();
+        for (const inv of inviteRows || []) {
+          const row = inv as { beef_id: string; invitee_id: string; inviter_id: string };
+          const mid = mediatorByBeef.get(row.beef_id);
+          if (mid && row.inviter_id === mid) {
+            const s = mediatorInviteeIdsByBeef.get(row.beef_id) || new Set<string>();
+            s.add(row.invitee_id);
+            mediatorInviteeIdsByBeef.set(row.beef_id, s);
+          }
+        }
+
         const { data: partRows, error: partErr } = await supabase
           .from('beef_participants')
-          .select('beef_id, user_id, invite_status, created_at, users(display_name, username)')
+          .select(
+            'beef_id, user_id, invite_status, created_at, is_main, role, users(display_name, username)',
+          )
           .in('beef_id', beefIds);
 
         if (!partErr && partRows) {
@@ -234,6 +260,8 @@ export default function FeedPage() {
             user_id: string;
             invite_status: string | null;
             created_at: string;
+            is_main: boolean | null;
+            role: string | null;
             users:
               | { display_name: string | null; username: string | null }
               | { display_name: string | null; username: string | null }[]
@@ -245,37 +273,61 @@ export default function FeedPage() {
             list.push(row);
             byBeef.set(row.beef_id, list);
           }
+          const packName = (
+            u:
+              | { display_name: string | null; username: string | null }
+              | { display_name: string | null; username: string | null }[]
+              | null,
+          ) => {
+            const pack = Array.isArray(u) ? u[0] : u;
+            return (
+              (pack?.display_name && String(pack.display_name).trim()) ||
+              (pack?.username && String(pack.username).trim()) ||
+              ''
+            );
+          };
           for (const beef of beefList as { id: string; mediator_id?: string | null }[]) {
             const mid = beef.mediator_id;
             const rows = byBeef.get(beef.id) || [];
-            const nonMed = rows.filter((r) => r.user_id !== mid);
-            nonMed.sort((a, b) => {
+            const invited = mediatorInviteeIdsByBeef.get(beef.id);
+            const nonMed = rows.filter((r) => r.user_id !== mid && r.role !== 'witness');
+            const eligible = nonMed.filter((r) => {
+              if (r.invite_status === 'declined') return false;
+              if (r.invite_status === 'accepted') return true;
+              return invited?.has(r.user_id) ?? false;
+            });
+            eligible.sort((a, b) => {
               const ra = a.invite_status === 'accepted' ? 0 : 1;
               const rb = b.invite_status === 'accepted' ? 0 : 1;
               if (ra !== rb) return ra - rb;
+              const ma = a.is_main ? 0 : 1;
+              const mb = b.is_main ? 0 : 1;
+              if (ma !== mb) return ma - mb;
               return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
             });
-            const u = nonMed[0]?.users;
-            const pack = Array.isArray(u) ? u[0] : u;
-            const name =
-              (pack?.display_name && String(pack.display_name).trim()) ||
-              (pack?.username && String(pack.username).trim()) ||
-              '';
-            if (name) challengerANameByBeef[beef.id] = name;
+            const first = packName(eligible[0]?.users ?? null);
+            const second = packName(eligible[1]?.users ?? null);
+            if (first) challengerANameByBeef[beef.id] = first;
+            if (second) challengerBNameByBeef[beef.id] = second;
           }
         }
       }
 
       const rawCount = beefList.length;
-      let beefsWithData = beefList.map((beef: any) => ({
-        ...beef,
-        host_name: beef.users?.display_name || beef.users?.username || 'Anonyme',
-        host_username: beef.users?.username?.trim() || null,
-        viewer_count: beef.viewer_count || 0,
-        tags: beef.tags || [],
-        participants_count: beef.beef_participants?.[0]?.count || 0,
-        challenger_a_name: challengerANameByBeef[beef.id] ?? null,
-      }));
+      let beefsWithData = beefList.map((beef: any) => {
+        const hostN = beef.users?.display_name || beef.users?.username || 'Anonyme';
+        return {
+          ...beef,
+          host_name: hostN,
+          host_username: beef.users?.username?.trim() || null,
+          mediator_name: hostN,
+          viewer_count: beef.viewer_count || 0,
+          tags: beef.tags || [],
+          participants_count: beef.beef_participants?.[0]?.count || 0,
+          challenger_a_name: challengerANameByBeef[beef.id] ?? null,
+          challenger_b_name: challengerBNameByBeef[beef.id] ?? null,
+        };
+      });
 
       if (selectedStatus === 'scheduled') {
         const now = Date.now();

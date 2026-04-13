@@ -39,6 +39,7 @@ import { DEFAULT_FREE_PREVIEW_MINUTES, viewerNeedsContinuationPay } from '@/lib/
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
 import { escapeForIlikeExact } from '@/lib/ilike-exact';
+import { PENDING_DM_WITH_STORAGE_KEY } from '@/lib/messages-deeplink';
 import { ARENA_QUICK_REACTIONS } from '@/lib/arena-quick-reactions';
 import {
   buildParticipantAliasSet,
@@ -1327,22 +1328,47 @@ export function TikTokStyleArena({
     ? sortedRemoteParticipants
     : sortedRemoteParticipants.filter(p => p !== hostRemoteParticipant);
 
-  const leftPanel = isHost ? sortedRemoteParticipants[0] : localParticipant;
-  const leftPanelIsLocal = !isHost;
+  /** Spectateurs : ne pas afficher le flux local comme « challenger A » (bug pseudo du viewer sur le slot gauche). */
+  const challengerRemotesForViewer = (() => {
+    if (!isViewer) return null;
+    const withoutMediator = remoteParticipants.filter(
+      (p) => !remoteMatchesMediator(p, host.id, host.name),
+    );
+    if (localParticipant?.sessionId) {
+      return withoutMediator.filter((p) => p.sessionId !== localParticipant.sessionId);
+    }
+    return withoutMediator;
+  })();
+
+  const leftPanel = isHost
+    ? sortedRemoteParticipants[0]
+    : isViewer
+      ? challengerRemotesForViewer?.[0] ?? null
+      : localParticipant;
+  const leftPanelIsLocal = !isHost && !isViewer;
   const leftPanelName = isHost
     ? (sortedRemoteParticipants[0]?.userName || 'Challenger 1')
-    : userName;
+    : isViewer
+      ? (challengerRemotesForViewer?.[0]?.userName || 'Challenger 1')
+      : userName;
 
-  const rightPanel = isHost ? sortedRemoteParticipants[1] : nonHostRemotes[0];
+  const rightPanel = isHost
+    ? sortedRemoteParticipants[1]
+    : isViewer
+      ? challengerRemotesForViewer?.[1] ?? null
+      : nonHostRemotes[0];
   /** Si le flux local Daily est mappé sur le panneau droit (rare mais possible selon l’ordre des peers). */
   const rightPanelIsLocal =
     !isHost &&
+    !isViewer &&
     !!localParticipant &&
     !!rightPanel &&
     rightPanel.sessionId === localParticipant.sessionId;
   const rightPanelName = isHost
     ? (sortedRemoteParticipants[1]?.userName || 'Challenger 2')
-    : (nonHostRemotes[0]?.userName || 'Challenger 2');
+    : isViewer
+      ? (challengerRemotesForViewer?.[1]?.userName || 'Challenger 2')
+      : (nonHostRemotes[0]?.userName || 'Challenger 2');
 
   const leftIsSpeaking =
     speakingTurnActive &&
@@ -3011,6 +3037,22 @@ export function TikTokStyleArena({
 
             {/* Actions */}
             <div className="space-y-3 pt-2">
+              <p className="text-xs text-gray-500 leading-relaxed px-1">
+                Il n’y a pas de fil de commentaires sur cet écran : les spectateurs peuvent{' '}
+                <span className="text-gray-400">noter le médiateur</span> (étoiles + commentaire) depuis le résumé du
+                beef.
+              </p>
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.96 }}
+                onClick={() => {
+                  if (endSummaryTimerRef.current) clearTimeout(endSummaryTimerRef.current);
+                  router.push(`/beef/${roomId}/summary`);
+                }}
+                className="w-full py-3 rounded-xl bg-white/10 text-white font-semibold text-sm hover:bg-white/15 transition-colors border border-white/10"
+              >
+                Résumé & avis médiateur
+              </motion.button>
               <motion.button
                 whileTap={{ scale: 0.96 }}
                 onClick={() => {
@@ -4647,6 +4689,11 @@ export function TikTokStyleArena({
                         type="button"
                         onClick={() => {
                           setShowProfile(false);
+                          try {
+                            sessionStorage.setItem(PENDING_DM_WITH_STORAGE_KEY, selectedProfile.id);
+                          } catch {
+                            /* private mode */
+                          }
                           router.push(`/messages?with=${encodeURIComponent(selectedProfile.id)}`);
                         }}
                         className="flex-1 rounded-lg border border-white/10 bg-white/5 py-2.5 font-bold text-white transition-colors hover:bg-white/10"

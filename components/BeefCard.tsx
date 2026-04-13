@@ -263,8 +263,11 @@ export function BeefCard({
           </h3>
         )}
 
-        {/* Hôte */}
+        {/* Médiateur (hôte du beef) */}
         <div className="flex items-center gap-2 mb-3">
+          <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-white/30 shrink-0">
+            Médiateur
+          </span>
           <div
             className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
             style={{ background: `hsl(${hueBase}, 55%, 42%)` }}
@@ -310,6 +313,37 @@ export function BeefCard({
             {tags.length > 3 && (
               <span className="px-1 font-mono text-[10px] text-white/25 tracking-wider self-center">+{tags.length - 3}</span>
             )}
+          </div>
+        )}
+
+        {/* Ring — challengers sur toutes les cartes (le médiateur est déjà la ligne « Hôte » ci-dessus) */}
+        {!isManifesto && (challenger_a_name || challenger_b_name) && (
+          <div className="mt-3 pt-3 border-t border-white/[0.06]">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">
+              Challengers
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {challenger_a_name ? (
+                <div className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] px-2.5 py-1">
+                  <div className="w-5 h-5 rounded-full bg-cobalt-500/30 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                    {challenger_a_name[0].toUpperCase()}
+                  </div>
+                  <span className="font-sans text-[11px] text-white/60 font-medium truncate max-w-[80px]">
+                    {challenger_a_name}
+                  </span>
+                </div>
+              ) : null}
+              {challenger_b_name ? (
+                <div className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] px-2.5 py-1">
+                  <div className="w-5 h-5 rounded-full bg-ember-500/25 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                    {challenger_b_name[0].toUpperCase()}
+                  </div>
+                  <span className="font-sans text-[11px] text-white/60 font-medium truncate max-w-[80px]">
+                    {challenger_b_name}
+                  </span>
+                </div>
+              ) : null}
+            </div>
           </div>
         )}
 

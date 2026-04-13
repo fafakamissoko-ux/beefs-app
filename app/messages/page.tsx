@@ -11,6 +11,7 @@ import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
 import { AppBackButton } from '@/components/AppBackButton';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
+import { PENDING_DM_WITH_STORAGE_KEY } from '@/lib/messages-deeplink';
 
 interface Conversation {
   id: string;
@@ -63,16 +64,17 @@ function MessagesPageInner() {
   const [searchResults, setSearchResults] = useState<UserSearchRow[]>([]);
   const [searching, setSearching] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const deepLinkTargetRef = useRef<string | null>(null);
+  const dmDeepLinkLockRef = useRef(false);
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login?redirect=/messages');
+      const dest = `/messages${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+      router.push(`/login?redirect=${encodeURIComponent(dest)}`);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, searchParams]);
 
-  const loadConversations = useCallback(async () => {
-    if (!user) return;
+  const loadConversations = useCallback(async (): Promise<Conversation[]> => {
+    if (!user) return [];
     setLoadingConvs(true);
     try {
       const { data: convs } = await supabase
@@ -81,7 +83,10 @@ function MessagesPageInner() {
         .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
         .order('last_message_at', { ascending: false, nullsFirst: false });
 
-      if (!convs) { setConversations([]); return; }
+      if (!convs) {
+        setConversations([]);
+        return [];
+      }
 
       const otherIds = convs.map(c => c.participant_1 === user.id ? c.participant_2 : c.participant_1);
       const { data: users } = await supabase.from('users').select('id, username, display_name, avatar_url').in('id', otherIds);
@@ -103,15 +108,22 @@ function MessagesPageInner() {
       }));
 
       setConversations(enriched);
+      return enriched;
     } catch (err) {
       console.error('Error loading conversations:', err);
+      return [];
     } finally {
       setLoadingConvs(false);
     }
   }, [user]);
 
   useEffect(() => {
-    if (user) void loadConversations();
+    if (!user) {
+      setConversations([]);
+      setLoadingConvs(false);
+      return;
+    }
+    void loadConversations();
   }, [user, loadConversations]);
 
   const scrollToBottom = useCallback(() => {
@@ -293,20 +305,23 @@ function MessagesPageInner() {
   };
 
   useEffect(() => {
-    if (loading || !user) return;
-    const raw = searchParams.get('with');
-    if (!raw) {
-      deepLinkTargetRef.current = null;
-      return;
+    if (loading || !user || loadingConvs) return;
+    if (dmDeepLinkLockRef.current) return;
+
+    let raw = searchParams.get('with');
+    if (!raw && typeof window !== 'undefined') {
+      raw = sessionStorage.getItem(PENDING_DM_WITH_STORAGE_KEY);
+      if (raw) sessionStorage.removeItem(PENDING_DM_WITH_STORAGE_KEY);
     }
+    if (!raw) return;
+
     const withId = raw.trim();
     if (!DM_WITH_UUID_RE.test(withId) || withId === user.id) {
       router.replace('/messages', { scroll: false });
       return;
     }
-    if (deepLinkTargetRef.current === withId) return;
-    deepLinkTargetRef.current = withId;
-    router.replace('/messages', { scroll: false });
+
+    dmDeepLinkLockRef.current = true;
 
     void (async () => {
       try {
@@ -343,18 +358,22 @@ function MessagesPageInner() {
           other_user: peer,
           unread_count: 0,
         };
-        setConversations(prev => {
-          const exists = prev.find(c => c.id === cid);
-          return exists ? prev : [conv, ...prev];
-        });
-        await loadMessages(conv);
+
+        const list = await loadConversations();
+        let open = list.find((c) => c.id === cid);
+        if (!open) {
+          setConversations((prev) => (prev.some((c) => c.id === cid) ? prev : [conv, ...prev]));
+          open = conv;
+        }
+        await loadMessages(open);
       } catch {
         toast('Impossible d’ouvrir la conversation', 'error');
       } finally {
-        deepLinkTargetRef.current = null;
+        dmDeepLinkLockRef.current = false;
+        router.replace('/messages', { scroll: false });
       }
     })();
-  }, [loading, user, searchParams, router, toast, loadMessages]);
+  }, [loading, user, loadingConvs, searchParams, router, toast, loadMessages, loadConversations]);
 
   const activateRow = (fn: () => void) => (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
