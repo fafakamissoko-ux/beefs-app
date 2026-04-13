@@ -92,28 +92,42 @@ export function Header() {
 
     // Toujours interroger la BDD (état réel). Le masquage du badge sur l’onglet actif est fait au rendu,
     // pas en falsifiant le count — sinon après navigation le compteur reste faux (ex. refresh sur /notifications).
-    const [invRes, notifRes, dmRes] = await Promise.all([
+    const [invRes, notifRpc, dmRpc] = await Promise.all([
       supabase
         .from('beef_invitations')
         .select('id', { count: 'exact', head: true })
         .eq('invitee_id', user.id)
         .eq('status', 'sent'),
-      supabase
+      supabase.rpc('count_unread_notifications'),
+      supabase.rpc('count_unread_direct_messages'),
+    ]);
+
+    setPendingInvitations(invRes.count ?? 0);
+
+    if (notifRpc.error) {
+      const fb = await supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .or('is_read.is.null,is_read.eq.false'),
-      supabase
+        .or('is_read.is.null,is_read.eq.false');
+      setUnreadNotifications(fb.count ?? 0);
+    } else {
+      const n = notifRpc.data;
+      setUnreadNotifications(typeof n === 'number' ? n : Number(n) || 0);
+    }
+
+    if (dmRpc.error) {
+      const fb = await supabase
         .from('direct_messages')
         .select('id, conversations!inner(participant_1, participant_2)', { count: 'exact', head: true })
         .or('is_read.is.null,is_read.eq.false')
         .neq('sender_id', user.id)
-        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`, { referencedTable: 'conversations' }),
-    ]);
-
-    setPendingInvitations(invRes.count ?? 0);
-    setUnreadNotifications(notifRes.count ?? 0);
-    setUnreadMessages(dmRes.count ?? 0);
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`, { referencedTable: 'conversations' });
+      setUnreadMessages(fb.count ?? 0);
+    } else {
+      const n = dmRpc.data;
+      setUnreadMessages(typeof n === 'number' ? n : Number(n) || 0);
+    }
   }, [user]);
 
   useEffect(() => {
