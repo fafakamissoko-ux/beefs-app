@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Users, Flame, Play, Calendar, ArrowUpRight, User } from 'lucide-react';
@@ -79,10 +79,31 @@ export function BeefCard({
 }: BeefCardProps) {
   const [hasOpenedArena, setHasOpenedArena] = useState(false);
   const [replayHover, setReplayHover] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [descNeedsToggle, setDescNeedsToggle] = useState(false);
+  const descMeasureRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     setHasOpenedArena(hasBeefWatchStarted(id));
   }, [id, status, price]);
+
+  useEffect(() => {
+    setDescExpanded(false);
+  }, [id, description]);
+
+  useLayoutEffect(() => {
+    const el = descMeasureRef.current;
+    const text = description?.trim();
+    if (!el || !text) {
+      setDescNeedsToggle(false);
+      return;
+    }
+    if (descExpanded) {
+      setDescNeedsToggle(true);
+      return;
+    }
+    setDescNeedsToggle(el.scrollHeight > el.clientHeight + 2);
+  }, [description, descExpanded]);
 
   const getPrimaryStatusBadge = () => {
     const base = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider backdrop-blur-md';
@@ -214,17 +235,40 @@ export function BeefCard({
           </div>
         )}
 
-        {/* Titre + description (dans le visuel) */}
+        {/* Titre + description (dans le visuel) — pb réservé pour ne pas chevaucher chrono / flamme */}
         {!thumbnail && (
-          <div className="absolute inset-x-0 bottom-0 z-[1] flex flex-col justify-end p-5">
-            <h4 className="font-sans text-base font-bold text-white leading-snug line-clamp-2 mb-1 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
-              {title}
-            </h4>
-            {description?.trim() && (
-              <p className="font-sans text-[11px] text-white/50 leading-relaxed line-clamp-2 break-words whitespace-normal text-ellipsis overflow-hidden">
-                {description.trim()}
-              </p>
-            )}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 top-0 z-[1] flex flex-col justify-end">
+            <div className="pointer-events-auto space-y-1 px-5 pb-12 pt-2">
+              <h4 className="font-sans text-base font-bold leading-snug text-white line-clamp-2 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+                {title}
+              </h4>
+              {description?.trim() && (
+                <div className="space-y-0.5">
+                  <p
+                    ref={descMeasureRef}
+                    className={`font-sans text-[11px] leading-snug text-white/50 break-words ${
+                      descExpanded
+                        ? 'max-h-[5.5rem] overflow-y-auto overscroll-contain pr-0.5'
+                        : 'line-clamp-2 overflow-hidden'
+                    }`}
+                  >
+                    {description.trim()}
+                  </p>
+                  {descNeedsToggle && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDescExpanded((v) => !v);
+                      }}
+                      className="font-sans text-[10px] font-semibold text-brand-400 hover:text-brand-300"
+                    >
+                      {descExpanded ? 'Réduire' : 'Voir plus'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
