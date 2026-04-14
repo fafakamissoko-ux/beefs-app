@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, Flame, X, Plus, Hash, Radio, Coins, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/Toast';
 import { BeefCard } from '@/components/BeefCard';
 import dynamic from 'next/dynamic';
 import { FeatureGuide } from '@/components/FeatureGuide';
@@ -35,7 +36,9 @@ interface Beef {
   description?: string;
   host_name: string;
   host_username?: string | null;
-  mediator_id?: string;
+  mediator_id?: string | null;
+  created_by?: string | null;
+  intent?: string | null;
   status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled';
   created_at: string;
   scheduled_at?: string;
@@ -50,6 +53,8 @@ interface Beef {
   challenger_a_name?: string | null;
   challenger_b_name?: string | null;
   mediator_name?: string | null;
+  is_featured?: boolean;
+  feed_position?: number;
 }
 
 const STATUS_FILTERS = [
@@ -60,7 +65,7 @@ const STATUS_FILTERS = [
 ];
 
 /** Aligné sur l’admin : mis en avant → feed_position (desc) → date. */
-function compareFeedOrder(a: Record<string, unknown>, b: Record<string, unknown>) {
+function compareFeedOrder(a: Beef, b: Beef) {
   const fa = !!a.is_featured;
   const fb = !!b.is_featured;
   if (fa !== fb) return fa ? -1 : 1;
@@ -74,6 +79,7 @@ export default function FeedPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [beefs, setBeefs] = useState<Beef[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedType, setFeedType] = useState<'pour-vous' | 'abonnements' | 'manifestes'>('pour-vous');
@@ -98,7 +104,7 @@ export default function FeedPage() {
       const raw = localStorage.getItem(FEED_FILTERS_KEY);
       if (raw) {
         const o = JSON.parse(raw) as { feedType?: string; selectedStatus?: string; selectedTags?: string[] };
-        if (o.feedType === 'pour-vous' || o.feedType === 'abonnements') setFeedType(o.feedType);
+        if (o.feedType === 'pour-vous' || o.feedType === 'abonnements' || o.feedType === 'manifestes') setFeedType(o.feedType);
         if (typeof o.selectedStatus === 'string') setSelectedStatus(o.selectedStatus);
         if (Array.isArray(o.selectedTags)) setSelectedTags(o.selectedTags);
       }
@@ -212,6 +218,11 @@ export default function FeedPage() {
         .order('feed_position', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(fetchLimit);
+
+      if (feedType === 'manifestes') {
+        query = query.eq('intent', 'manifesto').is('mediator_id', null);
+      }
+
       if (selectedStatus !== 'all' && selectedStatus !== 'scheduled') {
         query = query.eq('status', selectedStatus);
       }
@@ -227,8 +238,9 @@ export default function FeedPage() {
       const challengerBNameByBeef: Record<string, string> = {};
 
       const publicIds = new Set<string>();
-      for (const b of beefList as { mediator_id?: string | null }[]) {
+      for (const b of beefList as { mediator_id?: string | null; created_by?: string | null }[]) {
         if (b.mediator_id) publicIds.add(b.mediator_id);
+        if (b.created_by) publicIds.add(b.created_by);
       }
 
       let feedPublicMap = new Map<string, import('@/lib/fetch-user-public-profile').UserPublicProfileRow>();
@@ -285,11 +297,17 @@ export default function FeedPage() {
             byBeef.set(row.beef_id, list);
           }
           const packName = (userId: string) => displayNameFromPublicRow(feedPublicMap.get(userId), '');
-          for (const beef of beefList as { id: string; mediator_id?: string | null }[]) {
+          for (const beef of beefList as { id: string; mediator_id?: string | null; created_by?: string | null }[]) {
             const mid = beef.mediator_id;
+            const creatorId = beef.created_by;
             const rows = byBeef.get(beef.id) || [];
             const invited = mediatorInviteeIdsByBeef.get(beef.id);
-            const nonMed = rows.filter((r) => r.user_id !== mid && r.role !== 'witness');
+            const nonMed = rows.filter((r) => {
+              if (r.role === 'witness') return false;
+              if (mid && r.user_id === mid) return false;
+              if (!mid && creatorId && r.user_id === creatorId) return false;
+              return true;
+            });
             // Inclure les « pending » dès qu’ils sont dans beef_participants : les spectateurs ne voient
             // pas les lignes beef_invitations (RLS), donc invited serait vide sans ce cas.
             const eligible = nonMed.filter((r) => {
@@ -317,21 +335,27 @@ export default function FeedPage() {
       const rawCount = beefList.length;
       const { displayNameFromPublicRow: dnFromMap } = await import('@/lib/fetch-user-public-profile');
 
-      let beefsWithData = beefList.map((beef: any) => {
-        const med = beef.mediator_id ? feedPublicMap.get(beef.mediator_id) : undefined;
-        const hostN = dnFromMap(med, 'Anonyme');
+      let beefsWithData = beefList.map((beef: Record<string, unknown>) => {
+        const mid = beef.mediator_id as string | null | undefined;
+        const cid = beef.created_by as string | null | undefined;
+        const med = mid ? feedPublicMap.get(mid) : undefined;
+        const author = cid ? feedPublicMap.get(cid) : undefined;
+        const hostSource = med ?? author;
+        const hostN = dnFromMap(hostSource, 'Anonyme');
+        const partAgg = beef.beef_participants as { count: number }[] | undefined;
+        const bid = String(beef.id);
         return {
           ...beef,
           host_name: hostN,
-          host_username: med?.username?.trim() || null,
-          mediator_name: hostN,
-          viewer_count: beef.viewer_count || 0,
-          tags: beef.tags || [],
-          participants_count: beef.beef_participants?.[0]?.count || 0,
-          challenger_a_name: challengerANameByBeef[beef.id] ?? null,
-          challenger_b_name: challengerBNameByBeef[beef.id] ?? null,
+          host_username: hostSource?.username?.trim() || null,
+          mediator_name: mid ? hostN : null,
+          viewer_count: Number(beef.viewer_count) || 0,
+          tags: (beef.tags as string[] | undefined) || [],
+          participants_count: partAgg?.[0]?.count || 0,
+          challenger_a_name: challengerANameByBeef[bid] ?? null,
+          challenger_b_name: challengerBNameByBeef[bid] ?? null,
         };
-      });
+      }) as Beef[];
 
       if (selectedStatus === 'scheduled') {
         const now = Date.now();
@@ -347,12 +371,7 @@ export default function FeedPage() {
         beefsWithData = beefsWithData.filter((beef: any) => beef.tags?.some((tag: string) => selectedTags.includes(tag)));
       }
 
-      if (feedType === 'manifestes') {
-        beefsWithData = beefsWithData.filter(
-          (beef: any) => beef.status === 'pending'
-        );
-        beefsWithData.sort(compareFeedOrder);
-      } else if (feedType === 'abonnements') {
+      if (feedType === 'abonnements') {
         const followingSet = new Set(followingIds);
         beefsWithData = beefsWithData.filter(
           (beef: any) => beef.mediator_id && followingSet.has(beef.mediator_id)
@@ -373,6 +392,27 @@ export default function FeedPage() {
       setLoadingMore(false);
     }
   }, [fetchLimit, selectedStatus, selectedTags, feedType, followingIds]);
+
+  const handleClaimManifesto = useCallback(
+    async (beefId: string) => {
+      if (!user?.id) return;
+      const { error } = await supabase
+        .from('beefs')
+        .update({ mediator_id: user.id })
+        .eq('id', beefId)
+        .eq('intent', 'manifesto')
+        .is('mediator_id', null)
+        .neq('created_by', user.id);
+      if (error) {
+        toast(error.message || 'Impossible de saisir cette affaire', 'error');
+        return;
+      }
+      toast('Affaire saisie ! Retrouve-la dans L’Arène.', 'success');
+      setFeedType('pour-vous');
+      void loadBeefs();
+    },
+    [user?.id, toast, loadBeefs]
+  );
 
   useEffect(() => {
     if (!user) {
@@ -464,22 +504,23 @@ export default function FeedPage() {
 
         {/* Feed tabs + achat de points */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4 gap-y-4">
-          <div className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full bg-white/[0.05] p-1 backdrop-blur-md">
+          <div className="flex max-w-full min-w-0 flex-wrap items-center gap-6 border-b border-white/[0.08]">
             {[
-              { id: 'pour-vous', label: 'Pour vous', icon: TrendingUp },
-              { id: 'abonnements', label: 'Abonnements', icon: Users },
-              { id: 'manifestes', label: 'Manifestes', icon: FileText },
-            ].map(tab => (
+              { id: 'pour-vous' as const, label: "L'Arène", icon: TrendingUp },
+              { id: 'abonnements' as const, label: 'Abonnements', icon: Users },
+              { id: 'manifestes' as const, label: 'À Saisir', icon: FileText },
+            ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setFeedType(tab.id as any)}
-                className={`relative flex min-h-[44px] items-center gap-2 rounded-full px-5 py-2 text-sm font-bold transition-all duration-200 ${
+                type="button"
+                onClick={() => setFeedType(tab.id)}
+                className={`flex min-h-[44px] items-center gap-2 pb-1 text-sm transition-colors ${
                   feedType === tab.id
-                    ? 'text-white bg-white/10 ring-1 ring-white/[0.12] shadow-[0_0_12px_rgba(0,82,255,0.12)]'
-                    : 'text-gray-500 hover:text-gray-200'
+                    ? 'border-b-2 border-brand-500 font-bold text-white'
+                    : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-white/80'
                 }`}
               >
-                <tab.icon className="w-4 h-4" />
+                <tab.icon className={`h-4 w-4 shrink-0 ${feedType === tab.id ? 'text-white' : 'text-white/40'}`} />
                 <span>{tab.label}</span>
               </button>
             ))}
@@ -599,7 +640,19 @@ export default function FeedPage() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
               {beefs.map((beef, index) => (
-                <BeefCard key={beef.id} {...beef} onClick={() => handleBeefClick(beef)} onTagClick={handleTagClick} index={index} />
+                <BeefCard
+                  key={beef.id}
+                  {...beef}
+                  saisirTab={feedType === 'manifestes'}
+                  onSaisirAffaire={
+                    feedType === 'manifestes' && user?.id && beef.created_by && beef.created_by !== user.id
+                      ? () => void handleClaimManifesto(beef.id)
+                      : undefined
+                  }
+                  onClick={() => handleBeefClick(beef)}
+                  onTagClick={handleTagClick}
+                  index={index}
+                />
               ))}
             </div>
             {hasMore && (

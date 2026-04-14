@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, Clock, Users, Flame, Play, CheckCircle, Calendar, ArrowUpRight, User } from 'lucide-react';
+import { Clock, Users, Flame, Play, CheckCircle, Calendar, ArrowUpRight, User } from 'lucide-react';
 import { hasBeefWatchStarted } from '@/lib/beef-view-local';
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
@@ -32,6 +32,10 @@ interface BeefCardProps {
   onTagClick?: (tag: string) => void;
   onNotifyClick?: () => void;
   onApply?: () => void;
+  /** Onglet feed « À Saisir » : badge ⚖️ EN ATTENTE + CTA médiateur */
+  saisirTab?: boolean;
+  onSaisirAffaire?: () => void;
+  created_by?: string | null;
   index: number;
 }
 
@@ -56,6 +60,8 @@ export function BeefCard({
   onClick,
   onTagClick,
   onApply,
+  saisirTab = false,
+  onSaisirAffaire,
   index,
 }: BeefCardProps) {
   const [hasOpenedArena, setHasOpenedArena] = useState(false);
@@ -74,11 +80,21 @@ export function BeefCard({
 
   const getStatusBadge = () => {
     const base = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider backdrop-blur-md';
+    if (saisirTab) {
+      return (
+        <div className={`${base} border border-white/15 bg-white/[0.06] text-white/90`}>
+          <span className="text-xs" aria-hidden>
+            ⚖️
+          </span>{' '}
+          EN ATTENTE
+        </div>
+      );
+    }
     switch (uiStatus) {
       case 'live':
         return (
           <div className={`${base} bg-ember-500/15 border border-ember-500/35 text-ember-400`}>
-            <motion.div animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.2, repeat: Infinity }} className="w-1.5 h-1.5 bg-ember-500 rounded-full" />
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" aria-hidden />
             LIVE
           </div>
         );
@@ -91,8 +107,8 @@ export function BeefCard({
         );
       case 'replay':
         return (
-          <div className={`${base} bg-cobalt-500/14 border border-cobalt-500/30 text-cobalt-300`}>
-            <Play className="w-3 h-3 fill-current" />
+          <div className={`${base} border border-blue-500/30 bg-blue-500/20 text-blue-400`}>
+            <Play className="h-3 w-3 fill-current" />
             REPLAY
           </div>
         );
@@ -141,13 +157,14 @@ export function BeefCard({
   const isReplay = status === 'ended' || status === 'replay';
 
   return (
+    <div className="flex flex-col">
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
       onClick={onClick}
       onMouseEnter={() => isReplay && setReplayHover(true)}
-      onMouseLeave={() => setReplayHover(false)}
+      onMouseLeave={() => isReplay && setReplayHover(false)}
       className={`group relative cursor-pointer overflow-hidden rounded-[2rem] bg-white/[0.04] border backdrop-blur-2xl transition-all duration-300 hover:scale-[0.98] hover:bg-white/[0.06] ${
         isManifesto
           ? 'border-dashed border-white/15 hover:border-prestige-gold/30'
@@ -194,10 +211,10 @@ export function BeefCard({
         <div className="absolute top-3.5 left-3.5">{getStatusBadge()}</div>
 
         {/* Badges contextuels (replay, prix) */}
-        {(status === 'ended' || status === 'replay') && (
+        {(status === 'ended' || status === 'replay') && !saisirTab && (
           <div className="absolute top-3.5 right-3.5">
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-cobalt-500/15 border border-cobalt-500/30 text-cobalt-300 backdrop-blur-md">
-              <Play className="w-3 h-3 fill-current" />
+            <div className="flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/20 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-blue-400 backdrop-blur-md">
+              <Play className="h-3 w-3 fill-current" />
               Replay
             </div>
           </div>
@@ -212,8 +229,8 @@ export function BeefCard({
         )}
         {uiStatus === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
           <div className="absolute top-3.5 right-3.5">
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-white/10 border border-white/15 text-brand-200 backdrop-blur-md">
-              <Eye className="w-3 h-3 text-brand-400" />
+            <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
+              <Flame className="h-3 w-3 text-orange-500" />
               Suite · {price} pts
             </div>
           </div>
@@ -243,9 +260,9 @@ export function BeefCard({
               <span>{getTimeDisplay()}</span>
             </div>
           ) : <div />}
-          <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/60">
-            <Eye className="w-3 h-3" />
-            <span>{viewer_count.toLocaleString()}</span>
+          <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-orange-500">
+            <Flame className="h-3 w-3 shrink-0" strokeWidth={2.25} />
+            <span className="text-white/80">{viewer_count.toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -261,7 +278,7 @@ export function BeefCard({
         {/* Médiateur (hôte du beef) */}
         <div className="flex items-center gap-2 mb-3">
           <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-white/30 shrink-0">
-            Médiateur
+            {saisirTab && !mediator_name?.trim() ? 'Auteur' : 'Médiateur'}
           </span>
           <div
             className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 ${
@@ -443,5 +460,19 @@ export function BeefCard({
         </AnimatePresence>
       )}
     </motion.div>
+
+      {onSaisirAffaire && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSaisirAffaire();
+          }}
+          className="mt-4 w-full rounded-[2rem] bg-white py-3.5 text-center text-sm font-bold text-black transition-colors hover:bg-gray-200"
+        >
+          Saisir l&apos;Affaire
+        </button>
+      )}
+    </div>
   );
 }
