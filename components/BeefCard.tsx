@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Users, Flame, Play, Calendar, ArrowUpRight, User } from 'lucide-react';
+import { Clock, Users, Flame, Play, Calendar, User } from 'lucide-react';
 import { hasBeefWatchStarted } from '@/lib/beef-view-local';
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
@@ -45,8 +45,10 @@ interface BeefCardProps {
   onSaisirAffaire?: () => void;
   /** L’Arène : médiateur manifeste peut se retirer */
   onSeDesister?: () => void;
-  /** Feed : médiateur sur une affaire à venir — accès antichambre (défini seulement si l’utilisateur est le médiateur) */
+  /** Feed : médiateur, affaire planifiée — accès antichambre */
   onPrepareAudience?: () => void;
+  /** Carte live : public vs ring (médiateur / challenger accepté) */
+  liveAudienceAction?: { variant: 'join' | 'return'; onClick: () => void };
   intent?: string | null;
   created_by?: string | null;
   index: number;
@@ -77,6 +79,7 @@ export function BeefCard({
   onSaisirAffaire,
   onSeDesister,
   onPrepareAudience,
+  liveAudienceAction,
   intent,
   index,
 }: BeefCardProps) {
@@ -164,8 +167,9 @@ export function BeefCard({
     return '';
   };
 
-  const showScheduledCountdown =
-    (status === 'scheduled' || status === 'pending') &&
+  /** Pas de timer en pending (date non scellée) ; compte à rebours seulement si planifié ou live à venir */
+  const showCountdownTimer =
+    (status === 'scheduled' || status === 'live') &&
     !!scheduled_at &&
     new Date(scheduled_at).getTime() > Date.now();
 
@@ -177,10 +181,6 @@ export function BeefCard({
     (intent === 'manifesto' && (status === 'pending' || status === 'ready'));
   const mediatorSlotName = (mediator_name?.trim() || host_name?.trim() || '') || null;
   const isReplay = status === 'ended' || status === 'replay' || status === 'completed';
-
-  const showMediatorPrepareCta =
-    !!onPrepareAudience &&
-    (status === 'scheduled' || status === 'ready' || status === 'pending');
 
   const descText = description?.trim() ?? '';
 
@@ -286,24 +286,9 @@ export function BeefCard({
           </div>
         )}
 
-        {showMediatorPrepareCta && (
-          <div className="absolute bottom-11 left-4 right-4 z-[3]">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPrepareAudience?.();
-              }}
-              className="w-full rounded-xl bg-red-600 py-2.5 text-center font-sans text-xs font-bold uppercase tracking-wide text-white shadow-[0_0_20px_rgba(220,38,38,0.35)] transition-colors hover:bg-red-500 active:scale-[0.99]"
-            >
-              Préparer l&apos;Audience
-            </button>
-          </div>
-        )}
-
         {/* Métriques bas — chrono / countdown + viewers */}
         <div className="absolute bottom-3 left-4 right-4 z-[2] flex items-center justify-between">
-          {showScheduledCountdown && scheduled_at ? (
+          {showCountdownTimer && scheduled_at ? (
             <Countdown scheduledAt={scheduled_at} />
           ) : status === 'live' && getTimeDisplay() ? (
             <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/60">
@@ -361,12 +346,8 @@ export function BeefCard({
                   {participants_count}
                 </div>
               )}
-              {status === 'live' && (
-                <div className="flex items-center gap-0.5 font-sans text-[10px] font-semibold text-brand-400">
-                  Regarder <ArrowUpRight className="h-3 w-3" />
-                </div>
-              )}
-              {(status === 'scheduled' || status === 'ready' || showScheduledCountdown) &&
+              {(status === 'scheduled' || status === 'ready') &&
+                !liveAudienceAction &&
                 !((participants_count ?? 0) > 0) && (
                   <div className="flex items-center gap-0.5 font-sans text-[10px] font-semibold text-cobalt-400">
                     Bientôt <Calendar className="h-3 w-3" />
@@ -499,6 +480,66 @@ export function BeefCard({
             </div>
           </div>
         )}
+
+        {/* Actions feed — bas de carte (ne pas confondre pending / scheduled / live) */}
+        {(onSaisirAffaire || onPrepareAudience || onSeDesister || liveAudienceAction) && (
+          <div className="mt-4 space-y-2 border-t border-white/[0.06] pt-4">
+            {status === 'pending' && onSaisirAffaire && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSaisirAffaire();
+                }}
+                className="w-full rounded-xl bg-white/10 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-white/20"
+              >
+                Saisir l&apos;Affaire
+              </button>
+            )}
+            {status === 'scheduled' && (onPrepareAudience || onSeDesister) && (
+              <div className="flex flex-col gap-2">
+                {onPrepareAudience && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPrepareAudience();
+                    }}
+                    className="w-full rounded-xl border border-white/20 py-2.5 text-center text-sm font-semibold text-white transition-all hover:bg-white/10"
+                  >
+                    Préparer l&apos;Audience
+                  </button>
+                )}
+                {onSeDesister && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSeDesister();
+                    }}
+                    className="w-full py-1.5 text-center text-xs font-medium text-red-400/90 transition-colors hover:text-red-300"
+                  >
+                    Se désister
+                  </button>
+                )}
+              </div>
+            )}
+            {status === 'live' && liveAudienceAction && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  liveAudienceAction.onClick();
+                }}
+                className="w-full rounded-xl border border-brand-500/35 bg-brand-500/15 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-500/25"
+              >
+                {liveAudienceAction.variant === 'return'
+                  ? "Retourner dans l'Arène"
+                  : "Rejoindre l'Audience"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Overlay Replay — hover preview pour les beefs terminés */}
@@ -525,31 +566,6 @@ export function BeefCard({
         </AnimatePresence>
       )}
     </motion.div>
-
-      {onSaisirAffaire && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSaisirAffaire();
-          }}
-          className="mt-4 w-full rounded-[2rem] bg-white py-3.5 text-center text-sm font-bold text-black transition-colors hover:bg-gray-200"
-        >
-          Saisir l&apos;Affaire
-        </button>
-      )}
-      {onSeDesister && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSeDesister();
-          }}
-          className="mt-4 w-full rounded-[2rem] border border-white/15 bg-white/[0.04] py-3.5 text-center text-sm font-bold text-red-400 transition-colors hover:border-red-500/40 hover:bg-red-500/10"
-        >
-          Se désister
-        </button>
-      )}
     </div>
   );
 }

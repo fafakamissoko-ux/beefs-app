@@ -40,8 +40,8 @@ export default function CreateBeefPage() {
       router.push('/login');
       return;
     }
-    const beef = await submitNewBeef(supabase, user.id, beefData);
-    router.push(`/arena/${beef.id}`);
+    await submitNewBeef(supabase, user.id, beefData);
+    router.push('/feed');
   };
 
   if (!user) {

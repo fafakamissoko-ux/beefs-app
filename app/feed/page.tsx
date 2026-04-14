@@ -55,6 +55,8 @@ interface Beef {
   mediator_name?: string | null;
   is_featured?: boolean;
   feed_position?: number;
+  /** Feed : médiateur ou participant accepté — libellé « Retourner dans l'Arène » sur les cartes live */
+  user_is_live_ring?: boolean;
 }
 
 const STATUS_FILTERS = [
@@ -261,6 +263,7 @@ export default function FeedPage() {
       const beefIds = beefList.map((b: { id: string }) => b.id);
       const challengerANameByBeef: Record<string, string> = {};
       const challengerBNameByBeef: Record<string, string> = {};
+      let userOnLiveRingByBeef = new Map<string, boolean>();
 
       const publicIds = new Set<string>();
       for (const b of beefList as { mediator_id?: string | null; created_by?: string | null }[]) {
@@ -354,12 +357,23 @@ export default function FeedPage() {
             if (first) challengerANameByBeef[beef.id] = first;
             if (second) challengerBNameByBeef[beef.id] = second;
           }
+
+          const ringUid = user?.id;
+          if (ringUid && partRows) {
+            for (const row of partRows as PartRow[]) {
+              if (row.user_id !== ringUid) continue;
+              if (row.invite_status !== 'accepted') continue;
+              if (row.role === 'witness') continue;
+              userOnLiveRingByBeef.set(row.beef_id, true);
+            }
+          }
         }
       }
 
       const rawCount = beefList.length;
       const { displayNameFromPublicRow: dnFromMap } = await import('@/lib/fetch-user-public-profile');
 
+      const uid = user?.id;
       let beefsWithData = beefList.map((beef: Record<string, unknown>) => {
         const mid = beef.mediator_id as string | null | undefined;
         const cid = beef.created_by as string | null | undefined;
@@ -369,6 +383,7 @@ export default function FeedPage() {
         const hostN = dnFromMap(hostSource, 'Anonyme');
         const partAgg = beef.beef_participants as { count: number }[] | undefined;
         const bid = String(beef.id);
+        const onRing = Boolean(uid && (mid === uid || userOnLiveRingByBeef.get(bid)));
         return {
           ...beef,
           host_name: hostN,
@@ -379,6 +394,7 @@ export default function FeedPage() {
           participants_count: partAgg?.[0]?.count || 0,
           challenger_a_name: challengerANameByBeef[bid] ?? null,
           challenger_b_name: challengerBNameByBeef[bid] ?? null,
+          user_is_live_ring: onRing,
         };
       }) as Beef[];
 
@@ -418,7 +434,7 @@ export default function FeedPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [fetchLimit, selectedStatus, selectedTags, feedType, followingIds]);
+  }, [fetchLimit, selectedStatus, selectedTags, feedType, followingIds, user?.id]);
 
   const handleClaimManifesto = useCallback(
     async (beefId: string) => {
@@ -504,9 +520,9 @@ export default function FeedPage() {
   const handleCreateBeef = async (beefData: SubmitBeefPayload) => {
     if (!user) { router.push('/login'); return; }
     try {
-      const beef = await submitNewBeef(supabase, user.id, beefData);
+      await submitNewBeef(supabase, user.id, beefData);
       setShowCreateModal(false);
-      router.push(`/arena/${beef.id}`);
+      router.push('/feed');
     } catch (error: any) {
       throw new Error(error.message || 'Erreur lors de la création');
     }
@@ -695,22 +711,33 @@ export default function FeedPage() {
                   key={beef.id}
                   {...beef}
                   onPrepareAudience={
-                    user?.id === beef.mediator_id
+                    beef.status === 'scheduled' && user?.id === beef.mediator_id
                       ? () => router.push(`/live/${beef.id}`)
                       : undefined
                   }
                   saisirTab={feedType === 'manifestes'}
                   onSaisirAffaire={
-                    feedType === 'manifestes' && user?.id && beef.created_by && beef.created_by !== user.id
+                    beef.status === 'pending' &&
+                    beef.intent === 'manifesto' &&
+                    user?.id &&
+                    beef.created_by &&
+                    beef.created_by !== user.id
                       ? () => void handleClaimManifesto(beef.id)
                       : undefined
                   }
                   onSeDesister={
-                    feedType === 'pour-vous' &&
-                    selectedStatus === 'scheduled' &&
+                    beef.status === 'scheduled' &&
                     user?.id === beef.mediator_id &&
                     beef.intent === 'manifesto'
                       ? () => void handleWithdrawManifesto(beef.id)
+                      : undefined
+                  }
+                  liveAudienceAction={
+                    beef.status === 'live'
+                      ? {
+                          variant: beef.user_is_live_ring ? 'return' : 'join',
+                          onClick: () => router.push(`/arena/${beef.id}`),
+                        }
                       : undefined
                   }
                   onClick={() => handleBeefClick(beef)}
