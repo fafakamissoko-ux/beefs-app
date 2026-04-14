@@ -487,10 +487,10 @@ export default function FeedPage() {
             href={hrefWithFrom('/buy-points', pathname)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-full border border-ember-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-ember-400 transition-colors hover:bg-ember-500/10 hover:text-white"
+            className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-full border border-ember-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-ember-400 transition-colors hover:bg-ember-500/10 hover:text-white lg:hidden"
           >
             <Coins className="w-4 h-4 flex-shrink-0" />
-            <span>Acheter des points</span>
+            <span>Acquérir de l&apos;Aura</span>
           </a>
         </div>
 
@@ -621,7 +621,7 @@ export default function FeedPage() {
       {showCreateModal && <CreateBeefForm onSubmit={handleCreateBeef} onCancel={() => setShowCreateModal(false)} />}
 
       {/* FAB — prestige gold squircle */}
-      <div className="fixed bottom-8 right-8 z-40">
+      <div className="fixed bottom-8 right-8 z-40 lg:hidden">
         <div className="relative">
           <motion.button
             initial={{ scale: 0 }}

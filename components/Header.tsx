@@ -400,7 +400,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                     }`}
                   >
                     <Swords className="h-4 w-4" aria-hidden />
-                    <span>Déclarer</span>
+                    <span>Initier</span>
                   </Link>
 
                   <div className="relative" data-user-menu>
@@ -423,7 +423,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: -4, scale: 0.97 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute right-0 mt-2 w-60 rounded-2xl shadow-modal overflow-hidden dropdown-menu lg:left-0 lg:right-0 lg:w-full"
+                          className="absolute right-0 mt-2 w-60 rounded-2xl shadow-modal overflow-hidden dropdown-menu lg:top-auto lg:bottom-full lg:mb-2 lg:mt-0 lg:left-0 lg:right-auto"
                         >
                           <div className="px-4 py-3 dropdown-divider-bottom">
                             <p className="text-sm font-semibold text-white">{user.user_metadata?.username || 'Utilisateur'}</p>
@@ -517,7 +517,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   href={hrefWithFrom('/create', pathname)}
                   prefetch
                   className="flex shrink-0 items-center justify-center rounded-[2px] p-2 text-brand-400 transition hover:bg-white/[0.06]"
-                  aria-label="Déclarer un beef"
+                  aria-label="Initier"
                 >
                   <Swords className="h-5 w-5" aria-hidden />
                 </Link>

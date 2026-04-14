@@ -821,7 +821,7 @@ export default function SettingsPage() {
                 rel="noopener noreferrer"
                 className="text-xs font-semibold text-brand-400 hover:text-brand-300 whitespace-nowrap"
               >
-                Acheter des points
+                Acquérir de l&apos;Aura
               </a>
             </div>
             {pointTx.length === 0 ? (

@@ -107,7 +107,7 @@ export default function PointsDashboardPage() {
             className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white brand-gradient hover:opacity-95 transition-opacity"
           >
             <ShoppingBag className="w-4 h-4" aria-hidden />
-            Acheter des points
+            Acquérir de l&apos;Aura
             <ArrowRight className="w-4 h-4" aria-hidden />
           </a>
         </motion.div>
