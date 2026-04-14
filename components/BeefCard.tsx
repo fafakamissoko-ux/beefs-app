@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Users, Flame, Play, CheckCircle, Calendar, ArrowUpRight, User } from 'lucide-react';
+import { Clock, Users, Flame, Play, Calendar, ArrowUpRight, User } from 'lucide-react';
 import { hasBeefWatchStarted } from '@/lib/beef-view-local';
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
@@ -35,6 +35,9 @@ interface BeefCardProps {
   /** Onglet feed « À Saisir » : badge ⚖️ EN ATTENTE + CTA médiateur */
   saisirTab?: boolean;
   onSaisirAffaire?: () => void;
+  /** L’Arène : médiateur manifeste peut se retirer */
+  onSeDesister?: () => void;
+  intent?: string | null;
   created_by?: string | null;
   index: number;
 }
@@ -62,77 +65,66 @@ export function BeefCard({
   onApply,
   saisirTab = false,
   onSaisirAffaire,
+  onSeDesister,
+  intent,
   index,
 }: BeefCardProps) {
   const [hasOpenedArena, setHasOpenedArena] = useState(false);
   const [replayHover, setReplayHover] = useState(false);
 
-  const uiStatus: typeof status | 'scheduled' | 'preparing' =
-    status === 'pending' && scheduled_at && new Date(scheduled_at).getTime() > Date.now()
-      ? 'scheduled'
-      : status === 'pending' || status === 'ready'
-        ? 'preparing'
-        : status;
-
   useEffect(() => {
     setHasOpenedArena(hasBeefWatchStarted(id));
   }, [id, status, price]);
 
-  const getStatusBadge = () => {
-    const base = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider backdrop-blur-md';
-    if (saisirTab) {
+  const getPrimaryStatusBadge = () => {
+    if (saisirTab && status === 'pending') {
       return (
-        <div className={`${base} border border-white/15 bg-white/[0.06] text-white/90`}>
-          <span className="text-xs" aria-hidden>
-            ⚖️
-          </span>{' '}
-          EN ATTENTE
+        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/70 text-xs font-bold tracking-wider">
+          ⚖️ EN ATTENTE
         </div>
       );
     }
-    switch (uiStatus) {
+    switch (status) {
       case 'live':
         return (
-          <div className={`${base} bg-ember-500/15 border border-ember-500/35 text-ember-400`}>
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" aria-hidden />
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold tracking-wider uppercase">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+            </span>
             LIVE
           </div>
         );
-      case 'scheduled':
+      case 'ended':
+      case 'replay':
         return (
-          <div className={`${base} bg-cobalt-500/12 border border-cobalt-500/28 text-cobalt-400`}>
-            <Calendar className="w-3 h-3" />
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold tracking-wider uppercase">
+            ▶ JURISPRUDENCE
+          </div>
+        );
+      case 'scheduled':
+      case 'ready':
+        return (
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-cobalt-500/10 border border-cobalt-500/20 text-cobalt-400 text-xs font-bold tracking-wider uppercase">
+            <Calendar className="h-3.5 w-3.5 shrink-0" />
             À VENIR
           </div>
         );
-      case 'replay':
+      case 'pending':
         return (
-          <div className={`${base} border border-blue-500/30 bg-blue-500/20 text-blue-400`}>
-            <Play className="h-3 w-3 fill-current" />
-            REPLAY
-          </div>
-        );
-      case 'ended':
-        return (
-          <div className={`${base} bg-gray-500/12 border border-gray-500/25 text-gray-400`}>
-            <CheckCircle className="w-3 h-3" />
-            TERMINÉ
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-prestige-gold/10 border border-prestige-gold/25 text-prestige-gold text-xs font-bold tracking-wider uppercase">
+            <Clock className="h-3.5 w-3.5 shrink-0" />
+            PRÉPARATION
           </div>
         );
       case 'cancelled':
         return (
-          <div className={`${base} bg-gray-500/12 border border-gray-500/25 text-ember-400`}>
-            <CheckCircle className="w-3 h-3" />
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gray-500/12 border border-gray-500/25 text-gray-400 text-xs font-bold tracking-wider uppercase">
             ANNULÉ
           </div>
         );
-      case 'preparing':
-        return (
-          <div className={`${base} bg-prestige-gold/10 border border-prestige-gold/25 text-prestige-gold`}>
-            <Clock className="w-3 h-3" />
-            PRÉPARATION
-          </div>
-        );
+      default:
+        return null;
     }
   };
 
@@ -140,19 +132,24 @@ export function BeefCard({
     const now = Date.now();
     const createdTime = new Date(created_at).getTime();
     const minutesAgo = Math.floor((now - createdTime) / 60000);
-    if (status === 'live' || uiStatus === 'live') {
+    if (status === 'live') {
       if (minutesAgo < 60) return `${minutesAgo}min`;
       return `${Math.floor(minutesAgo / 60)}h`;
-    } else if (duration) {
-      return `${duration}min`;
     }
     return '';
   };
 
+  const showScheduledCountdown =
+    (status === 'scheduled' || status === 'pending') &&
+    !!scheduled_at &&
+    new Date(scheduled_at).getTime() > Date.now();
+
   const charSum = title.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const hueBase = charSum % 360;
 
-  const isManifesto = uiStatus === 'preparing';
+  const isManifesto =
+    saisirTab ||
+    (intent === 'manifesto' && (status === 'pending' || status === 'ready'));
   const mediatorSlotName = (mediator_name?.trim() || host_name?.trim() || '') || null;
   const isReplay = status === 'ended' || status === 'replay';
 
@@ -198,28 +195,10 @@ export function BeefCard({
         {/* Gradient lisibilité */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
 
-        {/* Live pulse */}
-        {uiStatus === 'live' && (
-          <motion.div
-            className="absolute top-4 right-4 w-3 h-3 rounded-full bg-ember-500 shadow-glow"
-            animate={{ boxShadow: ['0 0 0 0 rgba(255,77,0,0.45)', '0 0 0 10px rgba(255,77,0,0)', '0 0 0 0 rgba(255,77,0,0)'] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
-        )}
+        {/* Badge statut (unique, haut gauche) */}
+        <div className="absolute top-3.5 left-3.5 z-[2]">{getPrimaryStatusBadge()}</div>
 
-        {/* Badge statut */}
-        <div className="absolute top-3.5 left-3.5">{getStatusBadge()}</div>
-
-        {/* Badges contextuels (replay, prix) */}
-        {(status === 'ended' || status === 'replay') && !saisirTab && (
-          <div className="absolute top-3.5 right-3.5">
-            <div className="flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/20 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-blue-400 backdrop-blur-md">
-              <Play className="h-3 w-3 fill-current" />
-              Replay
-            </div>
-          </div>
-        )}
-        {uiStatus === 'scheduled' && (price ?? 0) > 0 && (
+        {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
           <div className="absolute top-3.5 right-3.5">
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-cobalt-500/12 border border-cobalt-500/25 text-cobalt-200 backdrop-blur-md">
               <Flame className="w-3 h-3" />
@@ -227,7 +206,7 @@ export function BeefCard({
             </div>
           </div>
         )}
-        {uiStatus === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
+        {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
           <div className="absolute top-3.5 right-3.5">
             <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
               <Flame className="h-3 w-3 text-orange-500" />
@@ -252,14 +231,16 @@ export function BeefCard({
 
         {/* Métriques bas — chrono / countdown + viewers */}
         <div className="absolute bottom-3 left-4 right-4 z-[2] flex items-center justify-between">
-          {uiStatus === 'scheduled' && scheduled_at ? (
+          {showScheduledCountdown && scheduled_at ? (
             <Countdown scheduledAt={scheduled_at} />
-          ) : getTimeDisplay() ? (
+          ) : status === 'live' && getTimeDisplay() ? (
             <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/60">
               <Clock className="w-3 h-3" />
               <span>{getTimeDisplay()}</span>
             </div>
-          ) : <div />}
+          ) : (
+            <div />
+          )}
           <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-orange-500">
             <Flame className="h-3 w-3 shrink-0" strokeWidth={2.25} />
             <span className="text-white/80">{viewer_count.toLocaleString()}</span>
@@ -299,12 +280,12 @@ export function BeefCard({
               {participants_count}
             </div>
           )}
-          {uiStatus === 'live' && (
+          {status === 'live' && (
             <div className="ml-auto flex items-center gap-0.5 font-sans text-[10px] text-brand-400 font-semibold">
               Regarder <ArrowUpRight className="w-3 h-3" />
             </div>
           )}
-          {uiStatus === 'scheduled' && !((participants_count ?? 0) > 0) && (
+          {(status === 'scheduled' || status === 'ready' || showScheduledCountdown) && !((participants_count ?? 0) > 0) && (
             <div className="ml-auto flex items-center gap-0.5 font-sans text-[10px] text-cobalt-400 font-semibold">
               Bientôt <Calendar className="w-3 h-3" />
             </div>
@@ -471,6 +452,18 @@ export function BeefCard({
           className="mt-4 w-full rounded-[2rem] bg-white py-3.5 text-center text-sm font-bold text-black transition-colors hover:bg-gray-200"
         >
           Saisir l&apos;Affaire
+        </button>
+      )}
+      {onSeDesister && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSeDesister();
+          }}
+          className="mt-4 w-full rounded-[2rem] border border-white/15 bg-white/[0.04] py-3.5 text-center text-sm font-bold text-red-400 transition-colors hover:border-red-500/40 hover:bg-red-500/10"
+        >
+          Se désister
         </button>
       )}
     </div>

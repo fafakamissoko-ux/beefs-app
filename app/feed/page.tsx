@@ -39,7 +39,7 @@ interface Beef {
   mediator_id?: string | null;
   created_by?: string | null;
   intent?: string | null;
-  status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled';
+  status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled' | 'pending' | 'ready';
   created_at: string;
   scheduled_at?: string;
   viewer_count?: number;
@@ -73,6 +73,20 @@ function compareFeedOrder(a: Beef, b: Beef) {
   const pb = Number(b.feed_position) || 0;
   if (pa !== pb) return pb - pa;
   return new Date(String(b.created_at)).getTime() - new Date(String(a.created_at)).getTime();
+}
+
+/** L’Arène : Live → à venir (pas terminé) → terminées / annulées. */
+function arenaLifecycleTier(beef: Beef): number {
+  if (beef.status === 'live') return 0;
+  if (beef.status === 'ended' || beef.status === 'replay' || beef.status === 'cancelled') return 2;
+  return 1;
+}
+
+function compareArenaOrder(a: Beef, b: Beef) {
+  const ta = arenaLifecycleTier(a);
+  const tb = arenaLifecycleTier(b);
+  if (ta !== tb) return ta - tb;
+  return compareFeedOrder(a, b);
 }
 
 export default function FeedPage() {
@@ -221,6 +235,10 @@ export default function FeedPage() {
 
       if (feedType === 'manifestes') {
         query = query.eq('intent', 'manifesto').is('mediator_id', null);
+      }
+
+      if (feedType === 'pour-vous') {
+        query = query.or('intent.is.null,intent.neq.manifesto,mediator_id.not.is.null');
       }
 
       if (selectedStatus !== 'all' && selectedStatus !== 'scheduled') {
@@ -377,6 +395,8 @@ export default function FeedPage() {
           (beef: any) => beef.mediator_id && followingSet.has(beef.mediator_id)
         );
         beefsWithData.sort(compareFeedOrder);
+      } else if (feedType === 'pour-vous') {
+        beefsWithData.sort(compareArenaOrder);
       } else {
         beefsWithData.sort(compareFeedOrder);
       }
@@ -398,7 +418,7 @@ export default function FeedPage() {
       if (!user?.id) return;
       const { error } = await supabase
         .from('beefs')
-        .update({ mediator_id: user.id })
+        .update({ mediator_id: user.id, status: 'scheduled' })
         .eq('id', beefId)
         .eq('intent', 'manifesto')
         .is('mediator_id', null)
@@ -412,6 +432,36 @@ export default function FeedPage() {
       void loadBeefs();
     },
     [user?.id, toast, loadBeefs]
+  );
+
+  const handleWithdrawManifesto = useCallback(
+    async (beefId: string) => {
+      if (!user?.id) return;
+      const { error } = await supabase
+        .from('beefs')
+        .update({ mediator_id: null, status: 'pending' })
+        .eq('id', beefId)
+        .eq('intent', 'manifesto')
+        .eq('mediator_id', user.id);
+      if (error) {
+        toast(error.message || 'Impossible de te désister', 'error');
+        return;
+      }
+      toast('Tu n’es plus médiateur sur cette affaire.', 'success');
+      void loadBeefs();
+    },
+    [user?.id, toast, loadBeefs]
+  );
+
+  const showWithdrawManifesto = useCallback(
+    (beef: Beef) => {
+      if (!user?.id || beef.intent !== 'manifesto' || beef.mediator_id !== user.id) return false;
+      if (beef.status === 'live' || beef.status === 'ended' || beef.status === 'replay' || beef.status === 'cancelled') {
+        return false;
+      }
+      return true;
+    },
+    [user?.id]
   );
 
   useEffect(() => {
@@ -647,6 +697,11 @@ export default function FeedPage() {
                   onSaisirAffaire={
                     feedType === 'manifestes' && user?.id && beef.created_by && beef.created_by !== user.id
                       ? () => void handleClaimManifesto(beef.id)
+                      : undefined
+                  }
+                  onSeDesister={
+                    feedType === 'pour-vous' && showWithdrawManifesto(beef)
+                      ? () => void handleWithdrawManifesto(beef.id)
                       : undefined
                   }
                   onClick={() => handleBeefClick(beef)}
