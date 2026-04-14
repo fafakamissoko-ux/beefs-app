@@ -694,6 +694,11 @@ export default function FeedPage() {
                 <BeefCard
                   key={beef.id}
                   {...beef}
+                  onPrepareAudience={
+                    user?.id === beef.mediator_id
+                      ? () => router.push(`/live/${beef.id}`)
+                      : undefined
+                  }
                   saisirTab={feedType === 'manifestes'}
                   onSaisirAffaire={
                     feedType === 'manifestes' && user?.id && beef.created_by && beef.created_by !== user.id

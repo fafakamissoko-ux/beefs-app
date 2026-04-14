@@ -45,6 +45,8 @@ interface BeefCardProps {
   onSaisirAffaire?: () => void;
   /** L’Arène : médiateur manifeste peut se retirer */
   onSeDesister?: () => void;
+  /** Feed : médiateur sur une affaire à venir — accès antichambre (défini seulement si l’utilisateur est le médiateur) */
+  onPrepareAudience?: () => void;
   intent?: string | null;
   created_by?: string | null;
   index: number;
@@ -74,6 +76,7 @@ export function BeefCard({
   saisirTab = false,
   onSaisirAffaire,
   onSeDesister,
+  onPrepareAudience,
   intent,
   index,
 }: BeefCardProps) {
@@ -174,6 +177,10 @@ export function BeefCard({
     (intent === 'manifesto' && (status === 'pending' || status === 'ready'));
   const mediatorSlotName = (mediator_name?.trim() || host_name?.trim() || '') || null;
   const isReplay = status === 'ended' || status === 'replay' || status === 'completed';
+
+  const showMediatorPrepareCta =
+    !!onPrepareAudience &&
+    (status === 'scheduled' || status === 'ready' || status === 'pending');
 
   const descText = description?.trim() ?? '';
 
@@ -276,6 +283,21 @@ export function BeefCard({
               </h4>
               {collapsibleDescription}
             </div>
+          </div>
+        )}
+
+        {showMediatorPrepareCta && (
+          <div className="absolute bottom-11 left-4 right-4 z-[3]">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPrepareAudience?.();
+              }}
+              className="w-full rounded-xl bg-red-600 py-2.5 text-center font-sans text-xs font-bold uppercase tracking-wide text-white shadow-[0_0_20px_rgba(220,38,38,0.35)] transition-colors hover:bg-red-500 active:scale-[0.99]"
+            >
+              Préparer l&apos;Audience
+            </button>
           </div>
         )}
 

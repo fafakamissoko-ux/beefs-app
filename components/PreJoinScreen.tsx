@@ -4,10 +4,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Video, VideoOff, ChevronDown } from 'lucide-react';
 import { MutinyProtocol } from './MutinyProtocol';
 
+const ANTI_JOIN_BTN =
+  'mt-8 px-8 py-4 bg-brand-500 hover:bg-brand-400 text-white font-bold text-lg rounded-xl transition-all shadow-[0_0_20px_rgba(239,68,68,0.3)] w-full max-w-md uppercase tracking-wide';
+
 interface PreJoinScreenProps {
   userName: string;
   /** Flux déjà autorisé par l’utilisateur — transmis à Daily pour éviter un 2ᵉ getUserMedia sans geste (iOS / Brave). */
-  onJoin: (preAcquiredMedia: MediaStream | null) => void;
+  onJoin: (preAcquiredMedia: MediaStream | null) => void | Promise<void>;
+  /** Médiateur (caméra/micro) — libellé du bouton final + sync live côté parent. */
+  isMediator?: boolean;
   viewerMode?: boolean;
   mediatorName?: string;
   currentUserSlot?: 'A' | 'B';
@@ -20,6 +25,7 @@ interface PreJoinScreenProps {
 export function PreJoinScreen({
   userName,
   onJoin,
+  isMediator = false,
   viewerMode = false,
   mediatorName,
   currentUserSlot,
@@ -124,32 +130,41 @@ export function PreJoinScreen({
     }
   };
 
-  const handleJoin = () => {
-    mediaHandedOffRef.current = true;
+  const handleJoin = async () => {
     const acquired = streamRef.current ?? stream;
     cancelAnimationFrame(animFrameRef.current);
-    if (videoRef.current) videoRef.current.srcObject = null;
-    /** Ne pas arrêter les pistes ici : Daily réutilise le même MediaStream (évite getUserMedia après await token). */
-    onJoin(acquired);
+    try {
+      /** Ne pas arrêter les pistes ici : Daily réutilise le même MediaStream (évite getUserMedia après await token). */
+      await onJoin(acquired);
+      mediaHandedOffRef.current = true;
+      if (videoRef.current) videoRef.current.srcObject = null;
+    } catch {
+      void startPreviewRef.current();
+    }
   };
 
   if (viewerMode) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-950 p-4">
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-obsidian p-4 text-white">
+        <h1 className="mb-8 text-3xl font-black uppercase tracking-wider">L&apos;Antichambre</h1>
         <div className="w-full max-w-md space-y-6 text-center">
-          <div className="w-24 h-24 bg-gradient-to-br from-brand-500/30 to-brand-600/20 rounded-full flex items-center justify-center mx-auto">
-            <span className="text-5xl font-black text-white">{userName?.[0]?.toUpperCase() || '?'}</span>
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-4 shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+            <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-brand-500/30 to-brand-600/20">
+              <span className="text-5xl font-black text-white">{userName?.[0]?.toUpperCase() || '?'}</span>
+            </div>
           </div>
           <div>
-            <h2 className="text-2xl font-black text-white">Rejoindre en tant que spectateur</h2>
-            <p className="text-gray-400 text-sm mt-2">Tu pourras regarder le beef, commenter, voter et envoyer des reactions</p>
+            <h2 className="text-xl font-bold text-white">Spectateur</h2>
+            <p className="mt-2 text-sm text-white/45">
+              Tu pourras regarder le beef, commenter, voter et envoyer des réactions.
+            </p>
           </div>
           <button
             type="button"
-            onClick={() => onJoin(null)}
-            className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-black text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/30 active:scale-95"
+            onClick={() => void onJoin(null)}
+            className={ANTI_JOIN_BTN}
           >
-            👁️ Regarder le Beef
+            ENTRER DANS L&apos;ARÈNE
           </button>
         </div>
       </div>
@@ -157,16 +172,16 @@ export function PreJoinScreen({
   }
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-gray-950 p-4">
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-obsidian p-4 text-white">
+      <h1 className="mb-8 text-3xl font-black uppercase tracking-wider">L&apos;Antichambre</h1>
       <div className="w-full max-w-2xl space-y-4">
-        {/* Title */}
         <div className="text-center">
-          <h2 className="text-2xl font-black text-white">Prêt à rejoindre ?</h2>
-          <p className="text-gray-400 text-sm mt-1">Teste ta caméra et ton micro avant d'entrer dans le beef</p>
+          <p className="text-sm text-white/45">Teste ta caméra et ton micro avant d&apos;entrer dans le beef</p>
         </div>
 
-        {/* Camera preview */}
-        <div className="relative aspect-video bg-gray-900 rounded-2xl overflow-hidden">
+        {/* Camera preview — cadre glass */}
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-4 shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+        <div className="relative aspect-video overflow-hidden rounded-xl bg-gray-900">
           {camEnabled ? (
             <video
               ref={videoRef}
@@ -208,6 +223,7 @@ export function PreJoinScreen({
               </div>
             </div>
           )}
+        </div>
         </div>
 
         {/* Controls row */}
@@ -303,13 +319,11 @@ export function PreJoinScreen({
           </div>
         )}
 
-        {/* Join button */}
-        <button
-          onClick={handleJoin}
-          className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-black text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/30 active:scale-95"
-        >
-          🔥 Rejoindre le Beef
-        </button>
+        <div className="flex w-full justify-center">
+          <button type="button" onClick={() => void handleJoin()} className={ANTI_JOIN_BTN}>
+            {isMediator ? '🔴 OUVRIR LA SÉANCE' : 'ENTRER DANS L&apos;ARÈNE'}
+          </button>
+        </div>
       </div>
     </div>
   );

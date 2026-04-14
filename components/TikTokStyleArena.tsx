@@ -241,8 +241,6 @@ export function TikTokStyleArena({
   const challengersEverJoinedRef = useRef(false);
   /** Évite de spammer le toast « challengers partis » tant que la room reste vide */
   const challengersAllLeftNotifiedRef = useRef(false);
-  /** Sync DB status → live quand la salle est active (sans attendre « Démarrer le chrono »). */
-  const autoLiveSyncedRef = useRef(false);
   const [userPoints, setUserPoints] = useState(0);
   const [profileFollowsTarget, setProfileFollowsTarget] = useState(false);
 
@@ -750,6 +748,30 @@ export function TikTokStyleArena({
   const [startingBeef, setStartingBeef] = useState(false);
 
   const startBeefTimer = useCallback(async () => {
+    const { count } = await supabase
+      .from('beefs')
+      .select('*', { count: 'exact', head: true })
+      .eq('mediator_id', host.id)
+      .eq('resolution_status', 'resolved')
+      .neq('id', roomId);
+    const price = continuationPriceFromResolvedCount(count ?? 0);
+    const { data: updatedRows, error: updateErr } = await supabase
+      .from('beefs')
+      .update({
+        started_at: new Date().toISOString(),
+        price,
+        is_premium: false,
+      })
+      .eq('id', roomId)
+      .eq('status', 'live')
+      .select('id');
+    if (updateErr || !updatedRows?.length) {
+      toast(
+        "Ouvre d'abord la séance depuis l'antichambre (statut live requis pour lancer le chrono).",
+        'error',
+      );
+      return;
+    }
     const startSec = DEFAULT_BEEF_DURATION;
     beefWallClockStartedAtRef.current = Date.now();
     beefEndsAtMsRef.current = Date.now() + startSec * 1000;
@@ -760,19 +782,6 @@ export function TikTokStyleArena({
     setTimerActive(true);
     setTimerPaused(false);
     toast('Le beef a commencé.', 'success');
-    const { count } = await supabase
-      .from('beefs')
-      .select('*', { count: 'exact', head: true })
-      .eq('mediator_id', host.id)
-      .eq('resolution_status', 'resolved')
-      .neq('id', roomId);
-    const price = continuationPriceFromResolvedCount(count ?? 0);
-    await supabase.from('beefs').update({
-      status: 'live',
-      started_at: new Date().toISOString(),
-      price,
-      is_premium: false,
-    }).eq('id', roomId);
     queueMicrotask(() => broadcastBeefGlobalTimer());
   }, [host.id, roomId, toast, broadcastBeefGlobalTimer]);
 
@@ -958,7 +967,6 @@ export function TikTokStyleArena({
 
   useEffect(() => {
     challengersEverJoinedRef.current = false;
-    autoLiveSyncedRef.current = false;
   }, [roomId]);
 
   // Track when mediator has actually connected at least once
@@ -1528,33 +1536,6 @@ export function TikTokStyleArena({
 
   // ── HYBRID LIVE SYNC: Broadcast (instant) + Polling (fallback) ──
   const [liveConnected, setLiveConnected] = useState(false);
-
-  useEffect(() => {
-    if (!isHost || !isJoined || !liveConnected || beefEnded || !roomId) return;
-    if (autoLiveSyncedRef.current) return;
-    if (remoteParticipants.length < 1) return;
-
-    let cancelled = false;
-    void (async () => {
-      const { data: row } = await supabase
-        .from('beefs')
-        .select('status')
-        .eq('id', roomId)
-        .maybeSingle();
-      if (cancelled || !row) return;
-      const s = String((row as { status?: string }).status ?? '');
-      if (s !== 'pending' && s !== 'ready') return;
-      const { error } = await supabase
-        .from('beefs')
-        .update({ status: 'live' })
-        .eq('id', roomId)
-        .in('status', ['pending', 'ready']);
-      if (!error) autoLiveSyncedRef.current = true;
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isHost, isJoined, liveConnected, beefEnded, roomId, remoteParticipants.length]);
 
   const seenMsgKeys = useRef(new Set<string>());
 
@@ -2812,8 +2793,15 @@ export function TikTokStyleArena({
   }, [contextMenuMsg]);
 
 
-  // Join: enregistre le flux pré-acquis puis lance join() via l’effet ci-dessus
-  const handleJoin = (preAcquired: MediaStream | null) => {
+  // Join: passage en « live » côté DB pour le médiateur uniquement, puis enregistre le flux et lance join()
+  const handleJoin = async (preAcquired: MediaStream | null) => {
+    if (isHost && !isViewer) {
+      const { error } = await supabase.from('beefs').update({ status: 'live' }).eq('id', roomId);
+      if (error) {
+        toast(error.message || 'Impossible de passer en direct', 'error');
+        throw new Error(error.message || 'live_update');
+      }
+    }
     setPreJoinMediaStream(preAcquired);
     setHasJoined(true);
   };
@@ -2845,7 +2833,12 @@ export function TikTokStyleArena({
   if (!hasJoined) {
     return (
       <div className="w-full h-full relative">
-        <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer} />
+        <PreJoinScreen
+          userName={userName}
+          onJoin={handleJoin}
+          viewerMode={isViewer}
+          isMediator={isHost && !isViewer}
+        />
         {/* Waiting for Daily.co room to be ready */}
         {!dailyRoomUrl && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm text-brand-400 text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2">
