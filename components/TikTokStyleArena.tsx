@@ -4326,7 +4326,7 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:w-auto lg:min-w-[12.5rem] lg:max-w-[15rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+            className="relative z-[200] isolate flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:w-auto lg:min-w-[12.5rem] lg:max-w-[15rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
             {/* Desktop : grille 2×5 (10 réactions) + 😀 / cœur / cadeau */}
             <div
@@ -4349,7 +4349,7 @@ export function TikTokStyleArena({
             <div
               role="toolbar"
               aria-label="Réactions rapides"
-              className="flex max-w-full flex-nowrap justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-0.5 hide-scrollbar [-webkit-overflow-scrolling:touch] lg:hidden"
+              className="touch-pan-x flex max-w-full flex-nowrap justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-0.5 hide-scrollbar [-webkit-overflow-scrolling:touch] lg:hidden"
             >
               {ARENA_QUICK_REACTIONS.map((emoji) => (
                 <button
@@ -4364,7 +4364,7 @@ export function TikTokStyleArena({
               ))}
             </div>
 
-            <div className="relative z-[130] flex flex-wrap items-center justify-center gap-2 overflow-visible max-lg:gap-1.5 lg:shrink-0">
+            <div className="relative z-[210] flex flex-wrap items-center justify-center gap-2 overflow-visible max-lg:gap-1.5 lg:shrink-0">
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.96 }}
