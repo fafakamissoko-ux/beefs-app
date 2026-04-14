@@ -23,7 +23,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative mx-auto min-h-dvh w-full overflow-x-hidden border-x border-white/5 bg-obsidian shadow-2xl lg:flex lg:max-w-7xl">
       <Header shell="phone" />
-      <main className="w-full min-w-0 flex-1 pt-14 transition-all lg:ml-64 lg:max-w-2xl lg:pt-0">{children}</main>
+      {/* Le lg:pt-0 annule la marge du header mobile. */}
+      <main className="flex w-full min-w-0 flex-1 flex-col pt-14 transition-all lg:pt-0 lg:pl-64">
+        <div className="w-full flex-1 px-4 py-4 lg:px-8 lg:pt-6 lg:pb-10">{children}</div>
+      </main>
     </div>
   );
 }
