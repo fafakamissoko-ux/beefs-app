@@ -433,7 +433,7 @@ export default function FeedPage() {
       <Suspense fallback={null}>
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
-      <div className="mx-auto w-full max-w-full px-4 pb-8 pt-10 sm:px-6">
+      <div className="w-full max-w-full pb-8 pt-6 sm:pt-8">
         {/* Active beef banner */}
         {activeBeef && (
           <motion.div
@@ -462,8 +462,8 @@ export default function FeedPage() {
         )}
 
         {/* Feed tabs + achat de points */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
-          <div className="inline-flex items-center gap-1 rounded-full bg-white/[0.05] p-1 backdrop-blur-md">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4 gap-y-4">
+          <div className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full bg-white/[0.05] p-1 backdrop-blur-md">
             {[
               { id: 'pour-vous', label: 'Pour vous', icon: TrendingUp },
               { id: 'abonnements', label: 'Abonnements', icon: Users },
@@ -487,7 +487,7 @@ export default function FeedPage() {
             href={hrefWithFrom('/buy-points', pathname)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-[44px] items-center justify-center gap-2 self-stretch rounded-full border border-ember-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-ember-400 transition-colors hover:bg-ember-500/10 hover:text-white sm:self-auto"
+            className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-full border border-ember-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-ember-400 transition-colors hover:bg-ember-500/10 hover:text-white"
           >
             <Coins className="w-4 h-4 flex-shrink-0" />
             <span>Acheter des points</span>
