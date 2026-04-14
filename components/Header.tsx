@@ -328,7 +328,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
 
             {/* Desktop Nav — liens app uniquement si connecté (sinon préfetch RSC ×6 → échecs Brave / Safari / réseau) */}
             <nav
-              className={`relative z-[5] hidden min-w-0 md:flex md:flex-1 md:items-center md:gap-1 ${
+              className={`relative z-[5] hidden min-w-0 lg:flex lg:flex-1 lg:items-center lg:gap-1 ${
                 shell === 'phone'
                   ? 'lg:mt-10 lg:w-full lg:flex-col lg:items-stretch lg:gap-3 lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-contain'
                   : ''
@@ -338,7 +338,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 <button
                   type="button"
                   aria-label="Ouvrir la recherche"
-                  className={`glass-prestige flex min-h-[44px] w-full max-w-xs shrink-0 items-center gap-2.5 rounded-[2px] px-3 py-2.5 text-left transition hover:bg-white/[0.06] md:mr-2 ${
+                  className={`glass-prestige flex min-h-[44px] w-full max-w-xs shrink-0 items-center gap-2.5 rounded-[2px] px-3 py-2.5 text-left transition hover:bg-white/[0.06] ${
                     shell === 'phone' ? 'lg:mr-0 lg:max-w-none lg:w-full' : ''
                   }`}
                 >
@@ -384,9 +384,9 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 })}
             </nav>
 
-            {/* Right — barre haute (md–lg) / bas de sidebar (lg+) */}
+            {/* Right — bas de sidebar (lg+) */}
             <div
-              className={`relative z-[5] hidden shrink-0 md:flex md:items-center md:gap-2 ${
+              className={`relative z-[5] hidden shrink-0 lg:flex lg:items-center lg:gap-2 ${
                 shell === 'phone' ? 'lg:mt-auto lg:w-full lg:flex-col lg:items-stretch lg:gap-4' : ''
               }`}
             >
@@ -498,13 +498,13 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               )}
             </div>
 
-            {/* Mobile — champ recherche entre logo et actions */}
-            <div className="flex min-w-0 flex-1 items-center gap-1.5 md:hidden">
+            {/* Mobile — recherche condensée + burger (viewport < lg) */}
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 lg:hidden">
               {showGlobalSearch && (
                 <button
                   type="button"
                   aria-label="Ouvrir la recherche"
-                  className="glass-prestige flex min-h-[40px] min-w-0 flex-1 items-center gap-2 rounded-[2px] px-2.5 py-2 text-left transition hover:bg-white/[0.06]"
+                  className="glass-prestige flex min-h-[40px] min-w-0 max-w-[160px] flex-1 items-center gap-2 truncate rounded-[2px] px-2.5 py-2 text-left transition hover:bg-white/[0.06] sm:max-w-xs"
                 >
                   <Search className="h-4 w-4 shrink-0 text-white/45" strokeWidth={1.75} aria-hidden />
                   <span className="min-w-0 flex-1 truncate text-xs font-medium text-gray-400 sm:text-sm">
@@ -537,7 +537,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="md:hidden border-t border-white/[0.06] dropdown-menu"
+              className="lg:hidden border-t border-white/[0.06] dropdown-menu"
             >
               {/* Backdrop */}
               <motion.div
