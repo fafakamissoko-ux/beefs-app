@@ -297,14 +297,29 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       <header
         className={
           shell === 'phone'
-            ? 'fixed left-1/2 top-0 z-header w-full max-w-md -translate-x-1/2 border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl'
+            ? 'fixed left-1/2 top-0 z-header w-full max-w-md -translate-x-1/2 border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl lg:left-0 lg:right-auto lg:h-dvh lg:max-w-none lg:w-64 lg:translate-x-0 lg:border-b-0 lg:border-r lg:border-white/[0.08] lg:flex lg:flex-col lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.06)]'
             : 'fixed left-0 right-0 top-0 z-header border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl'
         }
       >
-        <div className={shell === 'phone' ? 'mx-auto w-full px-4' : 'mx-auto max-w-7xl px-4'}>
-          <div className="flex h-14 min-w-0 items-center gap-2">
+        <div
+          className={
+            shell === 'phone'
+              ? 'mx-auto flex h-full min-h-0 w-full max-w-md flex-col lg:mx-0 lg:max-w-none'
+              : 'mx-auto max-w-7xl px-4'
+          }
+        >
+          <div
+            className={
+              shell === 'phone'
+                ? 'flex h-14 min-w-0 items-center justify-between gap-2 px-4 lg:h-full lg:min-h-0 lg:flex-col lg:items-stretch lg:justify-start lg:gap-0 lg:px-6 lg:py-8'
+                : 'flex h-14 min-w-0 items-center gap-2'
+            }
+          >
             {/* Logo — invités : accueil splash pour éviter préchargement /feed (RSC) sur login, onboarding, etc. */}
-            <Link href={user ? '/feed' : '/'} className="relative z-[5] flex items-center gap-2.5 group flex-shrink-0">
+            <Link
+              href={user ? '/feed' : '/'}
+              className={`relative z-[5] flex shrink-0 items-center gap-2.5 group ${shell === 'phone' ? 'lg:w-full' : ''}`}
+            >
               <BeefLogo size={32} className="transition-transform group-hover:scale-105" />
               <span className="hidden sm:block text-xl font-extrabold text-gradient tracking-tight">
                 Beefs
@@ -312,12 +327,20 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
             </Link>
 
             {/* Desktop Nav — liens app uniquement si connecté (sinon préfetch RSC ×6 → échecs Brave / Safari / réseau) */}
-            <nav className="relative z-[5] hidden min-w-0 flex-1 items-center gap-1 md:flex">
+            <nav
+              className={`relative z-[5] hidden min-w-0 md:flex md:flex-1 md:items-center md:gap-1 ${
+                shell === 'phone'
+                  ? 'lg:mt-10 lg:w-full lg:flex-col lg:items-stretch lg:gap-3 lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-contain'
+                  : ''
+              }`}
+            >
               {showGlobalSearch && (
                 <button
                   type="button"
                   aria-label="Ouvrir la recherche"
-                  className="glass-prestige mr-2 flex min-h-[44px] w-full max-w-xs shrink-0 items-center gap-2.5 rounded-[2px] px-3 py-2.5 text-left transition hover:bg-white/[0.06]"
+                  className={`glass-prestige flex min-h-[44px] w-full max-w-xs shrink-0 items-center gap-2.5 rounded-[2px] px-3 py-2.5 text-left transition hover:bg-white/[0.06] md:mr-2 ${
+                    shell === 'phone' ? 'lg:mr-0 lg:max-w-none lg:w-full' : ''
+                  }`}
                 >
                   <Search className="h-4 w-4 shrink-0 text-white/45" strokeWidth={1.75} aria-hidden />
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-400">
@@ -341,7 +364,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         active
                           ? 'text-white bg-white/[0.08]'
                           : 'text-gray-500 hover:text-gray-200 hover:bg-white/[0.04]'
-                      }`}
+                      } ${shell === 'phone' ? 'lg:w-full lg:justify-start lg:px-4' : ''}`}
                     >
                       <div className="relative">
                         <Icon className={`w-[18px] h-[18px] ${active && (item.href === '/live' || item.href === '/points') ? 'text-brand-400' : ''}`} />
@@ -351,7 +374,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       {active && (
                         <motion.div
                           layoutId="nav-indicator"
-                          className="absolute -bottom-[13px] left-3 right-3 h-[2px] rounded-full"
+                          className="absolute -bottom-[13px] left-3 right-3 h-[2px] rounded-full lg:hidden"
                           style={{ background: 'linear-gradient(90deg, #0052FF, #FF4D00)' }}
                           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                         />
@@ -361,14 +384,20 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 })}
             </nav>
 
-            {/* Right */}
-            <div className="hidden md:flex items-center gap-2 relative z-[5] shrink-0">
+            {/* Right — barre haute (md–lg) / bas de sidebar (lg+) */}
+            <div
+              className={`relative z-[5] hidden shrink-0 md:flex md:items-center md:gap-2 ${
+                shell === 'phone' ? 'lg:mt-auto lg:w-full lg:flex-col lg:items-stretch lg:gap-4' : ''
+              }`}
+            >
               {user ? (
                 <>
                   <Link
                     href="/create"
                     prefetch
-                    className="brand-gradient flex min-h-[44px] items-center gap-1.5 rounded-[2px] px-4 py-2 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97]"
+                    className={`brand-gradient flex min-h-[44px] items-center gap-1.5 rounded-[2px] px-4 py-2 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97] ${
+                      shell === 'phone' ? 'lg:w-full lg:justify-center' : ''
+                    }`}
                   >
                     <Swords className="h-4 w-4" aria-hidden />
                     <span>Déclarer</span>
@@ -377,7 +406,9 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   <div className="relative" data-user-menu>
                     <button
                       onClick={() => setUserMenuOpen(!userMenuOpen)}
-                      className="flex items-center gap-2 px-2.5 py-1.5 hover:bg-white/[0.06] rounded-xl transition-all"
+                      className={`flex items-center gap-2 px-2.5 py-1.5 hover:bg-white/[0.06] rounded-xl transition-all ${
+                        shell === 'phone' ? 'lg:w-full lg:justify-between' : ''
+                      }`}
                     >
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ring-2 ring-white/10 brand-gradient">
                         {user.user_metadata?.username?.[0]?.toUpperCase() || 'U'}
@@ -392,7 +423,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: -4, scale: 0.97 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute right-0 mt-2 w-60 rounded-2xl shadow-modal overflow-hidden dropdown-menu"
+                          className="absolute right-0 mt-2 w-60 rounded-2xl shadow-modal overflow-hidden dropdown-menu lg:left-0 lg:right-0 lg:w-full"
                         >
                           <div className="px-4 py-3 dropdown-divider-bottom">
                             <p className="text-sm font-semibold text-white">{user.user_metadata?.username || 'Utilisateur'}</p>
@@ -446,16 +477,20 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   </div>
                 </>
               ) : (
-                <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-2 ${shell === 'phone' ? 'lg:w-full lg:flex-col lg:gap-3' : ''}`}>
                   <Link
                     href="/login"
-                    className="btn-ghost min-h-[44px] px-4 text-sm font-medium text-gray-400 hover:text-white"
+                    className={`btn-ghost min-h-[44px] px-4 text-sm font-medium text-gray-400 hover:text-white ${
+                      shell === 'phone' ? 'lg:w-full lg:justify-center' : ''
+                    }`}
                   >
                     Connexion
                   </Link>
                   <Link
                     href="/signup"
-                    className="brand-gradient inline-flex min-h-[44px] items-center justify-center rounded-[2px] px-5 py-2 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97]"
+                    className={`brand-gradient inline-flex min-h-[44px] items-center justify-center rounded-[2px] px-5 py-2 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97] ${
+                      shell === 'phone' ? 'lg:w-full' : ''
+                    }`}
                   >
                     Entrer dans l&apos;Arène
                   </Link>
