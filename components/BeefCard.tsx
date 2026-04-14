@@ -102,8 +102,10 @@ export function BeefCard({
       setDescNeedsToggle(true);
       return;
     }
-    setDescNeedsToggle(el.scrollHeight > el.clientHeight + 2);
-  }, [description, descExpanded]);
+    const overflows = el.scrollHeight > el.clientHeight + 2;
+    const longTextFallback = text.length > 90;
+    setDescNeedsToggle(overflows || longTextFallback);
+  }, [description, descExpanded, thumbnail]);
 
   const getPrimaryStatusBadge = () => {
     const base = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider backdrop-blur-md';
@@ -173,6 +175,36 @@ export function BeefCard({
   const mediatorSlotName = (mediator_name?.trim() || host_name?.trim() || '') || null;
   const isReplay = status === 'ended' || status === 'replay' || status === 'completed';
 
+  const descText = description?.trim() ?? '';
+
+  const collapsibleDescription = descText ? (
+    <div className="min-w-0 space-y-0.5">
+      <p
+        ref={descMeasureRef}
+        style={{ overflowWrap: 'anywhere' }}
+        className={`font-sans text-[11px] leading-snug text-white/50 break-words ${
+          descExpanded
+            ? 'max-h-24 overflow-y-auto overscroll-contain pr-0.5 [scrollbar-width:thin]'
+            : 'line-clamp-2 overflow-hidden'
+        }`}
+      >
+        {descText}
+      </p>
+      {(descNeedsToggle || descText.length > 90) && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDescExpanded((v) => !v);
+          }}
+          className="font-sans text-[10px] font-semibold text-brand-400 hover:text-brand-300"
+        >
+          {descExpanded ? 'Réduire' : 'Voir plus'}
+        </button>
+      )}
+    </div>
+  ) : null;
+
   return (
     <div className="flex flex-col">
     <motion.div
@@ -235,39 +267,14 @@ export function BeefCard({
           </div>
         )}
 
-        {/* Titre + description (dans le visuel) — pb réservé pour ne pas chevaucher chrono / flamme */}
+        {/* Titre + description (sans vignette) — zone max-h + marge bas pour ne pas chevaucher chrono / flamme */}
         {!thumbnail && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 top-0 z-[1] flex flex-col justify-end">
-            <div className="pointer-events-auto space-y-1 px-5 pb-12 pt-2">
-              <h4 className="font-sans text-base font-bold leading-snug text-white line-clamp-2 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+          <div className="pointer-events-none absolute inset-0 z-[1] flex flex-col justify-end">
+            <div className="pointer-events-auto mx-5 mb-[3.35rem] flex max-h-[calc(100%-3.5rem)] min-h-0 flex-col justify-end gap-1 overflow-hidden pt-2">
+              <h4 className="line-clamp-2 shrink-0 font-sans text-base font-bold leading-snug text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
                 {title}
               </h4>
-              {description?.trim() && (
-                <div className="space-y-0.5">
-                  <p
-                    ref={descMeasureRef}
-                    className={`font-sans text-[11px] leading-snug text-white/50 break-words ${
-                      descExpanded
-                        ? 'max-h-[5.5rem] overflow-y-auto overscroll-contain pr-0.5'
-                        : 'line-clamp-2 overflow-hidden'
-                    }`}
-                  >
-                    {description.trim()}
-                  </p>
-                  {descNeedsToggle && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDescExpanded((v) => !v);
-                      }}
-                      className="font-sans text-[10px] font-semibold text-brand-400 hover:text-brand-300"
-                    >
-                      {descExpanded ? 'Réduire' : 'Voir plus'}
-                    </button>
-                  )}
-                </div>
-              )}
+              {collapsibleDescription}
             </div>
           </div>
         )}
@@ -294,9 +301,14 @@ export function BeefCard({
       {/* Contenu sous le visuel */}
       <div className="px-5 py-4">
         {thumbnail && (
-          <h3 className="font-sans text-[15px] font-bold text-white mb-1 line-clamp-2 leading-snug group-hover:text-brand-400 transition-colors duration-200">
-            {title}
-          </h3>
+          <>
+            <h3 className="font-sans text-[15px] font-bold text-white mb-1 line-clamp-2 leading-snug group-hover:text-brand-400 transition-colors duration-200">
+              {title}
+            </h3>
+            {collapsibleDescription ? (
+              <div className="mb-3 min-w-0">{collapsibleDescription}</div>
+            ) : null}
+          </>
         )}
 
         {/* Médiateur — même pastille que les challengers (avatar + nom dans le pill) */}
