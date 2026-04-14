@@ -3108,9 +3108,8 @@ export function TikTokStyleArena({
       {/* TikTok Battle : vidéo 60% + chat overlay */}
       <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
         {dailyRoomUrl ? (
-          /* z-[60] > dock social z-[55] : sinon le dock (chat scroll) recouvre le bas des dalles et vole les taps micro/cam */
           <div
-            className={`relative z-[60] pointer-events-none h-[60%] w-full shrink-0 overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
+            className={`relative z-[50] pointer-events-none h-[60%] w-full shrink-0 overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
           >
             {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
             <div className={`pointer-events-none absolute inset-0 z-0 flex h-auto flex-row gap-2 px-1 transition-shadow duration-700 ${sponsorGlow}`}>
@@ -3854,7 +3853,7 @@ export function TikTokStyleArena({
           </div>
         ) : (
         /* Placeholder — même hauteur vidéo que avec room */
-        <div className="relative z-[60] pointer-events-none h-[60%] w-full shrink-0 overflow-hidden">
+        <div className="relative z-[50] pointer-events-none h-[60%] w-full shrink-0 overflow-hidden">
           <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
           {debaters[0] ? (
             <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]">
@@ -4197,9 +4196,9 @@ export function TikTokStyleArena({
         </>
       )}
 
-      {/* ── Dock social — overlay massif bas, obstrue le bas des vidéos ── */}
+      {/* ── Dock social : top-[60%] aligné sur la hauteur vidéo h-[60%] — évite tout chevauchement (sinon z-index vidéo masquait le chat) ── */}
       {!beefEnded && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[55] flex h-[45%] min-h-[160px] w-full flex-col justify-end overflow-visible max-lg:h-[50%]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 top-[60%] z-[55] flex min-h-0 w-full flex-col justify-end overflow-visible">
         <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
