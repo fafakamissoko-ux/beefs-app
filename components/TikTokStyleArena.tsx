@@ -3109,10 +3109,10 @@ export function TikTokStyleArena({
       <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
         {dailyRoomUrl ? (
           <div
-            className={`relative z-[50] pointer-events-none h-[60%] w-full shrink-0 overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
+            className={`relative z-[50] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
           >
             {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
-            <div className={`pointer-events-none absolute inset-0 z-0 flex h-auto flex-row gap-2 px-1 transition-shadow duration-700 ${sponsorGlow}`}>
+            <div className={`pointer-events-none absolute inset-0 z-0 flex h-full min-h-0 flex-row gap-2 px-1 transition-shadow duration-700 ${sponsorGlow}`}>
               {/* LEFT — Participant A */}
               <motion.div
                 className={`pointer-events-auto relative h-full overflow-hidden rounded-[2rem] bg-[#08080A] transition-all duration-500 ring-inset ring-2 ring-cobalt-500/20 shadow-glow-cyan ${focusTarget === 'A' ? 'w-[80%]' : focusTarget === 'B' ? 'w-[20%]' : 'w-1/2'}`}
@@ -3853,8 +3853,8 @@ export function TikTokStyleArena({
           </div>
         ) : (
         /* Placeholder — même hauteur vidéo que avec room */
-        <div className="relative z-[50] pointer-events-none h-[60%] w-full shrink-0 overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
+        <div className="relative z-[50] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 z-0 flex h-full min-h-0 w-full flex-row">
           {debaters[0] ? (
             <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]">
               <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-2rem)] items-start justify-start gap-2">
