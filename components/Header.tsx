@@ -3,12 +3,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Home, Flame, Bell, User, Settings as SettingsIcon, MessageCircle, LogOut, Mail, ChevronDown, Plus, Shield, Coins } from 'lucide-react';
+import {
+  Menu,
+  X,
+  Home,
+  Flame,
+  Bell,
+  User,
+  Settings as SettingsIcon,
+  MessageCircle,
+  LogOut,
+  Mail,
+  ChevronDown,
+  Shield,
+  Coins,
+  Search,
+  Swords,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { BeefLogo } from '@/components/BeefLogo';
-import { GlobalSearchBar } from '@/components/GlobalSearchBar';
 import { BeefNotificationToasts } from '@/components/BeefNotificationToasts';
 import { supabase } from '@/lib/supabase/client';
 import { hrefWithFrom } from '@/lib/navigation-return';
@@ -66,6 +81,37 @@ function hideGlobalSearchOnPath(pathname: string | null): boolean {
   }
   if (pathname.startsWith('/auth/')) return true;
   return false;
+}
+
+/** Badge compteur nav (desktop + mobile menu) — ember + ping pour les convocations. */
+function NavUnreadBadge({
+  href,
+  count,
+  compact,
+}: {
+  href: string;
+  count: number;
+  compact?: boolean;
+}) {
+  if (count <= 0) return null;
+  const outer = compact
+    ? 'absolute -top-1 -right-1 flex h-3.5 min-w-[14px] items-center justify-center'
+    : 'absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center';
+  const inner = compact
+    ? 'min-h-[14px] min-w-[14px] px-0.5 text-[9px]'
+    : 'min-h-4 min-w-[16px] px-1 text-[10px]';
+  return (
+    <span className={outer}>
+      {href === '/invitations' && (
+        <span className="absolute inset-0 animate-ping rounded-full bg-ember-400 opacity-75" aria-hidden />
+      )}
+      <span
+        className={`relative z-[1] inline-flex items-center justify-center rounded-full bg-ember-500 font-bold text-white ${inner}`}
+      >
+        {formatNavBadgeCount(count)}
+      </span>
+    </span>
+  );
 }
 
 export type HeaderShell = 'phone' | 'full';
@@ -216,11 +262,11 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       icon: Bell,
       badge: unreadNotifications,
     },
-    { href: '/live', label: 'Live', icon: Flame, badge: 0 },
-    { href: '/points', label: 'Points', icon: Coins, badge: 0 },
+    { href: '/live', label: 'Audiences', icon: Flame, badge: 0 },
+    { href: '/points', label: 'Aura', icon: Coins, badge: 0 },
     {
       href: '/invitations',
-      label: 'Invitations',
+      label: 'Convocations',
       icon: Mail,
       badge: pendingInvitations,
     },
@@ -256,7 +302,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
         }
       >
         <div className={shell === 'phone' ? 'mx-auto w-full px-4' : 'mx-auto max-w-7xl px-4'}>
-          <div className="flex items-center justify-between h-14">
+          <div className="flex h-14 min-w-0 items-center gap-2">
             {/* Logo — invités : accueil splash pour éviter préchargement /feed (RSC) sur login, onboarding, etc. */}
             <Link href={user ? '/feed' : '/'} className="relative z-[5] flex items-center gap-2.5 group flex-shrink-0">
               <BeefLogo size={32} className="transition-transform group-hover:scale-105" />
@@ -266,8 +312,22 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
             </Link>
 
             {/* Desktop Nav — liens app uniquement si connecté (sinon préfetch RSC ×6 → échecs Brave / Safari / réseau) */}
-            <nav className="hidden md:flex items-center gap-1 relative z-[5] min-w-0">
-              {showGlobalSearch && <GlobalSearchBar />}
+            <nav className="relative z-[5] hidden min-w-0 flex-1 items-center gap-1 md:flex">
+              {showGlobalSearch && (
+                <button
+                  type="button"
+                  aria-label="Ouvrir la recherche"
+                  className="glass-prestige mr-2 flex min-h-[44px] w-full max-w-xs shrink-0 items-center gap-2.5 rounded-[2px] px-3 py-2.5 text-left transition hover:bg-white/[0.06]"
+                >
+                  <Search className="h-4 w-4 shrink-0 text-white/45" strokeWidth={1.75} aria-hidden />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-400">
+                    Rechercher un dossier, un médiateur…
+                  </span>
+                  <span className="hidden items-center rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] font-medium text-white/35 lg:inline-flex">
+                    ⌘K
+                  </span>
+                </button>
+              )}
               {user &&
                 navItems.map((item) => {
                   const Icon = item.icon;
@@ -285,11 +345,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                     >
                       <div className="relative">
                         <Icon className={`w-[18px] h-[18px] ${active && (item.href === '/live' || item.href === '/points') ? 'text-brand-400' : ''}`} />
-                        {item.badge > 0 && (
-                          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 flex items-center justify-center px-1 text-[10px] font-bold text-white rounded-full bg-red-500">
-                            {formatNavBadgeCount(item.badge)}
-                          </span>
-                        )}
+                        <NavUnreadBadge href={item.href} count={item.badge} />
                       </div>
                       <span>{item.label}</span>
                       {active && (
@@ -312,10 +368,10 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   <Link
                     href="/create"
                     prefetch
-                    className="brand-gradient flex items-center gap-1.5 rounded-[2px] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-glow active:scale-[0.97]"
+                    className="brand-gradient flex min-h-[44px] items-center gap-1.5 rounded-[2px] px-4 py-2 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97]"
                   >
-                    <Plus className="w-4 h-4" />
-                    <span>Créer</span>
+                    <Swords className="h-4 w-4" aria-hidden />
+                    <span>Déclarer</span>
                   </Link>
 
                   <div className="relative" data-user-menu>
@@ -345,8 +401,8 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           <div className="py-1">
                             {[
                               { href: '/profile', icon: User, label: 'Profil' },
-                              { href: '/buy-points', icon: Flame, label: 'Acheter des points' },
-                              { href: '/invitations', icon: Mail, label: 'Invitations' },
+                              { href: '/buy-points', icon: Flame, label: 'Acquérir de l\'Aura' },
+                              { href: '/invitations', icon: Mail, label: 'Convocations' },
                               { href: '/settings', icon: SettingsIcon, label: 'Paramètres' },
                               ...(userRole === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
                             ].map(item =>
@@ -391,22 +447,44 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 </>
               ) : (
                 <div className="flex items-center gap-2">
-                  <Link href="/login" className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors">
+                  <Link
+                    href="/login"
+                    className="btn-ghost min-h-[44px] px-4 text-sm font-medium text-gray-400 hover:text-white"
+                  >
                     Connexion
                   </Link>
-                  <Link href="/signup" className="px-4 py-2 text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.97] brand-gradient">
-                    S'inscrire
+                  <Link
+                    href="/signup"
+                    className="brand-gradient inline-flex min-h-[44px] items-center justify-center rounded-[2px] px-5 py-2 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97]"
+                  >
+                    Entrer dans l&apos;Arène
                   </Link>
                 </div>
               )}
             </div>
 
-            {/* Mobile */}
-            <div className="flex md:hidden items-center gap-1.5">
-              {showGlobalSearch && <GlobalSearchBar />}
+            {/* Mobile — champ recherche entre logo et actions */}
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 md:hidden">
+              {showGlobalSearch && (
+                <button
+                  type="button"
+                  aria-label="Ouvrir la recherche"
+                  className="glass-prestige flex min-h-[40px] min-w-0 flex-1 items-center gap-2 rounded-[2px] px-2.5 py-2 text-left transition hover:bg-white/[0.06]"
+                >
+                  <Search className="h-4 w-4 shrink-0 text-white/45" strokeWidth={1.75} aria-hidden />
+                  <span className="min-w-0 flex-1 truncate text-xs font-medium text-gray-400 sm:text-sm">
+                    Rechercher un dossier, un médiateur…
+                  </span>
+                </button>
+              )}
               {user && (
-                <Link href={hrefWithFrom('/create', pathname)} prefetch className="p-2 text-brand-400">
-                  <Plus className="w-5 h-5" />
+                <Link
+                  href={hrefWithFrom('/create', pathname)}
+                  prefetch
+                  className="flex shrink-0 items-center justify-center rounded-[2px] p-2 text-brand-400 transition hover:bg-white/[0.06]"
+                  aria-label="Déclarer un beef"
+                >
+                  <Swords className="h-5 w-5" aria-hidden />
                 </Link>
               )}
               <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-gray-400 hover:text-white transition-colors">
@@ -451,15 +529,11 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       >
                         <div className="relative">
                           <Icon className="w-5 h-5" />
-                          {item.badge > 0 && (
-                            <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 flex items-center justify-center px-0.5 text-[9px] font-bold text-white rounded-full bg-red-500">
-                              {formatNavBadgeCount(item.badge)}
-                            </span>
-                          )}
+                          <NavUnreadBadge href={item.href} count={item.badge} compact />
                         </div>
                         <span className="flex-1">{item.label}</span>
                         {item.badge > 0 && (
-                          <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">
+                          <span className="rounded-full bg-ember-500/10 px-2 py-0.5 text-[10px] font-bold text-ember-400">
                             {item.badge} nouvelle{item.badge > 1 ? 's' : ''}
                           </span>
                         )}
@@ -487,7 +561,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] rounded-xl transition-colors"
                       >
                         <Flame className="w-5 h-5 text-gray-500" />
-                        <span>Acheter des points</span>
+                        <span>Acquérir de l&apos;Aura</span>
                       </a>
                       {[
                         { href: '/profile', icon: User, label: 'Profil' },
@@ -507,14 +581,20 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       </button>
                     </>
                   ) : (
-                    <div className="flex gap-2 px-2">
-                      <Link href="/login" onClick={() => setMobileMenuOpen(false)}
-                        className="flex-1 text-center py-3 text-sm font-medium text-gray-300 hover:text-white bg-white/[0.04] rounded-xl transition-colors">
+                    <div className="flex flex-col gap-2 px-2 sm:flex-row">
+                      <Link
+                        href="/login"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="btn-ghost flex flex-1 items-center justify-center py-3 text-center text-sm font-medium text-gray-400 hover:text-white"
+                      >
                         Connexion
                       </Link>
-                      <Link href="/signup" onClick={() => setMobileMenuOpen(false)}
-                        className="flex-1 text-center py-3 text-sm font-semibold text-white rounded-xl transition-colors brand-gradient">
-                        S'inscrire
+                      <Link
+                        href="/signup"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="brand-gradient flex flex-1 items-center justify-center rounded-[2px] py-3 text-center text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97]"
+                      >
+                        Entrer dans l&apos;Arène
                       </Link>
                     </div>
                   )}
