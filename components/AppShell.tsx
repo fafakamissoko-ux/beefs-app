@@ -21,11 +21,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="relative mx-auto min-h-dvh w-full overflow-x-hidden border-x border-white/5 bg-obsidian shadow-2xl lg:flex lg:max-w-7xl">
+    <div className="relative min-h-dvh w-full overflow-x-hidden bg-obsidian flex flex-col lg:flex-row">
       <Header shell="phone" />
-      {/* Le lg:pt-0 annule la marge du header mobile. */}
-      <main className="flex w-full min-w-0 flex-1 flex-col pt-14 transition-all lg:pt-0 lg:pl-64">
-        <div className="w-full flex-1 px-4 py-4 lg:px-8 lg:pt-6 lg:pb-10">{children}</div>
+
+      {/* MOBILE/TABLET : max-w-md mx-auto pt-14 (Protège le design original)
+          DESKTOP (lg) : max-w-none mx-0 pl-64 pt-0 (Libère la grille et décale la sidebar) */}
+      <main className="flex-1 w-full max-w-md mx-auto pt-14 lg:max-w-none lg:mx-0 lg:pl-64 lg:pt-0 transition-all flex flex-col min-w-0">
+        {/* MOBILE : p-4 | DESKTOP : p-10 */}
+        <div className="w-full flex-1 p-4 lg:p-10 transition-all">{children}</div>
       </main>
     </div>
   );

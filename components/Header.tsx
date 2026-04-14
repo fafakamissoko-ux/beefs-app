@@ -504,7 +504,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 <button
                   type="button"
                   aria-label="Ouvrir la recherche"
-                  className="glass-prestige flex min-h-[40px] min-w-0 max-w-[160px] flex-1 items-center gap-3 truncate rounded-[2px] px-3 py-2 text-left transition hover:bg-white/[0.06] sm:max-w-xs"
+                  className="glass-prestige flex min-h-[40px] min-w-0 flex-1 items-center gap-2 truncate rounded-[2px] px-3 py-2 text-left transition hover:bg-white/[0.06]"
                 >
                   <Search className="h-4 w-4 shrink-0 text-gray-500" strokeWidth={1.75} aria-hidden />
                   <span className="min-w-0 flex-1 truncate text-sm text-gray-400">
