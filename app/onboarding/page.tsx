@@ -105,7 +105,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden">
       {/* Skip button with dropdown */}
       <div className="absolute top-4 right-4 z-50">
         <div className="relative group">

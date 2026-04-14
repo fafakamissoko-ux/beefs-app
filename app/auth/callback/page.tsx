@@ -53,7 +53,7 @@ function AuthCallbackInner() {
   }, [router, searchParams]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-black">
+    <div className="flex min-h-screen items-center justify-center">
       <div className="text-center">
         <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
         <p className="font-semibold text-white">Vérification en cours...</p>
@@ -66,7 +66,7 @@ export default function AuthCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-black">
+        <div className="flex min-h-screen items-center justify-center">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
         </div>
       }

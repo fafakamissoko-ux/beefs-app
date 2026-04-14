@@ -84,7 +84,7 @@ export default function BuyPointsPage() {
   const selectedPackData = POINT_PACKS.find(p => p.id === selectedPack);
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen">
       <div className="page-ambient-gradient" aria-hidden />
 
       <div className="relative z-[1] max-w-md mx-auto px-4 py-8">

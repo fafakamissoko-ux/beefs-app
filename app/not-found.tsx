@@ -3,7 +3,7 @@ import { Home, Search, Flame } from 'lucide-react';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center">
         <div className="mb-8">
           <div className="relative inline-block mb-6">

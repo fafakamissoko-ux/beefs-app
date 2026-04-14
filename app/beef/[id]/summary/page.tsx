@@ -167,7 +167,7 @@ export default function BeefSummaryPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -175,7 +175,7 @@ export default function BeefSummaryPage() {
 
   if (notFound || !beef) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <p className="text-white font-semibold mb-4">Beef introuvable</p>
         <Link href="/feed" className="text-brand-400 font-medium">Retour au feed</Link>
       </div>
@@ -202,7 +202,7 @@ export default function BeefSummaryPage() {
         : 'Terminé';
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-black px-4 py-10">
+    <div className="min-h-screen px-4 py-10">
       <div className="max-w-lg mx-auto space-y-8">
         <AppBackButton className="text-sm" />
 

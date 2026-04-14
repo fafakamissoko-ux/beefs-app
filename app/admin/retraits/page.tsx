@@ -94,7 +94,7 @@ export default function AdminRetraitsPage() {
 
   if (authLoading || userRole === null) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -102,7 +102,7 @@ export default function AdminRetraitsPage() {
 
   if (!authenticated) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <div className="card p-8 w-full max-w-sm text-center">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h1 className="text-xl font-bold text-white mb-2">Accès refusé</h1>
@@ -117,7 +117,7 @@ export default function AdminRetraitsPage() {
   const totalPendingAmount = requests.filter(r => r.status === 'pending').reduce((s, r) => s + Number(r.amount_euros), 0);
 
   return (
-    <div className="min-h-screen bg-black p-4 md:p-8">
+    <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

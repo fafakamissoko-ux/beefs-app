@@ -220,14 +220,14 @@ export default function AdminUsersPage() {
 
   if (authLoading || userRole === null || !user || userRole !== 'admin') {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black pb-24">
+    <div className="min-h-screen pb-24">
       {/* Header */}
       <div className="brand-gradient px-4 pt-14 pb-8">
         <div className="max-w-4xl mx-auto">

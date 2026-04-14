@@ -119,7 +119,7 @@ function LoginPageContent() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#08080A] p-4">
+    <div className="flex min-h-screen items-center justify-center p-4">
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
         <div className="absolute -right-40 -top-40 h-96 w-96 rounded-full blur-[120px]" style={{ background: 'rgba(255, 77, 0, 0.07)' }} />
         <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full blur-[120px]" style={{ background: 'rgba(0, 82, 255, 0.06)' }} />
@@ -321,7 +321,7 @@ function LoginPageContent() {
 
 function LoginLoadingFallback() {
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="text-center">
         <div className="w-12 h-12 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
         <p className="text-gray-400 text-sm">Chargement…</p>

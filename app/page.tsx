@@ -61,7 +61,7 @@ export default function SplashScreen() {
   }, [router]);
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden bg-[#08080A]">
+    <div className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden">
       {/* Background animated gradient */}
       <div className="absolute inset-0 opacity-30">
         <motion.div

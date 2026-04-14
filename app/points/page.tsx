@@ -67,14 +67,14 @@ export default function PointsDashboardPage() {
 
   if (!user && !authLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen">
       <div className="page-ambient-gradient" aria-hidden />
       <div className="relative z-[1] max-w-lg mx-auto px-4 py-8">
         <AppBackButton className="mb-6" />

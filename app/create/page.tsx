@@ -45,14 +45,14 @@ export default function CreateBeefPage() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen">
       <CreateBeefForm onSubmit={handleSubmit} onCancel={() => navigateSmartBack(router, '/feed')} />
     </div>
   );

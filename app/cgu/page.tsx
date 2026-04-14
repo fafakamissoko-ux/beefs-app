@@ -3,7 +3,7 @@ import { AppBackButton } from '@/components/AppBackButton';
 
 export default function CGUPage() {
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen text-white">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div
           className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-[120px]"

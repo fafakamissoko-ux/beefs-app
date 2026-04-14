@@ -422,14 +422,14 @@ export default function FeedPage() {
 
   if (!user) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-[#08080A]">
+      <div className="flex min-h-dvh items-center justify-center">
         <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh bg-black">
+    <div className="min-h-dvh">
       <Suspense fallback={null}>
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>

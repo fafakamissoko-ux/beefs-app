@@ -403,7 +403,7 @@ function MessagesPageInner() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -412,7 +412,7 @@ function MessagesPageInner() {
   if (!user) return null;
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] bg-black overflow-hidden">
+    <div className="h-[calc(100vh-3.5rem)] overflow-hidden">
       <div className="max-w-5xl mx-auto flex h-full">
         {/* Conversation list */}
         <div className={`w-full md:w-96 border-r border-white/[0.06] flex flex-col ${selectedConv ? 'hidden md:flex' : 'flex'}`}>
@@ -669,7 +669,7 @@ export default function MessagesPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-black">
+        <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
         </div>
       }

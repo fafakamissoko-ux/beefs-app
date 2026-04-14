@@ -195,7 +195,7 @@ export default function InvitationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-white font-semibold">Chargement des invitations...</p>
@@ -205,7 +205,7 @@ export default function InvitationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black pb-20">
+    <div className="min-h-screen pb-20">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <AppBackButton className="mb-4" />
         <div className="mb-8">
