@@ -241,6 +241,8 @@ export function TikTokStyleArena({
   const challengersEverJoinedRef = useRef(false);
   /** Évite de spammer le toast « challengers partis » tant que la room reste vide */
   const challengersAllLeftNotifiedRef = useRef(false);
+  /** Sync DB status → live quand la salle est active (sans attendre « Démarrer le chrono »). */
+  const autoLiveSyncedRef = useRef(false);
   const [userPoints, setUserPoints] = useState(0);
   const [profileFollowsTarget, setProfileFollowsTarget] = useState(false);
 
@@ -748,30 +750,6 @@ export function TikTokStyleArena({
   const [startingBeef, setStartingBeef] = useState(false);
 
   const startBeefTimer = useCallback(async () => {
-    const { count } = await supabase
-      .from('beefs')
-      .select('*', { count: 'exact', head: true })
-      .eq('mediator_id', host.id)
-      .eq('resolution_status', 'resolved')
-      .neq('id', roomId);
-    const price = continuationPriceFromResolvedCount(count ?? 0);
-    const { data: updatedRows, error: updateErr } = await supabase
-      .from('beefs')
-      .update({
-        started_at: new Date().toISOString(),
-        price,
-        is_premium: false,
-      })
-      .eq('id', roomId)
-      .eq('status', 'live')
-      .select('id');
-    if (updateErr || !updatedRows?.length) {
-      toast(
-        "Ouvre d'abord la séance depuis l'antichambre (statut live requis pour lancer le chrono).",
-        'error',
-      );
-      return;
-    }
     const startSec = DEFAULT_BEEF_DURATION;
     beefWallClockStartedAtRef.current = Date.now();
     beefEndsAtMsRef.current = Date.now() + startSec * 1000;
@@ -782,6 +760,19 @@ export function TikTokStyleArena({
     setTimerActive(true);
     setTimerPaused(false);
     toast('Le beef a commencé.', 'success');
+    const { count } = await supabase
+      .from('beefs')
+      .select('*', { count: 'exact', head: true })
+      .eq('mediator_id', host.id)
+      .eq('resolution_status', 'resolved')
+      .neq('id', roomId);
+    const price = continuationPriceFromResolvedCount(count ?? 0);
+    await supabase.from('beefs').update({
+      status: 'live',
+      started_at: new Date().toISOString(),
+      price,
+      is_premium: false,
+    }).eq('id', roomId);
     queueMicrotask(() => broadcastBeefGlobalTimer());
   }, [host.id, roomId, toast, broadcastBeefGlobalTimer]);
 
@@ -967,6 +958,7 @@ export function TikTokStyleArena({
 
   useEffect(() => {
     challengersEverJoinedRef.current = false;
+    autoLiveSyncedRef.current = false;
   }, [roomId]);
 
   // Track when mediator has actually connected at least once
@@ -1536,6 +1528,33 @@ export function TikTokStyleArena({
 
   // ── HYBRID LIVE SYNC: Broadcast (instant) + Polling (fallback) ──
   const [liveConnected, setLiveConnected] = useState(false);
+
+  useEffect(() => {
+    if (!isHost || !isJoined || !liveConnected || beefEnded || !roomId) return;
+    if (autoLiveSyncedRef.current) return;
+    if (remoteParticipants.length < 1) return;
+
+    let cancelled = false;
+    void (async () => {
+      const { data: row } = await supabase
+        .from('beefs')
+        .select('status')
+        .eq('id', roomId)
+        .maybeSingle();
+      if (cancelled || !row) return;
+      const s = String((row as { status?: string }).status ?? '');
+      if (s !== 'pending' && s !== 'ready') return;
+      const { error } = await supabase
+        .from('beefs')
+        .update({ status: 'live' })
+        .eq('id', roomId)
+        .in('status', ['pending', 'ready']);
+      if (!error) autoLiveSyncedRef.current = true;
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isHost, isJoined, liveConnected, beefEnded, roomId, remoteParticipants.length]);
 
   const seenMsgKeys = useRef(new Set<string>());
 
@@ -2793,15 +2812,8 @@ export function TikTokStyleArena({
   }, [contextMenuMsg]);
 
 
-  // Join: passage en « live » côté DB pour le médiateur uniquement, puis enregistre le flux et lance join()
-  const handleJoin = async (preAcquired: MediaStream | null) => {
-    if (isHost && !isViewer) {
-      const { error } = await supabase.from('beefs').update({ status: 'live' }).eq('id', roomId);
-      if (error) {
-        toast(error.message || 'Impossible de passer en direct', 'error');
-        throw new Error(error.message || 'live_update');
-      }
-    }
+  // Join: enregistre le flux pré-acquis puis lance join() via l’effet ci-dessus
+  const handleJoin = (preAcquired: MediaStream | null) => {
     setPreJoinMediaStream(preAcquired);
     setHasJoined(true);
   };
@@ -2832,13 +2844,8 @@ export function TikTokStyleArena({
   // Show pre-join screen before entering
   if (!hasJoined) {
     return (
-      <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
-        <PreJoinScreen
-          userName={userName}
-          onJoin={handleJoin}
-          viewerMode={isViewer}
-          isMediator={isHost && !isViewer}
-        />
+      <div className="w-full h-full relative">
+        <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer} />
         {/* Waiting for Daily.co room to be ready */}
         {!dailyRoomUrl && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm text-brand-400 text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2">
@@ -3109,10 +3116,10 @@ export function TikTokStyleArena({
       <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
         {dailyRoomUrl ? (
           <div
-            className={`relative z-[50] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
+            className={`relative z-[50] pointer-events-none h-[60%] w-full shrink-0 overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
           >
             {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
-            <div className={`pointer-events-none absolute inset-0 z-0 flex h-full min-h-0 flex-row gap-2 px-1 transition-shadow duration-700 ${sponsorGlow}`}>
+            <div className={`pointer-events-none absolute inset-0 z-0 flex h-auto flex-row gap-2 px-1 transition-shadow duration-700 ${sponsorGlow}`}>
               {/* LEFT — Participant A */}
               <motion.div
                 className={`pointer-events-auto relative h-full overflow-hidden rounded-[2rem] bg-[#08080A] transition-all duration-500 ring-inset ring-2 ring-cobalt-500/20 shadow-glow-cyan ${focusTarget === 'A' ? 'w-[80%]' : focusTarget === 'B' ? 'w-[20%]' : 'w-1/2'}`}
@@ -3321,13 +3328,11 @@ export function TikTokStyleArena({
                     aria-label={`Voter pour ${leftPanelName}`}
                   />
                 )}
-                {/* Pas d’overlay plein écran sur la dalle où le challenger voit son propre flux : sur mobile iOS/Safari
-                    la couche transparente capturait les taps avant micro/cam (z-index + hit-testing). */}
-                {!beefEnded && dailyRoomUrl && (isHost || userRole === 'challenger') && !leftPanelIsLocal && (
+                {!beefEnded && dailyRoomUrl && (isHost || userRole === 'challenger') && (
                   <button
                     type="button"
                     onClick={() => emitTapSupport('A')}
-                    className="absolute inset-x-0 top-0 bottom-40 z-[4] touch-manipulation bg-transparent max-lg:bottom-44"
+                    className="absolute inset-x-0 top-0 bottom-36 z-[4] touch-manipulation bg-transparent"
                     aria-label="Envoyer du soutien au challenger A"
                   />
                 )}
@@ -3364,8 +3369,8 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                {/* Bas dalle : pseudo centré + micro/cam en dessous (challenger local) — z élevé + pointer-events pour mobile */}
-                <div className="pointer-events-auto absolute bottom-3 left-1/2 z-[120] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
+                {/* Bas dalle : pseudo centré + micro/cam en dessous (challenger local) */}
+                <div className="absolute bottom-3 left-1/2 z-[100] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3388,13 +3393,13 @@ export function TikTokStyleArena({
                     <div className="flex gap-1.5">
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          toggleMic();
+                        onClick={() => {
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => toggleMic());
+                          });
                         }}
                         aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
-                        className={`flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all active:scale-95 ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
+                        className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
                       >
                         {micEnabled ? (
                           <Mic className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
@@ -3404,13 +3409,13 @@ export function TikTokStyleArena({
                       </button>
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          toggleCam();
+                        onClick={() => {
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => toggleCam());
+                          });
                         }}
                         aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
-                        className={`flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all active:scale-95 ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
+                        className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
                       >
                         {camEnabled ? (
                           <Video className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
@@ -3730,11 +3735,11 @@ export function TikTokStyleArena({
                     aria-label={`Voter pour ${rightPanelName}`}
                   />
                 )}
-                {!beefEnded && dailyRoomUrl && (isHost || userRole === 'challenger') && !rightPanelIsLocal && (
+                {!beefEnded && dailyRoomUrl && (isHost || userRole === 'challenger') && (
                   <button
                     type="button"
                     onClick={() => emitTapSupport('B')}
-                    className="absolute inset-x-0 top-0 bottom-40 z-[4] touch-manipulation bg-transparent max-lg:bottom-44"
+                    className="absolute inset-x-0 top-0 bottom-36 z-[4] touch-manipulation bg-transparent"
                     aria-label="Envoyer du soutien au challenger B"
                   />
                 )}
@@ -3759,7 +3764,7 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                <div className="pointer-events-auto absolute bottom-3 left-1/2 z-[120] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
+                <div className="absolute bottom-3 left-1/2 z-[100] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3782,13 +3787,13 @@ export function TikTokStyleArena({
                     <div className="flex gap-1.5">
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          toggleMic();
+                        onClick={() => {
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => toggleMic());
+                          });
                         }}
                         aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
-                        className={`flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all active:scale-95 ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
+                        className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
                       >
                         {micEnabled ? (
                           <Mic className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
@@ -3798,13 +3803,13 @@ export function TikTokStyleArena({
                       </button>
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          toggleCam();
+                        onClick={() => {
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => toggleCam());
+                          });
                         }}
                         aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
-                        className={`flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all active:scale-95 ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
+                        className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
                       >
                         {camEnabled ? (
                           <Video className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
@@ -3853,8 +3858,8 @@ export function TikTokStyleArena({
           </div>
         ) : (
         /* Placeholder — même hauteur vidéo que avec room */
-        <div className="relative z-[50] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 z-0 flex h-full min-h-0 w-full flex-row">
+        <div className="relative z-[50] pointer-events-none h-[60%] w-full shrink-0 overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 z-0 flex h-full w-full flex-row">
           {debaters[0] ? (
             <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]">
               <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-2rem)] items-start justify-start gap-2">
@@ -4196,9 +4201,9 @@ export function TikTokStyleArena({
         </>
       )}
 
-      {/* ── Dock social : top-[60%] aligné sur la hauteur vidéo h-[60%] — évite tout chevauchement (sinon z-index vidéo masquait le chat) ── */}
+      {/* ── Dock social — overlay massif bas, obstrue le bas des vidéos ── */}
       {!beefEnded && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 top-[60%] z-[55] flex min-h-0 w-full flex-col justify-end overflow-visible">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[55] flex h-[45%] min-h-[160px] w-full flex-col justify-end overflow-visible max-lg:h-[50%]">
         <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/80 via-black/50 to-transparent max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
@@ -4326,7 +4331,7 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[200] isolate flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:w-auto lg:min-w-[12.5rem] lg:max-w-[15rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+            className="relative z-[120] flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:w-auto lg:min-w-[12.5rem] lg:max-w-[15rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
             {/* Desktop : grille 2×5 (10 réactions) + 😀 / cœur / cadeau */}
             <div
@@ -4349,7 +4354,7 @@ export function TikTokStyleArena({
             <div
               role="toolbar"
               aria-label="Réactions rapides"
-              className="touch-pan-x flex max-w-full flex-nowrap justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-0.5 hide-scrollbar [-webkit-overflow-scrolling:touch] lg:hidden"
+              className="flex max-w-full flex-nowrap justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-0.5 hide-scrollbar [-webkit-overflow-scrolling:touch] lg:hidden"
             >
               {ARENA_QUICK_REACTIONS.map((emoji) => (
                 <button
@@ -4364,7 +4369,7 @@ export function TikTokStyleArena({
               ))}
             </div>
 
-            <div className="relative z-[210] flex flex-wrap items-center justify-center gap-2 overflow-visible max-lg:gap-1.5 lg:shrink-0">
+            <div className="relative z-[130] flex flex-wrap items-center justify-center gap-2 overflow-visible max-lg:gap-1.5 lg:shrink-0">
               <motion.button
                 type="button"
                 whileTap={{ scale: 0.96 }}

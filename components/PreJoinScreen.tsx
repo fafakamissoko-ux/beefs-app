@@ -1,19 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Mic, MicOff, Video, VideoOff, ChevronDown } from 'lucide-react';
 import { MutinyProtocol } from './MutinyProtocol';
-
-const ANTI_JOIN_BTN =
-  'mt-4 sm:mt-6 px-8 py-3.5 sm:py-4 bg-brand-500 hover:bg-brand-400 text-white font-bold text-base sm:text-lg rounded-xl transition-all shadow-[0_0_20px_rgba(239,68,68,0.3)] w-full max-w-md uppercase tracking-wide shrink-0';
 
 interface PreJoinScreenProps {
   userName: string;
   /** Flux déjà autorisé par l’utilisateur — transmis à Daily pour éviter un 2ᵉ getUserMedia sans geste (iOS / Brave). */
-  onJoin: (preAcquiredMedia: MediaStream | null) => void | Promise<void>;
-  /** Médiateur (caméra/micro) — libellé du bouton final + sync live côté parent. */
-  isMediator?: boolean;
+  onJoin: (preAcquiredMedia: MediaStream | null) => void;
   viewerMode?: boolean;
   mediatorName?: string;
   currentUserSlot?: 'A' | 'B';
@@ -26,7 +20,6 @@ interface PreJoinScreenProps {
 export function PreJoinScreen({
   userName,
   onJoin,
-  isMediator = false,
   viewerMode = false,
   mediatorName,
   currentUserSlot,
@@ -49,7 +42,6 @@ export function PreJoinScreen({
   const [selectedMic, setSelectedMic] = useState('');
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number>(0);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   const startPreview = useCallback(async (camId?: string, micId?: string) => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -132,124 +124,49 @@ export function PreJoinScreen({
     }
   };
 
-  const handleJoin = async () => {
+  const handleJoin = () => {
+    mediaHandedOffRef.current = true;
     const acquired = streamRef.current ?? stream;
     cancelAnimationFrame(animFrameRef.current);
-    try {
-      /** Ne pas arrêter les pistes ici : Daily réutilise le même MediaStream (évite getUserMedia après await token). */
-      await onJoin(acquired);
-      mediaHandedOffRef.current = true;
-      if (videoRef.current) videoRef.current.srcObject = null;
-    } catch {
-      void startPreviewRef.current();
-    }
+    if (videoRef.current) videoRef.current.srcObject = null;
+    /** Ne pas arrêter les pistes ici : Daily réutilise le même MediaStream (évite getUserMedia après await token). */
+    onJoin(acquired);
   };
-
-  /** Médiateur : update `status = live` + connexion Daily sont déclenchés dans `onJoin` (parent) après confirmation. */
-  const handleConfirmAndGoLive = async () => {
-    setIsConfirmModalOpen(false);
-    await handleJoin();
-  };
-
-  const handlePrimaryClick = () => {
-    if (isMediator) {
-      setIsConfirmModalOpen(true);
-      return;
-    }
-    void handleJoin();
-  };
-
-  const antichambreTitle = (
-    <h1 className="mb-6 text-center text-3xl font-black uppercase tracking-widest text-transparent sm:mb-8 lg:text-4xl bg-clip-text bg-gradient-to-r from-white to-white/60">
-      L&apos;Antichambre
-    </h1>
-  );
-
-  const confirmModal =
-    isConfirmModalOpen &&
-    typeof document !== 'undefined' &&
-    createPortal(
-      <div className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="antichambre-confirm-title"
-          className="w-full max-w-lg rounded-2xl border border-red-500/30 bg-[#121214] p-8 shadow-[0_0_40px_rgba(239,68,68,0.2)]"
-        >
-          <div className="mb-4 flex items-center gap-3">
-            <span className="relative flex h-3 w-3">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" />
-            </span>
-            <h2 id="antichambre-confirm-title" className="text-2xl font-black uppercase tracking-wider text-white">
-              Lancement de l&apos;Audience
-            </h2>
-          </div>
-          <p className="mb-8 text-lg text-white/70">
-            Vous êtes sur le point de convoquer publiquement les challengers et d&apos;ouvrir l&apos;Arène. Cette action
-            est irréversible.
-          </p>
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => setIsConfirmModalOpen(false)}
-              className="flex-1 rounded-xl border border-white/10 px-6 py-3 font-bold text-white transition-all hover:bg-white/5"
-            >
-              Annuler
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleConfirmAndGoLive()}
-              className="flex-1 rounded-xl bg-red-600 px-6 py-3 font-bold text-white shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all hover:bg-red-500"
-            >
-              Confirmer & Lancer
-            </button>
-          </div>
-        </div>
-      </div>,
-      document.body,
-    );
 
   if (viewerMode) {
     return (
-      <>
-        <div className="flex min-h-screen w-full flex-col items-center justify-center bg-obsidian p-4 text-white">
-          {antichambreTitle}
-          <div className="flex w-full max-w-md flex-col items-center space-y-6 text-center">
-            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#08080A] p-2 shadow-[0_0_50px_rgba(0,0,0,0.8)]">
-              <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-brand-500/30 to-brand-600/20">
-                <span className="text-5xl font-black text-white">{userName?.[0]?.toUpperCase() || '?'}</span>
-              </div>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">Spectateur</h2>
-              <p className="mt-2 text-sm text-white/45">
-                Tu pourras regarder le beef, commenter, voter et envoyer des réactions.
-              </p>
-            </div>
-            <button type="button" onClick={() => void onJoin(null)} className={ANTI_JOIN_BTN}>
-              ENTRER DANS L&apos;ARÈNE
-            </button>
+      <div className="w-full h-full flex items-center justify-center bg-gray-950 p-4">
+        <div className="w-full max-w-md space-y-6 text-center">
+          <div className="w-24 h-24 bg-gradient-to-br from-brand-500/30 to-brand-600/20 rounded-full flex items-center justify-center mx-auto">
+            <span className="text-5xl font-black text-white">{userName?.[0]?.toUpperCase() || '?'}</span>
           </div>
+          <div>
+            <h2 className="text-2xl font-black text-white">Rejoindre en tant que spectateur</h2>
+            <p className="text-gray-400 text-sm mt-2">Tu pourras regarder le beef, commenter, voter et envoyer des reactions</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onJoin(null)}
+            className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-black text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/30 active:scale-95"
+          >
+            👁️ Regarder le Beef
+          </button>
         </div>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
-      <div className="flex min-h-screen w-full flex-col items-center justify-center overflow-y-auto overscroll-contain bg-obsidian p-4 text-white">
-        {antichambreTitle}
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 sm:gap-4">
-        <div className="shrink-0 text-center">
-          <p className="text-xs text-white/45 sm:text-sm">
-            Teste ta caméra et ton micro avant d&apos;entrer dans le beef
-          </p>
+    <div className="w-full h-full flex items-center justify-center bg-gray-950 p-4">
+      <div className="w-full max-w-2xl space-y-4">
+        {/* Title */}
+        <div className="text-center">
+          <h2 className="text-2xl font-black text-white">Prêt à rejoindre ?</h2>
+          <p className="text-gray-400 text-sm mt-1">Teste ta caméra et ton micro avant d'entrer dans le beef</p>
         </div>
 
-        {/* Aperçu vidéo — cadre luxe */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#08080A] p-2 shadow-[0_0_50px_rgba(0,0,0,0.8)]">
-        <div className="relative mx-auto aspect-video w-full max-h-[min(38dvh,340px)] overflow-hidden rounded-xl bg-gray-900 sm:max-h-[min(42dvh,380px)]">
+        {/* Camera preview */}
+        <div className="relative aspect-video bg-gray-900 rounded-2xl overflow-hidden">
           {camEnabled ? (
             <video
               ref={videoRef}
@@ -291,7 +208,6 @@ export function PreJoinScreen({
               </div>
             </div>
           )}
-        </div>
         </div>
 
         {/* Controls row */}
@@ -387,14 +303,14 @@ export function PreJoinScreen({
           </div>
         )}
 
-        <div className="flex w-full shrink-0 justify-center pb-1 pt-1">
-          <button type="button" onClick={() => void handlePrimaryClick()} className={ANTI_JOIN_BTN}>
-            {isMediator ? '🔴 OUVRIR LA SÉANCE' : "ENTRER DANS L'ARÈNE"}
-          </button>
-        </div>
+        {/* Join button */}
+        <button
+          onClick={handleJoin}
+          className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-black text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/30 active:scale-95"
+        >
+          🔥 Rejoindre le Beef
+        </button>
       </div>
-      </div>
-      {confirmModal}
-    </>
+    </div>
   );
 }

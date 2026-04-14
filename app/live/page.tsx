@@ -157,9 +157,9 @@ export default function LivePage() {
     }
 
     try {
-      await submitNewBeef(supabase, user.id, beefData);
+      const beef = await submitNewBeef(supabase, user.id, beefData);
       setShowCreateModal(false);
-      router.push('/feed');
+      router.push(`/arena/${beef.id}`);
     } catch (error: unknown) {
       console.error('Error creating beef:', error);
       const msg =
