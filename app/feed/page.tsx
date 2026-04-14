@@ -10,6 +10,7 @@ import { BeefCard } from '@/components/BeefCard';
 import dynamic from 'next/dynamic';
 import { FeatureGuide } from '@/components/FeatureGuide';
 import { submitNewBeef } from '@/lib/submitNewBeef';
+import type { SubmitBeefPayload } from '@/lib/submitNewBeef';
 import { hrefWithFrom } from '@/lib/navigation-return';
 
 const CreateBeefForm = dynamic(() => import('@/components/CreateBeefForm').then(m => m.CreateBeefForm), {
@@ -409,7 +410,7 @@ export default function FeedPage() {
     setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   };
 
-  const handleCreateBeef = async (beefData: any) => {
+  const handleCreateBeef = async (beefData: SubmitBeefPayload) => {
     if (!user) { router.push('/login'); return; }
     try {
       const beef = await submitNewBeef(supabase, user.id, beefData);

@@ -2,7 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Flame, Calendar, AlertTriangle, FileText, X, ArrowRight, Search, UserPlus, Check, Plus } from 'lucide-react';
+import {
+  Flame,
+  Calendar,
+  AlertTriangle,
+  FileText,
+  X,
+  Check,
+  Search,
+  UserPlus,
+  Plus,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
@@ -12,6 +22,7 @@ import {
   scheduledLocalInputToIso,
   isScheduledTimeValid,
 } from '@/lib/beef-schedule';
+import type { BeefCreationIntent, BeefEventType, SubmitBeefPayload } from '@/lib/submitNewBeef';
 
 interface BeefParticipant {
   user_id: string;
@@ -25,40 +36,44 @@ interface BeefData {
   title: string;
   description: string;
   tags: string[];
-  scheduled_at: string; // Empty = start now, filled = scheduled
+  scheduled_at: string;
   is_scheduled: boolean;
   participants: BeefParticipant[];
+  event_type: BeefEventType;
 }
 
 interface CreateBeefFormProps {
-  onSubmit: (data: BeefData) => Promise<void>;
+  onSubmit: (data: SubmitBeefPayload) => Promise<void>;
   onCancel: () => void;
 }
+
+const initialBeefData = (): BeefData => ({
+  title: '',
+  description: '',
+  tags: [],
+  scheduled_at: '',
+  is_scheduled: false,
+  participants: [],
+  event_type: 'standard',
+});
 
 export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [step, setStep] = useState(1);
+  const [intent, setIntent] = useState<BeefCreationIntent | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<Record<string, unknown>[]>([]);
   const [searching, setSearching] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
-  
-  const [beefData, setBeefData] = useState<BeefData>({
-    title: '',
-    description: '',
-    tags: [],
-    scheduled_at: '',
-    is_scheduled: false,
-    participants: [],
-  });
+
+  const [beefData, setBeefData] = useState<BeefData>(initialBeefData);
 
   const [estimatedSuitePrice, setEstimatedSuitePrice] = useState<number | null>(null);
   useEffect(() => {
     if (!user?.id) return;
-    (async () => {
+    void (async () => {
       const { count } = await supabase
         .from('beefs')
         .select('*', { count: 'exact', head: true })
@@ -68,99 +83,83 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
     })();
   }, [user?.id]);
 
-  const updateData = (field: keyof BeefData, value: any) => {
-    setBeefData({ ...beefData, [field]: value });
+  const updateData = (field: keyof BeefData, value: unknown) => {
+    setBeefData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Trending/Popular tags for suggestions
   const POPULAR_TAGS = [
     'tech', 'startup', 'argent', 'respect', 'business', 'crypto',
     'politique', 'sport', 'gaming', 'culture', 'justice', 'amitié',
-    'famille', 'travail', 'collab', 'contrat', 'idée', 'crédit'
+    'famille', 'travail', 'collab', 'contrat', 'idée', 'crédit',
   ];
 
-  // Add tag
   const addTag = (tag: string) => {
     const cleanTag = tag.replace(/^[#$]/, '').trim().toLowerCase();
-    
     if (!cleanTag) return;
     if (beefData.tags.length >= 10) {
       toast('Maximum 10 tags par beef', 'info');
       return;
     }
     if (beefData.tags.includes(cleanTag)) return;
-
-    setBeefData({
-      ...beefData,
-      tags: [...beefData.tags, cleanTag],
-    });
+    setBeefData((prev) => ({
+      ...prev,
+      tags: [...prev.tags, cleanTag],
+    }));
     setTagInput('');
     setSuggestedTags([]);
   };
 
-  // Remove tag
   const removeTag = (tag: string) => {
-    setBeefData({
-      ...beefData,
-      tags: beefData.tags.filter(t => t !== tag),
-    });
+    setBeefData((prev) => ({
+      ...prev,
+      tags: prev.tags.filter((t) => t !== tag),
+    }));
   };
 
-  // Handle tag input change — show popular as default + filter on type
   const handleTagInput = (value: string) => {
     setTagInput(value);
     const searchTerm = value.replace(/^[#$]/, '').toLowerCase();
-    const available = POPULAR_TAGS.filter(t => !beefData.tags.includes(t));
+    const available = POPULAR_TAGS.filter((t) => !beefData.tags.includes(t));
     if (searchTerm.length > 0) {
-      // Filter matching tags + keep non-matching at end for discovery
-      const matched = available.filter(t => t.includes(searchTerm));
+      const matched = available.filter((t) => t.includes(searchTerm));
       setSuggestedTags(matched.slice(0, 6));
     } else {
-      // Show all popular tags on focus (no text typed)
       setSuggestedTags(available.slice(0, 6));
     }
   };
 
   const handleTagFocus = () => {
     if (!tagInput) {
-      setSuggestedTags(POPULAR_TAGS.filter(t => !beefData.tags.includes(t)).slice(0, 6));
+      setSuggestedTags(POPULAR_TAGS.filter((t) => !beefData.tags.includes(t)).slice(0, 6));
     }
   };
 
   const handleTagBlur = () => {
-    // Delay to allow click on suggestion
     setTimeout(() => setSuggestedTags([]), 150);
   };
 
-  // Handle tag input keydown — Entrée ou Espace valide le tag courant
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      if (tagInput.trim()) {
-        addTag(tagInput);
-      }
+      if (tagInput.trim()) addTag(tagInput);
     } else if (e.key === 'Backspace' && !tagInput && beefData.tags.length > 0) {
-      // Remove last tag if backspace on empty input
       removeTag(beefData.tags[beefData.tags.length - 1]);
     }
   };
 
-  // Search users to invite
   const searchUsers = async (query: string) => {
     if (query.length < 2) {
       setSearchResults([]);
       return;
     }
-
     setSearching(true);
     try {
       const { data, error } = await supabase
         .from('user_public_profile')
         .select('id, username, display_name, avatar_url')
         .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
-        .neq('id', user?.id) // Don't show current user (mediator)
+        .neq('id', user?.id)
         .limit(5);
-
       if (error) throw error;
       setSearchResults(data || []);
     } catch (error) {
@@ -170,58 +169,57 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
     }
   };
 
-  // Add participant
-  const addParticipant = (userData: any, isMain: boolean) => {
-    const isAlreadyAdded = beefData.participants.some(p => p.user_id === userData.id);
-    if (isAlreadyAdded) return;
-
+  const addParticipant = (userData: Record<string, unknown>, isMain: boolean) => {
+    const id = String(userData.id);
+    if (beefData.participants.some((p) => p.user_id === id)) return;
     const newParticipant: BeefParticipant = {
-      user_id: userData.id,
-      username: userData.username,
-      display_name: userData.display_name || userData.username,
+      user_id: id,
+      username: String(userData.username ?? ''),
+      display_name: String(userData.display_name || userData.username || ''),
       is_main: isMain,
       role: 'participant',
     };
-
-    setBeefData({
-      ...beefData,
-      participants: [...beefData.participants, newParticipant],
-    });
+    setBeefData((prev) => ({
+      ...prev,
+      participants: [...prev.participants, newParticipant],
+    }));
     setSearchQuery('');
     setSearchResults([]);
   };
 
-  // Remove participant
   const removeParticipant = (userId: string) => {
-    setBeefData({
-      ...beefData,
-      participants: beefData.participants.filter(p => p.user_id !== userId),
-    });
+    setBeefData((prev) => ({
+      ...prev,
+      participants: prev.participants.filter((p) => p.user_id !== userId),
+    }));
   };
 
-  // Toggle main participant
   const toggleMainParticipant = (userId: string) => {
-    setBeefData({
-      ...beefData,
-      participants: beefData.participants.map(p =>
+    setBeefData((prev) => ({
+      ...prev,
+      participants: prev.participants.map((p) =>
         p.user_id === userId ? { ...p, is_main: !p.is_main } : p
       ),
-    });
+    }));
   };
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const validateStep = (s: number): Record<string, string> => {
+  const mainParticipants = beefData.participants.filter((p) => p.is_main);
+
+  const validateForm = (): Record<string, string> => {
     const errors: Record<string, string> = {};
-    if (s === 1) {
-      if (!beefData.title.trim()) errors.title = 'Le titre est obligatoire.';
-      else if (beefData.title.trim().length <= 3) errors.title = 'Le titre doit faire au moins 4 caractères.';
-      if (beefData.tags.length === 0) errors.tags = 'Ajoute au moins 1 tag (#motclé).';
-    }
-    if (s === 3) {
-      if (!beefData.description.trim()) errors.description = 'La description est obligatoire.';
-      else if (beefData.description.trim().length < 50)
-        errors.description = `Description trop courte (${beefData.description.trim().length}/50 caractères minimum).`;
+    if (!beefData.title.trim()) errors.title = 'Le titre est obligatoire.';
+    else if (beefData.title.trim().length <= 3) errors.title = 'Le titre doit faire au moins 4 caractères.';
+    if (beefData.tags.length === 0) errors.tags = 'Ajoute au moins 1 tag (#motclé).';
+    if (!beefData.description.trim()) errors.description = 'La description est obligatoire.';
+    else if (beefData.description.trim().length < 50)
+      errors.description = `Description trop courte (${beefData.description.trim().length}/50 caractères minimum).`;
+
+    if (intent === 'mediation') {
+      if (mainParticipants.length !== 2) {
+        errors.participants = 'Convoque exactement 2 participants principaux.';
+      }
       if (beefData.is_scheduled) {
         if (!beefData.scheduled_at?.trim()) {
           errors.scheduled_at = 'Sélectionne une date et heure de programmation.';
@@ -234,549 +232,577 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
         }
       }
     }
+
+    if (intent === 'manifesto' && beefData.is_scheduled) {
+      if (!beefData.scheduled_at?.trim()) {
+        errors.scheduled_at = 'Sélectionne une date et heure ou désactive la programmation.';
+      } else {
+        const iso = scheduledLocalInputToIso(beefData.scheduled_at);
+        if (!iso || !isScheduledTimeValid(iso)) {
+          errors.scheduled_at =
+            'Choisis une date et heure au moins ~2 minutes dans le futur (fuseau horaire de l’appareil).';
+        }
+      }
+    }
+
     return errors;
   };
 
-  const handleNext = () => {
-    const errors = validateStep(step);
-    setFieldErrors(errors);
-    if (Object.keys(errors).length === 0) setStep(step + 1);
+  const handleBackToChoice = () => {
+    setIntent(null);
+    setBeefData(initialBeefData());
+    setFieldErrors({});
+    setSearchQuery('');
+    setSearchResults([]);
   };
 
   const handleSubmit = async () => {
-    const errors = validateStep(step);
+    if (!intent) return;
+    const errors = validateForm();
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
     setLoading(true);
     try {
-      await onSubmit({
-        ...beefData,
+      const payload: SubmitBeefPayload = {
+        intent,
+        event_type: beefData.event_type,
+        title: beefData.title.trim(),
+        description: beefData.description.trim(),
+        tags: beefData.tags,
         scheduled_at: beefData.is_scheduled ? beefData.scheduled_at : '',
-      });
-    } catch (error: any) {
+        participants: beefData.participants.map((p) => ({
+          user_id: p.user_id,
+          role: p.role,
+          is_main: p.is_main,
+        })),
+      };
+      await onSubmit(payload);
+    } catch (error: unknown) {
       console.error('Error creating beef:', error);
-      setFieldErrors({ submit: error?.message || 'Erreur inconnue. Réessaie.' });
+      const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message) : 'Erreur inconnue. Réessaie.';
+      setFieldErrors({ submit: msg });
     } finally {
       setLoading(false);
     }
   };
 
-  const canProceed = () => {
-    const errors = validateStep(step);
-    return Object.keys(errors).length === 0;
-  };
-
-  const getSeverityText = (severity: string) => {
-    switch (severity) {
-      case 'low': return '🟢 Désaccord léger';
-      case 'medium': return '🟡 Conflit modéré';
-      case 'high': return '🟠 Conflit sérieux';
-      case 'critical': return '🔴 Conflit critique';
-      default: return '';
-    }
-  };
-
-  const mainParticipants = beefData.participants.filter(p => p.is_main);
+  const splitCardClass =
+    'glass-prestige flex flex-col gap-3 rounded-[1.25rem] border border-white/10 p-6 text-left transition-all hover:border-brand-500 cursor-pointer min-h-[160px] flex-1';
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-modal flex items-center justify-center p-4 pt-20"
+      className="fixed inset-0 z-modal flex items-center justify-center bg-black/80 p-4 pt-20 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-beef-dialog-title"
     >
-      <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+      <div className="max-h-[90vh] w-full max-w-2xl">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="bg-surface-2 rounded-[2rem] p-6 w-full border-2 border-brand-500/50 shadow-modal"
+          className="w-full rounded-[2rem] border-2 border-brand-500/50 bg-surface-2 p-6 shadow-modal"
         >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 brand-gradient rounded-full flex items-center justify-center text-xl" aria-hidden>
-              🎭
-            </div>
-            <div>
-              <h2 id="create-beef-dialog-title" className="text-xl font-black text-white">
-                Organiser un beef
-              </h2>
-              <p className="text-gray-400 text-xs" id="create-beef-step-status">
-                Étape {step}/3 - Médiateur
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-            aria-label="Fermer la fenêtre Organiser un beef"
-          >
-            <X className="w-5 h-5 text-gray-400" aria-hidden />
-          </button>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="flex gap-2 mb-6">
-          {[1, 2, 3].map((s) => (
-            <div
-              key={s}
-              className={`h-1 flex-1 rounded-full ${
-                s <= step
-                  ? 'brand-gradient'
-                  : 'bg-gray-700'
-              }`}
-            />
-          ))}
-        </div>
-
-        {/* Step 1: Beef Info - SIMPLIFIED */}
-        {step === 1 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-4"
-          >
-            <div>
-              <label htmlFor="create-beef-title" className="block text-white font-semibold mb-2 text-sm">
-                Titre du beef
-              </label>
-              <input
-                id="create-beef-title"
-                type="text"
-                value={beefData.title}
-                onChange={(e) => { updateData('title', e.target.value); setFieldErrors(p => { const n = {...p}; delete n.title; return n; }); }}
-                placeholder="Ex: Idée de startup volée, Conflit d'associés, Argent non remboursé..."
-                className={`w-full bg-white/[0.04] border rounded-[2rem] px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors ${fieldErrors.title ? 'border-red-500' : 'border-white/[0.06] focus:border-brand-500'}`}
-                maxLength={100}
-              />
-              {fieldErrors.title
-                ? <p className="text-red-400 text-xs mt-1">⚠️ {fieldErrors.title}</p>
-                : <p className="text-gray-500 text-xs mt-1">Décrivez clairement le conflit</p>}
-            </div>
-
-            <div>
-              <label className="block text-white font-semibold mb-2 text-sm flex items-center gap-2">
-                <span className="text-brand-400 text-lg">#</span>
-                Tags (maximum 10)
-              </label>
-              <p className="text-gray-400 text-xs mb-2">
-                Ajoutez des tags pour aider les utilisateurs à trouver votre beef
-              </p>
-              
-              {/* Tag Input */}
-              <div className="relative">
-                <div className="flex gap-2">
-                    <div className="flex flex-wrap gap-2 bg-white/[0.04] border border-white/[0.06] rounded-[2rem] p-2 min-h-[44px] flex-1">
-                    {/* Display added tags */}
-                    {beefData.tags.map((tag) => (
-                      <motion.div
-                        key={tag}
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="flex items-center gap-1 brand-gradient text-black px-2 py-1 rounded-full text-xs font-bold"
-                      >
-                        <span>#{tag}</span>
-                        <button
-                          onClick={() => removeTag(tag)}
-                          className="hover:bg-black/20 rounded-full p-0.5 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </motion.div>
-                    ))}
-                    
-                    {/* Input field with ghost text */}
-                    {beefData.tags.length < 10 && (
-                      <div className="flex-1 min-w-[120px] relative">
-                        {/* Ghost text overlay — shows predicted completion */}
-                        {suggestedTags[0] && tagInput && (
-                          <span className="absolute inset-0 flex items-center text-sm pointer-events-none select-none">
-                            <span className="invisible">{tagInput.replace(/^[#$]/, '')}</span>
-                            <span className="text-gray-600">{suggestedTags[0].slice(tagInput.replace(/^[#$]/, '').length)}</span>
-                          </span>
-                        )}
-                        <input
-                          type="text"
-                          value={tagInput}
-                          onChange={(e) => handleTagInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            // Tab or ArrowRight accepts ghost prediction
-                            if ((e.key === 'Tab' || e.key === 'ArrowRight') && suggestedTags[0] && tagInput) {
-                              e.preventDefault();
-                              addTag(suggestedTags[0]);
-                              return;
-                            }
-                            handleTagKeyDown(e);
-                          }}
-                          onFocus={handleTagFocus}
-                          onBlur={handleTagBlur}
-                          placeholder={beefData.tags.length === 0 ? "Tape un mot..." : "Ajouter..."}
-                          className="w-full bg-transparent text-white text-sm placeholder-gray-500 focus:outline-none relative z-10"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* SMS-style prediction row — horizontal pills, no dropdown */}
-                {suggestedTags.length > 0 && beefData.tags.length < 10 && (
-                  <div className="flex items-center gap-1.5 mt-2 overflow-x-auto hide-scrollbar pb-0.5">
-                    {suggestedTags.map((tag, i) => (
-                      <button
-                        key={tag}
-                        onMouseDown={() => addTag(tag)}
-                        className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all
-                          ${i === 0 && tagInput
-                            ? 'bg-brand-500/25 border border-brand-500/50 text-brand-300'
-                            : 'bg-gray-800 border border-gray-700 text-gray-300 hover:border-brand-500/40 hover:text-brand-300'
-                          }`}
-                      >
-                        <span className="text-brand-400/70">#</span>
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-              <p className="text-gray-500 text-xs mt-2">
-                {beefData.tags.length}/10 tags
-                {suggestedTags[0] && tagInput ? ' · Tab pour l’auto-complétion' : ''}
-                {' · Entrée ou Espace pour valider le mot'}
-              </p>
-              </div>{/* closes relative */}
-            </div>{/* closes tag section */}
-          </motion.div>
-        )}
-
-        {/* Step 2: Add Participants */}
-        {step === 2 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-4"
-          >
-            <div>
-              <label className="block text-white font-semibold mb-2 text-sm">
-                Inviter les participants
-              </label>
-              <p className="text-gray-400 text-xs mb-3">
-                Cherche et invite les personnes concernées par ce beef
-              </p>
-              
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    searchUsers(e.target.value);
-                  }}
-                  placeholder="Rechercher un utilisateur..."
-                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-[2rem] pl-10 pr-4 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
-                />
-                {searching && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                )}
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full brand-gradient text-xl" aria-hidden>
+                🎭
               </div>
-
-              {/* Search Results */}
-              {searchResults.length > 0 && (
-                <div className="mt-2 bg-black/60 border border-gray-700 rounded-[2rem] overflow-hidden max-h-48 overflow-y-auto">
-                  {searchResults.map((result) => (
-                    <button
-                      key={result.id}
-                      onClick={() => addParticipant(result, beefData.participants.length < 2)}
-                      className="w-full flex items-center gap-2 p-2 hover:bg-white/5 transition-colors text-left"
-                    >
-                      <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white font-bold text-sm">
-                        {result.display_name?.[0]?.toUpperCase() || '?'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-semibold text-sm truncate">{result.display_name || result.username}</p>
-                        <p className="text-gray-400 text-xs truncate">@{result.username}</p>
-                      </div>
-                      <UserPlus className="w-4 h-4 text-brand-400 flex-shrink-0" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Added Participants */}
-            {beefData.participants.length > 0 && (
               <div>
-                <label className="block text-white font-semibold mb-2 text-sm">
-                  Participants invités ({beefData.participants.length})
-                </label>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {beefData.participants.map((participant) => (
-                    <div
-                      key={participant.user_id}
-                      className="flex items-center gap-2 p-2 bg-black/40 border border-gray-700 rounded-[2rem]"
-                    >
-                      <div className="w-8 h-8 rounded-full brand-gradient flex items-center justify-center text-white font-bold text-sm">
-                        {participant.display_name[0].toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-semibold text-sm truncate">{participant.display_name}</p>
-                        <p className="text-gray-400 text-xs truncate">@{participant.username}</p>
-                      </div>
+                <h2 id="create-beef-dialog-title" className="text-xl font-black text-white">
+                  {intent === null ? 'Nouvelle affaire' : intent === 'manifesto' ? 'Manifeste' : 'Médiation'}
+                </h2>
+                <p className="text-xs text-gray-400" id="create-beef-step-status">
+                  {intent === null
+                    ? 'Choisis ton intention'
+                    : intent === 'manifesto'
+                      ? 'Partie impliquée — expose ton dossier'
+                      : 'Haute juridiction — convoque et arbitre'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded-lg p-2 transition-colors hover:bg-white/10"
+              aria-label="Fermer la fenêtre Organiser un beef"
+            >
+              <X className="h-5 w-5 text-gray-400" aria-hidden />
+            </button>
+          </div>
+
+          {/* Étape 0 — choix d’intention */}
+          {intent === null && (
+            <div className="flex flex-col gap-4 lg:flex-row">
+              <button type="button" className={splitCardClass} onClick={() => setIntent('manifesto')}>
+                <span className="text-2xl" aria-hidden>
+                  ⚔️
+                </span>
+                <span className="text-lg font-black text-white">PARTIE IMPLIQUÉE</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-brand-400">Publier un Manifeste</span>
+                <p className="text-sm text-gray-400">
+                  Exposez vos griefs et attendez qu&apos;un médiateur s&apos;empare du dossier.
+                </p>
+              </button>
+              <button type="button" className={splitCardClass} onClick={() => setIntent('mediation')}>
+                <span className="text-2xl" aria-hidden>
+                  ⚖️
+                </span>
+                <span className="text-lg font-black text-white">HAUTE JURIDICTION</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-brand-400">Organiser une Médiation</span>
+                <p className="text-sm text-gray-400">
+                  Convoquez deux parties et arbitrez leur conflit.
+                </p>
+              </button>
+            </div>
+          )}
+
+          {/* Formulaire unifié */}
+          {intent !== null && (
+            <div className="flex max-h-[75vh] flex-col overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-white/[0.03]">
+              <div className="shrink-0 border-b border-white/[0.06] px-4 py-2">
+                <button
+                  type="button"
+                  onClick={handleBackToChoice}
+                  className="text-sm text-gray-500 transition-colors hover:text-white"
+                >
+                  ← Retour
+                </button>
+              </div>
+              <div className="hide-scrollbar flex-1 space-y-5 overflow-y-auto px-4 py-4">
+                <div>
+                  <label htmlFor="create-beef-title" className="mb-2 block text-sm font-semibold text-white">
+                    Motif du litige
+                  </label>
+                  <input
+                    id="create-beef-title"
+                    type="text"
+                    value={beefData.title}
+                    onChange={(e) => {
+                      updateData('title', e.target.value);
+                      setFieldErrors((p) => {
+                        const n = { ...p };
+                        delete n.title;
+                        return n;
+                      });
+                    }}
+                    placeholder="Ex : Idée volée, conflit d’associés, créance…"
+                    className={`w-full rounded-[2rem] border bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-gray-500 transition-colors focus:outline-none ${
+                      fieldErrors.title ? 'border-red-500' : 'border-white/[0.06] focus:border-brand-500'
+                    }`}
+                    maxLength={100}
+                  />
+                  {fieldErrors.title ? (
+                    <p className="mt-1 text-xs text-red-400">⚠️ {fieldErrors.title}</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-gray-500">Titre clair du litige</p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="mb-2 text-sm font-semibold text-white">Calibre</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(['standard', 'prestige'] as const).map((ev) => (
                       <button
-                        onClick={() => toggleMainParticipant(participant.user_id)}
-                        className={`px-2 py-1 rounded-full text-xs font-bold transition-all flex-shrink-0 ${
-                          participant.is_main
-                            ? 'bg-brand-500 text-black'
-                            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                        key={ev}
+                        type="button"
+                        onClick={() => updateData('event_type', ev)}
+                        className={`rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all ${
+                          beefData.event_type === ev
+                            ? 'brand-gradient text-black shadow-glow'
+                            : 'border border-white/[0.12] bg-white/[0.04] text-gray-400 hover:border-white/20'
                         }`}
                       >
-                        {participant.is_main ? '🔥 Principal' : 'Témoin'}
+                        {ev === 'standard' ? 'Standard' : 'Prestige (Affiche)'}
                       </button>
-                      <button
-                        onClick={() => removeParticipant(participant.user_id)}
-                        className="p-1 hover:bg-red-500/20 rounded-lg transition-colors flex-shrink-0"
-                      >
-                        <X className="w-4 h-4 text-red-400" />
-                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="create-beef-description" className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+                    <FileText className="h-4 w-4 text-purple-400" aria-hidden />
+                    Description
+                  </label>
+                  <textarea
+                    id="create-beef-description"
+                    value={beefData.description}
+                    onChange={(e) => {
+                      updateData('description', e.target.value);
+                      setFieldErrors((p) => {
+                        const n = { ...p };
+                        delete n.description;
+                        return n;
+                      });
+                    }}
+                    placeholder={
+                      intent === 'manifesto'
+                        ? 'Expose les faits, les enjeux, ce que tu attends…'
+                        : 'Contexte pour les parties et le déroulé souhaité…'
+                    }
+                    rows={8}
+                    className={`w-full resize-y rounded-[2rem] border bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-gray-500 transition-colors focus:outline-none ${
+                      fieldErrors.description ? 'border-red-500' : 'border-white/[0.06] focus:border-brand-500'
+                    }`}
+                    maxLength={1000}
+                  />
+                  <div className="mt-2 flex items-center justify-between">
+                    <p
+                      className={`text-xs font-semibold ${
+                        beefData.description.length < 50
+                          ? 'text-red-400'
+                          : beefData.description.length < 100
+                            ? 'text-yellow-400'
+                            : 'text-green-400'
+                      }`}
+                    >
+                      {beefData.description.length < 50
+                        ? `⚠️ Minimum 50 caractères (${50 - beefData.description.length} restants)`
+                        : `✓ ${beefData.description.length} caractères`}
+                    </p>
+                    <p className="text-xs text-gray-500">{beefData.description.length}/1000</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+                    <span className="text-lg text-brand-400">#</span>
+                    Tags (max 10)
+                  </label>
+                  <p className="mb-2 text-xs text-gray-400">Mots-clés pour le fil et la découverte</p>
+                  <div className="relative">
+                    <div className="flex gap-2">
+                      <div className="flex min-h-[44px] flex-1 flex-wrap gap-2 rounded-[2rem] border border-white/[0.06] bg-white/[0.04] p-2">
+                        {beefData.tags.map((tag) => (
+                          <motion.div
+                            key={tag}
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="flex items-center gap-1 rounded-full brand-gradient px-2 py-1 text-xs font-bold text-black"
+                          >
+                            <span>#{tag}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeTag(tag)}
+                              className="rounded-full p-0.5 transition-colors hover:bg-black/20"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </motion.div>
+                        ))}
+                        {beefData.tags.length < 10 && (
+                          <div className="relative min-w-[120px] flex-1">
+                            {suggestedTags[0] && tagInput && (
+                              <span className="pointer-events-none absolute inset-0 flex select-none items-center text-sm">
+                                <span className="invisible">{tagInput.replace(/^[#$]/, '')}</span>
+                                <span className="text-gray-600">
+                                  {suggestedTags[0].slice(tagInput.replace(/^[#$]/, '').length)}
+                                </span>
+                              </span>
+                            )}
+                            <input
+                              type="text"
+                              value={tagInput}
+                              onChange={(e) => handleTagInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if ((e.key === 'Tab' || e.key === 'ArrowRight') && suggestedTags[0] && tagInput) {
+                                  e.preventDefault();
+                                  addTag(suggestedTags[0]);
+                                  return;
+                                }
+                                handleTagKeyDown(e);
+                              }}
+                              onFocus={handleTagFocus}
+                              onBlur={handleTagBlur}
+                              placeholder={beefData.tags.length === 0 ? 'Tape un mot…' : 'Ajouter…'}
+                              className="relative z-10 w-full bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-
-                {mainParticipants.length < 2 && (
-                  <p className="text-yellow-400 text-xs mt-2 flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3" />
-                    Il faut au moins 2 participants principaux
-                  </p>
-                )}
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* Step 3: Description & Summary */}
-        {step === 3 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-4"
-          >
-            <div>
-              <label htmlFor="create-beef-description" className="block text-white font-semibold mb-2 flex items-center gap-2 text-sm">
-                <FileText className="w-4 h-4 text-purple-400" aria-hidden />
-                Contexte du conflit
-              </label>
-              <p className="text-gray-400 text-xs mb-2">
-                Expliquez la situation pour que le médiateur puisse aider efficacement.
-              </p>
-              <textarea
-                id="create-beef-description"
-                value={beefData.description}
-                onChange={(e) => { updateData('description', e.target.value); setFieldErrors(p => { const n = {...p}; delete n.description; return n; }); }}
-                placeholder="Décrivez le conflit : Que s'est-il passé ? Quels sont les enjeux ? Qu'attendez-vous de cette médiation ?"
-                rows={10}
-                className={`w-full bg-white/[0.04] border rounded-[2rem] px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none transition-colors resize-y ${fieldErrors.description ? 'border-red-500' : 'border-white/[0.06] focus:border-brand-500'}`}
-                maxLength={1000}
-              />
-              <div className="flex items-center justify-between mt-2">
-                <p className={`text-xs font-semibold ${
-                  beefData.description.length < 50 
-                    ? 'text-red-400' 
-                    : beefData.description.length < 100 
-                    ? 'text-yellow-400' 
-                    : 'text-green-400'
-                }`}>
-                  {beefData.description.length < 50 
-                    ? `⚠️ Minimum 50 caractères (${50 - beefData.description.length} restants)`
-                    : `✓ ${beefData.description.length} caractères`}
-                </p>
-                <p className="text-gray-500 text-xs">
-                  {beefData.description.length}/1000 max
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-white/[0.04] border border-white/[0.08] rounded-[2rem] p-3">
-              <p className="text-gray-300 text-sm leading-relaxed">
-                Après les premières minutes gratuites en direct, les spectateurs peuvent débloquer la suite avec des points.
-                Ton palier actuel pour ce beef :{' '}
-                <span className="text-brand-400 font-bold">
-                  {estimatedSuitePrice === null ? '…' : `${estimatedSuitePrice} pts`}
-                </span>
-                {' '}(fixé au lancement du chrono ; il augmente avec tes beefs résolus).
-              </p>
-            </div>
-
-            {/* Planification : une seule zone, choix explicite (évite min UTC + doublon étape 1 / mobile) */}
-            <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-[2rem] p-3 space-y-3">
-              <div className="flex items-center gap-2 text-white font-semibold text-sm">
-                <Calendar className="w-4 h-4 text-cyan-400 shrink-0" aria-hidden />
-                Démarrage du beef
-              </div>
-              <p className="text-gray-400 text-xs">
-                Choisis si le direct commence après les invitations, ou une date précise (heure de cet appareil).
-              </p>
-              <div className="space-y-2">
-                <label className="flex items-start gap-2 cursor-pointer rounded-lg p-2 hover:bg-white/5">
-                  <input
-                    type="radio"
-                    name="beef-schedule-mode"
-                    checked={!beefData.is_scheduled}
-                    onChange={() => {
-                      setFieldErrors((p) => {
-                        const n = { ...p };
-                        delete n.scheduled_at;
-                        return n;
-                      });
-                      setBeefData((prev) => ({ ...prev, is_scheduled: false, scheduled_at: '' }));
-                    }}
-                    className="mt-1 w-4 h-4 border-gray-600 text-cyan-500 focus:ring-cyan-500"
-                  />
-                  <span>
-                    <span className="text-white font-semibold text-sm">Dès que c’est prêt</span>
-                    <span className="block text-gray-400 text-xs">Pas de date fixe ; le beef reste en préparation jusqu’au lancement.</span>
-                  </span>
-                </label>
-                <label className="flex items-start gap-2 cursor-pointer rounded-lg p-2 hover:bg-white/5">
-                  <input
-                    type="radio"
-                    name="beef-schedule-mode"
-                    checked={beefData.is_scheduled}
-                    onChange={() => {
-                      setFieldErrors((p) => {
-                        const n = { ...p };
-                        delete n.scheduled_at;
-                        return n;
-                      });
-                      setBeefData((prev) => ({
-                        ...prev,
-                        is_scheduled: true,
-                        scheduled_at: prev.scheduled_at?.trim() ? prev.scheduled_at : minDateTimeLocalValue(),
-                      }));
-                    }}
-                    className="mt-1 w-4 h-4 border-gray-600 text-cyan-500 focus:ring-cyan-500"
-                  />
-                  <span className="flex-1 min-w-0">
-                    <span className="text-white font-semibold text-sm">Programmer une date et heure</span>
-                    <span className="block text-gray-400 text-xs mb-2">Tu peux modifier la valeur ci-dessous avant de créer.</span>
-                    {beefData.is_scheduled && (
-                      <input
-                        type="datetime-local"
-                        value={beefData.scheduled_at}
-                        min={minDateTimeLocalValue()}
-                        onChange={(e) => {
-                          updateData('scheduled_at', e.target.value);
-                          setFieldErrors((p) => {
-                            const n = { ...p };
-                            delete n.scheduled_at;
-                            return n;
-                          });
-                        }}
-                        className="w-full mt-1 bg-black/40 border border-white/[0.12] rounded-[2rem] px-3 py-2.5 text-white text-base focus:outline-none focus:border-cyan-500 transition-colors min-h-[44px]"
-                      />
+                    {suggestedTags.length > 0 && beefData.tags.length < 10 && (
+                      <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar">
+                        {suggestedTags.map((tag, i) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onMouseDown={() => addTag(tag)}
+                            className={`flex flex-shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all ${
+                              i === 0 && tagInput
+                                ? 'border border-brand-500/50 bg-brand-500/25 text-brand-300'
+                                : 'border border-gray-700 bg-gray-800 text-gray-300 hover:border-brand-500/40 hover:text-brand-300'
+                            }`}
+                          >
+                            <span className="text-brand-400/70">#</span>
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
                     )}
-                  </span>
-                </label>
-              </div>
-              {fieldErrors.scheduled_at && (
-                <p className="text-red-400 text-xs">⚠️ {fieldErrors.scheduled_at}</p>
-              )}
-            </div>
+                    <p className="mt-2 text-xs text-gray-500">
+                      {beefData.tags.length}/10 · Entrée ou Espace pour valider
+                      {suggestedTags[0] && tagInput ? ' · Tab pour l’auto-complétion' : ''}
+                    </p>
+                    {fieldErrors.tags && <p className="mt-1 text-xs text-red-400">⚠️ {fieldErrors.tags}</p>}
+                  </div>
+                </div>
 
-            {/* Summary */}
-            <div className="bg-brand-500/10 border border-brand-500/30 rounded-[2rem] p-3">
-              <p className="text-brand-400 font-bold mb-2 text-sm">📋 Récapitulatif</p>
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Titre:</span>
-                  <span className="text-white font-semibold truncate ml-2 max-w-[60%]">{beefData.title}</span>
+                {/* Participants — recherche conservée */}
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-white">
+                    {intent === 'manifesto' ? 'Adversaires ou cibles (optionnel)' : 'Convoquer les parties'}
+                  </label>
+                  <p className="mb-3 text-xs text-gray-400">
+                    {intent === 'manifesto'
+                      ? 'Tu peux publier sans inviter, ou taguer des comptes.'
+                      : 'Exactement 2 participants principaux requis.'}
+                  </p>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        void searchUsers(e.target.value);
+                      }}
+                      placeholder="Rechercher un utilisateur…"
+                      className="w-full rounded-[2rem] border border-white/[0.06] bg-white/[0.04] py-2 pl-10 pr-4 text-sm text-white placeholder-gray-500 transition-colors focus:border-brand-500 focus:outline-none"
+                    />
+                    {searching && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                      </div>
+                    )}
+                  </div>
+                  {searchResults.length > 0 && (
+                    <div className="mt-2 max-h-48 overflow-y-auto overflow-hidden rounded-[2rem] border border-gray-700 bg-black/60">
+                      {searchResults.map((result) => (
+                        <button
+                          key={String(result.id)}
+                          type="button"
+                          onClick={() => addParticipant(result, beefData.participants.length < 2)}
+                          className="flex w-full items-center gap-2 p-2 text-left transition-colors hover:bg-white/5"
+                        >
+                          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full brand-gradient text-sm font-bold text-white">
+                            {String(result.display_name || result.username || '?')[0]?.toUpperCase() ?? '?'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-white">
+                              {String(result.display_name || result.username)}
+                            </p>
+                            <p className="truncate text-xs text-gray-400">@{String(result.username)}</p>
+                          </div>
+                          <UserPlus className="h-4 w-4 flex-shrink-0 text-brand-400" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {beefData.participants.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {beefData.participants.map((participant) => (
+                        <div
+                          key={participant.user_id}
+                          className="flex items-center gap-2 rounded-[2rem] border border-gray-700 bg-black/40 p-2"
+                        >
+                          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full brand-gradient text-sm font-bold text-white">
+                            {participant.display_name[0]?.toUpperCase() ?? '?'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-white">{participant.display_name}</p>
+                            <p className="truncate text-xs text-gray-400">@{participant.username}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleMainParticipant(participant.user_id)}
+                            className={`flex-shrink-0 rounded-full px-2 py-1 text-xs font-bold transition-all ${
+                              participant.is_main ? 'bg-brand-500 text-black' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                            }`}
+                          >
+                            {participant.is_main ? '🔥 Principal' : 'Témoin'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeParticipant(participant.user_id)}
+                            className="flex-shrink-0 rounded-lg p-1 transition-colors hover:bg-red-500/20"
+                          >
+                            <X className="h-4 w-4 text-red-400" />
+                          </button>
+                        </div>
+                      ))}
+                      {intent === 'mediation' && mainParticipants.length !== 2 && (
+                        <p className="flex items-center gap-1 text-xs text-yellow-400">
+                          <AlertTriangle className="h-3 w-3" />
+                          Il faut exactement 2 participants principaux.
+                        </p>
+                      )}
+                      {fieldErrors.participants && (
+                        <p className="text-xs text-red-400">⚠️ {fieldErrors.participants}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Tags:</span>
-                  <span className="text-white font-semibold">{beefData.tags.length}</span>
+
+                <div className="space-y-3 rounded-[2rem] border border-blue-500/30 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 p-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <Calendar className="h-4 w-4 shrink-0 text-cyan-400" aria-hidden />
+                    Démarrage du beef
+                  </div>
+                  {intent === 'mediation' && !beefData.is_scheduled && (
+                    <p className="text-xs text-amber-400/90">
+                      Recommandé : programme une date pour que les parties se préparent.
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-400">
+                    {intent === 'manifesto'
+                      ? 'Optionnel : tu peux lancer sans date fixe.'
+                      : 'Choisis le mode de démarrage.'}
+                  </p>
+                  <label className="flex cursor-pointer items-start gap-2 rounded-lg p-2 hover:bg-white/5">
+                    <input
+                      type="radio"
+                      name="beef-schedule-mode"
+                      checked={!beefData.is_scheduled}
+                      onChange={() => {
+                        setFieldErrors((p) => {
+                          const n = { ...p };
+                          delete n.scheduled_at;
+                          return n;
+                        });
+                        setBeefData((prev) => ({ ...prev, is_scheduled: false, scheduled_at: '' }));
+                      }}
+                      className="mt-1 h-4 w-4 border-gray-600 text-cyan-500 focus:ring-cyan-500"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-white">Dès que c’est prêt</span>
+                      <span className="block text-xs text-gray-400">Pas de date fixée.</span>
+                    </span>
+                  </label>
+                  <label className="flex cursor-pointer items-start gap-2 rounded-lg p-2 hover:bg-white/5">
+                    <input
+                      type="radio"
+                      name="beef-schedule-mode"
+                      checked={beefData.is_scheduled}
+                      onChange={() => {
+                        setFieldErrors((p) => {
+                          const n = { ...p };
+                          delete n.scheduled_at;
+                          return n;
+                        });
+                        setBeefData((prev) => ({
+                          ...prev,
+                          is_scheduled: true,
+                          scheduled_at: prev.scheduled_at?.trim() ? prev.scheduled_at : minDateTimeLocalValue(),
+                        }));
+                      }}
+                      className="mt-1 h-4 w-4 border-gray-600 text-cyan-500 focus:ring-cyan-500"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-white">Programmer date et heure</span>
+                      {beefData.is_scheduled && (
+                        <input
+                          type="datetime-local"
+                          value={beefData.scheduled_at}
+                          min={minDateTimeLocalValue()}
+                          onChange={(e) => {
+                            updateData('scheduled_at', e.target.value);
+                            setFieldErrors((p) => {
+                              const n = { ...p };
+                              delete n.scheduled_at;
+                              return n;
+                            });
+                          }}
+                          className="mt-2 min-h-[44px] w-full rounded-[2rem] border border-white/[0.12] bg-black/40 px-3 py-2.5 text-base text-white transition-colors focus:border-cyan-500 focus:outline-none"
+                        />
+                      )}
+                    </span>
+                  </label>
+                  {fieldErrors.scheduled_at && (
+                    <p className="text-xs text-red-400">⚠️ {fieldErrors.scheduled_at}</p>
+                  )}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Démarrage:</span>
-                  <span className="text-blue-400 font-semibold text-right max-w-[58%]">
-                    {beefData.is_scheduled && beefData.scheduled_at?.trim()
-                      ? new Date(beefData.scheduled_at).toLocaleString('fr-FR', {
-                          day: '2-digit',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : 'Après invitations (pas de date fixe)'}
-                  </span>
+
+                <div className="rounded-[2rem] border border-brand-500/30 bg-brand-500/10 p-3">
+                  <p className="mb-2 text-sm font-bold text-brand-400">📋 Récap</p>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-gray-400">Intention</span>
+                      <span className="max-w-[58%] truncate text-right font-semibold text-white">
+                        {intent === 'manifesto' ? 'Manifeste' : 'Médiation'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-gray-400">Calibre</span>
+                      <span className="font-semibold text-white">{beefData.event_type}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-gray-400">Tags</span>
+                      <span className="font-semibold text-white">{beefData.tags.length}</span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-gray-400">Participants</span>
+                      <span className="font-semibold text-white">{beefData.participants.length}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Participants:</span>
-                  <span className="text-white font-semibold">{beefData.participants.length}</span>
+
+                <div className="rounded-[2rem] border border-white/[0.08] bg-white/[0.04] p-3">
+                  <p className="text-sm leading-relaxed text-gray-300">
+                    Après les premières minutes gratuites en direct, les spectateurs peuvent débloquer la suite avec des
+                    points. Palier estimé pour ce beef :{' '}
+                    <span className="font-bold text-brand-400">
+                      {estimatedSuitePrice === null ? '…' : `${estimatedSuitePrice} pts`}
+                    </span>
+                    .
+                  </p>
                 </div>
               </div>
             </div>
-          </motion.div>
-        )}
+          )}
 
-        {/* Field errors summary — only show non-empty errors */}
-        {Object.values(fieldErrors).some(e => e) && (
-          <div className="mt-4 p-3 bg-red-500/10 border border-red-500/40 rounded-[2rem] space-y-1">
-            {Object.values(fieldErrors).filter(e => e).map((err, i) => (
-              <p key={i} className="text-red-400 text-xs flex items-start gap-1.5">
-                <span className="mt-0.5">⚠️</span>
-                <span>{err}</span>
-              </p>
-            ))}
+          {Object.values(fieldErrors).some(Boolean) && (
+            <div className="mt-4 space-y-1 rounded-[2rem] border border-red-500/40 bg-red-500/10 p-3">
+              {Object.values(fieldErrors)
+                .filter(Boolean)
+                .map((err, i) => (
+                  <p key={i} className="flex items-start gap-1.5 text-xs text-red-400">
+                    <span className="mt-0.5">⚠️</span>
+                    <span>{err}</span>
+                  </p>
+                ))}
+            </div>
+          )}
+
+          {intent !== null && (
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="flex flex-1 items-center justify-center gap-2 rounded-[2rem] py-3 text-sm font-bold text-white shadow-glow transition-all brand-gradient hover:opacity-90 disabled:opacity-60"
+              >
+                {loading ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span>Création…</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    <span>{intent === 'manifesto' ? 'Publier le Manifeste' : 'Convoquer le Tribunal'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          <div className="mt-3 rounded-[2rem] border border-blue-500/20 bg-blue-500/10 p-2">
+            <p className="text-xs text-blue-400">
+              <strong>Obligatoire :</strong> titre, tags, description (50+ caractères).{' '}
+              {intent === 'mediation' && 'Médiation : 2 participants principaux.'}
+            </p>
           </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-2 mt-4">
-          {step > 1 && (
-            <button
-              onClick={() => { setStep(step - 1); setFieldErrors({}); }}
-              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 rounded-[2rem] transition-colors text-sm"
-            >
-              ← Retour
-            </button>
-          )}
-          {step < 3 ? (
-            <button
-              onClick={handleNext}
-              className="flex-1 brand-gradient hover:opacity-90 text-white font-bold py-3 rounded-[2rem] transition-all flex items-center justify-center gap-2 text-sm shadow-glow"
-            >
-              Continuer
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="flex-1 brand-gradient hover:opacity-90 disabled:opacity-60 text-white font-bold py-3 rounded-[2rem] transition-all flex items-center justify-center gap-2 text-sm shadow-glow"
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Création en cours...</span>
-                </>
-              ) : (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span>🔥 Créer &amp; Envoyer les invitations</span>
-                </>
-              )}
-            </button>
-          )}
-        </div>
-
-        <div className="mt-3 p-2 bg-blue-500/10 border border-blue-500/20 rounded-[2rem]">
-          <p className="text-blue-400 text-xs">
-            💡 <strong>Champs obligatoires:</strong> Titre (étape 1), Tags (étape 1), Description 50+ caractères (étape 3).
-          </p>
-        </div>
         </motion.div>
       </div>
     </div>

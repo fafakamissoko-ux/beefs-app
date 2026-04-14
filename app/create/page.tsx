@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { submitNewBeef } from '@/lib/submitNewBeef';
+import type { SubmitBeefPayload } from '@/lib/submitNewBeef';
 import { navigateSmartBack } from '@/lib/navigation-return';
 
 const CreateBeefForm = dynamic(
@@ -34,7 +35,7 @@ export default function CreateBeefPage() {
     }
   }, [user, router]);
 
-  const handleSubmit = async (beefData: any) => {
+  const handleSubmit = async (beefData: SubmitBeefPayload) => {
     if (!user) {
       router.push('/login');
       return;

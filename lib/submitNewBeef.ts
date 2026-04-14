@@ -2,19 +2,29 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
 import { normalizeScheduledAtForInsert } from '@/lib/beef-schedule';
 
+export type BeefCreationIntent = 'manifesto' | 'mediation';
+export type BeefEventType = 'standard' | 'prestige';
+
+/** Payload aligné avec CreateBeefForm → insertion Supabase */
+export interface SubmitBeefPayload {
+  intent: BeefCreationIntent;
+  event_type: BeefEventType;
+  title: string;
+  description?: string;
+  tags?: string[];
+  scheduled_at?: string;
+  participants?: { user_id: string; role?: string; is_main?: boolean }[];
+}
+
 /**
- * Crée un beef + participants / invitations (même logique que le feed).
+ * Crée un beef + participants / invitations.
+ * — mediation : mediator_id = créateur, invitations envoyées aux participants.
+ * — manifesto : mediator_id null, créateur inséré en challenger principal (is_main).
  */
 export async function submitNewBeef(
   supabase: SupabaseClient,
   userId: string,
-  beefData: {
-    title: string;
-    description?: string;
-    tags?: string[];
-    scheduled_at?: string;
-    participants?: { user_id: string; role?: string; is_main?: boolean }[];
-  }
+  beefData: SubmitBeefPayload
 ) {
   const { count } = await supabase
     .from('beefs')
@@ -23,12 +33,15 @@ export async function submitNewBeef(
     .eq('resolution_status', 'resolved');
 
   const price = continuationPriceFromResolvedCount(count ?? 0);
+
   const insertData: Record<string, unknown> = {
     title: beefData.title,
     subject: beefData.title,
     description: beefData.description || '',
-    mediator_id: userId,
-    /** Toujours `pending` : la contrainte SQL `beefs_status_check` n’inclut souvent pas `scheduled`. */
+    mediator_id: beefData.intent === 'mediation' ? userId : null,
+    created_by: userId,
+    intent: beefData.intent,
+    event_type: beefData.event_type,
     status: 'pending',
     is_premium: false,
     price,
@@ -41,24 +54,66 @@ export async function submitNewBeef(
   const { data: beef, error } = await supabase.from('beefs').insert(insertData).select().single();
   if (error) throw new Error(error.message);
 
-  if (beefData.participants?.length) {
-    await supabase.from('beef_participants').insert(
-      beefData.participants.map((p) => ({
+  type PartRow = {
+    beef_id: string;
+    user_id: string;
+    role: string;
+    is_main: boolean;
+    invite_status: string;
+  };
+
+  const participantRows: PartRow[] = [];
+
+  if (beefData.intent === 'manifesto') {
+    participantRows.push({
+      beef_id: beef.id,
+      user_id: userId,
+      role: 'participant',
+      is_main: true,
+      invite_status: 'accepted',
+    });
+    const others = (beefData.participants ?? []).filter((p) => p.user_id !== userId);
+    for (const p of others) {
+      participantRows.push({
         beef_id: beef.id,
         user_id: p.user_id,
         role: p.role || 'participant',
-        is_main: p.is_main || false,
+        is_main: Boolean(p.is_main),
         invite_status: 'pending',
-      }))
-    );
-    await supabase.from('beef_invitations').insert(
-      beefData.participants.map((p) => ({
+      });
+    }
+  } else {
+    for (const p of beefData.participants ?? []) {
+      participantRows.push({
         beef_id: beef.id,
-        inviter_id: userId,
-        invitee_id: p.user_id,
-        status: 'sent',
-      }))
-    );
+        user_id: p.user_id,
+        role: p.role || 'participant',
+        is_main: Boolean(p.is_main),
+        invite_status: 'pending',
+      });
+    }
+  }
+
+  if (participantRows.length > 0) {
+    const { error: pErr } = await supabase.from('beef_participants').insert(participantRows);
+    if (pErr) throw new Error(pErr.message);
+
+    const invitees =
+      beefData.intent === 'manifesto'
+        ? (beefData.participants ?? []).filter((p) => p.user_id !== userId)
+        : beefData.participants ?? [];
+
+    if (invitees.length > 0) {
+      const { error: invErr } = await supabase.from('beef_invitations').insert(
+        invitees.map((p) => ({
+          beef_id: beef.id,
+          inviter_id: userId,
+          invitee_id: p.user_id,
+          status: 'sent',
+        }))
+      );
+      if (invErr) throw new Error(invErr.message);
+    }
   }
 
   return beef as { id: string };

@@ -9,8 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CreateBeefForm } from '@/components/CreateBeefForm';
 import { useToast } from '@/components/Toast';
 import { AppBackButton } from '@/components/AppBackButton';
-import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
-import { normalizeScheduledAtForInsert } from '@/lib/beef-schedule';
+import { submitNewBeef } from '@/lib/submitNewBeef';
+import type { SubmitBeefPayload } from '@/lib/submitNewBeef';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { fetchUserPublicByIds, displayNameFromPublicRow } from '@/lib/fetch-user-public-profile';
@@ -149,7 +149,7 @@ export default function LivePage() {
     return () => { channel.unsubscribe(); };
   }, [authLoading, user, feedType, followingIds, loadLiveRooms, router]);
 
-  const handleCreateBeef = async (beefData: any) => {
+  const handleCreateBeef = async (beefData: SubmitBeefPayload) => {
     if (!user) {
       toast('Vous devez être connecté pour créer un beef', 'error');
       router.push('/login');
@@ -157,73 +157,16 @@ export default function LivePage() {
     }
 
     try {
-      const { count } = await supabase
-        .from('beefs')
-        .select('*', { count: 'exact', head: true })
-        .eq('mediator_id', user.id)
-        .eq('resolution_status', 'resolved');
-      const price = continuationPriceFromResolvedCount(count ?? 0);
-      const insertData: any = {
-        title: beefData.title,
-        subject: beefData.title, // subject mirrors title (NOT NULL constraint)
-        description: beefData.description || '',
-        mediator_id: user.id,
-        status: 'pending',
-        is_premium: false,
-        price,
-        tags: beefData.tags || [],
-      };
-
-      const when = normalizeScheduledAtForInsert(beefData.scheduled_at);
-      if (when) insertData.scheduled_at = when;
-
-      const { data: beef, error: beefError } = await supabase
-        .from('beefs')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (beefError) {
-        console.error('Supabase error creating beef:', beefError);
-        throw new Error(beefError.message);
-      }
-
-      // Only insert participants if there are some
-      if (beefData.participants && beefData.participants.length > 0) {
-        const participantsToInsert = beefData.participants.map((p: any) => ({
-          beef_id: beef.id,
-          user_id: p.user_id,
-          role: p.role || 'participant',
-          is_main: p.is_main || false,
-          invite_status: 'pending',
-        }));
-
-        const { error: partsError } = await supabase
-          .from('beef_participants')
-          .insert(participantsToInsert);
-
-        if (partsError) console.warn('Participants error (non-blocking):', partsError);
-
-        const invitationsToInsert = beefData.participants.map((p: any) => ({
-          beef_id: beef.id,
-          inviter_id: user.id,
-          invitee_id: p.user_id,
-          status: 'sent',
-        }));
-
-        const { error: invError } = await supabase
-          .from('beef_invitations')
-          .insert(invitationsToInsert);
-
-        if (invError) console.warn('Invitations error (non-blocking):', invError);
-      }
-
+      const beef = await submitNewBeef(supabase, user.id, beefData);
       setShowCreateModal(false);
       router.push(`/arena/${beef.id}`);
-
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating beef:', error);
-      throw new Error(error.message || 'Erreur lors de la création du beef');
+      const msg =
+        error && typeof error === 'object' && 'message' in error
+          ? String((error as { message?: string }).message)
+          : 'Erreur lors de la création du beef';
+      throw new Error(msg);
     }
   };
 
