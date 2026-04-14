@@ -255,40 +255,47 @@ export function BeefCard({
           </h3>
         )}
 
-        {/* Médiateur (hôte du beef) */}
-        <div className="flex items-center gap-2 mb-3">
-          <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-white/30 shrink-0">
+        {/* Médiateur — même pastille que les challengers (avatar + nom dans le pill) */}
+        <div className="mb-3">
+          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">
             {saisirTab && !mediator_name?.trim() ? 'Auteur' : 'Médiateur'}
-          </span>
-          <div
-            className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 ${
-              hueBase % 2 === 0 ? 'bg-cobalt-700' : 'bg-ember-800'
-            }`}
-          >
-            {(host_name || '?')[0].toUpperCase()}
+          </p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            <div className="flex min-w-0 max-w-[min(100%,18rem)] items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.06] px-2.5 py-1">
+              <div
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white ${
+                  hueBase % 2 === 0 ? 'bg-cobalt-500/30' : 'bg-ember-500/25'
+                }`}
+              >
+                {(host_name || '?')[0].toUpperCase()}
+              </div>
+              <ProfileUserLink
+                username={host_username}
+                className="font-sans text-[11px] font-medium text-white/60 truncate max-w-[80px]"
+              >
+                {host_name}
+              </ProfileUserLink>
+            </div>
+            <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {(participants_count ?? 0) > 0 && (
+                <div className="flex items-center gap-1 font-mono text-[10px] tracking-wider text-white/35">
+                  <Users className="h-3 w-3" />
+                  {participants_count}
+                </div>
+              )}
+              {status === 'live' && (
+                <div className="flex items-center gap-0.5 font-sans text-[10px] font-semibold text-brand-400">
+                  Regarder <ArrowUpRight className="h-3 w-3" />
+                </div>
+              )}
+              {(status === 'scheduled' || status === 'ready' || showScheduledCountdown) &&
+                !((participants_count ?? 0) > 0) && (
+                  <div className="flex items-center gap-0.5 font-sans text-[10px] font-semibold text-cobalt-400">
+                    Bientôt <Calendar className="h-3 w-3" />
+                  </div>
+                )}
+            </div>
           </div>
-          <ProfileUserLink
-            username={host_username}
-            className="font-sans text-xs text-white/50 font-medium truncate"
-          >
-            {host_name}
-          </ProfileUserLink>
-          {(participants_count ?? 0) > 0 && (
-            <div className="ml-auto flex items-center gap-1 font-mono text-[10px] text-white/35 tracking-wider">
-              <Users className="w-3 h-3" />
-              {participants_count}
-            </div>
-          )}
-          {status === 'live' && (
-            <div className="ml-auto flex items-center gap-0.5 font-sans text-[10px] text-brand-400 font-semibold">
-              Regarder <ArrowUpRight className="w-3 h-3" />
-            </div>
-          )}
-          {(status === 'scheduled' || status === 'ready' || showScheduledCountdown) && !((participants_count ?? 0) > 0) && (
-            <div className="ml-auto flex items-center gap-0.5 font-sans text-[10px] text-cobalt-400 font-semibold">
-              Bientôt <Calendar className="w-3 h-3" />
-            </div>
-          )}
         </div>
 
         {/* Tags */}
