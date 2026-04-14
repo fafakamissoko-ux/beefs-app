@@ -2832,7 +2832,7 @@ export function TikTokStyleArena({
   // Show pre-join screen before entering
   if (!hasJoined) {
     return (
-      <div className="w-full h-full relative">
+      <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
         <PreJoinScreen
           userName={userName}
           onJoin={handleJoin}

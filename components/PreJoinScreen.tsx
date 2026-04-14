@@ -5,7 +5,7 @@ import { Mic, MicOff, Video, VideoOff, ChevronDown } from 'lucide-react';
 import { MutinyProtocol } from './MutinyProtocol';
 
 const ANTI_JOIN_BTN =
-  'mt-8 px-8 py-4 bg-brand-500 hover:bg-brand-400 text-white font-bold text-lg rounded-xl transition-all shadow-[0_0_20px_rgba(239,68,68,0.3)] w-full max-w-md uppercase tracking-wide';
+  'mt-4 sm:mt-6 px-8 py-3.5 sm:py-4 bg-brand-500 hover:bg-brand-400 text-white font-bold text-base sm:text-lg rounded-xl transition-all shadow-[0_0_20px_rgba(239,68,68,0.3)] w-full max-w-md uppercase tracking-wide shrink-0';
 
 interface PreJoinScreenProps {
   userName: string;
@@ -145,9 +145,11 @@ export function PreJoinScreen({
 
   if (viewerMode) {
     return (
-      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-obsidian p-4 text-white">
-        <h1 className="mb-8 text-3xl font-black uppercase tracking-wider">L&apos;Antichambre</h1>
-        <div className="w-full max-w-md space-y-6 text-center">
+      <div className="flex h-full min-h-0 w-full flex-col items-center overflow-y-auto overscroll-contain bg-obsidian px-3 py-4 text-white sm:px-4">
+        <h1 className="mb-4 shrink-0 text-2xl font-black uppercase tracking-wider sm:mb-6 sm:text-3xl">
+          L'Antichambre
+        </h1>
+        <div className="flex w-full max-w-md flex-1 flex-col justify-center space-y-4 text-center sm:space-y-6">
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-4 shadow-[0_0_40px_rgba(0,0,0,0.8)]">
             <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-brand-500/30 to-brand-600/20">
               <span className="text-5xl font-black text-white">{userName?.[0]?.toUpperCase() || '?'}</span>
@@ -164,7 +166,7 @@ export function PreJoinScreen({
             onClick={() => void onJoin(null)}
             className={ANTI_JOIN_BTN}
           >
-            ENTRER DANS L&apos;ARÈNE
+            ENTRER DANS L'ARÈNE
           </button>
         </div>
       </div>
@@ -172,16 +174,20 @@ export function PreJoinScreen({
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-obsidian p-4 text-white">
-      <h1 className="mb-8 text-3xl font-black uppercase tracking-wider">L&apos;Antichambre</h1>
-      <div className="w-full max-w-2xl space-y-4">
-        <div className="text-center">
-          <p className="text-sm text-white/45">Teste ta caméra et ton micro avant d&apos;entrer dans le beef</p>
+    <div className="flex h-full min-h-0 w-full flex-col items-stretch overflow-y-auto overscroll-contain bg-obsidian px-3 py-3 text-white sm:px-4 sm:py-4">
+      <h1 className="mb-3 shrink-0 text-center text-2xl font-black uppercase tracking-wider sm:mb-4 sm:text-3xl">
+        L'Antichambre
+      </h1>
+      <div className="mx-auto flex w-full max-w-2xl min-h-0 flex-1 flex-col gap-3 sm:gap-4">
+        <div className="shrink-0 text-center">
+          <p className="text-xs text-white/45 sm:text-sm">
+            Teste ta caméra et ton micro avant d'entrer dans le beef
+          </p>
         </div>
 
-        {/* Camera preview — cadre glass */}
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-4 shadow-[0_0_40px_rgba(0,0,0,0.8)]">
-        <div className="relative aspect-video overflow-hidden rounded-xl bg-gray-900">
+        {/* Camera preview — cadre glass (hauteur plafonnée sur desktop pour garder le CTA visible) */}
+        <div className="min-h-0 shrink overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-3 shadow-[0_0_40px_rgba(0,0,0,0.8)] sm:p-4">
+        <div className="relative mx-auto aspect-video w-full max-h-[min(38dvh,340px)] overflow-hidden rounded-xl bg-gray-900 sm:max-h-[min(42dvh,380px)]">
           {camEnabled ? (
             <video
               ref={videoRef}
@@ -319,9 +325,9 @@ export function PreJoinScreen({
           </div>
         )}
 
-        <div className="flex w-full justify-center">
+        <div className="flex w-full shrink-0 justify-center pb-1 pt-1">
           <button type="button" onClick={() => void handleJoin()} className={ANTI_JOIN_BTN}>
-            {isMediator ? '🔴 OUVRIR LA SÉANCE' : 'ENTRER DANS L&apos;ARÈNE'}
+            {isMediator ? '🔴 OUVRIR LA SÉANCE' : "ENTRER DANS L'ARÈNE"}
           </button>
         </div>
       </div>
