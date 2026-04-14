@@ -292,16 +292,18 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
 
   return (
     <div
-      className="fixed inset-0 z-modal flex items-center justify-center bg-black/80 p-4 pt-20 backdrop-blur-sm"
+      className="fixed inset-0 z-modal overflow-y-auto overscroll-contain bg-black/80 backdrop-blur-sm [scrollbar-gutter:stable]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-beef-dialog-title"
     >
-      <div className="max-h-[90vh] w-full max-w-2xl">
+      {/* Centrage si la modale est courte ; scroll sur l’overlay si elle est plus haute que le viewport */}
+      <div className="flex min-h-[100dvh] w-full items-start justify-center p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4 sm:py-8">
+        <div className="my-auto w-full max-w-2xl">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="w-full rounded-[2rem] border-2 border-brand-500/50 bg-surface-2 p-6 shadow-modal"
+          className="max-h-[min(92dvh,calc(100dvh-1.5rem))] w-full overflow-y-auto overscroll-contain rounded-[2rem] border-2 border-brand-500/50 bg-surface-2 p-5 shadow-modal sm:p-6"
         >
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -333,7 +335,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
 
           {/* Étape 0 — choix d’intention */}
           {intent === null && (
-            <div className="flex flex-col gap-4 lg:flex-row">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
               <button type="button" className={splitCardClass} onClick={() => setIntent('manifesto')}>
                 <span className="text-2xl" aria-hidden>
                   ⚔️
@@ -357,9 +359,9 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
             </div>
           )}
 
-          {/* Formulaire unifié */}
+          {/* Formulaire unifié — tout défile dans la carte (plus de 75vh + footer hors écran) */}
           {intent !== null && (
-            <div className="flex max-h-[75vh] flex-col overflow-hidden rounded-[1.5rem] border border-white/[0.08] bg-white/[0.03]">
+            <div className="rounded-[1.5rem] border border-white/[0.08] bg-white/[0.03]">
               <div className="shrink-0 border-b border-white/[0.06] px-4 py-2">
                 <button
                   type="button"
@@ -369,7 +371,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                   ← Retour
                 </button>
               </div>
-              <div className="hide-scrollbar flex-1 space-y-5 overflow-y-auto px-4 py-4">
+              <div className="hide-scrollbar space-y-5 px-4 py-4">
                 <div>
                   <label htmlFor="create-beef-title" className="mb-2 block text-sm font-semibold text-white">
                     Motif du litige
@@ -440,7 +442,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                         ? 'Expose les faits, les enjeux, ce que tu attends…'
                         : 'Contexte pour les parties et le déroulé souhaité…'
                     }
-                    rows={8}
+                    rows={5}
                     className={`w-full resize-y rounded-[2rem] border bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-gray-500 transition-colors focus:outline-none ${
                       fieldErrors.description ? 'border-red-500' : 'border-white/[0.06] focus:border-brand-500'
                     }`}
@@ -804,6 +806,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
             </p>
           </div>
         </motion.div>
+        </div>
       </div>
     </div>
   );
