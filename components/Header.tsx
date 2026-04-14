@@ -297,7 +297,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       <header
         className={
           shell === 'phone'
-            ? 'fixed left-1/2 top-0 z-header w-full max-w-md -translate-x-1/2 border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl lg:left-0 lg:right-auto lg:h-dvh lg:max-w-none lg:w-64 lg:translate-x-0 lg:border-b-0 lg:border-r lg:border-white/[0.08] lg:flex lg:flex-col lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.06)]'
+            ? 'fixed left-1/2 top-0 z-header w-full max-w-md -translate-x-1/2 border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl lg:left-0 lg:top-0 lg:right-auto lg:h-dvh lg:max-w-none lg:w-64 lg:translate-x-0 lg:border-b-0 lg:border-r lg:border-white/[0.08] lg:flex lg:flex-col lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.06)]'
             : 'fixed left-0 right-0 top-0 z-header border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl'
         }
       >
@@ -338,15 +338,15 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 <button
                   type="button"
                   aria-label="Ouvrir la recherche"
-                  className={`glass-prestige flex min-h-[44px] w-full max-w-xs shrink-0 items-center gap-2.5 rounded-[2px] px-3 py-2.5 text-left transition hover:bg-white/[0.06] ${
+                  className={`glass-prestige flex min-h-[44px] w-full max-w-xs shrink-0 items-center gap-3 rounded-[2px] px-4 py-2 text-left transition hover:bg-white/[0.06] ${
                     shell === 'phone' ? 'lg:mr-0 lg:max-w-none lg:w-full' : ''
                   }`}
                 >
-                  <Search className="h-4 w-4 shrink-0 text-white/45" strokeWidth={1.75} aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-400">
+                  <Search className="h-4 w-4 shrink-0 text-gray-500" strokeWidth={1.75} aria-hidden />
+                  <span className="min-w-0 flex-1 truncate text-sm text-gray-400">
                     Rechercher un dossier, un médiateur…
                   </span>
-                  <span className="hidden items-center rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] font-medium text-white/35 lg:inline-flex">
+                  <span className="hidden shrink-0 items-center rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] font-medium text-white/35 lg:inline-flex">
                     ⌘K
                   </span>
                 </button>
@@ -504,10 +504,10 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 <button
                   type="button"
                   aria-label="Ouvrir la recherche"
-                  className="glass-prestige flex min-h-[40px] min-w-0 max-w-[160px] flex-1 items-center gap-2 truncate rounded-[2px] px-2.5 py-2 text-left transition hover:bg-white/[0.06] sm:max-w-xs"
+                  className="glass-prestige flex min-h-[40px] min-w-0 max-w-[160px] flex-1 items-center gap-3 truncate rounded-[2px] px-3 py-2 text-left transition hover:bg-white/[0.06] sm:max-w-xs"
                 >
-                  <Search className="h-4 w-4 shrink-0 text-white/45" strokeWidth={1.75} aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-xs font-medium text-gray-400 sm:text-sm">
+                  <Search className="h-4 w-4 shrink-0 text-gray-500" strokeWidth={1.75} aria-hidden />
+                  <span className="min-w-0 flex-1 truncate text-sm text-gray-400">
                     Rechercher un dossier, un médiateur…
                   </span>
                 </button>
