@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, X, User, Flame, Clock } from 'lucide-react';
+import { Search, X, User, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter, usePathname } from 'next/navigation';
@@ -18,27 +18,35 @@ interface SearchResult {
   avatar_url?: string;
 }
 
-export function GlobalSearchBar() {
+export type GlobalSearchModalProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export function GlobalSearchModal({ open, onOpenChange }: GlobalSearchModalProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'beefs' | 'users'>('beefs');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
-  // Close on click outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
+    if (!open) {
+      setQuery('');
+      setResults([]);
+    }
+  }, [open]);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onOpenChange(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onOpenChange]);
 
   const performSearch = useCallback(async () => {
     setLoading(true);
@@ -52,7 +60,7 @@ export function GlobalSearchBar() {
 
         if (error) throw error;
 
-        const beefResults: SearchResult[] = (data || []).map(beef => ({
+        const beefResults: SearchResult[] = (data || []).map((beef) => ({
           type: 'beef',
           id: beef.id,
           title: beef.title,
@@ -70,7 +78,7 @@ export function GlobalSearchBar() {
 
         if (error) throw error;
 
-        const userResults: SearchResult[] = (data || []).map(user => ({
+        const userResults: SearchResult[] = (data || []).map((user) => ({
           type: 'user',
           id: user.id,
           name: user.display_name || user.username,
@@ -88,7 +96,6 @@ export function GlobalSearchBar() {
     }
   }, [query, activeTab]);
 
-  // Search with debounce
   useEffect(() => {
     if (query.length < 2) {
       setResults([]);
@@ -108,7 +115,7 @@ export function GlobalSearchBar() {
     } else {
       router.push(hrefWithFrom(`/profile/${result.username}`, pathname));
     }
-    setIsOpen(false);
+    onOpenChange(false);
     setQuery('');
   };
 
@@ -126,40 +133,33 @@ export function GlobalSearchBar() {
   };
 
   return (
-    <div ref={searchRef} className="relative">
-      {/* Search Button */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white px-4 py-2 rounded-lg transition-colors"
-      >
-        <Search className="w-4 h-4" />
-        <span className="hidden md:inline text-sm">Rechercher...</span>
-      </button>
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-modal-backdrop bg-black/60 backdrop-blur-sm"
+            onClick={() => onOpenChange(false)}
+            aria-hidden
+          />
 
-      {/* Search Modal */}
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed left-0 right-0 top-14 bottom-0 bg-black/50 backdrop-blur-sm z-modal-backdrop"
-              onClick={() => setIsOpen(false)}
-              aria-hidden
-            />
-
-            {/* Search Panel */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed top-[50%] -translate-y-1/2 left-4 right-20 md:left-1/2 md:-translate-x-1/2 md:right-auto w-auto md:w-[500px] md:top-24 md:translate-y-0 bg-gray-900 rounded-xl border border-gray-700 shadow-2xl z-modal overflow-hidden max-h-[80vh] md:max-h-[75vh]"
-            >
-              {/* Tabs */}
-              <div className="flex items-center border-b border-gray-800">
+          <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Recherche globale"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.15 }}
+            className="fixed left-4 right-4 top-[max(5rem,10vh)] z-modal mx-auto w-[min(100%,32rem)] md:left-1/2 md:right-auto md:w-[500px] md:-translate-x-1/2"
+          >
+            <div className="overflow-hidden rounded-xl border border-white/[0.1] bg-[#121214] shadow-2xl max-h-[min(80vh,560px)] flex flex-col">
+              <div className="flex items-center border-b border-white/[0.08] shrink-0">
                 <button
+                  type="button"
                   onClick={() => setActiveTab('beefs')}
                   className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors relative ${
                     activeTab === 'beefs' ? 'text-white' : 'text-gray-500 hover:text-gray-300'
@@ -177,6 +177,7 @@ export function GlobalSearchBar() {
                   )}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('users')}
                   className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors relative ${
                     activeTab === 'users' ? 'text-white' : 'text-gray-500 hover:text-gray-300'
@@ -184,7 +185,7 @@ export function GlobalSearchBar() {
                 >
                   <div className="flex items-center justify-center gap-2">
                     <User className="w-4 h-4" />
-                    <span>Users</span>
+                    <span>Utilisateurs</span>
                   </div>
                   {activeTab === 'users' && (
                     <motion.div
@@ -195,54 +196,59 @@ export function GlobalSearchBar() {
                 </button>
               </div>
 
-              {/* Search Input */}
-              <div className="p-4 border-b border-gray-800">
+              <div className="border-b border-white/[0.08] p-4 shrink-0">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
                   <input
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder={activeTab === 'beefs' ? 'Rechercher des beefs...' : 'Rechercher des users...'}
-                    className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl pl-10 pr-10 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
+                    placeholder={
+                      activeTab === 'beefs'
+                        ? 'Rechercher des beefs…'
+                        : 'Rechercher des utilisateurs…'
+                    }
+                    className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2.5 pl-10 pr-10 text-sm text-white placeholder:text-gray-500 focus:border-brand-500 focus:outline-none"
                     autoFocus
                   />
-                  {query && (
+                  {query ? (
                     <button
+                      type="button"
                       onClick={() => setQuery('')}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                      aria-label="Effacer"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="h-4 w-4" />
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
-              {/* Results */}
-              <div className="max-h-[400px] overflow-y-auto">
+              <div className="min-h-0 flex-1 overflow-y-auto">
                 {loading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="flex items-center justify-center py-10">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
                   </div>
                 ) : results.length > 0 ? (
-                  <div className="divide-y divide-gray-800">
+                  <div className="divide-y divide-white/[0.06]">
                     {results.map((result) => (
                       <button
                         key={result.id}
+                        type="button"
                         onClick={() => handleResultClick(result)}
-                        className="w-full p-4 hover:bg-gray-800 transition-colors text-left"
+                        className="w-full p-4 text-left transition-colors hover:bg-white/[0.04]"
                       >
                         {result.type === 'beef' ? (
                           <div>
-                            <div className="flex items-center justify-between mb-1">
-                              <h4 className="text-white font-semibold text-sm line-clamp-1">{result.title}</h4>
+                            <div className="mb-1 flex items-center justify-between gap-2">
+                              <h4 className="line-clamp-1 text-sm font-semibold text-white">{result.title}</h4>
                               {getStatusBadge(result.status)}
                             </div>
                             {result.tags && result.tags.length > 0 && (
                               <div className="flex flex-wrap gap-1">
                                 {result.tags.slice(0, 3).map((tag, idx) => (
                                   <span key={idx} className="text-xs text-brand-400">
-                                    ${tag}
+                                    #{tag}
                                   </span>
                                 ))}
                               </div>
@@ -250,12 +256,12 @@ export function GlobalSearchBar() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full brand-gradient flex items-center justify-center text-white font-bold">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full brand-gradient text-sm font-bold text-white">
                               {result.name?.[0]?.toUpperCase() || '?'}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-white font-semibold text-sm truncate">{result.name}</p>
-                              <p className="text-gray-400 text-xs truncate">@{result.username}</p>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-white">{result.name}</p>
+                              <p className="truncate text-xs text-gray-400">@{result.username}</p>
                             </div>
                           </div>
                         )}
@@ -263,20 +269,20 @@ export function GlobalSearchBar() {
                     ))}
                   </div>
                 ) : query.length >= 2 ? (
-                  <div className="py-8 text-center">
-                    <p className="text-gray-500 text-sm">Aucun résultat trouvé</p>
+                  <div className="py-10 text-center">
+                    <p className="text-sm text-gray-500">Aucun résultat</p>
                   </div>
                 ) : (
-                  <div className="py-8 text-center">
-                    <Search className="w-12 h-12 text-gray-700 mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm">Tape au moins 2 caractères</p>
+                  <div className="py-10 text-center">
+                    <Search className="mx-auto mb-2 h-12 w-12 text-gray-700" />
+                    <p className="text-sm text-gray-500">Tape au moins 2 caractères</p>
                   </div>
                 )}
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }

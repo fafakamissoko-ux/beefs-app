@@ -21,6 +21,7 @@ import { OnboardingReminder } from "@/components/OnboardingReminder";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { PWAManager } from "@/components/PWAManager";
 import { ToastProvider } from "@/components/Toast";
+import { GlobalSearchProvider } from "@/contexts/GlobalSearchContext";
 import { BetaGate } from "@/components/BetaGate";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
@@ -92,6 +93,7 @@ function RootLayoutClient({
     <AuthProvider>
       <ThemeProvider>
         <ToastProvider>
+          <GlobalSearchProvider>
           <ClientMonitoring />
           <BetaGate>
           <PWAManager />
@@ -100,6 +102,7 @@ function RootLayoutClient({
           <OnboardingReminder />
           <PWAInstallPrompt />
           </BetaGate>
+          </GlobalSearchProvider>
         </ToastProvider>
       </ThemeProvider>
     </AuthProvider>

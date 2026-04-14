@@ -58,7 +58,7 @@ interface Beef {
 }
 
 const STATUS_FILTERS = [
-  { id: 'all', label: 'Tout' },
+  { id: 'all', label: 'Tous statuts' },
   { id: 'live', label: 'Live' },
   { id: 'scheduled', label: 'À venir' },
   { id: 'ended', label: 'Terminés' },
@@ -434,7 +434,7 @@ export default function FeedPage() {
         toast(error.message || 'Impossible de saisir cette affaire', 'error');
         return;
       }
-      toast('Affaire saisie ! Retrouve-la dans L’Arène.', 'success');
+      toast('Affaire saisie ! Retrouve-la dans l’onglet Pour toi.', 'success');
       setFeedType('pour-vous');
       void loadBeefs();
     },
@@ -557,7 +557,7 @@ export default function FeedPage() {
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4 gap-y-4">
           <div className="flex max-w-full min-w-0 flex-wrap items-center gap-6 border-b border-white/[0.08]">
             {[
-              { id: 'pour-vous' as const, label: "L'Arène", icon: TrendingUp },
+              { id: 'pour-vous' as const, label: 'Pour toi', icon: TrendingUp },
               { id: 'abonnements' as const, label: 'Abonnements', icon: Users },
               { id: 'manifestes' as const, label: 'À Saisir', icon: FileText },
             ].map((tab) => (

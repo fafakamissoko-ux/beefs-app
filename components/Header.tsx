@@ -27,6 +27,7 @@ import { BeefLogo } from '@/components/BeefLogo';
 import { BeefNotificationToasts } from '@/components/BeefNotificationToasts';
 import { supabase } from '@/lib/supabase/client';
 import { hrefWithFrom } from '@/lib/navigation-return';
+import { useGlobalSearch } from '@/contexts/GlobalSearchContext';
 
 const buyPointsAnchorClass =
   'flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors';
@@ -67,6 +68,26 @@ function formatNavBadgeCount(count: number): string {
   const n = Math.max(0, Math.floor(count));
   if (n > 999) return '999+';
   return String(n);
+}
+
+/** Raccourci clavier affiché dans la barre : ⌘K (Apple) ou Ctrl+K (Windows/Linux), rendu via <kbd> pour éviter les glyphes cassés. */
+function SearchKeyboardShortcut() {
+  const [modKey, setModKey] = useState<'⌘' | 'Ctrl'>('Ctrl');
+  useEffect(() => {
+    if (typeof navigator === 'undefined') return;
+    const apple = /Mac|iPhone|iPad|iPod/.test(navigator.platform ?? '');
+    setModKey(apple ? '⌘' : 'Ctrl');
+  }, []);
+  return (
+    <span className="hidden shrink-0 items-center gap-0.5 lg:inline-flex" aria-hidden>
+      <kbd className="pointer-events-none inline-flex h-5 min-w-[1.35rem] select-none items-center justify-center rounded border border-white/12 bg-black/35 px-1 font-sans text-[10px] font-semibold leading-none text-white/55 shadow-[inset_0_-1px_0_rgba(0,0,0,0.4)]">
+        {modKey}
+      </kbd>
+      <kbd className="pointer-events-none inline-flex h-5 min-w-[1.25rem] select-none items-center justify-center rounded border border-white/12 bg-black/35 px-1 font-sans text-[10px] font-semibold leading-none text-white/55 shadow-[inset_0_-1px_0_rgba(0,0,0,0.4)]">
+        K
+      </kbd>
+    </span>
+  );
 }
 
 function hideGlobalSearchOnPath(pathname: string | null): boolean {
@@ -126,6 +147,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
   const router = useRouter();
   const { user, userRole, signOut } = useAuth();
   const { toast } = useToast();
+  const { openSearch } = useGlobalSearch();
   const showGlobalSearch = Boolean(user) && !hideGlobalSearchOnPath(pathname);
 
   useEffect(() => {
@@ -255,7 +277,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
   }, [user, pathname, toast, loadUnreadCounts]);
 
   const navItems = [
-    { href: '/feed', label: 'Accueil', icon: Home, badge: 0 },
+    { href: '/feed', label: 'Fil d’actu', icon: Home, badge: 0 },
     {
       href: '/notifications',
       label: 'Notifications',
@@ -280,7 +302,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
 
   const isActive = (href: string) => {
     if (!pathname) return false;
-    /** Sur les pages profil, aucun onglet principal (Accueil, Messages, …) ne doit rester « actif ». */
+    /** Sur les pages profil, aucun onglet principal (Fil d’actu, Messages, …) ne doit rester « actif ». */
     if (pathname === '/profile' || pathname.startsWith('/profile/')) {
       return false;
     }
@@ -338,6 +360,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 <button
                   type="button"
                   aria-label="Ouvrir la recherche"
+                  onClick={() => openSearch()}
                   className={`glass-prestige flex min-h-[44px] w-full max-w-xs shrink-0 items-center gap-3 rounded-[2px] px-4 py-2 text-left transition hover:bg-white/[0.06] ${
                     shell === 'phone' ? 'lg:mr-0 lg:max-w-none lg:w-full' : ''
                   }`}
@@ -346,9 +369,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   <span className="min-w-0 flex-1 truncate text-sm text-gray-400">
                     Rechercher un dossier, un médiateur…
                   </span>
-                  <span className="hidden shrink-0 items-center rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] font-medium text-white/35 lg:inline-flex">
-                    ⌘K
-                  </span>
+                  <SearchKeyboardShortcut />
                 </button>
               )}
               {user &&
@@ -504,6 +525,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 <button
                   type="button"
                   aria-label="Ouvrir la recherche"
+                  onClick={() => openSearch()}
                   className="glass-prestige flex min-h-[40px] min-w-0 flex-1 items-center gap-2 truncate rounded-[2px] px-3 py-2 text-left transition hover:bg-white/[0.06]"
                 >
                   <Search className="h-4 w-4 shrink-0 text-gray-500" strokeWidth={1.75} aria-hidden />
