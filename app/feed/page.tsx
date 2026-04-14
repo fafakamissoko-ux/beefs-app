@@ -39,7 +39,7 @@ interface Beef {
   mediator_id?: string | null;
   created_by?: string | null;
   intent?: string | null;
-  status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled' | 'pending' | 'ready';
+  status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled' | 'pending' | 'ready' | 'completed';
   created_at: string;
   scheduled_at?: string;
   viewer_count?: number;
@@ -78,7 +78,14 @@ function compareFeedOrder(a: Beef, b: Beef) {
 /** L’Arène : Live → à venir (pas terminé) → terminées / annulées. */
 function arenaLifecycleTier(beef: Beef): number {
   if (beef.status === 'live') return 0;
-  if (beef.status === 'ended' || beef.status === 'replay' || beef.status === 'cancelled') return 2;
+  if (
+    beef.status === 'ended' ||
+    beef.status === 'replay' ||
+    beef.status === 'completed' ||
+    beef.status === 'cancelled'
+  ) {
+    return 2;
+  }
   return 1;
 }
 
@@ -453,17 +460,6 @@ export default function FeedPage() {
     [user?.id, toast, loadBeefs]
   );
 
-  const showWithdrawManifesto = useCallback(
-    (beef: Beef) => {
-      if (!user?.id || beef.intent !== 'manifesto' || beef.mediator_id !== user.id) return false;
-      if (beef.status === 'live' || beef.status === 'ended' || beef.status === 'replay' || beef.status === 'cancelled') {
-        return false;
-      }
-      return true;
-    },
-    [user?.id]
-  );
-
   useEffect(() => {
     if (!user) {
       const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
@@ -489,7 +485,12 @@ export default function FeedPage() {
   };
 
   const handleBeefClick = (beef: Beef) => {
-    if (beef.status === 'ended' || beef.status === 'replay' || beef.status === 'cancelled') {
+    if (
+      beef.status === 'ended' ||
+      beef.status === 'replay' ||
+      beef.status === 'completed' ||
+      beef.status === 'cancelled'
+    ) {
       router.push(`/beef/${beef.id}/summary`);
       return;
     }
@@ -700,7 +701,10 @@ export default function FeedPage() {
                       : undefined
                   }
                   onSeDesister={
-                    feedType === 'pour-vous' && showWithdrawManifesto(beef)
+                    feedType === 'pour-vous' &&
+                    selectedStatus === 'scheduled' &&
+                    user?.id === beef.mediator_id &&
+                    beef.intent === 'manifesto'
                       ? () => void handleWithdrawManifesto(beef.id)
                       : undefined
                   }

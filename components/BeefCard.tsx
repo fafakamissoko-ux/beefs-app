@@ -15,7 +15,15 @@ interface BeefCardProps {
   host_name: string;
   /** `username` en base pour lien profil (pas le seul display name). */
   host_username?: string | null;
-  status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled' | 'pending' | 'ready';
+  status:
+    | 'live'
+    | 'ended'
+    | 'replay'
+    | 'scheduled'
+    | 'cancelled'
+    | 'pending'
+    | 'ready'
+    | 'completed';
   created_at: string;
   scheduled_at?: string;
   viewer_count?: number;
@@ -77,26 +85,24 @@ export function BeefCard({
   }, [id, status, price]);
 
   const getPrimaryStatusBadge = () => {
-    if (saisirTab && status === 'pending') {
-      return (
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/70 text-xs font-bold tracking-wider">
-          ⚖️ EN ATTENTE
-        </div>
-      );
-    }
+    const base = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider backdrop-blur-md';
     switch (status) {
+      case 'pending':
+        return (
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/70 text-xs font-bold tracking-wider">
+            ⚖️ EN ATTENTE
+          </div>
+        );
       case 'live':
         return (
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold tracking-wider uppercase">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-            </span>
+          <div className={`${base} bg-ember-500/15 border border-ember-500/35 text-ember-400`}>
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember-500" aria-hidden />
             LIVE
           </div>
         );
       case 'ended':
       case 'replay':
+      case 'completed':
         return (
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold tracking-wider uppercase">
             ▶ JURISPRUDENCE
@@ -108,13 +114,6 @@ export function BeefCard({
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-cobalt-500/10 border border-cobalt-500/20 text-cobalt-400 text-xs font-bold tracking-wider uppercase">
             <Calendar className="h-3.5 w-3.5 shrink-0" />
             À VENIR
-          </div>
-        );
-      case 'pending':
-        return (
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-prestige-gold/10 border border-prestige-gold/25 text-prestige-gold text-xs font-bold tracking-wider uppercase">
-            <Clock className="h-3.5 w-3.5 shrink-0" />
-            PRÉPARATION
           </div>
         );
       case 'cancelled':
@@ -151,7 +150,7 @@ export function BeefCard({
     saisirTab ||
     (intent === 'manifesto' && (status === 'pending' || status === 'ready'));
   const mediatorSlotName = (mediator_name?.trim() || host_name?.trim() || '') || null;
-  const isReplay = status === 'ended' || status === 'replay';
+  const isReplay = status === 'ended' || status === 'replay' || status === 'completed';
 
   return (
     <div className="flex flex-col">
@@ -222,8 +221,8 @@ export function BeefCard({
               {title}
             </h4>
             {description?.trim() && (
-              <p className="font-sans text-[11px] text-white/50 leading-relaxed line-clamp-2">
-                {description.trim().slice(0, 90)}{(description.trim().length > 90) ? '…' : ''}
+              <p className="font-sans text-[11px] text-white/50 leading-relaxed line-clamp-2 break-words whitespace-normal text-ellipsis overflow-hidden">
+                {description.trim()}
               </p>
             )}
           </div>
