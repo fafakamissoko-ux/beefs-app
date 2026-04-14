@@ -3130,7 +3130,7 @@ export function TikTokStyleArena({
       <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
         {dailyRoomUrl ? (
           <div
-            className={`relative z-[60] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
+            className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
           >
             {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
             <div className={`pointer-events-none absolute inset-0 z-0 flex h-full min-h-0 flex-row gap-2 px-1 transition-shadow duration-700 ${sponsorGlow}`}>
@@ -3338,7 +3338,7 @@ export function TikTokStyleArena({
                       emitTapSupport('A');
                       castVote('A');
                     }}
-                    className="absolute inset-0 z-[5] touch-manipulation"
+                    className="absolute inset-0 z-[25] touch-manipulation"
                     aria-label={`Voter pour ${leftPanelName}`}
                   />
                 )}
@@ -3349,13 +3349,13 @@ export function TikTokStyleArena({
                   <button
                     type="button"
                     onClick={() => emitTapSupport('A')}
-                    className="absolute inset-x-0 top-0 bottom-40 z-[4] touch-manipulation bg-transparent max-lg:bottom-44"
+                    className="absolute inset-x-0 top-0 bottom-40 z-[24] touch-manipulation bg-transparent max-lg:bottom-44"
                     aria-label="Envoyer du soutien au challenger A"
                   />
                 )}
                 {/* Vote guide — first time only */}
                 {userRole === 'viewer' && (
-                  <div className="absolute top-24 left-1/2 -translate-x-1/2 z-[8] pointer-events-auto">
+                  <div className="pointer-events-none absolute top-24 left-1/2 z-[8] -translate-x-1/2">
                     <FeatureGuide
                       id="arena-vote"
                       title="Voter pour un challenger"
@@ -3748,7 +3748,7 @@ export function TikTokStyleArena({
                       emitTapSupport('B');
                       castVote('B');
                     }}
-                    className="absolute inset-0 z-[5] touch-manipulation"
+                    className="absolute inset-0 z-[25] touch-manipulation"
                     aria-label={`Voter pour ${rightPanelName}`}
                   />
                 )}
@@ -3759,7 +3759,7 @@ export function TikTokStyleArena({
                   <button
                     type="button"
                     onClick={() => emitTapSupport('B')}
-                    className="absolute inset-x-0 top-0 bottom-40 z-[4] touch-manipulation bg-transparent max-lg:bottom-44"
+                    className="absolute inset-x-0 top-0 bottom-40 z-[24] touch-manipulation bg-transparent max-lg:bottom-44"
                     aria-label="Envoyer du soutien au challenger B"
                   />
                 )}
@@ -3878,7 +3878,7 @@ export function TikTokStyleArena({
           </div>
         ) : (
         /* Placeholder — même hauteur vidéo que avec room */
-        <div className="relative z-[60] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] overflow-hidden">
+        <div className="relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] overflow-hidden">
           <div className="pointer-events-none absolute inset-0 z-0 flex h-full min-h-0 w-full flex-row">
           {debaters[0] ? (
             <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]">
@@ -4052,7 +4052,7 @@ export function TikTokStyleArena({
         )}
 
       {/* ── Header fixe : annonce puis chrono / LIVE (pile unique, mobile + desktop) ── */}
-      <div className="pointer-events-none fixed left-1/2 top-14 z-[60] flex w-full max-w-md -translate-x-1/2 flex-col lg:left-64 lg:right-0 lg:top-0 lg:max-w-none lg:translate-x-0">
+      <div className="pointer-events-none fixed left-1/2 top-14 z-[62] flex w-full max-w-md -translate-x-1/2 flex-col lg:left-64 lg:right-0 lg:top-0 lg:max-w-none lg:translate-x-0">
         {arenaHasAnnouncement && (
           <div className="pointer-events-none shrink-0 border-b border-white/10 bg-black/65 px-3 py-2 backdrop-blur-md">
             <p className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white">
@@ -4061,11 +4061,11 @@ export function TikTokStyleArena({
           </div>
         )}
         <div
-          className={`grid w-full grid-cols-1 items-start gap-2 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 ${arenaHasAnnouncement ? 'px-4 pb-3 pt-2' : 'p-4'}`}
+          className={`pointer-events-none grid w-full grid-cols-1 items-start gap-2 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 ${arenaHasAnnouncement ? 'px-4 pb-3 pt-2' : 'p-4'}`}
         >
-        <div className="hidden min-w-0 sm:block" aria-hidden />
+        <div className="pointer-events-none hidden min-w-0 sm:block" aria-hidden />
 
-        <div className="flex justify-center">
+        <div className="pointer-events-none flex justify-center">
           <div className="glass-prestige pointer-events-auto flex flex-col items-center justify-center gap-0.5 rounded-full px-4 py-2 text-center">
             {isJoined && timerActive ? (
               <div
@@ -4097,7 +4097,7 @@ export function TikTokStyleArena({
           </div>
         </div>
 
-        <div className="flex justify-center sm:justify-end">
+        <div className="pointer-events-none flex justify-center sm:justify-end">
           <div className="glass-prestige pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-full py-1.5 pl-2 pr-1.5 sm:gap-2 sm:pl-3">
             <div
               className={`flex items-center rounded-full px-2 py-0.5 ${

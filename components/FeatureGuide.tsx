@@ -102,8 +102,8 @@ export function FeatureGuide({
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           className={
             isLg
-              ? `absolute z-[120] w-[220px] max-w-[min(220px,calc(100vw-1.5rem))] ${getTooltipPosition(position, align)}`
-              : 'fixed left-1/2 top-auto z-[90] w-[min(320px,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)] -translate-x-1/2 bottom-[max(12rem,calc(38dvh+env(safe-area-inset-bottom)+3.25rem))]'
+              ? `pointer-events-auto absolute z-[120] w-[220px] max-w-[min(220px,calc(100vw-1.5rem))] ${getTooltipPosition(position, align)}`
+              : 'pointer-events-auto fixed left-1/2 top-auto z-[90] w-[min(320px,calc(100vw-1.5rem))] max-w-[calc(100vw-1.5rem)] -translate-x-1/2 bottom-[max(12rem,calc(38dvh+env(safe-area-inset-bottom)+3.25rem))]'
           }
         >
           <div className={`relative rounded-xl border px-3.5 py-2.5 shadow-xl backdrop-blur-sm ${bgClass}`}>
@@ -124,8 +124,9 @@ export function FeatureGuide({
             <p className={`text-[11px] mt-0.5 leading-snug ${subtextClass}`}>{description}</p>
 
             <button
+              type="button"
               onClick={dismiss}
-              className="mt-2 w-full bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-bold py-1.5 rounded-lg transition-colors"
+              className="mt-2 w-full touch-manipulation rounded-lg bg-brand-500 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-brand-600"
             >
               Compris
             </button>

@@ -135,7 +135,7 @@ export function PreJoinScreen({
 
   if (viewerMode) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-950 p-4">
+      <div className="flex h-full w-full touch-manipulation items-center justify-center bg-gray-950 p-4">
         <div className="w-full max-w-md space-y-6 text-center">
           <div className="w-24 h-24 bg-gradient-to-br from-brand-500/30 to-brand-600/20 rounded-full flex items-center justify-center mx-auto">
             <span className="text-5xl font-black text-white">{userName?.[0]?.toUpperCase() || '?'}</span>
@@ -147,7 +147,7 @@ export function PreJoinScreen({
           <button
             type="button"
             onClick={() => onJoin(null)}
-            className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-black text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/30 active:scale-95"
+            className="w-full touch-manipulation py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-black text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/30 active:scale-95"
           >
             👁️ Regarder le Beef
           </button>
@@ -157,7 +157,7 @@ export function PreJoinScreen({
   }
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-gray-950 p-4">
+    <div className="flex h-full w-full touch-manipulation items-center justify-center bg-gray-950 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <div className="w-full max-w-2xl space-y-4">
         {/* Title */}
         <div className="text-center">
@@ -166,7 +166,7 @@ export function PreJoinScreen({
         </div>
 
         {/* Camera preview */}
-        <div className="relative aspect-video bg-gray-900 rounded-2xl overflow-hidden">
+        <div className="relative aspect-video overflow-hidden rounded-2xl bg-gray-900">
           {camEnabled ? (
             <video
               ref={videoRef}
@@ -188,8 +188,8 @@ export function PreJoinScreen({
             </div>
           )}
 
-          {/* Name badge */}
-          <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm rounded-lg px-3 py-1">
+          {/* Name badge — ne pas intercepter les taps (contrôles sous-jacents si besoin) */}
+          <div className="pointer-events-none absolute bottom-3 left-3 rounded-lg bg-black/60 px-3 py-1 backdrop-blur-sm">
             <span className="text-white text-sm font-semibold">{userName} (Vous)</span>
           </div>
 
@@ -200,8 +200,9 @@ export function PreJoinScreen({
                 <VideoOff className="w-10 h-10 text-red-400 mx-auto mb-2" />
                 <p className="text-red-300 text-sm">{camError}</p>
                 <button
+                  type="button"
                   onClick={() => startPreview()}
-                  className="mt-3 text-orange-400 underline text-sm"
+                  className="mt-3 touch-manipulation text-sm text-orange-400 underline"
                 >
                   Réessayer
                 </button>
@@ -214,8 +215,9 @@ export function PreJoinScreen({
         <div className="flex items-center justify-between gap-3">
           {/* Cam toggle */}
           <button
+            type="button"
             onClick={toggleCam}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+            className={`flex touch-manipulation items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
               camEnabled
                 ? 'bg-gray-800 text-white hover:bg-gray-700'
                 : 'bg-red-500/20 text-red-400 border border-red-500/50'
@@ -228,8 +230,9 @@ export function PreJoinScreen({
           {/* Mic toggle + level meter */}
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={toggleMic}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${
+              className={`flex touch-manipulation items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
                 micEnabled
                   ? 'bg-gray-800 text-white hover:bg-gray-700'
                   : 'bg-red-500/20 text-red-400 border border-red-500/50'
@@ -305,8 +308,9 @@ export function PreJoinScreen({
 
         {/* Join button */}
         <button
+          type="button"
           onClick={handleJoin}
-          className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-black text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/30 active:scale-95"
+          className="w-full touch-manipulation rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 py-4 text-lg font-black text-white shadow-lg shadow-orange-500/30 transition-all hover:from-orange-600 hover:to-red-600 active:scale-95"
         >
           🔥 Rejoindre le Beef
         </button>
