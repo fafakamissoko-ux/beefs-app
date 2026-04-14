@@ -297,7 +297,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       <header
         className={
           shell === 'phone'
-            ? 'fixed left-1/2 top-0 z-header w-full max-w-md -translate-x-1/2 border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl lg:left-0 lg:top-0 lg:right-auto lg:h-dvh lg:max-w-none lg:w-64 lg:translate-x-0 lg:border-b-0 lg:border-r lg:border-white/[0.08] lg:flex lg:flex-col lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.06)]'
+            ? 'fixed left-1/2 top-0 z-header w-full max-w-md -translate-x-1/2 border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl lg:left-0 lg:top-0 lg:right-auto lg:h-dvh lg:w-64 lg:max-w-none lg:translate-x-0 lg:border-b-0 lg:border-r lg:border-white/[0.08] lg:bg-obsidian lg:flex lg:flex-col lg:shadow-[inset_-1px_0_0_rgba(255,255,255,0.06)]'
             : 'fixed left-0 right-0 top-0 z-header border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl'
         }
       >
@@ -311,14 +311,14 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
           <div
             className={
               shell === 'phone'
-                ? 'flex h-14 min-w-0 items-center justify-between gap-2 px-4 lg:h-full lg:min-h-0 lg:flex-col lg:items-stretch lg:justify-start lg:gap-0 lg:px-6 lg:py-8'
+                ? 'flex h-14 min-w-0 items-center justify-between gap-2 px-4 lg:h-full lg:min-h-0 lg:w-full lg:flex-col lg:items-start lg:justify-start lg:gap-0 lg:px-6 lg:py-8'
                 : 'flex h-14 min-w-0 items-center gap-2'
             }
           >
             {/* Logo — invités : accueil splash pour éviter préchargement /feed (RSC) sur login, onboarding, etc. */}
             <Link
               href={user ? '/feed' : '/'}
-              className={`relative z-[5] flex shrink-0 items-center gap-2.5 group ${shell === 'phone' ? 'lg:w-full' : ''}`}
+              className={`relative z-[5] flex shrink-0 items-center gap-2.5 group ${shell === 'phone' ? 'lg:mb-10 lg:w-full' : ''}`}
             >
               <BeefLogo size={32} className="transition-transform group-hover:scale-105" />
               <span className="hidden sm:block text-xl font-extrabold text-gradient tracking-tight">
@@ -328,9 +328,9 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
 
             {/* Desktop Nav — liens app uniquement si connecté (sinon préfetch RSC ×6 → échecs Brave / Safari / réseau) */}
             <nav
-              className={`relative z-[5] hidden min-w-0 lg:flex lg:flex-1 lg:items-center lg:gap-1 ${
+              className={`relative z-[5] hidden min-w-0 md:flex md:items-center md:gap-1 md:flex-1 ${
                 shell === 'phone'
-                  ? 'lg:mt-10 lg:w-full lg:flex-col lg:items-stretch lg:gap-3 lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-contain'
+                  ? 'lg:mt-0 lg:w-full lg:flex-col lg:items-stretch lg:gap-2 lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-contain lg:min-h-0'
                   : ''
               }`}
             >
@@ -386,7 +386,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
 
             {/* Right — bas de sidebar (lg+) */}
             <div
-              className={`relative z-[5] hidden shrink-0 lg:flex lg:items-center lg:gap-2 ${
+              className={`relative z-[5] hidden shrink-0 md:flex md:items-center md:gap-2 ${
                 shell === 'phone' ? 'lg:mt-auto lg:w-full lg:flex-col lg:items-stretch lg:gap-4' : ''
               }`}
             >
