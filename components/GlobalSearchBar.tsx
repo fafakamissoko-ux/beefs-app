@@ -48,6 +48,15 @@ export function GlobalSearchModal({ open, onOpenChange }: GlobalSearchModalProps
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onOpenChange]);
 
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   const performSearch = useCallback(async () => {
     setLoading(true);
     try {
@@ -136,32 +145,36 @@ export function GlobalSearchModal({ open, onOpenChange }: GlobalSearchModalProps
     <AnimatePresence>
       {open && (
         <>
+          {/* Fond bien lisible (évite l’effet « flottant » sans vrai voile) */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-modal-backdrop bg-black/60 backdrop-blur-sm"
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-modal-backdrop bg-[#050508]/85 backdrop-blur-md"
             onClick={() => onOpenChange(false)}
             aria-hidden
           />
 
-          <motion.div
-            ref={panelRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Recherche globale"
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 0.15 }}
-            className="fixed left-4 right-4 top-[max(5rem,10vh)] z-modal mx-auto w-[min(100%,32rem)] md:left-1/2 md:right-auto md:w-[500px] md:-translate-x-1/2"
-          >
-            <div className="overflow-hidden rounded-xl border border-white/[0.1] bg-[#121214] shadow-2xl max-h-[min(80vh,560px)] flex flex-col">
-              <div className="flex items-center border-b border-white/[0.08] shrink-0">
+          {/* Centrage viewport : plus de top fixe qui colle la modale en haut */}
+          <div className="fixed inset-0 z-modal flex min-h-0 items-center justify-center p-4 sm:p-6 pointer-events-none">
+            <motion.div
+              ref={panelRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Recherche globale"
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+              className="pointer-events-auto flex w-full max-w-lg max-h-[min(85dvh,640px)] flex-col"
+            >
+              <div className="flex min-h-0 max-h-full flex-1 flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-[#121214] shadow-[0_24px_80px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.04)]">
+              <div className="flex shrink-0 items-center border-b border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => setActiveTab('beefs')}
-                  className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors relative ${
+                  className={`relative flex-1 px-4 py-3 text-sm font-semibold transition-colors ${
                     activeTab === 'beefs' ? 'text-white' : 'text-gray-500 hover:text-gray-300'
                   }`}
                 >
@@ -179,7 +192,7 @@ export function GlobalSearchModal({ open, onOpenChange }: GlobalSearchModalProps
                 <button
                   type="button"
                   onClick={() => setActiveTab('users')}
-                  className={`flex-1 px-4 py-3 text-sm font-semibold transition-colors relative ${
+                  className={`relative flex-1 px-4 py-3 text-sm font-semibold transition-colors ${
                     activeTab === 'users' ? 'text-white' : 'text-gray-500 hover:text-gray-300'
                   }`}
                 >
@@ -280,7 +293,8 @@ export function GlobalSearchModal({ open, onOpenChange }: GlobalSearchModalProps
                 )}
               </div>
             </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
