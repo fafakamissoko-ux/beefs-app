@@ -267,10 +267,10 @@ export function BeefCard({
           </div>
         )}
 
-        {/* Titre + description (sans vignette) — zone max-h + marge bas pour ne pas chevaucher chrono / flamme */}
+        {/* Titre + description (sans vignette) — marge bas ~2.5rem : assez pour la ligne chrono/flamme, sans grand vide */}
         {!thumbnail && (
           <div className="pointer-events-none absolute inset-0 z-[1] flex flex-col justify-end">
-            <div className="pointer-events-auto mx-5 mb-[3.35rem] flex max-h-[calc(100%-3.5rem)] min-h-0 flex-col justify-end gap-1 overflow-hidden pt-2">
+            <div className="pointer-events-auto mx-5 mb-10 flex max-h-[calc(100%-2.75rem)] min-h-0 flex-col justify-end gap-1 overflow-hidden pt-2">
               <h4 className="line-clamp-2 shrink-0 font-sans text-base font-bold leading-snug text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
                 {title}
               </h4>
