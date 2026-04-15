@@ -2881,7 +2881,7 @@ export function TikTokStyleArena({
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
   return (
-    <div className="relative flex h-full flex-1 min-w-0 flex-col overflow-hidden bg-[#08080A]">
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#08080A]">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
