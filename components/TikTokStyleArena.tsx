@@ -3154,7 +3154,7 @@ export function TikTokStyleArena({
               >
                 {/* Aura gauge badge (host only) */}
                 {isHost && auraA > 0 && (
-                  <div className="pointer-events-auto absolute bottom-3 left-3 z-[25] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
+                  <div className="pointer-events-auto absolute bottom-3 left-3 z-[50] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
                     <div className="h-1.5 rounded-full bg-cobalt-500 transition-all duration-300" style={{ width: `${Math.max(8, auraA * 0.5)}px` }} />
                     <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-cobalt-300">{auraA}%</span>
                     {auraA >= 100 && (
@@ -3174,7 +3174,7 @@ export function TikTokStyleArena({
                     )}
                   </div>
                 )}
-                <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start justify-start gap-2">
+                <div className="pointer-events-none absolute left-4 top-4 z-[50] flex w-[calc(100%-3rem)] items-start justify-start gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3338,7 +3338,7 @@ export function TikTokStyleArena({
                       emitTapSupport('A');
                       castVote('A');
                     }}
-                    className="absolute inset-0 z-[25] touch-manipulation"
+                    className="absolute inset-0 z-[28] touch-manipulation"
                     aria-label={`Voter pour ${leftPanelName}`}
                   />
                 )}
@@ -3349,7 +3349,7 @@ export function TikTokStyleArena({
                   <button
                     type="button"
                     onClick={() => emitTapSupport('A')}
-                    className="absolute inset-x-0 top-0 bottom-40 z-[24] touch-manipulation bg-transparent max-lg:bottom-44"
+                    className="absolute inset-0 z-[28] touch-manipulation bg-transparent"
                     aria-label="Envoyer du soutien au challenger A"
                   />
                 )}
@@ -3510,7 +3510,7 @@ export function TikTokStyleArena({
                           audioTrack={mediatorIsLocal ? undefined : mediatorParticipant.audioTrack}
                           muted={mediatorIsLocal}
                           mirror={mediatorIsLocal}
-                          className="absolute inset-0 h-full w-full rounded-full object-cover"
+                          className="pointer-events-none absolute inset-0 h-full w-full rounded-full object-cover"
                         />
                       ) : (
                         <span className="font-mono text-3xl font-black text-white md:text-4xl">
@@ -3563,7 +3563,7 @@ export function TikTokStyleArena({
               >
                 {/* Aura gauge badge (host only) */}
                 {isHost && auraB > 0 && (
-                  <div className="pointer-events-auto absolute bottom-3 right-3 z-[25] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
+                  <div className="pointer-events-auto absolute bottom-3 right-3 z-[50] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
                     <div className="h-1.5 rounded-full bg-ember-500 transition-all duration-300" style={{ width: `${Math.max(8, auraB * 0.5)}px` }} />
                     <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-ember-300">{auraB}%</span>
                     {auraB >= 100 && (
@@ -3584,7 +3584,7 @@ export function TikTokStyleArena({
                   </div>
                 )}
                 <div
-                  className="pointer-events-none absolute right-4 top-4 z-[22] flex w-[calc(100%-3rem)] items-start justify-end gap-2"
+                  className="pointer-events-none absolute right-4 top-4 z-[50] flex w-[calc(100%-3rem)] items-start justify-end gap-2"
                 >
                   <button
                     type="button"
@@ -3749,7 +3749,7 @@ export function TikTokStyleArena({
                       emitTapSupport('B');
                       castVote('B');
                     }}
-                    className="absolute inset-0 z-[25] touch-manipulation"
+                    className="absolute inset-0 z-[28] touch-manipulation"
                     aria-label={`Voter pour ${rightPanelName}`}
                   />
                 )}
@@ -3760,7 +3760,7 @@ export function TikTokStyleArena({
                   <button
                     type="button"
                     onClick={() => emitTapSupport('B')}
-                    className="absolute inset-x-0 top-0 bottom-40 z-[24] touch-manipulation bg-transparent max-lg:bottom-44"
+                    className="absolute inset-0 z-[28] touch-manipulation bg-transparent"
                     aria-label="Envoyer du soutien au challenger B"
                   />
                 )}
@@ -3883,7 +3883,7 @@ export function TikTokStyleArena({
           <div className="pointer-events-none absolute inset-0 z-0 flex h-full min-h-0 w-full flex-row">
           {debaters[0] ? (
             <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden bg-[#08080A]">
-              <div className="pointer-events-none absolute left-4 top-4 z-[22] flex w-[calc(100%-2rem)] items-start justify-start gap-2">
+              <div className="pointer-events-none absolute left-4 top-4 z-[50] flex w-[calc(100%-2rem)] items-start justify-start gap-2">
                 <button
                   type="button"
                   onClick={() => void openProfile(debaters[0].name, debaters[0].id)}
@@ -3989,7 +3989,7 @@ export function TikTokStyleArena({
 
           {debaters[1] ? (
             <div className="pointer-events-auto relative h-full w-1/2 overflow-hidden border-l border-white/20 bg-[#08080A]">
-              <div className="pointer-events-none absolute right-4 top-4 z-[22] flex w-[calc(100%-2rem)] items-start justify-end gap-2">
+              <div className="pointer-events-none absolute right-4 top-4 z-[50] flex w-[calc(100%-2rem)] items-start justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => void openProfile(debaters[1].name, debaters[1].id)}
