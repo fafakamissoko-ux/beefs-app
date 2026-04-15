@@ -3884,7 +3884,7 @@ export function TikTokStyleArena({
         <div className="relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] landscape:flex-1 lg:flex-1 overflow-hidden">
           <div className="pointer-events-none absolute z-10 flex flex-row items-stretch gap-1 min-h-0 max-lg:left-1/2 max-lg:-translate-x-1/2 max-lg:w-full max-lg:px-1 max-lg:inset-y-0 max-lg:h-full lg:inset-x-0 lg:top-[12vh] lg:h-[50vh] lg:gap-4 lg:px-6">
           {debaters[0] ? (
-            <div className="pointer-events-auto relative flex-1 h-full w-full min-h-0 overflow-hidden bg-[#08080A] rounded-l-xl lg:rounded-2xl border-r border-white/20 shadow-lg flex items-center justify-center">
+            <div className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-hidden bg-[#08080A] rounded-l-xl lg:rounded-2xl border-r border-white/20 shadow-lg flex flex-col items-center justify-center">
               <div className="pointer-events-none absolute left-4 top-4 z-[50] flex w-[calc(100%-2rem)] items-start justify-start gap-2">
                 <button
                   type="button"
@@ -3992,7 +3992,7 @@ export function TikTokStyleArena({
           </div>
 
           {debaters[1] ? (
-            <div className="pointer-events-auto relative flex-1 h-full w-full min-h-0 overflow-hidden bg-[#08080A] rounded-r-xl lg:rounded-2xl border-l border-white/10 shadow-lg flex items-center justify-center">
+            <div className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-hidden bg-[#08080A] rounded-r-xl lg:rounded-2xl border-l border-white/10 shadow-lg flex flex-col items-center justify-center">
               <div className="pointer-events-none absolute right-4 top-4 z-[50] flex w-[calc(100%-2rem)] items-start justify-end gap-2">
                 <button
                   type="button"
