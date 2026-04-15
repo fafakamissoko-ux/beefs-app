@@ -4229,8 +4229,8 @@ export function TikTokStyleArena({
 
       {/* ── Dock social : top-[60%] aligné sur la zone vidéo — pas de chevauchement avec micro/cam (z vidéo > dock) ── */}
       {!beefEnded && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[55] flex min-h-0 w-full flex-col justify-end overflow-visible top-[60%] landscape:top-auto landscape:bottom-0 landscape:h-[80px] lg:top-auto lg:bottom-0 lg:h-[90px] bg-black">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/80 via-black/50 to-transparent landscape:bg-none lg:bg-none max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[55] flex min-h-0 w-full flex-col justify-end overflow-visible top-[60%] landscape:top-auto landscape:bottom-0 landscape:h-[120px] lg:top-auto lg:bottom-0 lg:h-[35vh] lg:max-w-[850px] lg:mx-auto">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             aria-live="polite"
