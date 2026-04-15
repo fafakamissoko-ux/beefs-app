@@ -31,8 +31,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="relative flex min-h-dvh min-w-0 w-full flex-col overflow-x-hidden bg-obsidian lg:flex-row">
       <Header shell="phone" />
 
-      {/* MOBILE/TABLET : max-w-md mx-auto pt-14 — DESKTOP : largeur verrouillée viewport − sidebar (w-64). */}
-      <main className="mx-auto flex flex-1 min-h-0 min-w-0 max-w-md flex-col overflow-x-hidden pt-14 transition-all lg:mx-0 lg:pt-0 lg:w-[calc(100vw-16rem)] lg:max-w-[calc(100vw-16rem)] lg:ml-64">
+      {/* MOBILE/TABLET : max-w-md mx-auto pt-14 — DESKTOP : w-full + lg:pl-64 (réserve la sidebar fixe w-64). */}
+      <main className="mx-auto flex w-full flex-1 min-h-0 min-w-0 max-w-md flex-col pt-14 transition-all lg:mx-0 lg:max-w-none lg:pl-64 lg:pt-0">
         <div
           className={`flex min-h-0 min-w-0 flex-1 flex-col transition-all ${
             roomImmersive ? 'overflow-hidden p-0' : 'overflow-x-hidden p-4 lg:p-10'
