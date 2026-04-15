@@ -3362,6 +3362,7 @@ export function TikTokStyleArena({
                       description="Tape sur l'écran d'un challenger pour voter ! Tu peux changer d'avis à tout moment."
                       position="bottom"
                       suppress={featureGuideSuppress}
+                      stack="under-tap-overlays"
                     />
                   </div>
                 )}
@@ -3450,7 +3451,7 @@ export function TikTokStyleArena({
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="flex flex-col items-center gap-2"
+                  className="pointer-events-none flex flex-col items-center gap-2"
                 >
                   <div className="relative">
                     <AnimatePresence>
