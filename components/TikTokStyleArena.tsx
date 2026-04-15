@@ -3585,16 +3585,14 @@ export function TikTokStyleArena({
                     )}
                   </div>
                 )}
-                <div
-                  className="pointer-events-none absolute right-4 top-4 z-[50] flex w-[calc(100%-3rem)] items-start justify-end gap-2"
-                >
+                <div className="pointer-events-none absolute inset-x-4 top-4 z-[50] flex items-start justify-center gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
                     }}
-                    className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-right font-mono text-xs font-semibold text-white lg:hidden"
+                    className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-center font-mono text-xs font-semibold text-white lg:hidden"
                   >
                     {rightPanelName} ({pulseVoicesB})
                   </button>
@@ -3993,11 +3991,11 @@ export function TikTokStyleArena({
 
           {debaters[1] ? (
             <div className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-hidden bg-[#08080A] rounded-r-xl lg:rounded-2xl border-l border-white/10 shadow-lg flex flex-col items-center justify-center">
-              <div className="pointer-events-none absolute right-4 top-4 z-[50] flex w-[calc(100%-2rem)] items-start justify-end gap-2">
+              <div className="pointer-events-none absolute inset-x-4 top-4 z-[50] flex items-start justify-center gap-2">
                 <button
                   type="button"
                   onClick={() => void openProfile(debaters[1].name, debaters[1].id)}
-                  className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-right font-mono text-xs font-semibold text-white"
+                  className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-center font-mono text-xs font-semibold text-white"
                 >
                   {debaters[1].name} ({pulseVoicesB})
                 </button>
@@ -4235,10 +4233,10 @@ export function TikTokStyleArena({
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
             aria-live="polite"
           >
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div
             ref={chatMessagesScrollRef}
-            className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:min-h-0 max-lg:max-h-[min(30svh,240px)] max-lg:flex-1 max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
+            className="min-h-0 min-w-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:min-h-0 max-lg:max-h-[min(30svh,240px)] max-lg:flex-1 max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -4357,7 +4355,7 @@ export function TikTokStyleArena({
 
           <div
             ref={reactionDockRef}
-            className="relative z-[200] isolate flex w-full shrink-0 flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:w-auto lg:min-w-[12.5rem] lg:max-w-[15rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+            className="relative z-[200] isolate flex max-lg:w-full shrink-0 grow-0 basis-auto flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:w-auto lg:min-w-[12.5rem] lg:max-w-[15rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
             {/* Desktop : grille 2×5 (10 réactions) + 😀 / cœur / cadeau */}
             <div
