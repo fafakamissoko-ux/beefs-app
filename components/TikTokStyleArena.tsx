@@ -3313,7 +3313,7 @@ export function TikTokStyleArena({
                         audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack}
                         muted={leftPanelIsLocal ? true : leftRemoteAudioMuted}
                         mirror={leftPanelIsLocal}
-                        className={`absolute inset-0 h-full w-full object-cover ${leftPanelIsLocal ? 'pointer-events-none' : ''}`}
+                        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
                       />
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-cobalt-500/10">
@@ -3723,7 +3723,7 @@ export function TikTokStyleArena({
                         audioTrack={rightPanelIsLocal ? undefined : rightPanel.audioTrack}
                         muted={rightPanelIsLocal ? true : rightRemoteAudioMuted}
                         mirror={rightPanelIsLocal}
-                        className={`absolute inset-0 h-full w-full object-cover ${rightPanelIsLocal ? 'pointer-events-none' : ''}`}
+                        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
                       />
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-ember-500/10">
@@ -4052,7 +4052,8 @@ export function TikTokStyleArena({
         )}
 
       {/* ── Header fixe : annonce puis chrono / LIVE (pile unique, mobile + desktop) ── */}
-      <div className="pointer-events-none fixed left-1/2 top-14 z-[62] flex w-full max-w-md -translate-x-1/2 flex-col lg:left-64 lg:right-0 lg:top-0 lg:max-w-none lg:translate-x-0">
+      {/* z-[80] > zone vidéo z-[65] : sinon la dalle droite volait les taps sur LIVE / Sliders (command deck) */}
+      <div className="pointer-events-none fixed left-1/2 top-14 z-[80] flex w-full max-w-md -translate-x-1/2 flex-col lg:left-64 lg:right-0 lg:top-0 lg:max-w-none lg:translate-x-0">
         {arenaHasAnnouncement && (
           <div className="pointer-events-none shrink-0 border-b border-white/10 bg-black/65 px-3 py-2 backdrop-blur-md">
             <p className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white">
