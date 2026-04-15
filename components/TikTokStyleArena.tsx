@@ -3135,7 +3135,7 @@ export function TikTokStyleArena({
             className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] landscape:flex-1 lg:flex-1 lg:pb-0 overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
           >
             {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
-            <div className={`pointer-events-none absolute z-10 flex flex-row items-stretch gap-1 min-h-0 max-lg:left-1/2 max-lg:-translate-x-1/2 max-lg:w-full max-lg:px-1 max-lg:inset-y-0 max-lg:h-full lg:left-0 lg:translate-x-0 lg:w-full lg:max-w-[1024px] lg:top-[12vh] lg:h-[50vh] lg:gap-4 lg:px-6 transition-shadow duration-700 ${sponsorGlow}`}>
+            <div className={`pointer-events-none absolute z-10 flex flex-row items-stretch gap-1 min-h-0 max-lg:left-1/2 max-lg:-translate-x-1/2 max-lg:w-full max-lg:px-1 max-lg:inset-y-0 max-lg:h-full lg:left-0 lg:translate-x-0 lg:w-full lg:top-[12vh] lg:h-[50vh] lg:gap-4 lg:px-6 transition-shadow duration-700 ${sponsorGlow}`}>
               {/* LEFT — Participant A */}
               <motion.div
                 className="pointer-events-auto relative flex-1 h-full w-full min-h-0 overflow-hidden bg-[#08080A] rounded-l-xl lg:rounded-2xl border-r border-white/20 shadow-lg flex items-center justify-center"
@@ -3882,7 +3882,7 @@ export function TikTokStyleArena({
         ) : (
         /* Placeholder — même hauteur vidéo que avec room */
         <div className="relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] landscape:flex-1 lg:flex-1 overflow-hidden">
-          <div className="pointer-events-none absolute z-10 flex flex-row items-stretch gap-1 min-h-0 max-lg:left-1/2 max-lg:-translate-x-1/2 max-lg:w-full max-lg:px-1 max-lg:inset-y-0 max-lg:h-full lg:left-0 lg:translate-x-0 lg:w-full lg:max-w-[1024px] lg:top-[12vh] lg:h-[50vh] lg:gap-4 lg:px-6">
+          <div className="pointer-events-none absolute z-10 flex flex-row items-stretch gap-1 min-h-0 max-lg:left-1/2 max-lg:-translate-x-1/2 max-lg:w-full max-lg:px-1 max-lg:inset-y-0 max-lg:h-full lg:left-0 lg:translate-x-0 lg:w-full lg:top-[12vh] lg:h-[50vh] lg:gap-4 lg:px-6">
           {debaters[0] ? (
             <div className="pointer-events-auto relative flex-1 h-full w-full min-h-0 overflow-hidden bg-[#08080A] rounded-l-xl lg:rounded-2xl border-r border-white/20 shadow-lg flex items-center justify-center">
               <div className="pointer-events-none absolute left-4 top-4 z-[50] flex w-[calc(100%-2rem)] items-start justify-start gap-2">
@@ -4229,7 +4229,7 @@ export function TikTokStyleArena({
 
       {/* ── Dock social : top-[60%] aligné sur la zone vidéo — pas de chevauchement avec micro/cam (z vidéo > dock) ── */}
       {!beefEnded && (
-        <div className="pointer-events-none absolute bottom-0 z-[55] flex min-h-0 flex-col justify-end overflow-visible max-lg:inset-x-0 max-lg:w-full max-lg:top-[60%] landscape:top-auto landscape:bottom-0 landscape:h-[120px] lg:left-0 lg:w-full lg:max-w-[1024px] lg:top-auto lg:h-[35vh] lg:px-6">
+        <div className="pointer-events-none absolute bottom-0 z-[55] flex min-h-0 flex-col justify-end overflow-visible max-lg:inset-x-0 max-lg:w-full max-lg:top-[60%] landscape:top-auto landscape:bottom-0 landscape:h-[120px] lg:left-0 lg:w-full lg:top-auto lg:h-[35vh] lg:px-6">
         <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
