@@ -319,7 +319,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       <header
         className={
           shell === 'phone'
-            ? 'fixed left-1/2 top-0 z-header w-full max-w-md -translate-x-1/2 border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl lg:left-0 lg:top-0 lg:right-auto lg:h-dvh lg:w-64 lg:max-w-none lg:translate-x-0 lg:border-b-0 lg:border-r lg:border-white/[0.08] lg:bg-transparent lg:backdrop-blur-none lg:flex lg:flex-col'
+            ? 'fixed left-1/2 top-0 z-header w-full max-w-md -translate-x-1/2 border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl lg:left-0 lg:top-0 lg:right-auto lg:h-dvh lg:w-64 lg:max-w-none lg:shrink-0 lg:translate-x-0 lg:border-b-0 lg:border-r lg:border-white/[0.08] lg:bg-transparent lg:backdrop-blur-none lg:flex lg:flex-col'
             : 'fixed left-0 right-0 top-0 z-header border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl'
         }
       >

@@ -28,14 +28,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="relative min-h-dvh w-full overflow-x-hidden bg-obsidian flex flex-col lg:flex-row">
+    <div className="relative flex min-h-dvh min-w-0 w-full flex-col overflow-x-hidden bg-obsidian lg:flex-row">
       <Header shell="phone" />
 
       {/* MOBILE/TABLET : max-w-md mx-auto pt-14 (Protège le design original)
-          DESKTOP (lg) : max-w-none mx-0 pl-64 pt-0 (Libère la grille et décale la sidebar) */}
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col pt-14 transition-all max-w-md mx-auto w-full lg:mx-0 lg:max-w-none lg:pl-64 lg:pt-0">
+          DESKTOP (lg) : pl-64 compense le header fixed — pas de w-full (évite overflow horizontal). */}
+      <main className="mx-auto flex w-full min-w-0 max-w-md flex-1 flex-col pt-14 transition-all lg:mx-0 lg:max-w-none lg:w-auto lg:min-w-0 lg:flex-1 lg:pl-64 lg:pt-0">
         <div
-          className={`flex min-h-0 w-full flex-1 flex-col transition-all ${
+          className={`flex min-h-0 min-w-0 flex-1 flex-col transition-all ${
             roomImmersive ? 'overflow-hidden p-0' : 'overflow-x-hidden p-4 lg:p-10'
           }`}
         >
