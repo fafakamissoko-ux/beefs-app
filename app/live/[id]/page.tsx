@@ -312,7 +312,7 @@ export default function LiveBeefRoomPage() {
   }
 
   return (
-    <div className="relative flex flex-col h-[calc(100dvh-3.5rem)] w-full overflow-hidden bg-[#050505] lg:h-[100dvh] lg:max-w-[1400px] lg:mx-auto lg:px-[140px] lg:py-4">
+    <div className="relative flex flex-col h-[calc(100dvh-3.5rem)] flex-1 min-w-0 overflow-hidden bg-[#050505] lg:h-[100dvh] lg:max-w-[1400px] lg:mx-auto lg:px-[140px] lg:py-4">
       {/* CONTENEUR SÉCURISÉ : Plein écran sur mobile, Contraint et centré sur Desktop */}
       <TikTokStyleArena
         host={host}
