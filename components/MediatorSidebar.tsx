@@ -7,6 +7,7 @@ import {
   X,
   Gavel,
   Maximize2,
+  Minimize2,
   MicOff,
   Mic,
   Timer,
@@ -82,6 +83,9 @@ type MediatorSidebarProps = {
   /** IDs déjà sur le ring / à exclure de la recherche (dont l’hôte courant) */
   inviteExcludeParticipantIds?: string[];
   inviteCurrentUserId?: string | null;
+  /** Bandeau vidéo des challengers réduit (synchronisé en broadcast pour tous) */
+  challengerStripMinimized?: boolean;
+  onChallengerStripMinimizedChange?: (minimized: boolean) => void;
 };
 
 const TILE = 'flex flex-col items-center justify-center gap-1.5 rounded-[2.5rem] border border-white/10 bg-white/5 px-3 py-4 backdrop-blur-3xl transition-all active:scale-[0.97]';
@@ -139,6 +143,8 @@ export function MediatorSidebar({
   onInviteParticipant,
   inviteExcludeParticipantIds = [],
   inviteCurrentUserId = null,
+  challengerStripMinimized = false,
+  onChallengerStripMinimizedChange,
 }: MediatorSidebarProps) {
   const [verdictOpen, setVerdictOpen] = useState(false);
   const [soundboardOpen, setSoundboardOpen] = useState(false);
@@ -226,6 +232,28 @@ export function MediatorSidebar({
                       <X className="h-4 w-4" strokeWidth={1} />
                     </button>
                   </div>
+
+            {onChallengerStripMinimizedChange && (
+              <div className="shrink-0 pb-3">
+                <button
+                  type="button"
+                  onClick={() => onChallengerStripMinimizedChange(!challengerStripMinimized)}
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-2.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white/90 backdrop-blur-xl transition-colors hover:bg-white/[0.1] active:scale-[0.99]"
+                >
+                  {challengerStripMinimized ? (
+                    <>
+                      <Maximize2 className="h-4 w-4 shrink-0 text-cobalt-300" strokeWidth={1.2} aria-hidden />
+                      Agrandir l&apos;écran des challengers
+                    </>
+                  ) : (
+                    <>
+                      <Minimize2 className="h-4 w-4 shrink-0 text-cobalt-300" strokeWidth={1.2} aria-hidden />
+                      Réduire l&apos;écran des challengers
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
 
             {/* Launch beef (pre-timer) */}
             {!timerActive && (
