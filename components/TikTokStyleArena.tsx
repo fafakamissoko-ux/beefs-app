@@ -231,6 +231,8 @@ export function TikTokStyleArena({
   const [auraB, setAuraB] = useState(0);
   const [auraMed, setAuraMed] = useState(0);
   const [auraFeverMed, setAuraFeverMed] = useState(false);
+  /** Heat Index global : activité de la salle (chat, spectateurs, réactions) — lueur chaude sur le bandeau vidéo. */
+  const [globalHeat, setGlobalHeat] = useState(0);
   const [pendingInvites, setPendingInvites] = useState<Array<{ userId: string; label: string }>>([]);
   const [parolePresetSec, setParolePresetSec] = useState(60);
   const [announcementTicker, setAnnouncementTicker] = useState('');
@@ -572,6 +574,15 @@ export function TikTokStyleArena({
   const liveViewerCountRef = useRef(liveViewerCount);
   useEffect(() => {
     liveViewerCountRef.current = liveViewerCount;
+  }, [liveViewerCount]);
+
+  const prevLiveViewerCountRef = useRef(viewerCount);
+  useEffect(() => {
+    if (liveViewerCount > prevLiveViewerCountRef.current) {
+      const delta = liveViewerCount - prevLiveViewerCountRef.current;
+      setGlobalHeat((v) => Math.min(100, v + Math.min(12, delta * 3)));
+    }
+    prevLiveViewerCountRef.current = liveViewerCount;
   }, [liveViewerCount]);
 
   // Chrono global — défaut 60 min, plafond MAX_BEEF_DURATION à la régie
@@ -955,6 +966,13 @@ export function TikTokStyleArena({
     return () => clearInterval(iv);
   }, []);
 
+  useEffect(() => {
+    const iv = window.setInterval(() => {
+      setGlobalHeat((v) => Math.max(0, v - 1));
+    }, 1000);
+    return () => window.clearInterval(iv);
+  }, []);
+
   // Auto-Fever médiateur : 15 s puis reset — deps SANS auraFeverMed sinon le cleanup annule le timer dès que fever passe à true
   useEffect(() => {
     if (auraMed < 100) return;
@@ -972,6 +990,15 @@ export function TikTokStyleArena({
   const sponsorGlow = sponsorAuraActive
     ? 'shadow-[0_0_52px_rgba(212,175,55,0.45),0_0_96px_rgba(255,220,140,0.22),inset_0_0_26px_rgba(212,175,55,0.14)]'
     : '';
+
+  const globalHeatGlow = useMemo(() => {
+    if (globalHeat <= 0) return 'none';
+    const a1 = Math.min(0.55, 0.14 + globalHeat / 180);
+    const a2 = Math.min(0.35, 0.06 + globalHeat / 220);
+    const r1 = 26 + globalHeat * 0.95;
+    const r2 = 56 + globalHeat * 0.75;
+    return `0 0 ${r1}px rgba(255,200,50,${a1}), 0 0 ${r2}px rgba(255,165,40,${a2}), inset 0 0 ${18 + globalHeat * 0.35}px rgba(255,210,100,${Math.min(0.2, 0.04 + globalHeat / 400)})`;
+  }, [globalHeat]);
 
   useEffect(() => {
     challengersEverJoinedRef.current = false;
@@ -1703,6 +1730,7 @@ export function TikTokStyleArena({
       if (dbId && prev.some((m) => m.id === dbId)) return prev;
       return [...prev, newMsg].slice(-80);
     });
+    setGlobalHeat((v) => Math.min(100, v + 4));
   }, []);
 
   const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | 'M' | null) => {
@@ -1724,6 +1752,7 @@ export function TikTokStyleArena({
 
   const emitTapSupport = useCallback((target: 'A' | 'B' | 'M') => {
     const boost = getAuraBoost();
+    setGlobalHeat((v) => Math.min(100, v + 2));
     if (target === 'M') {
       setSupportBurst((p) => ({ ...p, M: p.M + 1 }));
       setAuraMed((v) => Math.min(100, v + boost));
@@ -1755,6 +1784,7 @@ export function TikTokStyleArena({
         if (slot === 'A') setAuraA((v) => Math.min(100, v + boost));
         if (slot === 'B') setAuraB((v) => Math.min(100, v + boost));
         if (slot === 'M') setAuraMed((v) => Math.min(100, v + boost));
+        setGlobalHeat((v) => Math.min(100, v + 3));
       })
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
         addRemoteMessage(payload.user_name, payload.content, payload.initial, payload.id);
@@ -1764,6 +1794,7 @@ export function TikTokStyleArena({
         const dB = Math.max(0, Math.floor(Number(payload?.dB) || 0));
         if (dA) addPulseVoices('A', dA);
         if (dB) addPulseVoices('B', dB);
+        if (dA || dB) setGlobalHeat((v) => Math.min(100, v + 2));
       })
       .on('broadcast', { event: 'announcement_banner' }, ({ payload }: { payload?: { text?: string; durationSec?: number } }) => {
         if (isHostRef.current) return;
@@ -2795,6 +2826,7 @@ export function TikTokStyleArena({
     };
     setVisibleMessages((prev) => [...prev, optimistic].slice(-80));
     setChatInput('');
+    setGlobalHeat((v) => Math.min(100, v + 5));
 
     const isRlsPolicyError = (err: { code?: string; message?: string } | null) => {
       const msg = (err?.message ?? '').toLowerCase();
@@ -3203,6 +3235,15 @@ export function TikTokStyleArena({
           <div
             className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] landscape:flex-1 lg:flex-1 overflow-hidden lg:pb-0 max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
           >
+            <motion.div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-[11] mix-blend-screen"
+              animate={{
+                boxShadow: globalHeatGlow,
+                opacity: globalHeat > 0 ? Math.min(0.55, 0.1 + globalHeat / 140) : 0,
+              }}
+              transition={{ type: 'tween', duration: 0.45 }}
+            />
             {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
             <div
               className={`pointer-events-none absolute z-10 flex flex-row items-stretch gap-1 min-h-0 max-lg:left-1/2 max-lg:-translate-x-1/2 max-lg:w-full max-lg:px-1 max-lg:inset-y-0 max-lg:h-full lg:inset-x-0 lg:top-[12vh] lg:h-[50vh] lg:gap-4 lg:px-6 transition-shadow duration-700 ${sponsorGlow}`}
@@ -3372,6 +3413,17 @@ export function TikTokStyleArena({
                   >
                     {leftPanel?.videoTrack ? (
                       <>
+                        <motion.div
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 z-[5] rounded-l-3xl lg:rounded-3xl border-2 border-cobalt-400/80"
+                          animate={{
+                            boxShadow:
+                              auraA > 0
+                                ? `0 0 ${30 + auraA * 1.5}px rgba(59,130,246,${Math.min(0.95, 0.38 + auraA / 120)}), 0 0 ${56 + auraA * 1.2}px rgba(59,130,246,${Math.min(0.55, 0.16 + auraA / 100)})`
+                                : 'none',
+                          }}
+                          transition={{ type: 'tween', duration: 0.35 }}
+                        />
                         <ParticipantVideo
                           videoTrack={leftPanel.videoTrack}
                           audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack}
@@ -3379,21 +3431,20 @@ export function TikTokStyleArena({
                           mirror={leftPanelIsLocal}
                           className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full bg-black object-cover"
                         />
+                      </>
+                    ) : (
+                      <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
                         <motion.div
                           aria-hidden
-                          className="pointer-events-none absolute inset-0 z-20 rounded-l-3xl lg:rounded-3xl border-2 border-cobalt-400"
-                          style={{ opacity: Math.min(1, 0.4 + auraA / 100) }}
+                          className="pointer-events-none absolute inset-0 z-[2] rounded-l-3xl lg:rounded-3xl border-2 border-cobalt-400/40"
                           animate={{
                             boxShadow:
                               auraA > 0
-                                ? `0 0 ${30 + auraA * 1.5}px rgba(59,130,246,${Math.min(1, 0.5 + auraA / 100)}), 0 0 ${56 + auraA * 1.2}px rgba(147,197,253,${Math.min(0.85, 0.28 + auraA / 90)})`
+                                ? `0 0 ${24 + auraA * 1.2}px rgba(59,130,246,${Math.min(0.85, 0.28 + auraA / 130)}), 0 0 ${48 + auraA}px rgba(59,130,246,${Math.min(0.45, 0.12 + auraA / 110)})`
                                 : 'none',
                           }}
                           transition={{ type: 'tween', duration: 0.35 }}
                         />
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
                         <motion.div
                           className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.12)_0%,transparent_60%)]"
                           animate={{ opacity: [0.3, 0.7, 0.3], scale: [0.95, 1.05, 0.95] }}
@@ -3554,9 +3605,9 @@ export function TikTokStyleArena({
                             transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.35 }}
                           />
                           <motion.div
-                            className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_40%,rgba(255,220,140,0.38)_0%,rgba(180,120,40,0.12)_45%,transparent_72%)]"
+                            className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_40%,rgba(255,200,60,0.22)_0%,rgba(255,200,60,0.08)_45%,transparent_72%)]"
                             animate={{
-                              opacity: [0.55, 0.95, 0.55],
+                              opacity: [0.22, 0.38, 0.22],
                               scale: [1, 1.04, 1],
                             }}
                             transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
@@ -3584,24 +3635,23 @@ export function TikTokStyleArena({
                     >
                       {mediatorParticipant?.videoTrack ? (
                         <>
+                          <motion.div
+                            aria-hidden
+                            className="pointer-events-none absolute inset-0 z-[5] rounded-full border-2 border-[rgba(255,200,60,0.65)]"
+                            animate={{
+                              boxShadow:
+                                auraMed > 0
+                                  ? `0 0 ${30 + auraMed * 1.5}px rgba(255,200,60,${Math.min(0.92, 0.4 + auraMed / 120)}), 0 0 ${56 + auraMed * 1.2}px rgba(255,200,60,${Math.min(0.52, 0.17 + auraMed / 100)})`
+                                  : 'none',
+                            }}
+                            transition={{ type: 'tween', duration: 0.35 }}
+                          />
                           <ParticipantVideo
                             videoTrack={mediatorParticipant.videoTrack}
                             audioTrack={mediatorIsLocal ? undefined : mediatorParticipant.audioTrack}
                             muted={mediatorIsLocal}
                             mirror={mediatorIsLocal}
                             className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full bg-black object-cover rounded-full"
-                          />
-                          <motion.div
-                            aria-hidden
-                            className="pointer-events-none absolute inset-0 z-20 rounded-full border-2 border-prestige-gold"
-                            style={{ opacity: Math.min(1, 0.4 + auraMed / 100) }}
-                            animate={{
-                              boxShadow:
-                                auraMed > 0
-                                  ? `0 0 ${30 + auraMed * 1.5}px rgba(251,191,36,${Math.min(1, 0.5 + auraMed / 100)}), 0 0 ${56 + auraMed * 1.2}px rgba(254,243,199,${Math.min(0.85, 0.3 + auraMed / 90)})`
-                                  : 'none',
-                            }}
-                            transition={{ type: 'tween', duration: 0.35 }}
                           />
                         </>
                       ) : (
@@ -3792,6 +3842,17 @@ export function TikTokStyleArena({
                   >
                     {rightPanel?.videoTrack ? (
                       <>
+                        <motion.div
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 z-[5] rounded-r-3xl lg:rounded-3xl border-2 border-emerald-400/80"
+                          animate={{
+                            boxShadow:
+                              auraB > 0
+                                ? `0 0 ${30 + auraB * 1.5}px rgba(16,185,129,${Math.min(0.95, 0.38 + auraB / 120)}), 0 0 ${56 + auraB * 1.2}px rgba(16,185,129,${Math.min(0.55, 0.16 + auraB / 100)})`
+                                : 'none',
+                          }}
+                          transition={{ type: 'tween', duration: 0.35 }}
+                        />
                         <ParticipantVideo
                           videoTrack={rightPanel.videoTrack}
                           audioTrack={rightPanelIsLocal ? undefined : rightPanel.audioTrack}
@@ -3799,21 +3860,20 @@ export function TikTokStyleArena({
                           mirror={rightPanelIsLocal}
                           className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full bg-black object-cover"
                         />
+                      </>
+                    ) : (
+                      <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
                         <motion.div
                           aria-hidden
-                          className="pointer-events-none absolute inset-0 z-20 rounded-r-3xl lg:rounded-3xl border-2 border-emerald-400"
-                          style={{ opacity: Math.min(1, 0.4 + auraB / 100) }}
+                          className="pointer-events-none absolute inset-0 z-[2] rounded-r-3xl lg:rounded-3xl border-2 border-emerald-400/40"
                           animate={{
                             boxShadow:
                               auraB > 0
-                                ? `0 0 ${30 + auraB * 1.5}px rgba(16,185,129,${Math.min(1, 0.5 + auraB / 100)}), 0 0 ${56 + auraB * 1.2}px rgba(110,231,183,${Math.min(0.85, 0.28 + auraB / 90)})`
+                                ? `0 0 ${24 + auraB * 1.2}px rgba(16,185,129,${Math.min(0.85, 0.28 + auraB / 130)}), 0 0 ${48 + auraB}px rgba(16,185,129,${Math.min(0.45, 0.12 + auraB / 110)})`
                                 : 'none',
                           }}
                           transition={{ type: 'tween', duration: 0.35 }}
                         />
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
                         <motion.div
                           className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.12)_0%,transparent_60%)]"
                           animate={{ opacity: [0.3, 0.7, 0.3], scale: [0.95, 1.05, 0.95] }}
