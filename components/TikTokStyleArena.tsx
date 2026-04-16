@@ -600,6 +600,15 @@ export function TikTokStyleArena({
   // Participant roles from DB — maps Daily.co userNames to beef roles
   const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});
   const [liveViewerCount, setLiveViewerCount] = useState(viewerCount);
+  /** Boost d'aura par tap : moins d'impact quand il y a beaucoup de spectateurs (salle pleine). */
+  const auraBoostChallenger = useMemo(
+    () => Math.max(0.5, 10 / Math.max(1, liveViewerCount)),
+    [liveViewerCount],
+  );
+  const auraBoostMediator = useMemo(
+    () => Math.max(0.4, 7.5 / Math.max(1, liveViewerCount)),
+    [liveViewerCount],
+  );
 
   // Chrono global — défaut 60 min, plafond MAX_BEEF_DURATION à la régie
   const [beefTimeRemaining, setBeefTimeRemaining] = useState(DEFAULT_BEEF_DURATION);
@@ -691,23 +700,13 @@ export function TikTokStyleArena({
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
   }, [timerActive, timerPaused, toast]);
-  const [votesA, setVotesA] = useState(0);
-  const [votesB, setVotesB] = useState(0);
-  const pulseVoicesA = useArenaPulseVoicesStore((s) => s.pulseA);
-  const pulseVoicesB = useArenaPulseVoicesStore((s) => s.pulseB);
   const resetPulseVoices = useArenaPulseVoicesStore((s) => s.reset);
   const resetArenaVerdict = useArenaVerdictStore((s) => s.reset);
   const addPulseVoices = useArenaPulseVoicesStore((s) => s.addPulse);
   const pulseBroadcastPending = useRef({ A: 0, B: 0 });
 
-  const impactLeader = useMemo((): 'A' | 'B' | null => {
-    if (pulseVoicesA > pulseVoicesB) return 'A';
-    if (pulseVoicesB > pulseVoicesA) return 'B';
-    return null;
-  }, [pulseVoicesA, pulseVoicesB]);
   const pulseBroadcastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [myVote, setMyVote] = useState<'A' | 'B' | null>(null);
-  const [voteAnimation, setVoteAnimation] = useState<'A' | 'B' | null>(null);
   const lastPulseSideRef = useRef<'A' | 'B' | null>(null);
   const [supportBurst, setSupportBurst] = useState({ A: 0, B: 0, M: 0 });
   const [giftPrestigeFlash, setGiftPrestigeFlash] = useState(0);
@@ -716,30 +715,11 @@ export function TikTokStyleArena({
   const rematchVerdictTimerRef = useRef<number | null>(null);
   const rematchExitTimerRef = useRef<number | null>(null);
 
-  const castVote = useCallback((side: 'A' | 'B') => {
-    if (myVote === side) return; // already voted this side
-    const prevVote = myVote;
+  /** Mémorise le panneau « préféré » pour les réactions intégrées (pas de compteur de vote). */
+  const preferSide = useCallback((side: 'A' | 'B') => {
     setMyVote(side);
-
-    // Adjust local counts
-    if (prevVote === 'A') setVotesA(v => Math.max(0, v - 1));
-    if (prevVote === 'B') setVotesB(v => Math.max(0, v - 1));
-    if (side === 'A') setVotesA(v => v + 1);
-    if (side === 'B') setVotesB(v => v + 1);
-
-    // Visual feedback
-    setVoteAnimation(side);
-    setTimeout(() => setVoteAnimation(null), 800);
-
-    // Broadcast to others
-    if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'vote',
-        payload: { side, prev: prevVote, voter: userId },
-      }).catch(() => {});
-    }
-  }, [myVote, userId]);
+    lastPulseSideRef.current = side;
+  }, []);
 
   const flushPulseBroadcast = useCallback(() => {
     pulseBroadcastTimerRef.current = null;
@@ -791,8 +771,6 @@ export function TikTokStyleArena({
       }
     };
   }, []);
-
-  const totalVotes = votesA + votesB;
 
   /** Le chrono global du beef ne doit pas être figé par la micro du médiateur ou l’état audio des challengers. */
 
@@ -874,8 +852,6 @@ export function TikTokStyleArena({
   const statsRef = useRef({
     beefTimeRemaining: DEFAULT_BEEF_DURATION,
     liveViewerCount: 0,
-    votesA: 0,
-    votesB: 0,
     messagesCount: 0,
   });
 
@@ -918,8 +894,8 @@ export function TikTokStyleArena({
     const summary = {
       duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
       viewers: s.liveViewerCount,
-      votesA: s.votesA,
-      votesB: s.votesB,
+      votesA: 0,
+      votesB: 0,
       messages: s.messagesCount,
       endReason: reason,
     };
@@ -996,8 +972,8 @@ export function TikTokStyleArena({
   // Keep refs in sync
   useEffect(() => { endBeefRef.current = endBeef; }, [endBeef]);
   useEffect(() => {
-    statsRef.current = { beefTimeRemaining, liveViewerCount, votesA, votesB, messagesCount: visibleMessages.length };
-  }, [beefTimeRemaining, liveViewerCount, votesA, votesB, visibleMessages.length]);
+      statsRef.current = { beefTimeRemaining, liveViewerCount, messagesCount: visibleMessages.length };
+  }, [beefTimeRemaining, liveViewerCount, visibleMessages.length]);
 
   const formatBeefTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -1712,32 +1688,40 @@ export function TikTokStyleArena({
     });
   }, []);
 
-  const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | 'M' | null) => {
-    if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && (supportSlot === 'A' || supportSlot === 'B')) {
-      setSupportBurst((prev) => ({ ...prev, [supportSlot]: prev[supportSlot] + 1 }));
-      if (emoji === '❤️' || emoji === HEART_ON_FIRE) {
-        if (supportSlot === 'A') setAuraA((v) => Math.min(100, v + 4));
-        else setAuraB((v) => Math.min(100, v + 4));
+  const addRemoteReaction = useCallback(
+    (emoji: string, supportSlot?: 'A' | 'B' | 'M' | null) => {
+      if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && (supportSlot === 'A' || supportSlot === 'B')) {
+        setSupportBurst((prev) => ({ ...prev, [supportSlot]: prev[supportSlot] + 1 }));
+        if (emoji === '❤️' || emoji === HEART_ON_FIRE) {
+          const b = auraBoostChallenger;
+          if (supportSlot === 'A') setAuraA((v) => Math.min(100, v + b));
+          else setAuraB((v) => Math.min(100, v + b));
+        }
+        return;
       }
-      return;
-    }
-    if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && supportSlot === 'M') {
-      setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
-      if (emoji === '❤️' || emoji === HEART_ON_FIRE) setAuraMed((v) => Math.min(100, v + 3));
-      return;
-    }
-    const entry = createFlyingReactionEntry(emoji);
-    setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
-  }, []);
+      if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && supportSlot === 'M') {
+        setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
+        if (emoji === '❤️' || emoji === HEART_ON_FIRE) {
+          const b = auraBoostMediator;
+          setAuraMed((v) => Math.min(100, v + b));
+        }
+        return;
+      }
+      const entry = createFlyingReactionEntry(emoji);
+      setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
+    },
+    [auraBoostChallenger, auraBoostMediator],
+  );
 
   const emitTapSupport = useCallback((target: 'A' | 'B' | 'M') => {
     if (target === 'M') {
       setSupportBurst((p) => ({ ...p, M: p.M + 1 }));
-      setAuraMed((v) => Math.min(100, v + 3));
+      setAuraMed((v) => Math.min(100, v + auraBoostMediator));
     } else {
       setSupportBurst((p) => ({ ...p, [target]: p[target] + 1 }));
-      if (target === 'A') setAuraA((v) => Math.min(100, v + 4));
-      else setAuraB((v) => Math.min(100, v + 4));
+      const b = auraBoostChallenger;
+      if (target === 'A') setAuraA((v) => Math.min(100, v + b));
+      else setAuraB((v) => Math.min(100, v + b));
     }
     const xPercent =
       target === 'A' ? 14 + Math.random() * 16 : target === 'B' ? 70 + Math.random() * 16 : 44 + Math.random() * 12;
@@ -1754,7 +1738,7 @@ export function TikTokStyleArena({
         payload: { emoji: '❤️', supportSlot: target },
       })
       .catch(() => {});
-  }, []);
+  }, [auraBoostChallenger, auraBoostMediator]);
 
   // 1) Broadcast channel — instant P2P delivery
   useEffect(() => {
@@ -1769,12 +1753,6 @@ export function TikTokStyleArena({
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
         console.log('[Live] Received broadcast message from:', payload.user_name);
         addRemoteMessage(payload.user_name, payload.content, payload.initial, payload.id);
-      })
-      .on('broadcast', { event: 'vote' }, ({ payload }: any) => {
-        if (payload.prev === 'A') setVotesA(v => Math.max(0, v - 1));
-        if (payload.prev === 'B') setVotesB(v => Math.max(0, v - 1));
-        if (payload.side === 'A') setVotesA(v => v + 1);
-        if (payload.side === 'B') setVotesB(v => v + 1);
       })
       .on('broadcast', { event: 'pulse_voice' }, ({ payload }: any) => {
         const dA = Math.max(0, Math.floor(Number(payload?.dA) || 0));
@@ -1930,8 +1908,8 @@ export function TikTokStyleArena({
           setEndSummary({
             duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
             viewers: s.liveViewerCount,
-            votesA: s.votesA,
-            votesB: s.votesB,
+            votesA: 0,
+            votesB: 0,
             messages: s.messagesCount,
             endReason: payload?.reason || 'Beef terminé',
           });
@@ -2091,8 +2069,12 @@ export function TikTokStyleArena({
     if (integrated && isHeartEmoji) {
       if (heartTarget === 'M') {
         setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
+        setAuraMed((v) => Math.min(100, v + auraBoostMediator));
       } else {
         setSupportBurst((prev) => ({ ...prev, [heartTarget]: prev[heartTarget] + 1 }));
+        const b = auraBoostChallenger;
+        if (heartTarget === 'A') setAuraA((v) => Math.min(100, v + b));
+        else setAuraB((v) => Math.min(100, v + b));
       }
       const xPercent =
         heartTarget === 'A'
@@ -3131,8 +3113,8 @@ export function TikTokStyleArena({
               <p className="text-sm text-gray-400">{endSummary.endReason}</p>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Stats (pas de compteur de votes : le soutien se lit sur l’aura en direct) */}
+            <div className="grid grid-cols-3 gap-3">
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
                 <div className="text-2xl font-bold text-brand-400">{endSummary.duration}</div>
                 <div className="text-xs text-gray-500 mt-1">Durée</div>
@@ -3145,32 +3127,7 @@ export function TikTokStyleArena({
                 <div className="text-2xl font-bold text-ember-400">{endSummary.messages}</div>
                 <div className="text-xs text-gray-500 mt-1">Messages</div>
               </div>
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <div className="text-2xl font-bold text-cobalt-400">{endSummary.votesA + endSummary.votesB}</div>
-                <div className="text-xs text-gray-500 mt-1">Votes</div>
-              </div>
             </div>
-
-            {/* Vote Result */}
-            {(endSummary.votesA + endSummary.votesB > 0) && (
-              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                <div className="text-xs text-gray-400 mb-2">Résultat des votes</div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-cobalt-400 w-10 text-right">
-                    {Math.round((endSummary.votesA / (endSummary.votesA + endSummary.votesB)) * 100)}%
-                  </span>
-                  <div className="flex-1 h-3 bg-gray-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-cobalt-600 to-cobalt-400 rounded-full transition-all"
-                      style={{ width: `${(endSummary.votesA / (endSummary.votesA + endSummary.votesB)) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-xs font-semibold text-ember-400 w-10">
-                    {Math.round((endSummary.votesB / (endSummary.votesA + endSummary.votesB)) * 100)}%
-                  </span>
-                </div>
-              </div>
-            )}
 
             {/* Actions */}
             <div className="space-y-3 pt-2">
@@ -3272,27 +3229,17 @@ export function TikTokStyleArena({
                     : { duration: gloryIntenseA ? 0.35 : 0.2 }
                 }
               >
-                {/* Aura gauge badge (host only) */}
-                {isHost && auraA > 0 && (
-                  <div className="pointer-events-auto absolute bottom-3 left-3 z-[130] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
-                    <div className="h-1.5 rounded-full bg-cobalt-500 transition-all duration-300" style={{ width: `${Math.max(8, auraA * 0.5)}px` }} />
-                    <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-cobalt-300">{auraA}%</span>
-                    {auraA >= 100 && (
-                      <span className="pointer-events-none text-[8px] font-black text-cobalt-200 animate-pulse">PRÊT</span>
-                    )}
-                    {auraA >= 100 && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setGloryChallengerSlot('A');
-                        }}
-                        className="ml-0.5 shrink-0 rounded-full bg-white/25 px-1.5 py-0.5 font-mono text-[7px] font-black uppercase tracking-wide text-white shadow-[0_0_12px_rgba(255,255,255,0.35)] hover:bg-white/35"
-                      >
-                        Gloire
-                      </button>
-                    )}
-                  </div>
+                {isHost && auraA >= 100 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setGloryChallengerSlot('A');
+                    }}
+                    className="pointer-events-auto absolute bottom-3 left-3 z-[130] shrink-0 rounded-full bg-white/20 px-2 py-1 font-mono text-[7px] font-black uppercase tracking-wide text-white shadow-[0_0_12px_rgba(255,255,255,0.35)] backdrop-blur-md hover:bg-white/30"
+                  >
+                    Gloire
+                  </button>
                 )}
                 <div className="pointer-events-none absolute left-4 top-4 z-[130] flex w-[calc(100%-3rem)] items-start justify-start gap-2">
                   <button
@@ -3303,7 +3250,7 @@ export function TikTokStyleArena({
                     }}
                     className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-left font-mono text-xs font-semibold text-white lg:hidden"
                   >
-                    {leftPanelName} ({pulseVoicesA})
+                    {leftPanelName}
                   </button>
                 </div>
                 <AnimatePresence>
@@ -3469,10 +3416,10 @@ export function TikTokStyleArena({
                     type="button"
                     onClick={() => {
                       emitTapSupport('A');
-                      castVote('A');
+                      preferSide('A');
                     }}
                     className="absolute inset-0 z-[28] touch-manipulation"
-                    aria-label={`Voter pour ${leftPanelName}`}
+                    aria-label={`Soutenir ${leftPanelName}`}
                   />
                 )}
                 {!beefEnded &&
@@ -3491,26 +3438,14 @@ export function TikTokStyleArena({
                   <div className="pointer-events-none absolute top-24 left-1/2 z-[8] -translate-x-1/2">
                     <FeatureGuide
                       id="arena-vote"
-                      title="Voter pour un challenger"
-                      description="Tape sur l'écran d'un challenger pour voter ! Tu peux changer d'avis à tout moment."
+                      title="Soutenir un challenger"
+                      description="Tape sur l'écran d'un challenger pour renforcer son aura ! Tu peux changer de panneau à tout moment."
                       position="bottom"
                       suppress={featureGuideSuppress}
                       stack="under-tap-overlays"
                     />
                   </div>
                 )}
-                {/* Vote flash animation */}
-                <AnimatePresence>
-                  {voteAnimation === 'A' && (
-                    <motion.div
-                      initial={{ opacity: 0.6 }}
-                      animate={{ opacity: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.8 }}
-                      className="absolute inset-0 bg-cobalt-500/20 z-[6] pointer-events-none"
-                    />
-                  )}
-                </AnimatePresence>
                 {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
                   <div className="pointer-events-none absolute left-1/2 top-14 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1.5 font-mono text-[11px] font-black tabular-nums text-white shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
                     {speakingTurnPaused && (
@@ -3651,14 +3586,6 @@ export function TikTokStyleArena({
                         </span>
                       )}
                     </button>
-                    {/* Aura gauge badge (host only) */}
-                    {isHost && auraMed > 0 && (
-                      <div className="pointer-events-none absolute -bottom-1 left-1/2 z-[26] flex -translate-x-1/2 items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
-                        <div className="h-1.5 rounded-full bg-prestige-gold transition-all duration-300" style={{ width: `${Math.max(8, auraMed * 0.4)}px` }} />
-                        <span className="font-mono text-[8px] font-bold tabular-nums text-prestige-gold">{auraMed}%</span>
-                        {auraFeverMed && <span className="text-[8px] font-black text-prestige-gold animate-pulse">FEVER</span>}
-                      </div>
-                    )}
                   </div>
                   <button
                     type="button"
@@ -3694,27 +3621,17 @@ export function TikTokStyleArena({
                     : { duration: gloryIntenseB ? 0.35 : 0.2 }
                 }
               >
-                {/* Aura gauge badge (host only) */}
-                {isHost && auraB > 0 && (
-                  <div className="pointer-events-auto absolute bottom-3 right-3 z-[130] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
-                    <div className="h-1.5 rounded-full bg-emerald-500 transition-all duration-300" style={{ width: `${Math.max(8, auraB * 0.5)}px` }} />
-                    <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-emerald-300">{auraB}%</span>
-                    {auraB >= 100 && (
-                      <span className="pointer-events-none text-[8px] font-black text-emerald-200 animate-pulse">PRÊT</span>
-                    )}
-                    {auraB >= 100 && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setGloryChallengerSlot('B');
-                        }}
-                        className="ml-0.5 shrink-0 rounded-full bg-white/25 px-1.5 py-0.5 font-mono text-[7px] font-black uppercase tracking-wide text-white shadow-[0_0_12px_rgba(255,255,255,0.35)] hover:bg-white/35"
-                      >
-                        Gloire
-                      </button>
-                    )}
-                  </div>
+                {isHost && auraB >= 100 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setGloryChallengerSlot('B');
+                    }}
+                    className="pointer-events-auto absolute bottom-3 right-3 z-[130] shrink-0 rounded-full bg-white/20 px-2 py-1 font-mono text-[7px] font-black uppercase tracking-wide text-white shadow-[0_0_12px_rgba(255,255,255,0.35)] backdrop-blur-md hover:bg-white/30"
+                  >
+                    Gloire
+                  </button>
                 )}
                 <div className="pointer-events-none absolute inset-x-4 top-4 z-[130] flex items-start justify-center gap-2">
                   <button
@@ -3725,7 +3642,7 @@ export function TikTokStyleArena({
                     }}
                     className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-center font-mono text-xs font-semibold text-white lg:hidden"
                   >
-                    {rightPanelName} ({pulseVoicesB})
+                    {rightPanelName}
                   </button>
                 </div>
                 <AnimatePresence>
@@ -3891,10 +3808,10 @@ export function TikTokStyleArena({
                     type="button"
                     onClick={() => {
                       emitTapSupport('B');
-                      castVote('B');
+                      preferSide('B');
                     }}
                     className="absolute inset-0 z-[28] touch-manipulation"
-                    aria-label={`Voter pour ${rightPanelName}`}
+                    aria-label={`Soutenir ${rightPanelName}`}
                   />
                 )}
                 {!beefEnded &&
@@ -3908,18 +3825,6 @@ export function TikTokStyleArena({
                     aria-label="Envoyer du soutien au challenger B"
                   />
                 )}
-                {/* Vote flash animation */}
-                <AnimatePresence>
-                  {voteAnimation === 'B' && (
-                    <motion.div
-                      initial={{ opacity: 0.6 }}
-                      animate={{ opacity: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.8 }}
-                      className="pointer-events-none absolute inset-0 z-[6] bg-emerald-500/20"
-                    />
-                  )}
-                </AnimatePresence>
                 {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
                   <div className="pointer-events-none absolute left-1/2 top-14 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1.5 font-mono text-[11px] font-black tabular-nums text-white shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
                     {speakingTurnPaused && (
@@ -4033,7 +3938,7 @@ export function TikTokStyleArena({
                   onClick={() => void openProfile(debaters[0].name, debaters[0].id)}
                   className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-left font-mono text-xs font-semibold text-white"
                 >
-                  {debaters[0].name} ({pulseVoicesA})
+                  {debaters[0].name}
                 </button>
               </div>
               <div
@@ -4143,7 +4048,7 @@ export function TikTokStyleArena({
                   onClick={() => void openProfile(debaters[1].name, debaters[1].id)}
                   className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-center font-mono text-xs font-semibold text-white"
                 >
-                  {debaters[1].name} ({pulseVoicesB})
+                  {debaters[1].name}
                 </button>
               </div>
               <div
