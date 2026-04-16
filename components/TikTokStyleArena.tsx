@@ -612,6 +612,8 @@ export function TikTokStyleArena({
   }, [beefTimeRemaining]);
 
   const endBeefRef = useRef<(reason: string) => Promise<void>>();
+  /** Rempli après `useDailyCall` — `endBeef` vit au-dessus du hook et ne peut pas fermer sur `leave` en closure directe. */
+  const leaveRef = useRef<() => Promise<void>>(async () => {});
 
   // ── VOTE SYSTEM — TikTok-style duel gauge ──
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -899,13 +901,13 @@ export function TikTokStyleArena({
     }
 
     // Stop camera/mic
-    await leave();
+    await leaveRef.current();
 
     // Auto-redirect after 12 seconds
     endSummaryTimerRef.current = setTimeout(() => {
       router.replace('/feed');
     }, 12000);
-  }, [roomId, leave, router]);
+  }, [roomId, router]);
 
   const handleMediatorVerdict = useCallback(
     async (kind: 'resolved' | 'closed' | 'rematch') => {
@@ -1292,6 +1294,10 @@ export function TikTokStyleArena({
     activeSpeakerPeerId,
     error: callError,
   } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer, userId, roomId, meetingTokenForDaily);
+
+  useEffect(() => {
+    leaveRef.current = leave;
+  }, [leave]);
 
   // Auto-join quand « Rejoindre » + URL Daily ; spectateur : attendre GET access (jeton).
   useEffect(() => {
