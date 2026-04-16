@@ -74,6 +74,8 @@ type MediatorSidebarProps = {
   onClearAnnouncement: () => void;
   /** Invitations en attente (beef_participants.pending) */
   pendingInvites: Array<{ userId: string; label: string }>;
+  onAcceptPendingInvite?: (userId: string) => void;
+  onRejectPendingInvite?: (userId: string) => void;
   /** Inviter un co-hôte (recherche inline dans le Command Deck) */
   onInviteParticipant?: (userId: string) => void | Promise<void>;
   /** IDs déjà sur le ring / à exclure de la recherche (dont l’hôte courant) */
@@ -131,6 +133,8 @@ export function MediatorSidebar({
   onPublishAnnouncement,
   onClearAnnouncement,
   pendingInvites,
+  onAcceptPendingInvite,
+  onRejectPendingInvite,
   onInviteParticipant,
   inviteExcludeParticipantIds = [],
   inviteCurrentUserId = null,
@@ -436,9 +440,23 @@ export function MediatorSidebar({
                                 <span className="min-w-0 break-words font-mono text-[11px] text-white/85">
                                   {inv.label}
                                 </span>
-                                <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 font-mono text-[8px] uppercase tracking-wider text-white/50">
-                                  En attente
-                                </span>
+                                <div className="flex shrink-0 items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => onRejectPendingInvite?.(inv.userId)}
+                                    className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-white/50 hover:bg-red-500/20 hover:text-red-400"
+                                    aria-label="Refuser l’invitation"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => onAcceptPendingInvite?.(inv.userId)}
+                                    className="rounded-full border border-brand-500/30 bg-brand-500/20 px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-wider text-brand-400 hover:bg-brand-500/40"
+                                  >
+                                    Accepter
+                                  </button>
+                                </div>
                               </li>
                             ))
                           )}

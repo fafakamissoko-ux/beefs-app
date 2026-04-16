@@ -472,6 +472,49 @@ export function TikTokStyleArena({
     );
   }, [isHost, roomId]);
 
+  const handleAcceptPendingInvite = useCallback(
+    async (inviteUserId: string) => {
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('beef_participants')
+        .update({
+          role: 'participant',
+          invite_status: 'accepted',
+          responded_at: now,
+        })
+        .eq('beef_id', roomId)
+        .eq('user_id', inviteUserId);
+      if (error) {
+        toast("Erreur lors de l'acceptation", 'error');
+        return;
+      }
+      toast('Challenger accepté !', 'success');
+      void fetchPendingInvites();
+    },
+    [roomId, toast, fetchPendingInvites],
+  );
+
+  /** Refus : UPDATE → declined (pas de DELETE RLS médiateur sur beef_participants). */
+  const handleRejectPendingInvite = useCallback(
+    async (inviteUserId: string) => {
+      const { error } = await supabase
+        .from('beef_participants')
+        .update({
+          invite_status: 'declined',
+          responded_at: new Date().toISOString(),
+        })
+        .eq('beef_id', roomId)
+        .eq('user_id', inviteUserId)
+        .eq('invite_status', 'pending');
+      if (error) {
+        toast('Erreur lors du refus', 'error');
+        return;
+      }
+      void fetchPendingInvites();
+    },
+    [roomId, toast, fetchPendingInvites],
+  );
+
   useEffect(() => {
     if (!isHost || !mediatorSidebarOpen) return;
     void fetchPendingInvites();
@@ -4242,6 +4285,8 @@ export function TikTokStyleArena({
             onPublishAnnouncement={publishAnnouncementBanner}
             onClearAnnouncement={clearAnnouncementBanner}
             pendingInvites={pendingInvites}
+            onAcceptPendingInvite={handleAcceptPendingInvite}
+            onRejectPendingInvite={handleRejectPendingInvite}
             onInviteParticipant={handleInviteFromModal}
             inviteExcludeParticipantIds={inviteExcludeParticipantIds}
             inviteCurrentUserId={userId}
