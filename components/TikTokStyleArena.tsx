@@ -228,8 +228,9 @@ export function TikTokStyleArena({
   const [endSummary, setEndSummary] = useState<{
     duration: string;
     viewers: number;
-    votesA: number;
-    votesB: number;
+    resonanceA: number;
+    resonanceB: number;
+    resonanceM: number;
     messages: number;
     endReason: string;
   } | null>(null);
@@ -709,6 +710,10 @@ export function TikTokStyleArena({
   const [myVote, setMyVote] = useState<'A' | 'B' | null>(null);
   const lastPulseSideRef = useRef<'A' | 'B' | null>(null);
   const [supportBurst, setSupportBurst] = useState({ A: 0, B: 0, M: 0 });
+  const supportBurstRef = useRef(supportBurst);
+  useEffect(() => {
+    supportBurstRef.current = supportBurst;
+  }, [supportBurst]);
   const [giftPrestigeFlash, setGiftPrestigeFlash] = useState(0);
   const [verdictConfetti, setVerdictConfetti] = useState(false);
   const [rematchSequence, setRematchSequence] = useState(false);
@@ -761,6 +766,9 @@ export function TikTokStyleArena({
     }
     resetPulseVoices();
     resetArenaVerdict();
+    statsRef.current.votesA = 0;
+    statsRef.current.votesB = 0;
+    setSupportBurst({ A: 0, B: 0, M: 0 });
   }, [roomId, resetPulseVoices, resetArenaVerdict]);
 
   useEffect(() => {
@@ -853,6 +861,9 @@ export function TikTokStyleArena({
     beefTimeRemaining: DEFAULT_BEEF_DURATION,
     liveViewerCount: 0,
     messagesCount: 0,
+    /** Résonance « distante » (réactions reçues en broadcast), cumulée côté client. */
+    votesA: 0,
+    votesB: 0,
   });
 
   const endBeef = useCallback(async (reason: string = 'Terminé par le médiateur') => {
@@ -891,11 +902,13 @@ export function TikTokStyleArena({
     const mins = Math.floor(elapsed / 60);
     const secs = elapsed % 60;
 
+    const sb = supportBurstRef.current;
     const summary = {
       duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
       viewers: s.liveViewerCount,
-      votesA: 0,
-      votesB: 0,
+      resonanceA: s.votesA + sb.A,
+      resonanceB: s.votesB + sb.B,
+      resonanceM: sb.M,
       messages: s.messagesCount,
       endReason: reason,
     };
@@ -972,7 +985,12 @@ export function TikTokStyleArena({
   // Keep refs in sync
   useEffect(() => { endBeefRef.current = endBeef; }, [endBeef]);
   useEffect(() => {
-      statsRef.current = { beefTimeRemaining, liveViewerCount, messagesCount: visibleMessages.length };
+    statsRef.current = {
+      ...statsRef.current,
+      beefTimeRemaining,
+      liveViewerCount,
+      messagesCount: visibleMessages.length,
+    };
   }, [beefTimeRemaining, liveViewerCount, visibleMessages.length]);
 
   const formatBeefTime = (seconds: number) => {
@@ -1691,7 +1709,8 @@ export function TikTokStyleArena({
   const addRemoteReaction = useCallback(
     (emoji: string, supportSlot?: 'A' | 'B' | 'M' | null) => {
       if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && (supportSlot === 'A' || supportSlot === 'B')) {
-        setSupportBurst((prev) => ({ ...prev, [supportSlot]: prev[supportSlot] + 1 }));
+        if (supportSlot === 'A') statsRef.current.votesA += 1;
+        else statsRef.current.votesB += 1;
         if (emoji === '❤️' || emoji === HEART_ON_FIRE) {
           const b = auraBoostChallenger;
           if (supportSlot === 'A') setAuraA((v) => Math.min(100, v + b));
@@ -1895,7 +1914,18 @@ export function TikTokStyleArena({
         setTimerActive(false);
         setTimerPaused(false);
         if (payload?.summary) {
-          setEndSummary(payload.summary);
+          const raw = payload.summary as Record<string, unknown>;
+          const legacyA = typeof raw.votesA === 'number' ? raw.votesA : 0;
+          const legacyB = typeof raw.votesB === 'number' ? raw.votesB : 0;
+          setEndSummary({
+            duration: String(raw.duration ?? ''),
+            viewers: Math.max(0, Math.floor(Number(raw.viewers) || 0)),
+            resonanceA: typeof raw.resonanceA === 'number' ? raw.resonanceA : legacyA,
+            resonanceB: typeof raw.resonanceB === 'number' ? raw.resonanceB : legacyB,
+            resonanceM: typeof raw.resonanceM === 'number' ? raw.resonanceM : 0,
+            messages: Math.max(0, Math.floor(Number(raw.messages) || 0)),
+            endReason: String(raw.endReason ?? payload?.reason ?? 'Beef terminé'),
+          });
         } else {
           const s = statsRef.current;
           const wall = beefWallClockStartedAtRef.current;
@@ -1905,11 +1935,13 @@ export function TikTokStyleArena({
               : Math.max(0, DEFAULT_BEEF_DURATION - s.beefTimeRemaining);
           const mins = Math.floor(elapsed / 60);
           const secs = elapsed % 60;
+          const sb = supportBurstRef.current;
           setEndSummary({
             duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
             viewers: s.liveViewerCount,
-            votesA: 0,
-            votesB: 0,
+            resonanceA: s.votesA + sb.A,
+            resonanceB: s.votesB + sb.B,
+            resonanceM: sb.M,
             messages: s.messagesCount,
             endReason: payload?.reason || 'Beef terminé',
           });
@@ -3126,6 +3158,26 @@ export function TikTokStyleArena({
               <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
                 <div className="text-2xl font-bold text-ember-400">{endSummary.messages}</div>
                 <div className="text-xs text-gray-500 mt-1">Messages</div>
+              </div>
+            </div>
+
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10 mt-3">
+              <div className="text-xs text-gray-400 mb-3 uppercase tracking-widest font-mono text-center">
+                Résonance Générée
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-col items-center p-2 rounded-lg bg-cobalt-500/10 border border-cobalt-500/20">
+                  <span className="text-lg font-black text-cobalt-400 tabular-nums">{endSummary.resonanceA}</span>
+                  <span className="text-[9px] text-cobalt-200/60 uppercase font-mono mt-1">Slot A</span>
+                </div>
+                <div className="flex flex-col items-center p-2 rounded-lg bg-prestige-gold/10 border border-prestige-gold/20">
+                  <span className="text-lg font-black text-prestige-gold tabular-nums">{endSummary.resonanceM}</span>
+                  <span className="text-[9px] text-prestige-gold/60 uppercase font-mono mt-1">Médiateur</span>
+                </div>
+                <div className="flex flex-col items-center p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <span className="text-lg font-black text-emerald-400 tabular-nums">{endSummary.resonanceB}</span>
+                  <span className="text-[9px] text-emerald-200/60 uppercase font-mono mt-1">Slot B</span>
+                </div>
               </div>
             </div>
 
