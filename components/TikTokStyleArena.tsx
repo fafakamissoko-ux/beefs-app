@@ -89,7 +89,7 @@ interface TikTokStyleArenaProps {
   userId: string;
   userName: string;
   /** Toujours fourni par la page arène (pas de défaut « viewer » — évite des GET /api/beef/access fantômes). */
-  userRole: 'mediator' | 'challenger' | 'viewer';
+  userRole: 'mediator' | 'challenger' | 'viewer' | 'spectator';
   viewerCount?: number;
   tension?: number;
   points?: number;
@@ -194,7 +194,7 @@ export function TikTokStyleArena({
 }: TikTokStyleArenaProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const isViewer = userRole === 'viewer';
+  const isViewer = userRole === 'viewer' || userRole === 'spectator';
   const [hasJoined, setHasJoined] = useState(false);
   /** MediaStream du pré-joint (médiateur / challenger) — réutilisé par Daily pour éviter un 2ᵉ getUserMedia bloqué sur mobile. */
   const [preJoinMediaStream, setPreJoinMediaStream] = useState<MediaStream | null>(null);
@@ -601,15 +601,10 @@ export function TikTokStyleArena({
   // Participant roles from DB — maps Daily.co userNames to beef roles
   const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});
   const [liveViewerCount, setLiveViewerCount] = useState(viewerCount);
-  /** Boost d'aura par tap : moins d'impact quand il y a beaucoup de spectateurs (salle pleine). */
-  const auraBoostChallenger = useMemo(
-    () => Math.max(0.5, 10 / Math.max(1, liveViewerCount)),
-    [liveViewerCount],
-  );
-  const auraBoostMediator = useMemo(
-    () => Math.max(0.4, 7.5 / Math.max(1, liveViewerCount)),
-    [liveViewerCount],
-  );
+  const liveViewerCountRef = useRef(liveViewerCount);
+  useEffect(() => {
+    liveViewerCountRef.current = liveViewerCount;
+  }, [liveViewerCount]);
 
   // Chrono global — défaut 60 min, plafond MAX_BEEF_DURATION à la régie
   const [beefTimeRemaining, setBeefTimeRemaining] = useState(DEFAULT_BEEF_DURATION);
@@ -1390,7 +1385,7 @@ export function TikTokStyleArena({
 
   // Spectateurs uniquement (pas médiateur ni challengers)
   useEffect(() => {
-    if (!isJoined || userRole !== 'viewer') return;
+    if (!isJoined || !isViewer) return;
 
     supabase.rpc('increment_viewer_count', { beef_id: roomId }).then(() => {});
     setLiveViewerCount((prev) => prev + 1);
@@ -1398,7 +1393,7 @@ export function TikTokStyleArena({
     return () => {
       supabase.rpc('decrement_viewer_count', { beef_id: roomId }).then(() => {});
     };
-  }, [isJoined, roomId, userRole]);
+  }, [isJoined, roomId, isViewer]);
 
   // Sort remote participants: main challengers first based on roles
   const sortedRemoteParticipants = [...remoteParticipants].sort((a, b) => {
@@ -1706,41 +1701,32 @@ export function TikTokStyleArena({
     });
   }, []);
 
-  const addRemoteReaction = useCallback(
-    (emoji: string, supportSlot?: 'A' | 'B' | 'M' | null) => {
-      if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && (supportSlot === 'A' || supportSlot === 'B')) {
-        if (supportSlot === 'A') statsRef.current.votesA += 1;
-        else statsRef.current.votesB += 1;
-        if (emoji === '❤️' || emoji === HEART_ON_FIRE) {
-          const b = auraBoostChallenger;
-          if (supportSlot === 'A') setAuraA((v) => Math.min(100, v + b));
-          else setAuraB((v) => Math.min(100, v + b));
-        }
-        return;
-      }
-      if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && supportSlot === 'M') {
-        setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
-        if (emoji === '❤️' || emoji === HEART_ON_FIRE) {
-          const b = auraBoostMediator;
-          setAuraMed((v) => Math.min(100, v + b));
-        }
-        return;
-      }
-      const entry = createFlyingReactionEntry(emoji);
-      setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
-    },
-    [auraBoostChallenger, auraBoostMediator],
-  );
+  const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | 'M' | null) => {
+    if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && (supportSlot === 'A' || supportSlot === 'B')) {
+      if (supportSlot === 'A') statsRef.current.votesA += 1;
+      else statsRef.current.votesB += 1;
+      return;
+    }
+    if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && supportSlot === 'M') {
+      setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
+      return;
+    }
+    const entry = createFlyingReactionEntry(emoji);
+    setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
+  }, []);
+
+  /** Boost par tap / réaction soutenue : assez fort pour contrebalancer le decay aura (−1 / 500 ms). */
+  const getAuraBoost = () => (liveViewerCountRef.current > 50 ? 2 : 5);
 
   const emitTapSupport = useCallback((target: 'A' | 'B' | 'M') => {
+    const boost = getAuraBoost();
     if (target === 'M') {
       setSupportBurst((p) => ({ ...p, M: p.M + 1 }));
-      setAuraMed((v) => Math.min(100, v + auraBoostMediator));
+      setAuraMed((v) => Math.min(100, v + boost));
     } else {
       setSupportBurst((p) => ({ ...p, [target]: p[target] + 1 }));
-      const b = auraBoostChallenger;
-      if (target === 'A') setAuraA((v) => Math.min(100, v + b));
-      else setAuraB((v) => Math.min(100, v + b));
+      if (target === 'A') setAuraA((v) => Math.min(100, v + boost));
+      else setAuraB((v) => Math.min(100, v + boost));
     }
     const xPercent =
       target === 'A' ? 14 + Math.random() * 16 : target === 'B' ? 70 + Math.random() * 16 : 44 + Math.random() * 12;
@@ -1757,7 +1743,7 @@ export function TikTokStyleArena({
         payload: { emoji: '❤️', supportSlot: target },
       })
       .catch(() => {});
-  }, [auraBoostChallenger, auraBoostMediator]);
+  }, []);
 
   // 1) Broadcast channel — instant P2P delivery
   useEffect(() => {
@@ -1768,6 +1754,11 @@ export function TikTokStyleArena({
     channel
       .on('broadcast', { event: 'reaction' }, ({ payload }: any) => {
         addRemoteReaction(payload.emoji, payload.supportSlot);
+        const boost = liveViewerCountRef.current > 50 ? 2 : 5;
+        const slot = payload?.supportSlot as 'A' | 'B' | 'M' | undefined;
+        if (slot === 'A') setAuraA((v) => Math.min(100, v + boost));
+        if (slot === 'B') setAuraB((v) => Math.min(100, v + boost));
+        if (slot === 'M') setAuraMed((v) => Math.min(100, v + boost));
       })
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
         console.log('[Live] Received broadcast message from:', payload.user_name);
@@ -2099,14 +2090,14 @@ export function TikTokStyleArena({
           : slotAB;
 
     if (integrated && isHeartEmoji) {
+      const boost = getAuraBoost();
       if (heartTarget === 'M') {
         setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
-        setAuraMed((v) => Math.min(100, v + auraBoostMediator));
+        setAuraMed((v) => Math.min(100, v + boost));
       } else {
         setSupportBurst((prev) => ({ ...prev, [heartTarget]: prev[heartTarget] + 1 }));
-        const b = auraBoostChallenger;
-        if (heartTarget === 'A') setAuraA((v) => Math.min(100, v + b));
-        else setAuraB((v) => Math.min(100, v + b));
+        if (heartTarget === 'A') setAuraA((v) => Math.min(100, v + boost));
+        else setAuraB((v) => Math.min(100, v + boost));
       }
       const xPercent =
         heartTarget === 'A'
@@ -3463,7 +3454,7 @@ export function TikTokStyleArena({
                   </motion.div>
                 </AnimatePresence>
                 {/* Vote tap overlay — viewers tap to vote for this challenger */}
-                {userRole === 'viewer' && (
+                {isViewer && (
                   <button
                     type="button"
                     onClick={() => {
@@ -3486,7 +3477,7 @@ export function TikTokStyleArena({
                   />
                 )}
                 {/* Vote guide — first time only */}
-                {userRole === 'viewer' && (
+                {isViewer && (
                   <div className="pointer-events-none absolute top-24 left-1/2 z-[8] -translate-x-1/2">
                     <FeatureGuide
                       id="arena-vote"
@@ -3855,7 +3846,7 @@ export function TikTokStyleArena({
                   </motion.div>
                 </AnimatePresence>
                 {/* Vote tap overlay — viewers tap to vote for this challenger */}
-                {userRole === 'viewer' && (
+                {isViewer && (
                   <button
                     type="button"
                     onClick={() => {
@@ -4423,7 +4414,7 @@ export function TikTokStyleArena({
           </div>
           <div className="relative z-[130] min-w-0 shrink-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1">
             <div className="flex min-w-0 items-center gap-2">
-              {userRole === 'viewer' && (
+              {isViewer && (
                 <button
                   type="button"
                   onClick={() => void handleRaiseHand()}
