@@ -211,7 +211,7 @@ export function MediatorSidebar({
 
                   {/* Header */}
                   <div className="relative z-10 flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
-                    <span className="font-mono text-xs font-bold tracking-tight text-white/90">
+                    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-xs font-bold tracking-tight text-white/90">
                       Tableau de bord
                     </span>
                     <button
@@ -220,7 +220,7 @@ export function MediatorSidebar({
                         e.stopPropagation();
                         onClose();
                       }}
-                      className="relative z-20 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white shadow-sm backdrop-blur-3xl hover:bg-white/15"
+                      className="relative z-20 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/10 text-white shadow-sm backdrop-blur-3xl hover:bg-white/15"
                       aria-label="Fermer"
                     >
                       <X className="h-4 w-4" strokeWidth={1} />
@@ -234,7 +234,7 @@ export function MediatorSidebar({
                   type="button"
                   disabled={startingBeef}
                   onClick={() => void onStartBeef()}
-                  className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-[2.5rem] border border-cobalt-500/80 bg-cobalt-500 py-3.5 font-mono text-[11px] font-black uppercase tracking-[0.18em] text-white shadow-[0_0_28px_rgba(59,130,246,0.55)] disabled:cursor-wait disabled:opacity-70"
+                  className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full border border-cobalt-500/80 bg-cobalt-500 py-3.5 font-mono text-[11px] font-black uppercase tracking-[0.18em] text-white shadow-[0_0_28px_rgba(59,130,246,0.55)] disabled:cursor-wait disabled:opacity-70"
                   animate={
                     startingBeef
                       ? {}
@@ -265,7 +265,7 @@ export function MediatorSidebar({
                     <button
                       type="button"
                       onClick={beefTimerPaused ? onResumeBeefTimer : onPauseBeefTimer}
-                      className={`flex min-h-[4.25rem] flex-1 flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-2 backdrop-blur-3xl transition-all active:scale-[0.98] ${
+                      className={`flex min-h-[4.25rem] flex-1 flex-col items-center justify-center gap-1 rounded-3xl border px-2 py-2 backdrop-blur-3xl transition-all active:scale-[0.98] ${
                         beefTimerPaused
                           ? 'border-emerald-400/30 bg-emerald-500/10'
                           : 'border-amber-400/30 bg-amber-500/10'
@@ -279,7 +279,7 @@ export function MediatorSidebar({
                         {beefTimerPaused ? 'Reprendre' : 'Pause'}
                       </span>
                     </button>
-                    <div className="flex min-h-[4.25rem] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl border border-white/10 bg-white/[0.05] px-2 py-2 backdrop-blur-3xl">
+                    <div className="flex min-h-[4.25rem] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-3xl border border-white/10 bg-white/[0.05] px-2 py-2 backdrop-blur-3xl">
                       <span className="font-mono text-[7px] font-bold uppercase tracking-widest text-white/45">
                         Restant
                       </span>
@@ -296,7 +296,7 @@ export function MediatorSidebar({
                           ? 'Replier prolongations et roulette du chrono'
                           : 'Déplier prolongations et roulette du chrono'
                       }
-                      className="flex w-11 shrink-0 flex-col items-center justify-center rounded-2xl border border-white/15 bg-white/5 text-white/80 transition-colors hover:bg-white/10"
+                      className="flex w-11 shrink-0 flex-col items-center justify-center rounded-3xl border border-white/15 bg-white/5 text-white/80 transition-colors hover:bg-white/10"
                     >
                       {beefTimerExpanded ? (
                         <ChevronUp className="h-5 w-5" strokeWidth={2} />
@@ -330,7 +330,7 @@ export function MediatorSidebar({
                           maxSec={maxBeefDurationSec}
                           onChange={(sec) => onAdjustTime(sec - beefRemainingSec)}
                           ariaLabel="Temps restant du débat"
-                          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] py-3"
+                          className="rounded-3xl border border-white/[0.06] bg-white/[0.02] py-3"
                         />
                       </motion.div>
                     )}
@@ -365,21 +365,21 @@ export function MediatorSidebar({
                         <button
                           type="button"
                           onClick={() => { onVerdict('resolved'); setVerdictOpen(false); onClose(); }}
-                          className="rounded-[2.5rem] border border-emerald-400/40 bg-emerald-600/20 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-white hover:bg-emerald-500/35"
+                          className="rounded-full border border-emerald-400/40 bg-emerald-600/20 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-white hover:bg-emerald-500/35"
                         >
                           Résolu
                         </button>
                         <button
                           type="button"
                           onClick={() => { onVerdict('closed'); setVerdictOpen(false); onClose(); }}
-                          className="rounded-[2.5rem] border border-white/15 bg-white/8 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-white hover:bg-white/15"
+                          className="rounded-full border border-white/15 bg-white/8 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-white hover:bg-white/15"
                         >
                           Clos
                         </button>
                         <button
                           type="button"
                           onClick={() => { onVerdict('rematch'); setVerdictOpen(false); onClose(); }}
-                          className="rounded-[2.5rem] border border-ember-500/40 bg-ember-600/20 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-ember-100 hover:bg-ember-500/35"
+                          className="rounded-full border border-ember-500/40 bg-ember-600/20 py-3 font-mono text-[9px] font-black uppercase tracking-widest text-ember-100 hover:bg-ember-500/35"
                         >
                           Rematch
                         </button>
@@ -413,7 +413,7 @@ export function MediatorSidebar({
                       transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
                       className="col-span-2 overflow-hidden"
                     >
-                      <div className="flex max-h-[min(52vh,420px)] flex-col gap-3 overflow-y-auto overflow-x-hidden overscroll-contain rounded-[2rem] border border-white/12 bg-black/50 p-3 backdrop-blur-xl [-webkit-overflow-scrolling:touch] touch-pan-y">
+                      <div className="flex max-h-[min(52vh,420px)] flex-col gap-3 overflow-y-auto overflow-x-hidden overscroll-contain rounded-[2.5rem] border border-white/12 bg-black/50 p-3 backdrop-blur-xl [-webkit-overflow-scrolling:touch] touch-pan-y">
                         <div className="flex shrink-0 items-center justify-between gap-2">
                           <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/80">
                             File invités
@@ -429,14 +429,14 @@ export function MediatorSidebar({
                         )}
                         <ul className="shrink-0 space-y-2 border-t border-white/10 pt-3">
                           {pendingInvites.length === 0 ? (
-                            <li className="rounded-2xl border border-dashed border-white/10 px-3 py-4 text-center font-mono text-[10px] text-white/45">
+                            <li className="rounded-3xl border border-dashed border-white/10 px-3 py-4 text-center font-mono text-[10px] text-white/45">
                               Aucune invitation en attente
                             </li>
                           ) : (
                             pendingInvites.map((inv) => (
                               <li
                                 key={inv.userId}
-                                className="flex items-start justify-between gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5"
+                                className="flex items-start justify-between gap-2 rounded-3xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5"
                               >
                                 <span className="min-w-0 break-words font-mono text-[11px] text-white/85">
                                   {inv.label}
@@ -487,7 +487,7 @@ export function MediatorSidebar({
                       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
                       className="col-span-2 overflow-hidden"
                     >
-                      <div className="rounded-[2rem] border border-white/12 bg-black/45 p-3 backdrop-blur-xl">
+                      <div className="rounded-[2.5rem] border border-white/12 bg-black/45 p-3 backdrop-blur-xl">
                         <label htmlFor="mediator-announce-input" className="sr-only">
                           Texte de l&apos;annonce
                         </label>
@@ -497,7 +497,7 @@ export function MediatorSidebar({
                           onChange={(e) => setAnnounceDraft(e.target.value)}
                           rows={2}
                           placeholder="Message du bandeau…"
-                          className="mb-2 w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white placeholder-white/35 focus:border-amber-400/40 focus:outline-none"
+                          className="mb-2 w-full resize-none rounded-3xl border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white placeholder-white/35 focus:border-amber-400/40 focus:outline-none"
                         />
                         <p className="mb-1.5 font-mono text-[8px] font-bold uppercase tracking-wider text-white/40">
                           Durée d&apos;affichage
@@ -525,7 +525,7 @@ export function MediatorSidebar({
                               onPublishAnnouncement(announceDraft.trim(), announceDurationSec);
                               setAnnounceEditorOpen(false);
                             }}
-                            className="rounded-[2rem] border border-amber-500/50 bg-amber-500/20 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-amber-50 hover:bg-amber-500/35"
+                            className="rounded-full border border-amber-500/50 bg-amber-500/20 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-amber-50 hover:bg-amber-500/35"
                           >
                             Publier
                           </button>
@@ -535,7 +535,7 @@ export function MediatorSidebar({
                               onClearAnnouncement();
                               setAnnounceDraft('');
                             }}
-                            className="rounded-[2rem] border border-white/15 bg-white/5 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-white/75 hover:bg-white/10"
+                            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-white/75 hover:bg-white/10"
                           >
                             Effacer bannière
                           </button>
@@ -558,7 +558,7 @@ export function MediatorSidebar({
                       <button
                         type="button"
                         onClick={() => onFocusTargetChange('A')}
-                        className={`rounded-[2rem] py-2.5 font-mono text-[8px] font-black uppercase tracking-wide ${
+                        className={`rounded-full py-2.5 font-mono text-[8px] font-black uppercase tracking-wide ${
                           focusTarget === 'A'
                             ? 'bg-blue-500/35 text-white'
                             : 'bg-white/5 text-white/65 hover:bg-white/10'
@@ -569,7 +569,7 @@ export function MediatorSidebar({
                       <button
                         type="button"
                         onClick={() => onFocusTargetChange(null)}
-                        className={`rounded-[2rem] py-2.5 font-mono text-[8px] font-black uppercase tracking-wide ${
+                        className={`rounded-full py-2.5 font-mono text-[8px] font-black uppercase tracking-wide ${
                           focusTarget === null
                             ? 'bg-blue-500/35 text-white'
                             : 'bg-white/5 text-white/65 hover:bg-white/10'
@@ -580,7 +580,7 @@ export function MediatorSidebar({
                       <button
                         type="button"
                         onClick={() => onFocusTargetChange('B')}
-                        className={`rounded-[2rem] py-2.5 font-mono text-[8px] font-black uppercase tracking-wide ${
+                        className={`rounded-full py-2.5 font-mono text-[8px] font-black uppercase tracking-wide ${
                           focusTarget === 'B'
                             ? 'bg-blue-500/35 text-white'
                             : 'bg-white/5 text-white/65 hover:bg-white/10'
@@ -673,7 +673,7 @@ export function MediatorSidebar({
                   type="button"
                   onClick={() => setParoleWheelExpanded((v) => !v)}
                   aria-expanded={paroleWheelExpanded}
-                  className="flex w-full items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.07]"
+                  className="flex w-full items-center justify-between gap-2 rounded-3xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.07]"
                 >
                   <div className="min-w-0">
                     <h3 className="font-mono text-[10px] font-semibold tracking-tight text-white/80">
@@ -704,7 +704,7 @@ export function MediatorSidebar({
                         maxSec={600}
                         onChange={onParolePresetSecChange}
                         ariaLabel="Durée du prochain tour de parole"
-                        className="rounded-2xl border border-white/[0.06] bg-white/[0.02] py-3"
+                        className="rounded-3xl border border-white/[0.06] bg-white/[0.02] py-3"
                       />
                     </motion.div>
                   )}
@@ -744,14 +744,14 @@ export function MediatorSidebar({
                                 <button
                                   type="button"
                                   onClick={onStopSpeakingTurn}
-                                  className="rounded-[2.5rem] border border-white/15 bg-white/8 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-white/15"
+                                  className="rounded-full border border-white/15 bg-white/8 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-white/15"
                                 >
                                   Arrêter
                                 </button>
                                 <button
                                   type="button"
                                   onClick={speakingTurnPaused ? onResumeSpeakingTurn : onPauseSpeakingTurn}
-                                  className="rounded-[2.5rem] border border-amber-500/40 bg-amber-500/12 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-amber-100 hover:bg-amber-500/25"
+                                  className="rounded-full border border-amber-500/40 bg-amber-500/12 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-amber-100 hover:bg-amber-500/25"
                                 >
                                   {speakingTurnPaused ? 'Reprendre' : 'Pause'}
                                 </button>
@@ -759,7 +759,7 @@ export function MediatorSidebar({
                               <button
                                 type="button"
                                 onClick={onRestartSpeakingTurn}
-                                className="w-full rounded-[2.5rem] border border-cobalt-500/40 bg-cobalt-600/15 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-cobalt-500/30"
+                                className="w-full rounded-full border border-cobalt-500/40 bg-cobalt-600/15 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-cobalt-500/30"
                               >
                                 Relancer le tour
                               </button>
@@ -769,7 +769,7 @@ export function MediatorSidebar({
                               type="button"
                               disabled={speakingTurnActive}
                               onClick={() => onHotMic(row.slot, parolePresetSec)}
-                              className="flex w-full items-center justify-center rounded-[2.5rem] border border-ember-500/40 bg-ember-500/12 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-ember-50 hover:bg-ember-500/25 disabled:cursor-not-allowed disabled:opacity-35"
+                              className="flex w-full items-center justify-center rounded-full border border-ember-500/40 bg-ember-500/12 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-ember-50 hover:bg-ember-500/25 disabled:cursor-not-allowed disabled:opacity-35"
                             >
                               Lancer parole · {formatParole(parolePresetSec)}
                             </button>
@@ -782,7 +782,7 @@ export function MediatorSidebar({
                               onClick={() =>
                                 lockedOut ? undefined : onSetChallengerMuted(row.sessionId, row.debaterId, !muted)
                               }
-                              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[2.5rem] border px-2 py-2 font-mono text-[10px] font-bold ${
+                              className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border px-2 py-2 font-mono text-[10px] font-bold ${
                                 lockedOut
                                   ? 'cursor-not-allowed border-white/10 bg-black/50 text-white/45'
                                   : muted
@@ -811,7 +811,7 @@ export function MediatorSidebar({
                               type="button"
                               title="Expulser"
                               onClick={() => void onEjectParticipant(row.sessionId)}
-                              className="flex shrink-0 items-center gap-1 rounded-[2.5rem] border border-ember-500/40 bg-ember-500/15 px-3 py-2 font-mono text-[10px] font-bold text-white hover:bg-ember-500/30"
+                              className="flex shrink-0 items-center gap-1 rounded-full border border-ember-500/40 bg-ember-500/15 px-3 py-2 font-mono text-[10px] font-bold text-white hover:bg-ember-500/30"
                             >
                               <UserX className="h-3.5 w-3.5" strokeWidth={1} />
                             </button>
