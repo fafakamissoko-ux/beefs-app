@@ -476,6 +476,7 @@ export function TikTokStyleArena({
 
   const handleAcceptPendingInvite = useCallback(
     async (inviteUserId: string) => {
+      console.log("⚖️ Médiateur : J'accepte l'utilisateur", inviteUserId);
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('beef_participants')
@@ -559,17 +560,33 @@ export function TikTokStyleArena({
           filter: `beef_id=eq.${roomId}`,
         },
         (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
-          const row = payload.new;
-          const uid = row.user_id;
-          const status = row.invite_status;
-          if (typeof uid !== 'string' || uid !== userId) return;
-          if (status !== 'accepted') return;
-          const prev = payload.old?.invite_status;
-          if (prev === 'accepted') return;
-          setAcceptedInviteAlert(true);
+          console.log('📡 SIGNAL REÇU - Changement participant:', payload);
+          const newRow = payload.new;
+          const oldRow = payload.old;
+          const rawUid = newRow.user_id;
+          const rowUserStr =
+            typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
+          const myId = String(userId);
+          if (rowUserStr === myId) {
+            console.log("👤 C'est mon ID ! Statut actuel:", newRow.invite_status);
+            if (newRow.invite_status === 'accepted') {
+              if (oldRow?.invite_status === 'accepted') {
+                console.log('⏭️ Déjà accepted côté old row, skip modale.');
+                return;
+              }
+              console.log('✅ MATCH ! Activation de la modale.');
+              setAcceptedInviteAlert(true);
+            }
+          }
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('📶 spectator_invite_sync SUBSCRIBED', { roomId, userId });
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn('📶 spectator_invite_sync', status);
+        }
+      });
 
     return () => {
       void supabase.removeChannel(ch);
@@ -4883,7 +4900,7 @@ export function TikTokStyleArena({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-[3000] flex items-center justify-center bg-black/90 px-4 backdrop-blur-md"
+            className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/90 px-4 backdrop-blur-md"
             role="dialog"
             aria-modal="true"
             aria-labelledby="mediation-invite-title"
