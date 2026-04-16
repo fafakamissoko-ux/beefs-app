@@ -203,6 +203,8 @@ export function TikTokStyleArena({
   const [mediatorSidebarOpen, setMediatorSidebarOpen] = useState(false);
   const [showGiftPicker, setShowGiftPicker] = useState(false);
   const [showViewerList, setShowViewerList] = useState(false);
+  /** Spectateur promu co-hôte : le médiateur a accepté l’invitation (beef_participants). */
+  const [acceptedInviteAlert, setAcceptedInviteAlert] = useState(false);
 
   // ── AURA "FERVEUR SOCIALE" ──
   const [auraA, setAuraA] = useState(0);
@@ -541,6 +543,38 @@ export function TikTokStyleArena({
       void supabase.removeChannel(ch);
     };
   }, [isHost, roomId, fetchPendingInvites]);
+
+  /** Spectateurs : détecte l’acceptation médiateur sur leur ligne beef_participants. */
+  useEffect(() => {
+    if (!isViewer || !roomId || !userId) return;
+
+    const ch = supabase
+      .channel(`spectator_invite_sync_${roomId}_${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'beef_participants',
+          filter: `beef_id=eq.${roomId}`,
+        },
+        (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
+          const row = payload.new;
+          const uid = row.user_id;
+          const status = row.invite_status;
+          if (typeof uid !== 'string' || uid !== userId) return;
+          if (status !== 'accepted') return;
+          const prev = payload.old?.invite_status;
+          if (prev === 'accepted') return;
+          setAcceptedInviteAlert(true);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [isViewer, roomId, userId]);
 
   const goBuyPoints = useCallback(() => {
     openBuyPointsPage(router);
@@ -4833,6 +4867,58 @@ export function TikTokStyleArena({
                   )}
                 </div>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {acceptedInviteAlert && !beefEnded && (
+          <motion.div
+            key="mediation-table-invite"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[3000] flex items-center justify-center bg-black/90 px-4 backdrop-blur-md"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mediation-invite-title"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="w-full max-w-sm overflow-hidden rounded-3xl border border-cobalt-500/30 bg-gradient-to-b from-[#0c0c0f] to-black p-6 text-center shadow-[0_0_80px_rgba(59,130,246,0.15)]"
+            >
+              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-cobalt-500/20">
+                <span className="text-4xl" aria-hidden>
+                  ⚖️
+                </span>
+              </div>
+              <h2
+                id="mediation-invite-title"
+                className="mb-2 font-mono text-xl font-black uppercase tracking-tight text-white"
+              >
+                Invitation à la médiation
+              </h2>
+              <p className="mb-6 text-sm text-white/60">
+                Le médiateur souhaite t&apos;entendre. Installe-toi à la table des échanges en préparant ta caméra et
+                ton micro.
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="w-full rounded-2xl bg-cobalt-500 py-3.5 font-mono text-sm font-black uppercase tracking-wider text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-transform hover:bg-cobalt-400 active:scale-95"
+              >
+                Prendre place
+              </button>
+              <button
+                type="button"
+                onClick={() => setAcceptedInviteAlert(false)}
+                className="mt-3 text-xs font-semibold text-white/40 hover:text-white/80"
+              >
+                Annuler et rester spectateur
+              </button>
             </motion.div>
           </motion.div>
         )}
