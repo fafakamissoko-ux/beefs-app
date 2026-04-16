@@ -3415,11 +3415,11 @@ export function TikTokStyleArena({
                       <>
                         <motion.div
                           aria-hidden
-                          className="pointer-events-none absolute inset-0 z-[5] rounded-l-3xl lg:rounded-3xl border-2 border-cobalt-400/80"
+                          className="pointer-events-none absolute -inset-[2px] z-[5] rounded-l-3xl lg:rounded-3xl"
                           animate={{
                             boxShadow:
                               auraA > 0
-                                ? `0 0 ${30 + auraA * 1.5}px rgba(59,130,246,${Math.min(0.95, 0.38 + auraA / 120)}), 0 0 ${56 + auraA * 1.2}px rgba(59,130,246,${Math.min(0.55, 0.16 + auraA / 100)})`
+                                ? `0 0 ${20 + auraA}px rgba(59,130,246,${Math.min(1, 0.4 + auraA / 100)})`
                                 : 'none',
                           }}
                           transition={{ type: 'tween', duration: 0.35 }}
@@ -3436,11 +3436,11 @@ export function TikTokStyleArena({
                       <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
                         <motion.div
                           aria-hidden
-                          className="pointer-events-none absolute inset-0 z-[2] rounded-l-3xl lg:rounded-3xl border-2 border-cobalt-400/40"
+                          className="pointer-events-none absolute -inset-[2px] z-[2] rounded-l-3xl lg:rounded-3xl"
                           animate={{
                             boxShadow:
                               auraA > 0
-                                ? `0 0 ${24 + auraA * 1.2}px rgba(59,130,246,${Math.min(0.85, 0.28 + auraA / 130)}), 0 0 ${48 + auraA}px rgba(59,130,246,${Math.min(0.45, 0.12 + auraA / 110)})`
+                                ? `0 0 ${20 + auraA}px rgba(59,130,246,${Math.min(1, 0.4 + auraA / 100)})`
                                 : 'none',
                           }}
                           transition={{ type: 'tween', duration: 0.35 }}
@@ -3578,36 +3578,50 @@ export function TikTokStyleArena({
               {/* CENTER — Médiateur : hit targets seulement sur la bulle et le badge (évite de bloquer micro/cam des challengers) */}
               <div className="pointer-events-none absolute left-1/2 top-1/2 z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
                 <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                   className="pointer-events-none flex flex-col items-center gap-2"
                 >
-                  <div className="relative">
+                  <div className="relative flex items-center justify-center">
                     <AnimatePresence>
                       {mediatorNeonAudio && (
                         <motion.div
                           key="mediator-gold-aura"
-                          initial={{ opacity: 0, scale: 0.92 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
+                          initial={{ scale: 0.92 }}
+                          animate={{ scale: 1 }}
+                          exit={{ scale: 0.95 }}
                           className="pointer-events-none absolute -inset-4 rounded-full sm:-inset-5"
                           aria-hidden
                         >
-                          {/* Ondes sonores discrètes — or / ambre (médiateur) */}
+                          {/* Ondes — uniquement lueurs (pas de ring/border) pour ne pas assombrir la vidéo */}
                           <motion.div
-                            className="absolute inset-0 rounded-full ring-1 ring-prestige-gold/25 shadow-prestige-ring"
-                            animate={{ scale: [1, 1.12, 1], opacity: [0.45, 0, 0.45] }}
+                            className="absolute inset-0 rounded-full"
+                            animate={{
+                              scale: [1, 1.12, 1],
+                              boxShadow: [
+                                '0 0 18px rgba(255,200,60,0.2)',
+                                '0 0 32px rgba(255,200,60,0.38)',
+                                '0 0 18px rgba(255,200,60,0.2)',
+                              ],
+                            }}
                             transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
                           />
                           <motion.div
-                            className="absolute inset-0 rounded-full ring-1 ring-prestige-gold/20 shadow-glow"
-                            animate={{ scale: [1, 1.2, 1], opacity: [0.35, 0, 0.35] }}
+                            className="absolute inset-0 rounded-full"
+                            animate={{
+                              scale: [1, 1.2, 1],
+                              boxShadow: [
+                                '0 0 14px rgba(255,200,60,0.15)',
+                                '0 0 40px rgba(255,200,60,0.32)',
+                                '0 0 14px rgba(255,200,60,0.15)',
+                              ],
+                            }}
                             transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.35 }}
                           />
                           <motion.div
-                            className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_40%,rgba(255,200,60,0.22)_0%,rgba(255,200,60,0.08)_45%,transparent_72%)]"
+                            className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_40%,rgba(255,200,60,0.14)_0%,rgba(255,200,60,0.05)_45%,transparent_72%)]"
                             animate={{
-                              opacity: [0.22, 0.38, 0.22],
                               scale: [1, 1.04, 1],
                             }}
                             transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
@@ -3626,22 +3640,36 @@ export function TikTokStyleArena({
                         </motion.div>
                       )}
                     </AnimatePresence>
+                    {mediatorMicEnabled && (
+                      <motion.div
+                        aria-hidden
+                        className="pointer-events-none absolute -inset-2 z-[6] rounded-full"
+                        animate={{
+                          boxShadow: [
+                            '0 0 16px rgba(255,200,60,0.35)',
+                            '0 0 36px rgba(255,200,60,0.58)',
+                            '0 0 16px rgba(255,200,60,0.35)',
+                          ],
+                        }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                    )}
                     <MediatorSupportHalo burstKey={supportBurst.M} />
                     <button
                       type="button"
                       onClick={() => emitTapSupport('M')}
                       aria-label="Envoyer du soutien au médiateur"
-                      className={`pointer-events-auto relative flex h-24 w-24 sm:h-32 sm:w-32 lg:h-[min(170px,32dvh)] lg:w-[min(170px,32dvh)] shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-prestige-gold bg-prestige-gold text-4xl text-black shadow-glow ring-2 ring-prestige-gold/40 transition-transform active:scale-[0.98] touch-manipulation ${auraFeverMed ? 'saturate-150 brightness-110' : ''} ${mediatorMicEnabled ? 'animate-pulse shadow-[0_0_40px_rgba(251,191,36,0.6)]' : ''}`}
+                      className={`pointer-events-auto relative z-10 flex h-24 w-24 sm:h-32 sm:w-32 lg:h-[min(170px,32dvh)] lg:w-[min(170px,32dvh)] shrink-0 items-center justify-center overflow-hidden rounded-full bg-prestige-gold text-4xl text-black shadow-[0_0_28px_rgba(255,200,60,0.45),0_12px_40px_rgba(0,0,0,0.35)] transition-transform active:scale-[0.98] touch-manipulation ${auraFeverMed ? 'saturate-150 brightness-110' : ''}`}
                     >
                       {mediatorParticipant?.videoTrack ? (
                         <>
                           <motion.div
                             aria-hidden
-                            className="pointer-events-none absolute inset-0 z-[5] rounded-full border-2 border-[rgba(255,200,60,0.65)]"
+                            className="pointer-events-none absolute -inset-[2px] z-[5] rounded-full"
                             animate={{
                               boxShadow:
                                 auraMed > 0
-                                  ? `0 0 ${30 + auraMed * 1.5}px rgba(255,200,60,${Math.min(0.92, 0.4 + auraMed / 120)}), 0 0 ${56 + auraMed * 1.2}px rgba(255,200,60,${Math.min(0.52, 0.17 + auraMed / 100)})`
+                                  ? `0 0 ${20 + auraMed}px rgba(255,200,60,${Math.min(1, 0.4 + auraMed / 100)})`
                                   : 'none',
                             }}
                             transition={{ type: 'tween', duration: 0.35 }}
@@ -3844,11 +3872,11 @@ export function TikTokStyleArena({
                       <>
                         <motion.div
                           aria-hidden
-                          className="pointer-events-none absolute inset-0 z-[5] rounded-r-3xl lg:rounded-3xl border-2 border-emerald-400/80"
+                          className="pointer-events-none absolute -inset-[2px] z-[5] rounded-r-3xl lg:rounded-3xl"
                           animate={{
                             boxShadow:
                               auraB > 0
-                                ? `0 0 ${30 + auraB * 1.5}px rgba(16,185,129,${Math.min(0.95, 0.38 + auraB / 120)}), 0 0 ${56 + auraB * 1.2}px rgba(16,185,129,${Math.min(0.55, 0.16 + auraB / 100)})`
+                                ? `0 0 ${20 + auraB}px rgba(16,185,129,${Math.min(1, 0.4 + auraB / 100)})`
                                 : 'none',
                           }}
                           transition={{ type: 'tween', duration: 0.35 }}
@@ -3865,11 +3893,11 @@ export function TikTokStyleArena({
                       <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
                         <motion.div
                           aria-hidden
-                          className="pointer-events-none absolute inset-0 z-[2] rounded-r-3xl lg:rounded-3xl border-2 border-emerald-400/40"
+                          className="pointer-events-none absolute -inset-[2px] z-[2] rounded-r-3xl lg:rounded-3xl"
                           animate={{
                             boxShadow:
                               auraB > 0
-                                ? `0 0 ${24 + auraB * 1.2}px rgba(16,185,129,${Math.min(0.85, 0.28 + auraB / 130)}), 0 0 ${48 + auraB}px rgba(16,185,129,${Math.min(0.45, 0.12 + auraB / 110)})`
+                                ? `0 0 ${20 + auraB}px rgba(16,185,129,${Math.min(1, 0.4 + auraB / 100)})`
                                 : 'none',
                           }}
                           transition={{ type: 'tween', duration: 0.35 }}
