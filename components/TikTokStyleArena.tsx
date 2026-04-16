@@ -3419,7 +3419,7 @@ export function TikTokStyleArena({
                         className="pointer-events-none absolute inset-0 h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-cobalt-500/10">
+                      <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-cobalt-500/10">
                         <span className="text-5xl font-black text-white/80">
                           {leftPanel ? leftPanelName[0].toUpperCase() : '👤'}
                         </span>
@@ -3616,7 +3616,7 @@ export function TikTokStyleArena({
                           className="pointer-events-none absolute inset-0 h-full w-full rounded-full object-cover"
                         />
                       ) : (
-                        <span className="font-mono text-3xl font-black text-white md:text-4xl">
+                        <span className="pointer-events-none absolute inset-0 flex h-full w-full min-h-0 items-center justify-center font-mono text-3xl font-black text-white md:text-4xl">
                           {mediatorName?.[0]?.toUpperCase() || '·'}
                         </span>
                       )}
@@ -3828,7 +3828,7 @@ export function TikTokStyleArena({
                         className="pointer-events-none absolute inset-0 h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-ember-500/10">
+                      <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-ember-500/10">
                         <span className="text-5xl font-black text-white/80">
                           {rightPanel ? rightPanelName[0].toUpperCase() : '👤'}
                         </span>
@@ -3993,9 +3993,11 @@ export function TikTokStyleArena({
                   {debaters[0].name} ({pulseVoicesA})
                 </button>
               </div>
-              <div className={`absolute inset-0 flex items-center justify-center bg-cobalt-500/10 text-5xl font-black text-white/80 ${
-                speakingTurnTarget === debaters[0]?.id ? 'ring-2 ring-inset ring-cobalt-400' : ''
-              }`}>
+              <div
+                className={`absolute inset-0 flex h-full min-h-0 w-full items-center justify-center bg-cobalt-500/10 text-5xl font-black text-white/80 ${
+                  speakingTurnTarget === debaters[0]?.id ? 'ring-2 ring-inset ring-cobalt-400' : ''
+                }`}
+              >
                 👤
               </div>
               <AnimatePresence>
@@ -4030,8 +4032,8 @@ export function TikTokStyleArena({
               </AnimatePresence>
             </div>
           ) : (
-            <div className="pointer-events-auto relative flex-1 overflow-hidden bg-[#08080A] lg:rounded-2xl">
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-cobalt-500/5">
+            <div className="pointer-events-auto relative flex min-h-0 h-full min-w-0 flex-1 overflow-hidden bg-[#08080A] rounded-l-xl border-r border-white/20 lg:rounded-2xl">
+              <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-cobalt-500/5">
                 <motion.div 
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
@@ -4101,9 +4103,11 @@ export function TikTokStyleArena({
                   {debaters[1].name} ({pulseVoicesB})
                 </button>
               </div>
-              <div className={`absolute inset-0 flex items-center justify-center bg-ember-500/10 text-5xl font-black text-white/80 ${
-                speakingTurnTarget === debaters[1]?.id ? 'ring-2 ring-inset ring-ember-400' : ''
-              }`}>
+              <div
+                className={`absolute inset-0 flex h-full min-h-0 w-full items-center justify-center bg-ember-500/10 text-5xl font-black text-white/80 ${
+                  speakingTurnTarget === debaters[1]?.id ? 'ring-2 ring-inset ring-ember-400' : ''
+                }`}
+              >
                 👤
               </div>
               <AnimatePresence>
@@ -4138,8 +4142,8 @@ export function TikTokStyleArena({
               </AnimatePresence>
             </div>
           ) : (
-            <div className="pointer-events-auto relative flex-1 overflow-hidden border-l border-white/20 bg-[#08080A] lg:rounded-2xl">
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-ember-500/5">
+            <div className="pointer-events-auto relative flex min-h-0 h-full min-w-0 flex-1 overflow-hidden rounded-r-xl border-l border-white/10 bg-[#08080A] lg:rounded-2xl">
+              <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-ember-500/5">
                 <motion.div 
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
