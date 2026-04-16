@@ -28,7 +28,7 @@ export default function CreateBeefPage() {
     if (!user) {
       const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
       if (hasSeenOnboarding !== 'true') {
-        router.push('/onboarding');
+        router.push('/welcome');
         return;
       }
       router.push('/login');

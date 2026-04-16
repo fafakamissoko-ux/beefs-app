@@ -102,6 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           display_name: username,
           points: 0,
           is_verified: false,
+          needs_arena_username: false,
         });
       }
 

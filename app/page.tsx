@@ -31,26 +31,30 @@ export default function SplashScreen() {
       const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
 
       if (session?.user) {
-        // Check if user is newly created (less than 5 minutes old)
         const { data: userData } = await supabase
           .from('users')
-          .select('created_at')
+          .select('created_at, needs_arena_username')
           .eq('id', session.user.id)
-          .single();
-        
-        const isNewUser = userData?.created_at 
-          ? (new Date().getTime() - new Date(userData.created_at).getTime()) < 5 * 60 * 1000
+          .maybeSingle();
+
+        if (userData?.needs_arena_username === true) {
+          router.push('/onboarding');
+          return;
+        }
+
+        const isNewUser = userData?.created_at
+          ? new Date().getTime() - new Date(userData.created_at).getTime() < 5 * 60 * 1000
           : false;
 
         if (isNewUser && hasSeenOnboarding !== 'true') {
-          router.push('/onboarding');
+          router.push('/welcome');
         } else {
-          router.push('/feed'); // Redirect to Feed Découverte
+          router.push('/feed');
         }
       } else if (hasSeenOnboarding === 'true') {
         router.push('/login');
       } else {
-        router.push('/onboarding');
+        router.push('/welcome');
       }
     }, 2000);
 

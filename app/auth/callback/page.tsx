@@ -3,6 +3,7 @@
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
+import { ensurePublicUserProfile } from '@/lib/ensure-public-user-profile';
 
 function AuthCallbackInner() {
   const router = useRouter();
@@ -38,6 +39,19 @@ function AuthCallbackInner() {
         if (sessionError || !session) {
           console.error('Auth callback session:', sessionError);
           router.replace('/login?error=verification_failed');
+          return;
+        }
+
+        await ensurePublicUserProfile(supabase, session.user);
+
+        const { data: profile, error: profileErr } = await supabase
+          .from('users')
+          .select('needs_arena_username')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (!profileErr && profile?.needs_arena_username === true) {
+          router.replace('/onboarding');
           return;
         }
 

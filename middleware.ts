@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware';
 
 // Simple in-memory rate limiter for API routes
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
@@ -76,7 +77,14 @@ function canonicalHostRedirect(request: NextRequest): NextResponse | null {
   return null;
 }
 
-export function middleware(request: NextRequest) {
+function pathRequiresArenaProfile(pathname: string): boolean {
+  if (pathname === '/feed' || pathname.startsWith('/feed/')) return true;
+  if (pathname.startsWith('/live/')) return true;
+  if (pathname.startsWith('/arena/')) return true;
+  return false;
+}
+
+export async function middleware(request: NextRequest) {
   const hostRedirect = canonicalHostRedirect(request);
   if (hostRedirect) return hostRedirect;
 
@@ -115,7 +123,47 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  const { supabase, response } = createSupabaseMiddlewareClient(request);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (pathname === '/onboarding') {
+    if (!user) {
+      const login = request.nextUrl.clone();
+      login.pathname = '/login';
+      login.searchParams.set('next', '/onboarding');
+      return NextResponse.redirect(login);
+    }
+    const { data: row, error } = await supabase
+      .from('users')
+      .select('needs_arena_username')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (!error && row && row.needs_arena_username === false) {
+      const feed = request.nextUrl.clone();
+      feed.pathname = '/feed';
+      feed.search = '';
+      return NextResponse.redirect(feed);
+    }
+    return response;
+  }
+
+  if (user && pathRequiresArenaProfile(pathname)) {
+    const { data: row, error } = await supabase
+      .from('users')
+      .select('needs_arena_username')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (!error && row?.needs_arena_username === true) {
+      const onboard = request.nextUrl.clone();
+      onboard.pathname = '/onboarding';
+      onboard.search = '';
+      return NextResponse.redirect(onboard);
+    }
+  }
+
+  return response;
 }
 
 export const config = {

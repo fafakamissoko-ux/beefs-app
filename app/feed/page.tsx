@@ -13,6 +13,7 @@ import { FeatureGuide } from '@/components/FeatureGuide';
 import { submitNewBeef } from '@/lib/submitNewBeef';
 import type { SubmitBeefPayload } from '@/lib/submitNewBeef';
 import { hrefWithFrom } from '@/lib/navigation-return';
+import { useClientArenaOnboardingGuard } from '@/lib/client-arena-onboarding-guard';
 
 const CreateBeefForm = dynamic(() => import('@/components/CreateBeefForm').then(m => m.CreateBeefForm), {
   loading: () => <div className="flex items-center justify-center p-8"><div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>,
@@ -102,6 +103,7 @@ export default function FeedPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
+  useClientArenaOnboardingGuard(user?.id);
   const { toast } = useToast();
   const [beefs, setBeefs] = useState<Beef[]>([]);
   const [loading, setLoading] = useState(true);
@@ -479,7 +481,7 @@ export default function FeedPage() {
   useEffect(() => {
     if (!user) {
       const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-      if (hasSeenOnboarding !== 'true') { router.push('/onboarding'); return; }
+      if (hasSeenOnboarding !== 'true') { router.push('/welcome'); return; }
       router.push('/login');
       return;
     }

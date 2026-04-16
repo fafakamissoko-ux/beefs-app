@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { Clock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { normalizeBeefId } from '@/lib/beef-id';
+import { useClientArenaOnboardingGuard } from '@/lib/client-arena-onboarding-guard';
 
 export default function ArenaPage() {
   const params = useParams();
@@ -47,6 +48,8 @@ export default function ArenaPage() {
   const [hasPaidContinuation, setHasPaidContinuation] = useState(false);
   /** Évite de monter l’arène avec rôle « viewer » par défaut + mauvais host.id avant chargement du beef. */
   const [arenaReady, setArenaReady] = useState(false);
+
+  useClientArenaOnboardingGuard(userId || null);
 
   useEffect(() => {
     if (roomIdParam.trim() !== '' && !roomId) {

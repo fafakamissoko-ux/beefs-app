@@ -13,10 +13,21 @@ function isRoomImmersiveRoute(pathname: string | null): boolean {
   return /^\/arena\/[^/]+/.test(pathname) || /^\/live\/[^/]+/.test(pathname);
 }
 
+/** Pages plein écran sans chrome app (sas pseudo, carrousel d’accueil). */
+function isStandalonePublicPage(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return pathname === '/onboarding' || pathname === '/welcome';
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const fullWidthShell = pathname?.startsWith('/admin') ?? false;
   const roomImmersive = isRoomImmersiveRoute(pathname ?? null);
+  const standalone = isStandalonePublicPage(pathname ?? null);
+
+  if (standalone) {
+    return <>{children}</>;
+  }
 
   if (fullWidthShell) {
     return (

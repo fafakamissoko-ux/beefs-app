@@ -50,6 +50,7 @@ export async function ensurePublicUserProfile(supabase: SupabaseClient, user: Us
       display_name,
       points: 0,
       is_verified: !!user.email_confirmed_at,
+      needs_arena_username: true,
     });
 
     if (error) {
@@ -63,6 +64,7 @@ export async function ensurePublicUserProfile(supabase: SupabaseClient, user: Us
         display_name,
         points: 0,
         is_verified: !!user.email_confirmed_at,
+        needs_arena_username: true,
       });
       if (e2) console.error('[ensurePublicUserProfile] insert', e2);
     }

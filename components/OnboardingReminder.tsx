@@ -87,7 +87,7 @@ export function OnboardingReminder() {
 
   const handleViewOnboarding = () => {
     setShowReminder(false);
-    router.push('/onboarding');
+    router.push('/welcome');
   };
 
   if (!showReminder) return null;
