@@ -1008,105 +1008,10 @@ export function TikTokStyleArena({
     ? 'shadow-[0_0_32px_rgba(212,175,55,0.25),inset_0_0_18px_rgba(212,175,55,0.08)]'
     : '';
 
-  /** Pas de bulles « onboarding » quand la salle est déjà active ou pendant la connexion Daily */
-  const featureGuideSuppress =
-    isJoining ||
-    (isJoined && (remoteParticipants.length > 0 || timerActive));
-
   useEffect(() => {
     challengersEverJoinedRef.current = false;
     autoLiveSyncedRef.current = false;
   }, [roomId]);
-
-  // Track when mediator has actually connected at least once
-  useEffect(() => {
-    if (!isJoined || isHost) return;
-    const mediatorPresent = remoteParticipants.some(p =>
-      remoteMatchesMediator(p, host.id, host.name),
-    );
-    if (mediatorPresent) {
-      mediatorWasConnectedRef.current = true;
-    }
-  }, [remoteParticipants, isJoined, isHost, host.id, host.name]);
-
-  // If current user IS the mediator and joined, mark as connected
-  useEffect(() => {
-    if (isHost && isJoined) {
-      mediatorWasConnectedRef.current = true;
-    }
-  }, [isHost, isJoined]);
-
-  // Médiateur : mémoriser qu’un challenger invité est réellement entré dans la room (userData UUID + alias profil)
-  useEffect(() => {
-    if (!isHost || !isJoined) return;
-    const expectedChallengerSlots = Object.keys(participantRoles).filter(uid => uid !== host.id);
-    if (expectedChallengerSlots.length === 0) return;
-    const anyChallengerPresent = remoteParticipants.some(p =>
-      matchRemoteToExpectedBeefParticipant(p, host.id, host.name, participantRoles) !== null,
-    );
-    if (anyChallengerPresent) {
-      challengersEverJoinedRef.current = true;
-    }
-  }, [isHost, isJoined, remoteParticipants, participantRoles, host.id, host.name]);
-
-  // ── AUTO-END: Detect mediator or all challengers leaving ──
-  useEffect(() => {
-    if (!isJoined || beefEndedRef.current) return;
-
-    const challengerUserIds = Object.keys(participantRoles);
-
-    const mediatorPresent =
-      isHost || remoteParticipants.some(p => remoteMatchesMediator(p, host.id, host.name));
-
-    if (!mediatorPresent && !isHost && mediatorWasConnectedRef.current) {
-      // Médiateur absent : avertissement + décompte — on ne termine **pas** le beef depuis un client non-hôte
-      // (sinon navigation / onglet achat / coupure réseau court-circuitent le direct à tort).
-      if (!mediatorGraceRef.current && !mediatorGraceActive) {
-        setMediatorGraceActive(true);
-        setMediatorGraceSeconds(90);
-
-        const countdown = setInterval(() => {
-          setMediatorGraceSeconds(prev => {
-            if (prev <= 1) {
-              clearInterval(countdown);
-              mediatorGraceRef.current = null;
-              setMediatorGraceActive(false);
-              toast(
-                'Le médiateur est toujours absent — le direct reste ouvert jusqu’à son retour ou la fin côté médiateur.',
-                'info',
-              );
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        mediatorGraceRef.current = countdown;
-      }
-    } else if (mediatorPresent && mediatorGraceRef.current) {
-      // Mediator reconnected — cancel grace period
-      clearInterval(mediatorGraceRef.current);
-      mediatorGraceRef.current = null;
-      setMediatorGraceActive(false);
-      setMediatorGraceSeconds(0);
-      toast('Le médiateur est de retour', 'success');
-    }
-
-    // Challengers partis, médiateur toujours présent : ne pas terminer le beef — notification unique.
-    if (
-      isHost &&
-      challengerUserIds.length > 0 &&
-      challengersEverJoinedRef.current &&
-      remoteParticipants.length === 0 &&
-      isJoined
-    ) {
-      if (!challengersAllLeftNotifiedRef.current) {
-        challengersAllLeftNotifiedRef.current = true;
-        toast('Les challengers ont quitté la room — le direct continue. Tu peux terminer le beef depuis la régie.', 'info');
-      }
-    } else if (remoteParticipants.length > 0) {
-      challengersAllLeftNotifiedRef.current = false;
-    }
-  }, [remoteParticipants, isJoined, isHost, host.id, host.name, participantRoles, mediatorGraceActive, toast]);
 
   // Mediator leaving triggers endBeef
   const handleLeaveAsMediator = useCallback(async () => {
@@ -1298,6 +1203,101 @@ export function TikTokStyleArena({
   useEffect(() => {
     leaveRef.current = leave;
   }, [leave]);
+
+  /** Pas de bulles « onboarding » quand la salle est déjà active ou pendant la connexion Daily */
+  const featureGuideSuppress =
+    isJoining ||
+    (isJoined && (remoteParticipants.length > 0 || timerActive));
+
+  // Track when mediator has actually connected at least once
+  useEffect(() => {
+    if (!isJoined || isHost) return;
+    const mediatorPresent = remoteParticipants.some(p =>
+      remoteMatchesMediator(p, host.id, host.name),
+    );
+    if (mediatorPresent) {
+      mediatorWasConnectedRef.current = true;
+    }
+  }, [remoteParticipants, isJoined, isHost, host.id, host.name]);
+
+  // If current user IS the mediator and joined, mark as connected
+  useEffect(() => {
+    if (isHost && isJoined) {
+      mediatorWasConnectedRef.current = true;
+    }
+  }, [isHost, isJoined]);
+
+  // Médiateur : mémoriser qu’un challenger invité est réellement entré dans la room (userData UUID + alias profil)
+  useEffect(() => {
+    if (!isHost || !isJoined) return;
+    const expectedChallengerSlots = Object.keys(participantRoles).filter(uid => uid !== host.id);
+    if (expectedChallengerSlots.length === 0) return;
+    const anyChallengerPresent = remoteParticipants.some(p =>
+      matchRemoteToExpectedBeefParticipant(p, host.id, host.name, participantRoles) !== null,
+    );
+    if (anyChallengerPresent) {
+      challengersEverJoinedRef.current = true;
+    }
+  }, [isHost, isJoined, remoteParticipants, participantRoles, host.id, host.name]);
+
+  // ── AUTO-END: Detect mediator or all challengers leaving ──
+  useEffect(() => {
+    if (!isJoined || beefEndedRef.current) return;
+
+    const challengerUserIds = Object.keys(participantRoles);
+
+    const mediatorPresent =
+      isHost || remoteParticipants.some(p => remoteMatchesMediator(p, host.id, host.name));
+
+    if (!mediatorPresent && !isHost && mediatorWasConnectedRef.current) {
+      // Médiateur absent : avertissement + décompte — on ne termine **pas** le beef depuis un client non-hôte
+      // (sinon navigation / onglet achat / coupure réseau court-circuitent le direct à tort).
+      if (!mediatorGraceRef.current && !mediatorGraceActive) {
+        setMediatorGraceActive(true);
+        setMediatorGraceSeconds(90);
+
+        const countdown = setInterval(() => {
+          setMediatorGraceSeconds(prev => {
+            if (prev <= 1) {
+              clearInterval(countdown);
+              mediatorGraceRef.current = null;
+              setMediatorGraceActive(false);
+              toast(
+                'Le médiateur est toujours absent — le direct reste ouvert jusqu’à son retour ou la fin côté médiateur.',
+                'info',
+              );
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        mediatorGraceRef.current = countdown;
+      }
+    } else if (mediatorPresent && mediatorGraceRef.current) {
+      // Mediator reconnected — cancel grace period
+      clearInterval(mediatorGraceRef.current);
+      mediatorGraceRef.current = null;
+      setMediatorGraceActive(false);
+      setMediatorGraceSeconds(0);
+      toast('Le médiateur est de retour', 'success');
+    }
+
+    // Challengers partis, médiateur toujours présent : ne pas terminer le beef — notification unique.
+    if (
+      isHost &&
+      challengerUserIds.length > 0 &&
+      challengersEverJoinedRef.current &&
+      remoteParticipants.length === 0 &&
+      isJoined
+    ) {
+      if (!challengersAllLeftNotifiedRef.current) {
+        challengersAllLeftNotifiedRef.current = true;
+        toast('Les challengers ont quitté la room — le direct continue. Tu peux terminer le beef depuis la régie.', 'info');
+      }
+    } else if (remoteParticipants.length > 0) {
+      challengersAllLeftNotifiedRef.current = false;
+    }
+  }, [remoteParticipants, isJoined, isHost, host.id, host.name, participantRoles, mediatorGraceActive, toast]);
 
   // Auto-join quand « Rejoindre » + URL Daily ; spectateur : attendre GET access (jeton).
   useEffect(() => {
