@@ -351,7 +351,11 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
 
             {/* Desktop Nav — liens app uniquement si connecté (sinon préfetch RSC ×6 → échecs Brave / Safari / réseau) */}
             <nav
-              className={`relative z-[5] hidden min-w-0 md:flex md:items-center md:gap-1 md:flex-1 ${
+              className={`relative z-[5] hidden min-w-0 ${
+                shell === 'full'
+                  ? 'lg:flex lg:items-center lg:gap-1 lg:flex-1'
+                  : 'md:flex md:items-center md:gap-1 md:flex-1'
+              } ${
                 shell === 'phone'
                   ? 'lg:mt-0 lg:w-full lg:flex-col lg:items-stretch lg:gap-2 lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-contain lg:min-h-0'
                   : ''
@@ -362,12 +366,12 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   type="button"
                   aria-label="Ouvrir la recherche"
                   onClick={() => openSearch()}
-                  className={`glass-prestige flex min-h-[44px] w-full max-w-xs shrink-0 items-center gap-3 rounded-[2px] px-4 py-2 text-left transition hover:bg-white/[0.06] ${
+                  className={`glass-prestige flex min-h-[44px] w-full max-w-xs shrink-0 items-center gap-3 rounded-[2px] px-4 py-2 text-left transition hover:bg-white/[0.06] md:max-w-[150px] lg:max-w-[250px] ${
                     shell === 'phone' ? 'lg:mr-0 lg:max-w-none lg:w-full' : ''
                   }`}
                 >
                   <Search className="h-4 w-4 shrink-0 text-gray-500" strokeWidth={1.75} aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-sm text-gray-400">
+                  <span className="min-w-0 truncate text-sm text-gray-400 md:hidden lg:inline lg:min-w-0 lg:flex-1">
                     Rechercher un dossier, un médiateur…
                   </span>
                   <SearchKeyboardShortcut />
@@ -392,7 +396,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         <Icon className={`w-[18px] h-[18px] ${active && (item.href === '/live' || item.href === '/points') ? 'text-brand-400' : ''}`} />
                         <NavUnreadBadge href={item.href} count={item.badge} />
                       </div>
-                      <span>{item.label}</span>
+                      <span className="md:hidden lg:inline">{item.label}</span>
                       {active && (
                         <motion.div
                           layoutId="nav-indicator"
@@ -408,9 +412,9 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
 
             {/* Right — bas de sidebar (lg+) */}
             <div
-              className={`relative z-[5] hidden shrink-0 md:flex md:items-center md:gap-2 ${
-                shell === 'phone' ? 'lg:mt-auto lg:w-full lg:flex-col lg:items-stretch lg:gap-4' : ''
-              }`}
+              className={`relative z-[5] hidden shrink-0 ${
+                shell === 'full' ? 'lg:flex lg:items-center lg:gap-2' : 'md:flex md:items-center md:gap-2'
+              } ${shell === 'phone' ? 'lg:mt-auto lg:w-full lg:flex-col lg:items-stretch lg:gap-4' : ''}`}
             >
               {user ? (
                 <>
@@ -422,7 +426,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                     }`}
                   >
                     <Swords className="h-4 w-4" aria-hidden />
-                    <span>Initier</span>
+                    <span className="md:hidden lg:inline">Initier</span>
                   </Link>
 
                   <div className="relative" data-user-menu>
