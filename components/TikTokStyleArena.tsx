@@ -1287,7 +1287,7 @@ export function TikTokStyleArena({
   useEffect(() => {
     if (!isViewer) return;
     fetchViewerAccess();
-    const id = setInterval(fetchViewerAccess, 8000);
+    const id = setInterval(fetchViewerAccess, 30_000);
     const onVis = () => {
       if (document.visibilityState === 'visible') fetchViewerAccess();
     };

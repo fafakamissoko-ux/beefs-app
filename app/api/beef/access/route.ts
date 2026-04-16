@@ -10,14 +10,23 @@ const supabaseAdmin = createClient(
 
 async function getAuthUser(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
-  if (!authHeader) return null;
-  const supabaseAuth = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
-  const { data: { user } } = await supabaseAuth.auth.getUser();
-  return user;
+  if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.length < 15) return null;
+
+  try {
+    const supabaseAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const {
+      data: { user },
+      error,
+    } = await supabaseAuth.auth.getUser();
+    if (error || !user) return null;
+    return user;
+  } catch {
+    return null;
+  }
 }
 
 function beefIdFromSearchParams(searchParams: URLSearchParams): string | null {
