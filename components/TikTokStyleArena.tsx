@@ -335,6 +335,7 @@ export function TikTokStyleArena({
     const el = reactionDockRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
+    if (r.width < 4 && r.height < 4) return;
     setDockPickerPos({
       bottom: Math.max(8, window.innerHeight - r.top + 8),
       right: Math.max(8, window.innerWidth - r.right),
@@ -4407,15 +4408,14 @@ export function TikTokStyleArena({
       {/* ── Dock social : top-[60%] aligné sur la zone vidéo — pas de chevauchement avec micro/cam (z vidéo > dock) ── */}
       {!beefEnded && (
         <div className="pointer-events-none absolute bottom-0 z-[55] flex min-h-0 flex-col justify-end overflow-visible max-lg:inset-x-0 max-lg:w-full max-lg:top-[60%] landscape:top-auto landscape:bottom-0 landscape:h-[120px] lg:inset-x-0 lg:top-auto lg:h-[35vh] lg:px-6">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
           <div
-            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+            className="grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_auto_auto] gap-y-2 overflow-hidden lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(12.5rem,15rem)] lg:grid-rows-[minmax(0,1fr)_auto] lg:gap-x-6 lg:gap-y-0"
             aria-live="polite"
           >
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div
             ref={chatMessagesScrollRef}
-            className="min-h-0 min-w-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:min-h-0 max-lg:max-h-[min(30svh,240px)] max-lg:flex-1 max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
+            className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:row-start-1 max-lg:min-h-0 max-lg:max-h-[min(30svh,240px)] max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] lg:col-start-1 lg:row-start-1 lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -4431,13 +4431,19 @@ export function TikTokStyleArena({
                   key={message.id}
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="relative flex max-w-full items-start gap-1.5"
+                  className="relative mb-3 flex max-w-full flex-col"
                 >
-                  <div className="pointer-events-none flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt-500/90 to-ember-500/90 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_4px_14px_rgba(0,0,0,0.35)]">
-                    <span className="text-[9px] font-bold text-white">{message.initial}</span>
+                  <div className="mb-1 flex items-baseline gap-2 pl-1">
+                    <ProfileUserLink
+                      username={message.user_name}
+                      onArenaProfileClick={(q) => void openProfile(q, undefined)}
+                      className="text-[10px] font-bold uppercase tracking-wider text-white/50"
+                    >
+                      {message.user_name}
+                    </ProfileUserLink>
                   </div>
                   <div
-                    className={`pointer-events-auto max-w-[calc(100%-2rem)] rounded-3xl bg-[#08080a]/55 px-2 py-1 shadow-[0_6px_24px_rgba(0,0,0,0.4)] backdrop-blur-2xl ${
+                    className={`relative inline-block max-w-[min(100%,28rem)] self-start rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-2 text-sm leading-relaxed text-white/90 shadow-[0_4px_30px_rgba(0,0,0,0.1)] backdrop-blur-md ${
                       canDelete ? 'cursor-context-menu touch-manipulation' : ''
                     }`}
                     onContextMenu={
@@ -4462,16 +4468,7 @@ export function TikTokStyleArena({
                     onTouchEnd={canDelete ? clearLongPress : undefined}
                     onTouchMove={canDelete ? clearLongPress : undefined}
                   >
-                    <ProfileUserLink
-                      username={message.user_name}
-                      onArenaProfileClick={(q) => void openProfile(q, undefined)}
-                      className="block font-mono text-[9px] font-bold uppercase tracking-tight text-[#ffffff] [text-shadow:0_1px_3px_rgba(0,0,0,0.9)] sm:[text-shadow:0_1px_2px_rgba(0,0,0,0.75)]"
-                    >
-                      {message.user_name}
-                    </ProfileUserLink>
-                    <span className="break-words text-[12px] font-medium leading-snug tracking-tight text-[#ffffff] [text-shadow:0_2px_8px_rgba(0,0,0,0.95),0_1px_2px_rgba(0,0,0,0.85)] sm:[text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
-                      {message.content}
-                    </span>
+                    <span className="break-words">{message.content}</span>
                     {contextMenuMsg === message.id && (
                       <div
                         className="absolute bottom-full left-0 z-[50] mb-1 min-w-[8rem] rounded-2xl border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
@@ -4493,60 +4490,10 @@ export function TikTokStyleArena({
             })}
             <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
           </div>
-          <div className="relative z-[130] min-w-0 shrink-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1">
-            <div className="flex min-w-0 items-center gap-2">
-              {isViewer && (
-                <button
-                  type="button"
-                  onClick={() => void handleRaiseHand()}
-                  aria-label="Demander à monter sur le ring"
-                  className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] transition-colors hover:bg-white/[0.12]"
-                >
-                  <span className="text-lg" aria-hidden>
-                    ✋
-                  </span>
-                </button>
-              )}
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    void handleSendMessage();
-                  }
-                }}
-                placeholder="Message..."
-                aria-label="Message dans le chat du direct"
-                autoComplete="off"
-                enterKeyHint="send"
-                className="min-w-0 flex-1 rounded-3xl bg-[#08080a]/65 py-2 pl-2.5 pr-3 text-[13px] font-medium tracking-tight text-white shadow-[0_8px_32px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.04)] placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_24px_rgba(59,130,246,0.22),0_8px_32px_rgba(0,0,0,0.45)]"
-              />
-              <button
-                type="button"
-                disabled={!chatInput.trim()}
-                onClick={() => void handleSendMessage()}
-                aria-label="Envoyer le message"
-                className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-cobalt-500 hover:bg-cobalt-600 disabled:pointer-events-none disabled:opacity-35"
-              >
-                <Send className="h-3.5 w-3.5 text-white" strokeWidth={1} aria-hidden />
-              </button>
-            </div>
-            <FeatureGuide
-              id="arena-chat"
-              title="Chat en direct"
-              description="Envoie des messages visibles par tous les viewers et participants."
-              position="top"
-              suppress={featureGuideSuppress}
-            />
-          </div>
-          </div>
-          </div>
 
           <div
             ref={reactionDockRef}
-            className="relative z-[200] isolate flex max-lg:w-full shrink-0 grow-0 basis-auto flex-row flex-wrap items-center justify-center gap-1 overflow-visible px-1 py-1 max-lg:justify-center lg:w-auto lg:min-w-[12.5rem] lg:max-w-[15rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-end lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+            className="relative z-[200] isolate flex max-lg:row-start-2 max-lg:w-full max-lg:shrink-0 max-lg:flex-row max-lg:flex-wrap max-lg:items-center max-lg:justify-center max-lg:gap-1 max-lg:overflow-visible max-lg:px-1 max-lg:py-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex lg:w-auto lg:min-w-0 lg:max-w-[15rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-stretch lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
           >
             {/* Desktop : grille 2×5 (10 réactions) + 😀 / cœur / cadeau */}
             <div
@@ -4637,6 +4584,58 @@ export function TikTokStyleArena({
               </div>
 
             </div>
+          </div>
+
+          <div className="relative z-[130] min-w-0 max-lg:row-start-3 max-lg:shrink-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1 lg:col-start-1 lg:row-start-2">
+            <div className="flex min-w-0 flex-col gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                {isViewer && (
+                  <button
+                    type="button"
+                    onClick={() => void handleRaiseHand()}
+                    aria-label="Demander à monter sur le ring"
+                    className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] transition-colors hover:bg-white/[0.12]"
+                  >
+                    <span className="text-lg" aria-hidden>
+                      ✋
+                    </span>
+                  </button>
+                )}
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      void handleSendMessage();
+                    }
+                  }}
+                  placeholder="Message..."
+                  aria-label="Message dans le chat du direct"
+                  autoComplete="off"
+                  enterKeyHint="send"
+                  className="min-w-0 flex-1 rounded-3xl bg-[#08080a]/65 py-2 pl-2.5 pr-3 text-[13px] font-medium tracking-tight text-white shadow-[0_8px_32px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.04)] placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_24px_rgba(59,130,246,0.22),0_8px_32px_rgba(0,0,0,0.45)]"
+                />
+                <button
+                  type="button"
+                  disabled={!chatInput.trim()}
+                  onClick={() => void handleSendMessage()}
+                  aria-label="Envoyer le message"
+                  className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-cobalt-500 hover:bg-cobalt-600 disabled:pointer-events-none disabled:opacity-35"
+                >
+                  <Send className="h-3.5 w-3.5 text-white" strokeWidth={1} aria-hidden />
+                </button>
+              </div>
+              <FeatureGuide
+                id="arena-chat"
+                title="Chat en direct"
+                description="Envoie des messages visibles par tous les viewers et participants."
+                position="top"
+                suppress={featureGuideSuppress}
+              />
+            </div>
+          </div>
           </div>
         </div>
         </div>
