@@ -74,6 +74,7 @@ type MediatorSidebarProps = {
   onClearAnnouncement: () => void;
   /** Invitations en attente (beef_participants.pending) */
   pendingInvites: Array<{ userId: string; label: string }>;
+  /** Acceptation / refus : le parent doit appeler POST /api/beef/manage (RLS — pas d’UPDATE client). */
   onAcceptPendingInvite?: (userId: string) => void;
   onRejectPendingInvite?: (userId: string) => void;
   /** Inviter un co-hôte (recherche inline dans le tableau de bord) */

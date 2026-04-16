@@ -37,7 +37,7 @@ import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
 import { DEFAULT_FREE_PREVIEW_MINUTES, viewerNeedsContinuationPay } from '@/lib/beef-preview';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
-import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
+import { postBeefManage, type BeefManageAction } from '@/lib/beef-manage-client';
 import { escapeForIlikeExact } from '@/lib/ilike-exact';
 import { PENDING_DM_WITH_STORAGE_KEY } from '@/lib/messages-deeplink';
 import { ARENA_QUICK_REACTIONS } from '@/lib/arena-quick-reactions';
@@ -197,6 +197,23 @@ export function TikTokStyleArena({
 }: TikTokStyleArenaProps) {
   const router = useRouter();
   const { toast } = useToast();
+
+  const runBeefManage = useCallback(
+    async (body: BeefManageAction) => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast('Session expirée', 'error');
+        return { ok: false as const, error: 'Session' };
+      }
+      const r = await postBeefManage(session.access_token, body);
+      if (!r.ok) toast(r.error, 'error');
+      return r;
+    },
+    [toast],
+  );
+
   const isViewer = userRole === 'viewer' || userRole === 'spectator';
   const [hasJoined, setHasJoined] = useState(false);
   /** MediaStream du pré-joint (médiateur / challenger) — réutilisé par Daily pour éviter un 2ᵉ getUserMedia bloqué sur mobile. */
@@ -456,45 +473,31 @@ export function TikTokStyleArena({
 
   const handleAcceptPendingInvite = useCallback(
     async (inviteUserId: string) => {
-      const now = new Date().toISOString();
-      const { error } = await supabase
-        .from('beef_participants')
-        .update({
-          role: 'participant',
-          invite_status: 'accepted',
-          responded_at: now,
-        })
-        .eq('beef_id', roomId)
-        .eq('user_id', inviteUserId);
-      if (error) {
-        toast("Erreur lors de l'acceptation", 'error');
-        return;
-      }
+      const r = await runBeefManage({
+        action: 'ACCEPT_PARTICIPANT',
+        beefId: roomId,
+        participantId: inviteUserId,
+      });
+      if (!r.ok) return;
       toast('Challenger accepté !', 'success');
       void fetchPendingInvites();
     },
-    [roomId, toast, fetchPendingInvites],
+    [roomId, toast, fetchPendingInvites, runBeefManage],
   );
 
   /** Refus : UPDATE → declined (pas de DELETE RLS médiateur sur beef_participants). */
   const handleRejectPendingInvite = useCallback(
     async (inviteUserId: string) => {
-      const { error } = await supabase
-        .from('beef_participants')
-        .update({
-          invite_status: 'declined',
-          responded_at: new Date().toISOString(),
-        })
-        .eq('beef_id', roomId)
-        .eq('user_id', inviteUserId)
-        .eq('invite_status', 'pending');
-      if (error) {
-        toast('Erreur lors du refus', 'error');
-        return;
-      }
+      const r = await runBeefManage({
+        action: 'REMOVE_PARTICIPANT',
+        beefId: roomId,
+        participantId: inviteUserId,
+        removeKind: 'decline',
+      });
+      if (!r.ok) return;
       void fetchPendingInvites();
     },
-    [roomId, toast, fetchPendingInvites],
+    [roomId, fetchPendingInvites, runBeefManage],
   );
 
   useEffect(() => {
@@ -799,6 +802,13 @@ export function TikTokStyleArena({
   const [startingBeef, setStartingBeef] = useState(false);
 
   const startBeefTimer = useCallback(async () => {
+    const r = await runBeefManage({
+      action: 'TOGGLE_STATUS',
+      beefId: roomId,
+      toggle: 'START_LIVE_SESSION',
+    });
+    if (!r.ok) return;
+
     const startSec = DEFAULT_BEEF_DURATION;
     beefWallClockStartedAtRef.current = Date.now();
     beefEndsAtMsRef.current = Date.now() + startSec * 1000;
@@ -809,21 +819,8 @@ export function TikTokStyleArena({
     setTimerActive(true);
     setTimerPaused(false);
     toast('Le beef a commencé.', 'success');
-    const { count } = await supabase
-      .from('beefs')
-      .select('*', { count: 'exact', head: true })
-      .eq('mediator_id', host.id)
-      .eq('resolution_status', 'resolved')
-      .neq('id', roomId);
-    const price = continuationPriceFromResolvedCount(count ?? 0);
-    await supabase.from('beefs').update({
-      status: 'live',
-      started_at: new Date().toISOString(),
-      price,
-      is_premium: false,
-    }).eq('id', roomId);
     queueMicrotask(() => broadcastBeefGlobalTimer());
-  }, [host.id, roomId, toast, broadcastBeefGlobalTimer]);
+  }, [roomId, toast, broadcastBeefGlobalTimer, runBeefManage]);
 
   // Use refs for stats so endBeef captures the latest values without stale closures
   const statsRef = useRef({
@@ -837,28 +834,16 @@ export function TikTokStyleArena({
 
   const endBeef = useCallback(async (reason: string = 'Terminé par le médiateur') => {
     if (beefEndedRef.current) return;
+
+    const r = await runBeefManage({
+      action: 'TOGGLE_STATUS',
+      beefId: roomId,
+      toggle: 'END_BEEF',
+      endReason: reason,
+    });
+    if (!r.ok) return;
+
     beefEndedRef.current = true;
-
-    const resolutionMap: Record<string, 'resolved' | 'unresolved' | 'abandoned'> = {
-      'Terminé par le médiateur': 'resolved',
-      'Le médiateur a mis fin au beef': 'resolved',
-      'Temps écoulé': 'resolved',
-      'Temps écoulé (60 min)': 'resolved',
-      'Verdict : résolu': 'resolved',
-      'Tous les challengers ont quitté': 'unresolved',
-      'Clos par le médiateur': 'unresolved',
-      'Rematch demandé': 'unresolved',
-      'Médiateur déconnecté': 'abandoned',
-      'Le médiateur a quitté': 'abandoned',
-    };
-    // Raison inconnue → abandoned (évite de marquer « résolu » des fins crash / libellés oubliés)
-    const resolution = resolutionMap[reason] ?? 'abandoned';
-
-    await supabase.from('beefs').update({
-      status: 'ended',
-      ended_at: new Date().toISOString(),
-      resolution_status: resolution,
-    }).eq('id', roomId);
 
     const s = statsRef.current;
     const wall = beefWallClockStartedAtRef.current;
@@ -900,7 +885,7 @@ export function TikTokStyleArena({
     endSummaryTimerRef.current = setTimeout(() => {
       router.replace('/feed');
     }, 12000);
-  }, [roomId, router]);
+  }, [roomId, router, runBeefManage]);
 
   const handleMediatorVerdict = useCallback(
     async (kind: 'resolved' | 'closed' | 'rematch') => {
@@ -922,17 +907,18 @@ export function TikTokStyleArena({
       }
       playRematchThunderSfx();
       setRematchSequence(true);
-      await supabase
-        .from('beefs')
-        .update({ mediation_summary: 'Rematch demandé — Round 2 à planifier avec les challengers.' })
-        .eq('id', roomId);
+      await runBeefManage({
+        action: 'TOGGLE_STATUS',
+        beefId: roomId,
+        toggle: 'REMATCH_MEDIATION_SUMMARY',
+      });
       if (rematchVerdictTimerRef.current) clearTimeout(rematchVerdictTimerRef.current);
       rematchVerdictTimerRef.current = window.setTimeout(() => {
         rematchVerdictTimerRef.current = null;
         void endBeef('Rematch demandé');
       }, 10000);
     },
-    [isHost, roomId, endBeef],
+    [isHost, roomId, endBeef, runBeefManage],
   );
 
   useEffect(() => {
@@ -1695,17 +1681,21 @@ export function TikTokStyleArena({
       if (cancelled || !row) return;
       const s = String((row as { status?: string }).status ?? '');
       if (s !== 'pending' && s !== 'ready') return;
-      const { error } = await supabase
-        .from('beefs')
-        .update({ status: 'live' })
-        .eq('id', roomId)
-        .in('status', ['pending', 'ready']);
-      if (!error) autoLiveSyncedRef.current = true;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const r = await postBeefManage(session.access_token, {
+        action: 'TOGGLE_STATUS',
+        beefId: roomId,
+        toggle: 'SYNC_LIVE',
+      });
+      if (r.ok) autoLiveSyncedRef.current = true;
     })();
     return () => {
       cancelled = true;
     };
-  }, [isHost, isJoined, liveConnected, beefEnded, roomId, remoteParticipants.length]);
+  }, [isHost, isJoined, liveConnected, beefEnded, roomId, remoteParticipants.length, postBeefManage]);
 
   const seenMsgKeys = useRef(new Set<string>());
 
@@ -2590,21 +2580,12 @@ export function TikTokStyleArena({
       return;
     }
 
-    // Insert invitation + participant
-    await supabase.from('beef_participants').upsert({
-      beef_id: roomId,
-      user_id: foundUser.id,
-      role: 'participant',
-      is_main: false,
-      invite_status: 'pending',
-    }, { onConflict: 'beef_id,user_id' });
-
-    await supabase.from('beef_invitations').insert({
-      beef_id: roomId,
-      inviter_id: userId,
-      invitee_id: foundUser.id,
-      status: 'sent',
+    const inv = await runBeefManage({
+      action: 'INVITE_PARTICIPANT',
+      beefId: roomId,
+      participantId: foundUser.id,
     });
+    if (!inv.ok) return;
 
     setDebaters([...debaters, {
       id: foundUser.id,
@@ -2618,20 +2599,12 @@ export function TikTokStyleArena({
   };
 
   const handleInviteFromModal = async (invitedUserId: string) => {
-    await supabase.from('beef_participants').upsert({
-      beef_id: roomId,
-      user_id: invitedUserId,
-      role: 'participant',
-      is_main: false,
-      invite_status: 'pending',
-    }, { onConflict: 'beef_id,user_id' });
-
-    await supabase.from('beef_invitations').insert({
-      beef_id: roomId,
-      inviter_id: userId,
-      invitee_id: invitedUserId,
-      status: 'sent',
+    const inv = await runBeefManage({
+      action: 'INVITE_PARTICIPANT',
+      beefId: roomId,
+      participantId: invitedUserId,
     });
+    if (!inv.ok) return;
 
     // Fetch user info for local debaters list
     const { data: invitedUser } = await supabase
