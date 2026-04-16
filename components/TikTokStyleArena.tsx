@@ -231,20 +231,6 @@ export function TikTokStyleArena({
   const [auraB, setAuraB] = useState(0);
   const [auraMed, setAuraMed] = useState(0);
   const [auraFeverMed, setAuraFeverMed] = useState(false);
-  /** null = 50/50, A ou B = ce panneau occupe ~80 % de la largeur (synchronisé en broadcast pour tous) */
-  const [focusTarget, setFocusTarget] = useState<null | 'A' | 'B'>(null);
-  const focusTargetRef = useRef<null | 'A' | 'B'>(null);
-  useEffect(() => {
-    focusTargetRef.current = focusTarget;
-  }, [focusTarget]);
-
-  /** Bandeau vidéo A/B réduit — purement visuel, synchronisé en broadcast (pas de colonne beefs). */
-  const [challengerStripMinimized, setChallengerStripMinimized] = useState(false);
-  const challengerStripMinimizedRef = useRef(false);
-  useEffect(() => {
-    challengerStripMinimizedRef.current = challengerStripMinimized;
-  }, [challengerStripMinimized]);
-
   const [pendingInvites, setPendingInvites] = useState<Array<{ userId: string; label: string }>>([]);
   const [parolePresetSec, setParolePresetSec] = useState(60);
   const [announcementTicker, setAnnouncementTicker] = useState('');
@@ -640,20 +626,6 @@ export function TikTokStyleArena({
         type: 'broadcast',
         event: 'beef_global_timer',
         payload: { active, paused, remainingSec, endsAtMs },
-      })
-      .catch(() => {});
-    void channelRef.current
-      .send({
-        type: 'broadcast',
-        event: 'video_focus',
-        payload: { target: focusTargetRef.current },
-      })
-      .catch(() => {});
-    void channelRef.current
-      .send({
-        type: 'broadcast',
-        event: 'challenger_strip_layout',
-        payload: { minimized: challengerStripMinimizedRef.current },
       })
       .catch(() => {});
   }, []);
@@ -1793,18 +1765,6 @@ export function TikTokStyleArena({
         if (dA) addPulseVoices('A', dA);
         if (dB) addPulseVoices('B', dB);
       })
-      .on('broadcast', { event: 'video_focus' }, ({ payload }: { payload?: { target?: unknown } }) => {
-        const t = payload?.target;
-        if (t === null || t === 'A' || t === 'B') {
-          setFocusTarget(t);
-        }
-      })
-      .on('broadcast', { event: 'challenger_strip_layout' }, ({ payload }: { payload?: { minimized?: unknown } }) => {
-        const m = payload?.minimized;
-        if (typeof m === 'boolean') {
-          setChallengerStripMinimized(m);
-        }
-      })
       .on('broadcast', { event: 'announcement_banner' }, ({ payload }: { payload?: { text?: string; durationSec?: number } }) => {
         if (isHostRef.current) return;
         const raw = String(payload?.text ?? '').trim();
@@ -1980,22 +1940,6 @@ export function TikTokStyleArena({
         if (status === 'SUBSCRIBED') {
           channelRef.current = channel;
           setLiveConnected(true);
-          if (isHostRef.current) {
-            void channel
-              .send({
-                type: 'broadcast',
-                event: 'video_focus',
-                payload: { target: focusTargetRef.current },
-              })
-              .catch(() => {});
-            void channel
-              .send({
-                type: 'broadcast',
-                event: 'challenger_strip_layout',
-                payload: { minimized: challengerStripMinimizedRef.current },
-              })
-              .catch(() => {});
-          }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.warn('[Live] Broadcast failed — polling fallback active');
           setLiveConnected(false);
@@ -2024,28 +1968,6 @@ export function TikTokStyleArena({
     router,
     leave,
   ]);
-
-  useEffect(() => {
-    if (!isHost || !liveConnected || !channelRef.current) return;
-    void channelRef.current
-      .send({
-        type: 'broadcast',
-        event: 'video_focus',
-        payload: { target: focusTarget },
-      })
-      .catch(() => {});
-  }, [focusTarget, isHost, liveConnected]);
-
-  useEffect(() => {
-    if (!isHost || !liveConnected || !channelRef.current) return;
-    void channelRef.current
-      .send({
-        type: 'broadcast',
-        event: 'challenger_strip_layout',
-        payload: { minimized: challengerStripMinimized },
-      })
-      .catch(() => {});
-  }, [challengerStripMinimized, isHost, liveConnected]);
 
   useEffect(() => {
     if (!liveConnected || !isHost || !timerActive) return;
@@ -3275,23 +3197,15 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* TikTok Battle : vidéo 60% + chat overlay (réductible — flex cohérent) */}
+      {/* TikTok Battle : vidéo 60% + chat overlay */}
       <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
         {effectiveDailyRoomUrl ? (
           <div
-            className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 overflow-hidden lg:pb-0 max-lg:pb-28 ${
-              challengerStripMinimized
-                ? 'flex-none max-lg:h-[min(36svh,300px)] max-lg:max-h-[42dvh] lg:h-[min(26vh,220px)] lg:max-h-[min(30dvh,240px)] max-lg:pb-20'
-                : 'flex-[0_0_60%] landscape:flex-1 lg:flex-1'
-            } ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
+            className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] landscape:flex-1 lg:flex-1 overflow-hidden lg:pb-0 max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
           >
             {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
             <div
-              className={`pointer-events-none absolute z-10 flex min-h-0 flex-row items-stretch gap-1 transition-shadow duration-700 ${sponsorGlow} ${
-                challengerStripMinimized
-                  ? 'inset-x-0 inset-y-0 h-full w-full px-1 lg:inset-x-0 lg:px-6 lg:gap-4'
-                  : 'max-lg:left-1/2 max-lg:h-full max-lg:w-full max-lg:-translate-x-1/2 max-lg:px-1 max-lg:inset-y-0 lg:inset-x-0 lg:top-[12vh] lg:h-[50vh] lg:gap-4 lg:px-6'
-              }`}
+              className={`pointer-events-none absolute z-10 flex flex-row items-stretch gap-1 min-h-0 max-lg:left-1/2 max-lg:-translate-x-1/2 max-lg:w-full max-lg:px-1 max-lg:inset-y-0 max-lg:h-full lg:inset-x-0 lg:top-[12vh] lg:h-[50vh] lg:gap-4 lg:px-6 transition-shadow duration-700 ${sponsorGlow}`}
             >
               {/* LEFT — Participant A */}
               <motion.div
@@ -4052,20 +3966,8 @@ export function TikTokStyleArena({
           </div>
         ) : (
         /* Placeholder — même hauteur vidéo que avec room */
-        <div
-          className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 overflow-hidden ${
-            challengerStripMinimized
-              ? 'flex-none max-lg:h-[min(36svh,300px)] max-lg:max-h-[42dvh] lg:h-[min(26vh,220px)] lg:max-h-[min(30dvh,240px)]'
-              : 'flex-[0_0_60%] landscape:flex-1 lg:flex-1'
-          }`}
-        >
-          <div
-            className={`pointer-events-none absolute z-10 flex min-h-0 flex-row items-stretch gap-1 ${
-              challengerStripMinimized
-                ? 'inset-x-0 inset-y-0 h-full w-full px-1 lg:inset-x-0 lg:px-6 lg:gap-4'
-                : 'max-lg:left-1/2 max-lg:h-full max-lg:w-full max-lg:-translate-x-1/2 max-lg:px-1 max-lg:inset-y-0 lg:inset-x-0 lg:top-[12vh] lg:h-[50vh] lg:gap-4 lg:px-6'
-            }`}
-          >
+        <div className="relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] landscape:flex-1 lg:flex-1 overflow-hidden">
+          <div className="pointer-events-none absolute z-10 flex flex-row items-stretch gap-1 min-h-0 max-lg:left-1/2 max-lg:-translate-x-1/2 max-lg:w-full max-lg:px-1 max-lg:inset-y-0 max-lg:h-full lg:inset-x-0 lg:top-[12vh] lg:h-[50vh] lg:gap-4 lg:px-6">
           {debaters[0] ? (
             <div className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-hidden bg-[#08080A] rounded-l-3xl lg:rounded-3xl border-r border-white/20 shadow-lg flex flex-col items-center justify-center">
               <div className="pointer-events-none absolute left-4 top-4 z-[50] flex w-[calc(100%-2rem)] items-start justify-start gap-2">
@@ -4397,8 +4299,6 @@ export function TikTokStyleArena({
             mediatorCamEnabled={camEnabled}
             onMediatorToggleMic={() => void toggleMic()}
             onMediatorToggleCam={() => void toggleCam()}
-            focusTarget={focusTarget}
-            onFocusTargetChange={setFocusTarget}
             beefRemainingSec={beefTimeRemaining}
             maxBeefDurationSec={MAX_BEEF_DURATION}
             parolePresetSec={parolePresetSec}
@@ -4412,21 +4312,13 @@ export function TikTokStyleArena({
             onInviteParticipant={handleInviteFromModal}
             inviteExcludeParticipantIds={inviteExcludeParticipantIds}
             inviteCurrentUserId={userId}
-            challengerStripMinimized={challengerStripMinimized}
-            onChallengerStripMinimizedChange={setChallengerStripMinimized}
           />
         </>
       )}
 
       {/* ── Dock social : top-[60%] aligné sur la zone vidéo — pas de chevauchement avec micro/cam (z vidéo > dock) ── */}
       {!beefEnded && (
-        <div
-          className={`pointer-events-none absolute bottom-0 z-[55] flex min-h-0 flex-col justify-end overflow-visible max-lg:inset-x-0 max-lg:w-full landscape:top-auto landscape:bottom-0 landscape:h-[120px] lg:inset-x-0 lg:top-auto lg:h-[35vh] lg:px-6 ${
-            challengerStripMinimized
-              ? 'max-lg:top-[min(38svh,38%)]'
-              : 'max-lg:top-[60%]'
-          }`}
-        >
+        <div className="pointer-events-none absolute bottom-0 z-[55] flex min-h-0 flex-col justify-end overflow-visible max-lg:inset-x-0 max-lg:w-full max-lg:top-[60%] landscape:top-auto landscape:bottom-0 landscape:h-[120px] lg:inset-x-0 lg:top-auto lg:h-[35vh] lg:px-6">
         <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:flex-row lg:items-end lg:gap-6 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"

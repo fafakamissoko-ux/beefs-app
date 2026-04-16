@@ -6,8 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Gavel,
-  Maximize2,
-  Minimize2,
   MicOff,
   Mic,
   Timer,
@@ -61,9 +59,6 @@ type MediatorSidebarProps = {
   mediatorCamEnabled?: boolean;
   onMediatorToggleMic?: () => void | Promise<void>;
   onMediatorToggleCam?: () => void | Promise<void>;
-  /** null = split 50/50, A ou B = panneau mis en avant 80/20 */
-  focusTarget?: null | 'A' | 'B';
-  onFocusTargetChange?: (target: null | 'A' | 'B') => void;
   /** Temps restant chrono beef (secondes) — pour la roulette */
   beefRemainingSec: number;
   maxBeefDurationSec: number;
@@ -83,9 +78,6 @@ type MediatorSidebarProps = {
   /** IDs déjà sur le ring / à exclure de la recherche (dont l’hôte courant) */
   inviteExcludeParticipantIds?: string[];
   inviteCurrentUserId?: string | null;
-  /** Bandeau vidéo des challengers réduit (synchronisé en broadcast pour tous) */
-  challengerStripMinimized?: boolean;
-  onChallengerStripMinimizedChange?: (minimized: boolean) => void;
 };
 
 const TILE = 'flex flex-col items-center justify-center gap-1.5 rounded-[2.5rem] border border-white/10 bg-white/5 px-3 py-4 backdrop-blur-3xl transition-all active:scale-[0.97]';
@@ -128,8 +120,6 @@ export function MediatorSidebar({
   mediatorCamEnabled,
   onMediatorToggleMic,
   onMediatorToggleCam,
-  focusTarget = null,
-  onFocusTargetChange,
   beefRemainingSec,
   maxBeefDurationSec,
   parolePresetSec,
@@ -143,8 +133,6 @@ export function MediatorSidebar({
   onInviteParticipant,
   inviteExcludeParticipantIds = [],
   inviteCurrentUserId = null,
-  challengerStripMinimized = false,
-  onChallengerStripMinimizedChange,
 }: MediatorSidebarProps) {
   const [verdictOpen, setVerdictOpen] = useState(false);
   const [soundboardOpen, setSoundboardOpen] = useState(false);
@@ -232,28 +220,6 @@ export function MediatorSidebar({
                       <X className="h-4 w-4" strokeWidth={1} />
                     </button>
                   </div>
-
-            {onChallengerStripMinimizedChange && (
-              <div className="shrink-0 pb-3">
-                <button
-                  type="button"
-                  onClick={() => onChallengerStripMinimizedChange(!challengerStripMinimized)}
-                  className="flex w-full items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-2.5 font-mono text-[10px] font-bold uppercase tracking-widest text-white/90 backdrop-blur-xl transition-colors hover:bg-white/[0.1] active:scale-[0.99]"
-                >
-                  {challengerStripMinimized ? (
-                    <>
-                      <Maximize2 className="h-4 w-4 shrink-0 text-cobalt-300" strokeWidth={1.2} aria-hidden />
-                      Agrandir l&apos;écran des challengers
-                    </>
-                  ) : (
-                    <>
-                      <Minimize2 className="h-4 w-4 shrink-0 text-cobalt-300" strokeWidth={1.2} aria-hidden />
-                      Réduire l&apos;écran des challengers
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
 
             {/* Launch beef (pre-timer) */}
             {!timerActive && (
@@ -572,53 +538,6 @@ export function MediatorSidebar({
                     </motion.div>
                   )}
                 </AnimatePresence>
-
-                {/* ── FOCUS caméra (col-span-2) ── */}
-                {onFocusTargetChange && (
-                  <div className="col-span-2 rounded-[2.5rem] border border-white/10 bg-white/[0.04] p-1.5 backdrop-blur-3xl">
-                    <div className="mb-2 flex items-center gap-2 px-1">
-                      <Maximize2 className="h-4 w-4 shrink-0 text-blue-400" strokeWidth={1.2} />
-                      <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-blue-200/90">
-                        Focus vidéo
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onFocusTargetChange('A')}
-                        className={`rounded-full py-2.5 font-mono text-[8px] font-black uppercase tracking-wide ${
-                          focusTarget === 'A'
-                            ? 'bg-blue-500/35 text-white'
-                            : 'bg-white/5 text-white/65 hover:bg-white/10'
-                        }`}
-                      >
-                        Focus A
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onFocusTargetChange(null)}
-                        className={`rounded-full py-2.5 font-mono text-[8px] font-black uppercase tracking-wide ${
-                          focusTarget === null
-                            ? 'bg-blue-500/35 text-white'
-                            : 'bg-white/5 text-white/65 hover:bg-white/10'
-                        }`}
-                      >
-                        50/50
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onFocusTargetChange('B')}
-                        className={`rounded-full py-2.5 font-mono text-[8px] font-black uppercase tracking-wide ${
-                          focusTarget === 'B'
-                            ? 'bg-blue-500/35 text-white'
-                            : 'bg-white/5 text-white/65 hover:bg-white/10'
-                        }`}
-                      >
-                        Focus B
-                      </button>
-                    </div>
-                  </div>
-                )}
 
                 {/* ── MUTE A/B ── */}
                 <button
