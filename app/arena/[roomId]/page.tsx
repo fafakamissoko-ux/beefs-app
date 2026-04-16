@@ -40,6 +40,8 @@ export default function ArenaPage() {
   });
 
   const [dailyRoomUrl, setDailyRoomUrl] = useState<string | null>(null);
+  /** Jeton Daily depuis `GET /api/beef/access` (undefined = pas encore synchronisé). */
+  const [dailyMeetingToken, setDailyMeetingToken] = useState<string | null | undefined>(undefined);
   const [initialViewerCount, setInitialViewerCount] = useState(0);
   const [beefTitle, setBeefTitle] = useState('');
   const [previewStartedAt, setPreviewStartedAt] = useState<string | null>(null);
@@ -85,6 +87,7 @@ export default function ArenaPage() {
     setArenaReady(false);
     setBeefEndedInfo(null);
     setDailyRoomUrl(null);
+    setDailyMeetingToken(undefined);
 
     const loadRoomData = async () => {
       const { data: beef } = await supabase.from('beefs').select('*').eq('id', roomId).single();
@@ -171,6 +174,8 @@ export default function ArenaPage() {
       if (cancelled) return;
       await ensureDailyRoom(roomId);
       if (cancelled) return;
+      await syncVideoAccessFromApi(roomId);
+      if (cancelled) return;
       setArenaReady(true);
     };
 
@@ -198,6 +203,30 @@ export default function ArenaPage() {
       supabase.removeChannel(ch);
     };
   }, [roomId]);
+
+  const syncVideoAccessFromApi = async (beefId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const res = await fetch(`/api/beef/access?beefId=${encodeURIComponent(beefId)}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = (await res.json()) as {
+        dailyRoomUrl?: string | null;
+        dailyToken?: string | null;
+        error?: string;
+      };
+      if (!res.ok) return;
+      if (typeof data.dailyRoomUrl === 'string' && data.dailyRoomUrl) {
+        setDailyRoomUrl(data.dailyRoomUrl);
+      }
+      if ('dailyToken' in data) {
+        setDailyMeetingToken(data.dailyToken ?? null);
+      }
+    } catch {
+      /* ignore */
+    }
+  };
 
   const ensureDailyRoom = async (beefId: string) => {
     const roomName = beefDailyRoomName(beefId);
@@ -324,6 +353,7 @@ export default function ArenaPage() {
         viewerCount={initialViewerCount}
         debateTitle={beefTitle}
         dailyRoomUrl={dailyRoomUrl}
+        dailyMeetingToken={dailyMeetingToken}
         onReaction={() => {}}
         onShare={handleShare}
         previewStartedAt={previewStartedAt}

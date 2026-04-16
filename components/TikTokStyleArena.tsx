@@ -95,6 +95,8 @@ interface TikTokStyleArenaProps {
   points?: number;
   debateTitle?: string;
   dailyRoomUrl?: string | null;
+  /** Jeton Daily `GET /api/beef/access` (médiateur / challenger / avant fetch spectateur). */
+  dailyMeetingToken?: string | null;
   onReaction: (emoji: string) => void;
   onTap?: () => void;
   onShare: () => void;
@@ -184,6 +186,7 @@ export function TikTokStyleArena({
   points = 0,
   debateTitle = 'Débat en direct',
   dailyRoomUrl,
+  dailyMeetingToken,
   onReaction,
   onShare,
   previewStartedAt = null,
@@ -275,36 +278,6 @@ export function TikTokStyleArena({
   const [mediatorHoldingFloor, setMediatorHoldingFloor] = useState(false);
   /** Coupure micro imposée par le médiateur (broadcast — le toggle local seul ne suffisait pas) */
   const [micMutedByMediator, setMicMutedByMediator] = useState(false);
-
-  const {
-    join,
-    leave,
-    toggleMic,
-    toggleCam,
-    setLocalAudioEnabled,
-    setRemoteParticipantAudio,
-    ejectRemoteParticipant,
-    isJoined,
-    isJoining,
-    micEnabled,
-    camEnabled,
-    localParticipant,
-    remoteParticipants,
-    activeSpeakerPeerId,
-    error: callError,
-  } = useDailyCall(dailyRoomUrl ?? null, userName, isViewer, userId, roomId);
-
-  // Auto-join when user clicked "Rejoindre" AND dailyRoomUrl becomes available
-  useEffect(() => {
-    if (hasJoined && dailyRoomUrl && !isJoined && !isJoining) {
-      void join(preJoinMediaStream);
-    }
-  }, [hasJoined, dailyRoomUrl, isJoined, isJoining, join, preJoinMediaStream]);
-
-  /** Diagnostic #58 : URL Daily (écart env / salle). */
-  useEffect(() => {
-    console.log('🔗 DAILY URL:', dailyRoomUrl);
-  }, [dailyRoomUrl]);
 
   const [flyingReactions, setFlyingReactions] = useState<FlyingReactionEntry[]>([]);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -1197,6 +1170,8 @@ export function TikTokStyleArena({
     continuationPrice?: number;
     freePreviewMinutes?: number;
     previewEndsInSeconds?: number;
+    dailyRoomUrl?: string | null;
+    dailyToken?: string | null;
   };
   const [serverAccess, setServerAccess] = useState<ServerAccessPayload | null>(null);
   /** True après la 1ʳᵉ tentative GET /api/beef/access (évite paywall + leave avant réponse serveur). */
@@ -1288,6 +1263,66 @@ export function TikTokStyleArena({
       window.removeEventListener('pageshow', onPageShow);
     };
   }, [isViewer, fetchViewerAccess]);
+
+  const effectiveDailyRoomUrl =
+    isViewer && viewerAccessReady && serverAccess?.dailyRoomUrl
+      ? serverAccess.dailyRoomUrl
+      : (dailyRoomUrl ?? null);
+
+  const meetingTokenForDaily: string | null | undefined = isViewer
+    ? viewerAccessReady && serverAccess !== null
+      ? (serverAccess.dailyToken !== undefined ? serverAccess.dailyToken : dailyMeetingToken)
+      : undefined
+    : dailyMeetingToken;
+
+  const {
+    join,
+    leave,
+    toggleMic,
+    toggleCam,
+    setLocalAudioEnabled,
+    setRemoteParticipantAudio,
+    ejectRemoteParticipant,
+    isJoined,
+    isJoining,
+    micEnabled,
+    camEnabled,
+    localParticipant,
+    remoteParticipants,
+    activeSpeakerPeerId,
+    error: callError,
+  } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer, userId, roomId, meetingTokenForDaily);
+
+  // Auto-join quand « Rejoindre » + URL Daily ; spectateur : attendre GET access (jeton).
+  useEffect(() => {
+    if (!hasJoined || !effectiveDailyRoomUrl || isJoined || isJoining) return;
+    if (isViewer && !viewerAccessReady) return;
+    if (
+      isViewer &&
+      viewerAccessReady &&
+      serverAccess &&
+      serverAccess.dailyToken === null &&
+      (serverAccess.viewerAccess === 'locked' || serverAccess.viewerAccess === 'not_live')
+    ) {
+      return;
+    }
+    void join(preJoinMediaStream);
+  }, [
+    hasJoined,
+    effectiveDailyRoomUrl,
+    isJoined,
+    isJoining,
+    join,
+    preJoinMediaStream,
+    isViewer,
+    viewerAccessReady,
+    serverAccess,
+  ]);
+
+  /** Diagnostic #58 : URL Daily effective (props + GET access spectateur). */
+  useEffect(() => {
+    console.log('🔗 DAILY URL:', effectiveDailyRoomUrl);
+  }, [effectiveDailyRoomUrl]);
 
   const accessResolved = serverAccess !== null;
   const serverLocked =
@@ -1518,28 +1553,28 @@ export function TikTokStyleArena({
 
   /** Halos néon (Phase 2) : parole réelle Daily + micro ouvert sur la piste audio. */
   const leftNeonAudio =
-    !!dailyRoomUrl &&
+    !!effectiveDailyRoomUrl &&
     !!leftPanel &&
     !!activeSpeakerPeerId &&
     activeSpeakerPeerId === leftPanel.sessionId &&
     leftPanel.audioOn;
 
   const rightNeonAudio =
-    !!dailyRoomUrl &&
+    !!effectiveDailyRoomUrl &&
     !!rightPanel &&
     !!activeSpeakerPeerId &&
     activeSpeakerPeerId === rightPanel.sessionId &&
     rightPanel.audioOn;
 
   const mediatorNeonAudio =
-    !!dailyRoomUrl &&
+    !!effectiveDailyRoomUrl &&
     !!mediatorParticipant &&
     !!activeSpeakerPeerId &&
     activeSpeakerPeerId === mediatorParticipant.sessionId &&
     mediatorParticipant.audioOn;
 
   const mediatorRemoteRows = useMemo((): MediatorRemoteRow[] => {
-    if (!isHost || !dailyRoomUrl) return [];
+    if (!isHost || !effectiveDailyRoomUrl) return [];
     const rows: MediatorRemoteRow[] = [];
     if (leftPanel?.sessionId) {
       rows.push({
@@ -1560,7 +1595,7 @@ export function TikTokStyleArena({
       });
     }
     return rows;
-  }, [isHost, dailyRoomUrl, leftPanel, rightPanel, leftPanelName, rightPanelName]);
+  }, [isHost, effectiveDailyRoomUrl, leftPanel, rightPanel, leftPanelName, rightPanelName]);
 
   const leftPanelRef = useRef(leftPanel);
   const rightPanelRef = useRef(rightPanel);
@@ -2977,7 +3012,7 @@ export function TikTokStyleArena({
       <div className="w-full h-full relative">
         <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer} />
         {/* Waiting for Daily.co room to be ready */}
-        {!dailyRoomUrl && (
+        {!effectiveDailyRoomUrl && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm text-brand-400 text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2">
             <div className="w-3 h-3 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
             Préparation de la room vidéo...
@@ -2988,7 +3023,7 @@ export function TikTokStyleArena({
   }
 
   // Waiting for join to complete (dailyRoomUrl just became available)
-  if (hasJoined && dailyRoomUrl && !isJoined && isJoining) {
+  if (hasJoined && effectiveDailyRoomUrl && !isJoined && isJoining) {
     // We're in the process of joining — show arena but with a connecting overlay
   }
 
@@ -3239,7 +3274,7 @@ export function TikTokStyleArena({
 
       {/* TikTok Battle : vidéo 60% + chat overlay */}
       <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
-        {dailyRoomUrl ? (
+        {effectiveDailyRoomUrl ? (
           <div
             className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] landscape:flex-1 lg:flex-1 lg:pb-0 overflow-hidden max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
           >
@@ -3468,7 +3503,7 @@ export function TikTokStyleArena({
                   />
                 )}
                 {!beefEnded &&
-                  dailyRoomUrl &&
+                  effectiveDailyRoomUrl &&
                   (isHost || userRole === 'challenger') &&
                   !leftPanelIsLocal && (
                   <button
@@ -3882,7 +3917,7 @@ export function TikTokStyleArena({
                   />
                 )}
                 {!beefEnded &&
-                  dailyRoomUrl &&
+                  effectiveDailyRoomUrl &&
                   (isHost || userRole === 'challenger') &&
                   !rightPanelIsLocal && (
                   <button
@@ -4282,7 +4317,7 @@ export function TikTokStyleArena({
       </div>
 
       {/* ── Médiateur — barre de commande (privée) — ouverture via bouton header (plus de FAB) ── */}
-      {isHost && isJoined && !beefEnded && dailyRoomUrl && (
+      {isHost && isJoined && !beefEnded && effectiveDailyRoomUrl && (
         <>
           <MediatorSidebar
             open={mediatorSidebarOpen}

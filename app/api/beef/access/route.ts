@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import type { User } from '@supabase/supabase-js';
 import { updateUserBalance } from '@/lib/updateUserBalance';
 import { normalizeBeefId } from '@/lib/beef-id';
+import { beefDailyRoomName } from '@/lib/beef-daily-room';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,6 +39,114 @@ function beefIdFromSearchParams(searchParams: URLSearchParams): string | null {
   return null;
 }
 
+const MEETING_TOKEN_TTL_SEC = 2 * 60 * 60; // 2 h
+
+async function fetchDailyRoomUrl(roomName: string, apiKey: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.daily.co/v1/rooms/${encodeURIComponent(roomName)}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { url?: string };
+    return typeof data.url === 'string' ? data.url : null;
+  } catch {
+    return null;
+  }
+}
+
+type DailyTokenRole = 'mediator' | 'participant' | 'spectator';
+
+/**
+ * Crée un meeting token Daily (POST /v1/meeting-tokens).
+ * — médiateur : is_owner
+ * — spectateur : micro + cam coupés à l’entrée
+ * — participant (challenger) : flux média libres (pas de start_* forcés)
+ */
+async function createDailyMeetingToken(params: {
+  apiKey: string;
+  roomName: string;
+  user: User;
+  userName: string;
+  role: DailyTokenRole;
+}): Promise<string | null> {
+  const { apiKey, roomName, user, userName, role } = params;
+  const uid = user.id.trim();
+  if (uid.length < 1 || uid.length > 36) return null;
+
+  const now = Math.floor(Date.now() / 1000);
+  const exp = now + MEETING_TOKEN_TTL_SEC;
+
+  const properties: Record<string, unknown> = {
+    room_name: roomName,
+    user_id: uid,
+    user_name: userName.slice(0, 120),
+    exp,
+    eject_at_token_exp: true,
+  };
+
+  if (role === 'mediator') {
+    properties.is_owner = true;
+  }
+  if (role === 'spectator') {
+    properties.start_video_off = true;
+    properties.start_audio_off = true;
+  }
+
+  const res = await fetch('https://api.daily.co/v1/meeting-tokens', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ properties }),
+  });
+
+  const data = (await res.json()) as { token?: string; error?: string };
+  if (!res.ok || typeof data.token !== 'string') {
+    return null;
+  }
+  return data.token;
+}
+
+async function videoCredentialsForUser(
+  supabase: ReturnType<typeof createClient>,
+  user: User,
+  beefId: string,
+  grantTokenRole: DailyTokenRole | null,
+): Promise<{ dailyRoomUrl: string | null; dailyToken: string | null }> {
+  const apiKey = process.env.DAILY_API_KEY;
+  const roomName = beefDailyRoomName(beefId);
+  const dailyRoomUrl = apiKey ? await fetchDailyRoomUrl(roomName, apiKey) : null;
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('display_name, username')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const userName =
+    (profile?.display_name?.trim() ||
+      profile?.username?.trim() ||
+      user.email?.split('@')[0] ||
+      'Utilisateur')
+      .slice(0, 120);
+
+  if (!apiKey || !grantTokenRole || !dailyRoomUrl) {
+    return { dailyRoomUrl, dailyToken: null };
+  }
+
+  const dailyToken = await createDailyMeetingToken({
+    apiKey,
+    roomName,
+    user,
+    userName,
+    role: grantTokenRole,
+  });
+
+  return { dailyRoomUrl, dailyToken };
+}
+
 /** Vérité serveur : anti-fraude (rechargement / onglet / manipulation client). */
 export async function GET(request: NextRequest) {
   try {
@@ -68,11 +178,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (beef.mediator_id === user.id) {
+      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, 'mediator');
       return NextResponse.json({
         role: 'mediator',
         viewerAccess: 'full',
         continuationPrice: beef.price ?? 0,
         freePreviewMinutes: beef.free_preview_minutes ?? 10,
+        ...video,
       });
     }
 
@@ -85,11 +197,13 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (part) {
+      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, 'participant');
       return NextResponse.json({
         role: 'participant',
         viewerAccess: 'full',
         continuationPrice: beef.price ?? 0,
         freePreviewMinutes: beef.free_preview_minutes ?? 10,
+        ...video,
       });
     }
 
@@ -97,20 +211,24 @@ export async function GET(request: NextRequest) {
     const fpMin = beef.free_preview_minutes ?? 10;
 
     if (beef.status !== 'live') {
+      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, null);
       return NextResponse.json({
         role: 'spectator',
         viewerAccess: 'not_live',
         continuationPrice: price,
         freePreviewMinutes: fpMin,
+        ...video,
       });
     }
 
     if (price <= 0) {
+      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, 'spectator');
       return NextResponse.json({
         role: 'spectator',
         viewerAccess: 'free',
         continuationPrice: 0,
         freePreviewMinutes: fpMin,
+        ...video,
       });
     }
 
@@ -122,22 +240,26 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (accessRow) {
+      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, 'spectator');
       return NextResponse.json({
         role: 'spectator',
         viewerAccess: 'paid',
         continuationPrice: price,
         freePreviewMinutes: fpMin,
         startedAt: beef.started_at,
+        ...video,
       });
     }
 
     if (!beef.started_at) {
+      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, 'spectator');
       return NextResponse.json({
         role: 'spectator',
         viewerAccess: 'waiting_start',
         continuationPrice: price,
         freePreviewMinutes: fpMin,
         startedAt: null,
+        ...video,
       });
     }
 
@@ -145,6 +267,7 @@ export async function GET(request: NextRequest) {
     const previewSec = fpMin * 60;
 
     if (elapsedSec <= previewSec) {
+      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, 'spectator');
       return NextResponse.json({
         role: 'spectator',
         viewerAccess: 'preview',
@@ -152,15 +275,18 @@ export async function GET(request: NextRequest) {
         freePreviewMinutes: fpMin,
         startedAt: beef.started_at,
         previewEndsInSeconds: Math.max(0, previewSec - elapsedSec),
+        ...video,
       });
     }
 
+    const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, null);
     return NextResponse.json({
       role: 'spectator',
       viewerAccess: 'locked',
       continuationPrice: price,
       freePreviewMinutes: fpMin,
       startedAt: beef.started_at,
+      ...video,
     });
   } catch {
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });

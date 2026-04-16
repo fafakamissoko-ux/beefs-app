@@ -79,6 +79,13 @@ export function useDailyCall(
   viewerMode = false,
   arenaUserId: string | null = null,
   beefId: string | null = null,
+  /**
+   * Jeton Daily issu de `GET /api/beef/access` (prioritaire).
+   * - `undefined` : comportement historique → `POST /api/daily/meeting-token` si `beefId` est défini.
+   * - `string` : utilisé tel quel pour `join({ token })`.
+   * - `null` : spectateur sans droit vidéo (ex. accès verrouillé) → join refusé côté client.
+   */
+  accessMeetingToken: string | null | undefined = undefined,
 ): UseDailyCallReturn {
   const callRef = useRef<DailyCall | null>(null);
   const [isJoined, setIsJoined] = useState(false);
@@ -98,11 +105,13 @@ export function useDailyCall(
   const arenaUserIdRef = useRef(arenaUserId);
   const beefIdRef = useRef(beefId);
   const viewerModeRef = useRef(viewerMode);
+  const accessMeetingTokenRef = useRef(accessMeetingToken);
   roomUrlRef.current = roomUrl;
   userNameRef.current = userName;
   arenaUserIdRef.current = arenaUserId;
   beefIdRef.current = beefId;
   viewerModeRef.current = viewerMode;
+  accessMeetingTokenRef.current = accessMeetingToken;
 
   const fetchMeetingToken = useCallback(async (): Promise<string> => {
     const bid = beefIdRef.current;
@@ -224,9 +233,17 @@ export function useDailyCall(
 
       console.log('🔌 Daily.co joining room:', roomUrl, viewerMode ? '(viewer)' : '');
       const userData = buildDailyJoinUserData(arenaUserId);
-      /** Salles privées Daily : le token est obligatoire (même logique que la reconnexion réseau). */
+      /** Jeton : priorité au token `beef/access`, sinon émission legacy `daily/meeting-token`. */
       let token: string | undefined;
-      if (beefIdRef.current) {
+      const accessTok = accessMeetingTokenRef.current;
+      if (typeof accessTok === 'string' && accessTok.length > 0) {
+        token = accessTok;
+      } else if (accessTok === null && viewerModeRef.current && beefIdRef.current) {
+        clearJoinWatchdog();
+        setError('Accès vidéo refusé : jeton de réunion manquant (droits spectateur).');
+        setIsJoining(false);
+        return;
+      } else if (beefIdRef.current) {
         token = await fetchMeetingToken();
       }
 
@@ -443,11 +460,21 @@ export function useDailyCall(
         });
 
         if (roomUrlRef.current && beefIdRef.current) {
-          const token = await fetchMeetingToken();
+          const accessTok = accessMeetingTokenRef.current;
+          if (accessTok === null && viewerModeRef.current) {
+            reconnectingRef.current = false;
+            return;
+          }
+          let token: string | undefined;
+          if (typeof accessTok === 'string' && accessTok.length > 0) {
+            token = accessTok;
+          } else {
+            token = await fetchMeetingToken();
+          }
           const userData = buildDailyJoinUserData(arenaUserIdRef.current);
           await newCo.join({
             url: roomUrlRef.current,
-            token,
+            ...(token ? { token } : {}),
             userName: userNameRef.current,
             ...(userData ? { userData } : {}),
             startVideoOff: viewerModeRef.current,
