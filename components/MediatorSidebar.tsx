@@ -76,7 +76,7 @@ type MediatorSidebarProps = {
   pendingInvites: Array<{ userId: string; label: string }>;
   onAcceptPendingInvite?: (userId: string) => void;
   onRejectPendingInvite?: (userId: string) => void;
-  /** Inviter un co-hôte (recherche inline dans le Command Deck) */
+  /** Inviter un co-hôte (recherche inline dans le tableau de bord) */
   onInviteParticipant?: (userId: string) => void | Promise<void>;
   /** IDs déjà sur le ring / à exclure de la recherche (dont l’hôte courant) */
   inviteExcludeParticipantIds?: string[];
@@ -187,7 +187,7 @@ export function MediatorSidebar({
                 {/* Backdrop — portail body pour éviter les conflits d’empilement dans l’arène */}
                 <motion.button
                   type="button"
-                  aria-label="Fermer le command deck"
+                  aria-label="Fermer le tableau de bord"
                   className="fixed inset-0 z-modal-backdrop bg-black/50 backdrop-blur-[2px]"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -198,7 +198,7 @@ export function MediatorSidebar({
                 {/* Bottom Sheet */}
                 <motion.aside
                   role="dialog"
-                  aria-label="Command Deck"
+                  aria-label="Tableau de bord"
                   initial={{ y: '100%' }}
                   animate={{ y: 0 }}
                   exit={{ y: '100%' }}
@@ -211,7 +211,7 @@ export function MediatorSidebar({
                   {/* Header */}
                   <div className="relative z-10 flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
                     <span className="font-mono text-xs font-bold tracking-tight text-white/90">
-                      Command Deck
+                      Tableau de bord
                     </span>
                     <button
                       type="button"
@@ -233,22 +233,22 @@ export function MediatorSidebar({
                   type="button"
                   disabled={startingBeef}
                   onClick={() => void onStartBeef()}
-                  className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-[2.5rem] border border-[#FF4D00]/80 bg-[#FF4D00] py-3.5 font-mono text-[11px] font-black uppercase tracking-[0.18em] text-black shadow-[0_0_28px_rgba(255,77,0,0.55)] disabled:cursor-wait disabled:opacity-70"
+                  className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-[2.5rem] border border-cobalt-500/80 bg-cobalt-500 py-3.5 font-mono text-[11px] font-black uppercase tracking-[0.18em] text-white shadow-[0_0_28px_rgba(59,130,246,0.55)] disabled:cursor-wait disabled:opacity-70"
                   animate={
                     startingBeef
                       ? {}
                       : {
                           boxShadow: [
-                            '0 0 18px rgba(255,77,0,0.45)',
-                            '0 0 32px rgba(255,77,0,0.75)',
-                            '0 0 18px rgba(255,77,0,0.45)',
+                            '0 0 18px rgba(59,130,246,0.45)',
+                            '0 0 32px rgba(59,130,246,0.75)',
+                            '0 0 18px rgba(59,130,246,0.45)',
                           ],
                         }
                   }
                   transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  <Play className="h-4 w-4 shrink-0 text-black" strokeWidth={1} aria-hidden />
-                  {startingBeef ? 'Lancement…' : 'Lancer le beef'}
+                  <Play className="h-4 w-4 shrink-0 text-white" strokeWidth={1} aria-hidden />
+                  {startingBeef ? 'Ouverture…' : 'Ouvrir la séance'}
                 </motion.button>
               </div>
             )}

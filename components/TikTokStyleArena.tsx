@@ -3274,7 +3274,7 @@ export function TikTokStyleArena({
               >
                 {/* Aura gauge badge (host only) */}
                 {isHost && auraA > 0 && (
-                  <div className="pointer-events-auto absolute bottom-3 left-3 z-[50] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
+                  <div className="pointer-events-auto absolute bottom-3 left-3 z-[130] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
                     <div className="h-1.5 rounded-full bg-cobalt-500 transition-all duration-300" style={{ width: `${Math.max(8, auraA * 0.5)}px` }} />
                     <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-cobalt-300">{auraA}%</span>
                     {auraA >= 100 && (
@@ -3294,7 +3294,7 @@ export function TikTokStyleArena({
                     )}
                   </div>
                 )}
-                <div className="pointer-events-none absolute left-4 top-4 z-[50] flex w-[calc(100%-3rem)] items-start justify-start gap-2">
+                <div className="pointer-events-none absolute left-4 top-4 z-[130] flex w-[calc(100%-3rem)] items-start justify-start gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3433,17 +3433,30 @@ export function TikTokStyleArena({
                         audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack}
                         muted={leftPanelIsLocal ? true : leftRemoteAudioMuted}
                         mirror={leftPanelIsLocal}
-                        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                        className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full object-cover"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-cobalt-500/10">
-                        <span className="text-5xl font-black text-white/80">
-                          {leftPanel ? leftPanelName[0].toUpperCase() : '👤'}
-                        </span>
+                      <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
+                        <motion.div
+                          className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.12)_0%,transparent_60%)]"
+                          animate={{ opacity: [0.3, 0.7, 0.3], scale: [0.95, 1.05, 0.95] }}
+                          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                        <div className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full border border-cobalt-500/20 bg-cobalt-500/10 shadow-[0_0_40px_rgba(59,130,246,0.15)]">
+                          <motion.span
+                            className="text-4xl"
+                            animate={{ rotate: [-2, 2, -2] }}
+                            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                          >
+                            ⚖️
+                          </motion.span>
+                        </div>
                         {!leftPanel && (
-                          <div className="mt-3 flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 backdrop-blur-md">
-                            <div className="h-2 w-2 rounded-full bg-cobalt-400 animate-pulse" />
-                            <span className="text-white text-[11px] font-semibold tracking-tight">En attente...</span>
+                          <div className="relative z-10 mt-6 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
+                            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-cobalt-400" />
+                            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-white/60">
+                              Installation à la table...
+                            </span>
                           </div>
                         )}
                       </div>
@@ -3508,7 +3521,7 @@ export function TikTokStyleArena({
                   </div>
                 )}
                 {/* Bas dalle : pseudo + micro/cam — z élevé + pointer-events pour rester au-dessus du dock chat */}
-                <div className="pointer-events-auto absolute bottom-3 left-1/2 z-[120] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
+                <div className="pointer-events-auto absolute bottom-3 left-1/2 z-[140] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3630,7 +3643,7 @@ export function TikTokStyleArena({
                           audioTrack={mediatorIsLocal ? undefined : mediatorParticipant.audioTrack}
                           muted={mediatorIsLocal}
                           mirror={mediatorIsLocal}
-                          className="pointer-events-none absolute inset-0 h-full w-full rounded-full object-cover"
+                          className="pointer-events-none absolute inset-0 z-10 h-full w-full rounded-full object-cover"
                         />
                       ) : (
                         <span className="pointer-events-none absolute inset-0 flex h-full w-full min-h-0 items-center justify-center font-mono text-3xl font-black text-white md:text-4xl">
@@ -3683,11 +3696,11 @@ export function TikTokStyleArena({
               >
                 {/* Aura gauge badge (host only) */}
                 {isHost && auraB > 0 && (
-                  <div className="pointer-events-auto absolute bottom-3 right-3 z-[50] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
-                    <div className="h-1.5 rounded-full bg-ember-500 transition-all duration-300" style={{ width: `${Math.max(8, auraB * 0.5)}px` }} />
-                    <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-ember-300">{auraB}%</span>
+                  <div className="pointer-events-auto absolute bottom-3 right-3 z-[130] flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 backdrop-blur-md">
+                    <div className="h-1.5 rounded-full bg-emerald-500 transition-all duration-300" style={{ width: `${Math.max(8, auraB * 0.5)}px` }} />
+                    <span className="pointer-events-none font-mono text-[8px] font-bold tabular-nums text-emerald-300">{auraB}%</span>
                     {auraB >= 100 && (
-                      <span className="pointer-events-none text-[8px] font-black text-ember-200 animate-pulse">PRÊT</span>
+                      <span className="pointer-events-none text-[8px] font-black text-emerald-200 animate-pulse">PRÊT</span>
                     )}
                     {auraB >= 100 && (
                       <button
@@ -3703,7 +3716,7 @@ export function TikTokStyleArena({
                     )}
                   </div>
                 )}
-                <div className="pointer-events-none absolute inset-x-4 top-4 z-[50] flex items-start justify-center gap-2">
+                <div className="pointer-events-none absolute inset-x-4 top-4 z-[130] flex items-start justify-center gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3728,9 +3741,9 @@ export function TikTokStyleArena({
                         className="absolute inset-0"
                         animate={{
                           boxShadow: [
-                            'inset 0 0 32px rgba(255, 0, 80, 0.22)',
-                            'inset 0 0 56px rgba(0, 240, 255, 0.28)',
-                            'inset 0 0 32px rgba(255, 0, 80, 0.22)',
+                            'inset 0 0 32px rgba(16, 185, 129, 0.22)',
+                            'inset 0 0 56px rgba(45, 212, 191, 0.28)',
+                            'inset 0 0 32px rgba(16, 185, 129, 0.22)',
                           ],
                         }}
                         transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
@@ -3753,14 +3766,14 @@ export function TikTokStyleArena({
                           boxShadow: gloryIntenseB
                             ? [
                                 'inset 0 0 56px rgba(255,255,255,0.72)',
-                                'inset 0 0 118px rgba(255,230,200,0.92)',
+                                'inset 0 0 118px rgba(167,243,208,0.92)',
                                 'inset 0 0 72px rgba(255,255,255,0.8)',
-                                'inset 0 0 118px rgba(255,215,180,0.88)',
+                                'inset 0 0 118px rgba(110,231,183,0.88)',
                                 'inset 0 0 56px rgba(255,255,255,0.72)',
                               ]
                             : [
                                 'inset 0 0 40px rgba(255,255,255,0.4)',
-                                'inset 0 0 88px rgba(255,220,186,0.5)',
+                                'inset 0 0 88px rgba(52,211,153,0.45)',
                                 'inset 0 0 40px rgba(255,255,255,0.4)',
                               ],
                         }}
@@ -3777,7 +3790,7 @@ export function TikTokStyleArena({
                             opacity: [0.25, 0.52, 0.28, 0.48, 0.25],
                             background: [
                               'radial-gradient(circle at 65% 42%, rgba(255,255,255,0.48) 0%, transparent 55%)',
-                              'radial-gradient(circle at 35% 58%, rgba(255,230,200,0.5) 0%, transparent 50%)',
+                              'radial-gradient(circle at 35% 58%, rgba(167,243,208,0.5) 0%, transparent 50%)',
                               'radial-gradient(circle at 50% 38%, rgba(255,255,255,0.42) 0%, transparent 58%)',
                             ],
                           }}
@@ -3790,7 +3803,7 @@ export function TikTokStyleArena({
                 <AnimatePresence>
                   {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
                     <motion.div
-                      key="right-hotmic-ember"
+                      key="right-hotmic-emerald"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -3801,14 +3814,14 @@ export function TikTokStyleArena({
                         animate={{
                           boxShadow: speakingTurnPaused
                             ? [
-                                'inset 0 0 44px rgba(255,77,0,0.16)',
-                                'inset 0 0 58px rgba(255,120,0,0.24)',
-                                'inset 0 0 44px rgba(255,77,0,0.16)',
+                                'inset 0 0 44px rgba(16,185,129,0.16)',
+                                'inset 0 0 58px rgba(52,211,153,0.24)',
+                                'inset 0 0 44px rgba(16,185,129,0.16)',
                               ]
                             : [
-                                'inset 0 0 38px rgba(255,77,0,0.42)',
-                                'inset 0 0 76px rgba(255,85,0,0.62)',
-                                'inset 0 0 38px rgba(255,77,0,0.42)',
+                                'inset 0 0 38px rgba(16,185,129,0.38)',
+                                'inset 0 0 76px rgba(45,212,191,0.52)',
+                                'inset 0 0 38px rgba(16,185,129,0.38)',
                               ],
                         }}
                         transition={{
@@ -3818,7 +3831,7 @@ export function TikTokStyleArena({
                         }}
                       />
                       <motion.div
-                        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(255,77,0,0.28)_0%,rgba(255,77,0,0.1)_45%,transparent_70%)]"
+                        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(16,185,129,0.28)_0%,rgba(52,211,153,0.1)_45%,transparent_70%)]"
                         animate={{
                           opacity: speakingTurnPaused ? [0.18, 0.32, 0.18] : [0.38, 0.62, 0.38],
                         }}
@@ -3842,17 +3855,30 @@ export function TikTokStyleArena({
                         audioTrack={rightPanelIsLocal ? undefined : rightPanel.audioTrack}
                         muted={rightPanelIsLocal ? true : rightRemoteAudioMuted}
                         mirror={rightPanelIsLocal}
-                        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                        className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full object-cover"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-ember-500/10">
-                        <span className="text-5xl font-black text-white/80">
-                          {rightPanel ? rightPanelName[0].toUpperCase() : '👤'}
-                        </span>
+                      <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
+                        <motion.div
+                          className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.12)_0%,transparent_60%)]"
+                          animate={{ opacity: [0.3, 0.7, 0.3], scale: [0.95, 1.05, 0.95] }}
+                          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                        <div className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full border border-emerald-500/20 bg-emerald-500/10 shadow-[0_0_40px_rgba(16,185,129,0.18)]">
+                          <motion.span
+                            className="text-4xl"
+                            animate={{ rotate: [-2, 2, -2] }}
+                            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                          >
+                            ⚖️
+                          </motion.span>
+                        </div>
                         {!rightPanel && (
-                          <div className="mt-3 flex items-center gap-2 rounded-full bg-black/30 px-3 py-1.5 backdrop-blur-md">
-                            <div className="h-2 w-2 rounded-full bg-red-400 animate-pulse" />
-                            <span className="text-white text-[11px] font-semibold tracking-tight">En attente...</span>
+                          <div className="relative z-10 mt-6 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
+                            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-white/60">
+                              Installation à la table...
+                            </span>
                           </div>
                         )}
                       </div>
@@ -3890,7 +3916,7 @@ export function TikTokStyleArena({
                       animate={{ opacity: 0 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.8 }}
-                      className="absolute inset-0 bg-ember-500/20 z-[6] pointer-events-none"
+                      className="pointer-events-none absolute inset-0 z-[6] bg-emerald-500/20"
                     />
                   )}
                 </AnimatePresence>
@@ -3903,7 +3929,7 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                <div className="pointer-events-auto absolute bottom-3 left-1/2 z-[120] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
+                <div className="pointer-events-auto absolute bottom-3 left-1/2 z-[140] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -4096,7 +4122,7 @@ export function TikTokStyleArena({
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0, opacity: 0, y: -10 }}
                         transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                        className="rounded-full bg-gradient-to-r from-cobalt-600/95 via-ember-500/95 to-cobalt-500/95 px-4 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.55),0_0_32px_rgba(251,146,60,0.12)] backdrop-blur-2xl"
+                        className="rounded-full bg-gradient-to-r from-cobalt-600/95 via-emerald-500/95 to-cobalt-500/95 px-4 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.55),0_0_32px_rgba(16,185,129,0.12)] backdrop-blur-2xl"
                       >
                         <h2 className="text-white text-[10px] sm:text-xs font-black text-center drop-shadow-lg">
                           {debateTitle}
@@ -4121,8 +4147,8 @@ export function TikTokStyleArena({
                 </button>
               </div>
               <div
-                className={`absolute inset-0 flex h-full min-h-0 w-full items-center justify-center bg-ember-500/10 text-5xl font-black text-white/80 ${
-                  speakingTurnTarget === debaters[1]?.id ? 'ring-2 ring-inset ring-ember-400' : ''
+                className={`absolute inset-0 flex h-full min-h-0 w-full items-center justify-center bg-emerald-500/10 text-5xl font-black text-white/80 ${
+                  speakingTurnTarget === debaters[1]?.id ? 'ring-2 ring-inset ring-emerald-400' : ''
                 }`}
               >
                 👤
@@ -4136,19 +4162,19 @@ export function TikTokStyleArena({
                     transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                     className={`absolute left-4 top-14 z-20 rounded-2xl bg-black/95 px-4 py-2 shadow-2xl backdrop-blur-xl border-[3px] border-solid ${
                       speakingTurnRemaining <= 10
-                        ? 'border-ember-600'
+                        ? 'border-emerald-600'
                         : speakingTurnRemaining <= 30
-                          ? 'border-ember-500/80'
-                          : 'border-cobalt-500/80'
+                          ? 'border-emerald-500/80'
+                          : 'border-emerald-400/80'
                     }`}
                   >
                     <div
                       className={`text-4xl font-black tabular-nums ${
                         speakingTurnRemaining <= 10
-                          ? 'text-ember-500 animate-pulse'
+                          ? 'text-emerald-400 animate-pulse'
                           : speakingTurnRemaining <= 30
-                            ? 'text-ember-400'
-                            : 'text-cobalt-400'
+                            ? 'text-emerald-300'
+                            : 'text-emerald-200'
                       }`}
                     >
                       {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
@@ -4160,7 +4186,7 @@ export function TikTokStyleArena({
             </div>
           ) : (
             <div className="pointer-events-auto relative flex min-h-0 h-full min-w-0 flex-1 overflow-hidden rounded-r-xl border-l border-white/10 bg-[#08080A] lg:rounded-2xl">
-              <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-ember-500/5">
+              <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-emerald-500/5">
                 <motion.div 
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
@@ -4177,7 +4203,7 @@ export function TikTokStyleArena({
         )}
 
       {/* ── Header fixe : annonce puis chrono / LIVE (pile unique, mobile + desktop) ── */}
-      {/* z-[80] > zone vidéo z-[65] : sinon la dalle droite volait les taps sur LIVE / Sliders (command deck) */}
+      {/* z-[80] > zone vidéo z-[65] : sinon la dalle droite volait les taps sur LIVE / Sliders (tableau de bord) */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[80] flex w-full flex-col p-2 lg:p-4">
         {arenaHasAnnouncement && (
           <div className="pointer-events-none shrink-0 border-b border-white/10 bg-black/65 px-3 py-2 backdrop-blur-md">
@@ -4473,7 +4499,7 @@ export function TikTokStyleArena({
                 disabled={!chatInput.trim()}
                 onClick={() => void handleSendMessage()}
                 aria-label="Envoyer le message"
-                className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-xl bg-ember-500 hover:bg-ember-600 disabled:pointer-events-none disabled:opacity-35"
+                className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-xl bg-cobalt-500 hover:bg-cobalt-600 disabled:pointer-events-none disabled:opacity-35"
               >
                 <Send className="h-3.5 w-3.5 text-white" strokeWidth={1} aria-hidden />
               </button>
