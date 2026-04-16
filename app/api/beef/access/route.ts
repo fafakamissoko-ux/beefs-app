@@ -57,6 +57,9 @@ async function fetchDailyRoomUrl(roomName: string, apiKey: string): Promise<stri
 
 type DailyTokenRole = 'mediator' | 'participant' | 'spectator';
 
+/** Ligne `users` pour le nom Daily — cast explicite car le client admin peut inférer `never` sans types DB générés. */
+type UsersNameFields = { display_name: string | null; username: string | null };
+
 /**
  * Crée un meeting token Daily (POST /v1/meeting-tokens).
  * — médiateur : is_owner
@@ -110,7 +113,7 @@ async function createDailyMeetingToken(params: {
 }
 
 async function videoCredentialsForUser(
-  supabase: ReturnType<typeof createClient>,
+  supabase: typeof supabaseAdmin,
   user: User,
   beefId: string,
   grantTokenRole: DailyTokenRole | null,
@@ -119,11 +122,13 @@ async function videoCredentialsForUser(
   const roomName = beefDailyRoomName(beefId);
   const dailyRoomUrl = apiKey ? await fetchDailyRoomUrl(roomName, apiKey) : null;
 
-  const { data: profile } = await supabase
+  const { data: profileRaw } = await supabase
     .from('users')
     .select('display_name, username')
     .eq('id', user.id)
     .maybeSingle();
+
+  const profile = profileRaw as UsersNameFields | null;
 
   const userName =
     (profile?.display_name?.trim() ||
