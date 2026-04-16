@@ -1276,6 +1276,30 @@ export function TikTokStyleArena({
     }
   };
 
+  const handleRaiseHand = useCallback(async () => {
+    if (!userId || !roomId) return;
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const res = await fetch('/api/beef/raise-hand', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ beefId: roomId }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      toast('Demande envoyée ! Le médiateur va te répondre.', 'success');
+    } catch (error) {
+      console.error('Erreur lors de la demande:', error);
+      const msg = error instanceof Error ? error.message : 'Impossible d’envoyer la demande.';
+      toast(msg, 'error');
+    }
+  }, [userId, roomId, toast]);
+
   // Spectateurs uniquement (pas médiateur ni challengers)
   useEffect(() => {
     if (!isJoined || userRole !== 'viewer') return;
@@ -4316,6 +4340,18 @@ export function TikTokStyleArena({
           </div>
           <div className="relative z-[130] min-w-0 shrink-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1">
             <div className="flex min-w-0 items-center gap-2">
+              {userRole === 'viewer' && (
+                <button
+                  type="button"
+                  onClick={() => void handleRaiseHand()}
+                  aria-label="Demander à monter sur le ring"
+                  className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-xl bg-white/[0.06] transition-colors hover:bg-white/[0.12]"
+                >
+                  <span className="text-lg" aria-hidden>
+                    ✋
+                  </span>
+                </button>
+              )}
               <input
                 type="text"
                 value={chatInput}
