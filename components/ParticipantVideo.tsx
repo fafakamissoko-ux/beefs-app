@@ -21,12 +21,20 @@ export function ParticipantVideo({ videoTrack, audioTrack, muted = false, classN
     if (videoTrack) tracks.push(videoTrack);
     if (audioTrack && !muted) tracks.push(audioTrack);
 
-    el.srcObject = tracks.length > 0 ? new MediaStream(tracks) : null;
+    if (tracks.length > 0) {
+      const stream = new MediaStream(tracks);
+      el.srcObject = stream;
+
+      // FORÇAGE DU MOTEUR : On ordonne au navigateur de lire le flux injecté
+      el.play().catch((err) => {
+        console.warn('⚠️ Lecture automatique bloquée par le navigateur (Autoplay Policy) :', err);
+        // Note : Si l'utilisateur n'a pas cliqué sur la page avant, le navigateur bloque le son.
+      });
+    } else {
+      el.srcObject = null;
+    }
 
     return () => {
-      // Only clear srcObject — DO NOT stop tracks here.
-      // Track lifecycle is managed by useDailyCall.leave() which runs
-      // the nuclear stop BEFORE this component unmounts.
       el.srcObject = null;
     };
   }, [videoTrack, audioTrack, muted]);
@@ -37,7 +45,7 @@ export function ParticipantVideo({ videoTrack, audioTrack, muted = false, classN
       autoPlay
       playsInline
       muted={muted}
-      className={`${className} ${mirror ? '[transform:scaleX(-1)]' : ''}`}
+      className={`${className} ${mirror ? '[transform:scaleX(-1)]' : ''} bg-transparent object-cover`}
     />
   );
 }
