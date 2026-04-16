@@ -3234,7 +3234,7 @@ export function TikTokStyleArena({
       <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
         {effectiveDailyRoomUrl ? (
           <div
-            className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] landscape:flex-1 lg:flex-1 overflow-hidden lg:pb-0 max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
+            className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] landscape:flex-1 lg:flex-1 overflow-visible lg:pb-0 max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
           >
             <motion.div
               aria-hidden
@@ -3251,7 +3251,7 @@ export function TikTokStyleArena({
             >
               {/* LEFT — Participant A */}
               <motion.div
-                className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-hidden bg-[#08080A] rounded-l-3xl lg:rounded-3xl border-r border-white/20 shadow-lg flex items-center justify-center"
+                className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-visible bg-[#08080A] rounded-l-3xl lg:rounded-3xl border-r border-white/20 shadow-lg flex items-center justify-center"
                 animate={
                   rematchSequence
                     ? { x: [0, -5, 5, -4, 4, -3, 3, 0], y: [0, 3, -3, 2, -2, 0], scale: 1 }
@@ -3298,7 +3298,7 @@ export function TikTokStyleArena({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[4]"
+                      className="pointer-events-none absolute inset-0 z-[22]"
                     >
                       <motion.div
                         className="absolute inset-0"
@@ -3321,7 +3321,7 @@ export function TikTokStyleArena({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className={`pointer-events-none absolute inset-0 ${gloryIntenseA ? 'z-[8]' : 'z-[6]'}`}
+                      className="pointer-events-none absolute inset-0 z-[22]"
                     >
                       <motion.div
                         className="absolute inset-0"
@@ -3370,7 +3370,7 @@ export function TikTokStyleArena({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[5] block"
+                      className="pointer-events-none absolute inset-0 z-[23] block"
                     >
                       <motion.div
                         className="absolute inset-0"
@@ -3403,6 +3403,18 @@ export function TikTokStyleArena({
                     </motion.div>
                   )}
                 </AnimatePresence>
+                <motion.div
+                  aria-hidden
+                  className="pointer-events-none absolute -inset-[8px] z-[1] rounded-l-3xl lg:rounded-3xl"
+                  animate={{
+                    boxShadow:
+                      auraA > 0
+                        ? `0 0 ${20 + auraA}px rgba(59,130,246,${Math.min(1, 0.4 + auraA / 100)})`
+                        : 'none',
+                  }}
+                  transition={{ type: 'tween', duration: 0.35 }}
+                />
+                <div className="absolute inset-0 z-[10] overflow-hidden rounded-l-3xl lg:rounded-3xl">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={leftPanel?.sessionId ? `vid-left-${leftPanel.sessionId}` : 'empty-left'}
@@ -3414,17 +3426,6 @@ export function TikTokStyleArena({
                   >
                     {leftPanel?.videoTrack ? (
                       <>
-                        <motion.div
-                          aria-hidden
-                          className="pointer-events-none absolute -inset-[2px] z-[5] rounded-l-3xl lg:rounded-3xl"
-                          animate={{
-                            boxShadow:
-                              auraA > 0
-                                ? `0 0 ${20 + auraA}px rgba(59,130,246,${Math.min(1, 0.4 + auraA / 100)})`
-                                : 'none',
-                          }}
-                          transition={{ type: 'tween', duration: 0.35 }}
-                        />
                         <ParticipantVideo
                           videoTrack={leftPanel.videoTrack}
                           audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack}
@@ -3435,17 +3436,6 @@ export function TikTokStyleArena({
                       </>
                     ) : (
                       <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
-                        <motion.div
-                          aria-hidden
-                          className="pointer-events-none absolute -inset-[2px] z-[2] rounded-l-3xl lg:rounded-3xl"
-                          animate={{
-                            boxShadow:
-                              auraA > 0
-                                ? `0 0 ${20 + auraA}px rgba(59,130,246,${Math.min(1, 0.4 + auraA / 100)})`
-                                : 'none',
-                          }}
-                          transition={{ type: 'tween', duration: 0.35 }}
-                        />
                         <motion.div
                           className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.12)_0%,transparent_60%)]"
                           animate={{ opacity: [0.3, 0.7, 0.3], scale: [0.95, 1.05, 0.95] }}
@@ -3472,10 +3462,12 @@ export function TikTokStyleArena({
                     )}
                   </motion.div>
                 </AnimatePresence>
+                </div>
                 {/* Vote tap overlay — viewers tap to vote for this challenger */}
                 {isViewer && (
-                  <button
+                  <motion.button
                     type="button"
+                    whileTap={{ scale: 0.96, filter: 'brightness(1.2)' }}
                     onClick={() => {
                       emitTapSupport('A');
                       preferSide('A');
@@ -3488,8 +3480,9 @@ export function TikTokStyleArena({
                   effectiveDailyRoomUrl &&
                   (isHost || userRole === 'challenger') &&
                   !leftPanelIsLocal && (
-                  <button
+                  <motion.button
                     type="button"
+                    whileTap={{ scale: 0.96, filter: 'brightness(1.2)' }}
                     onClick={() => emitTapSupport('A')}
                     className="absolute inset-0 z-[28] touch-manipulation bg-transparent"
                     aria-label="Envoyer du soutien au challenger A"
@@ -3656,25 +3649,26 @@ export function TikTokStyleArena({
                       />
                     )}
                     <MediatorSupportHalo burstKey={supportBurst.M} />
-                    <button
+                    <motion.div
+                      aria-hidden
+                      className="pointer-events-none absolute -inset-[6px] z-[5] rounded-full"
+                      animate={{
+                        boxShadow:
+                          auraMed > 0
+                            ? `0 0 ${20 + auraMed}px rgba(255,200,60,${Math.min(1, 0.4 + auraMed / 100)})`
+                            : 'none',
+                      }}
+                      transition={{ type: 'tween', duration: 0.35 }}
+                    />
+                    <motion.button
                       type="button"
+                      whileTap={{ scale: 0.96, filter: 'brightness(1.2)' }}
                       onClick={() => emitTapSupport('M')}
                       aria-label="Envoyer du soutien au médiateur"
-                      className={`pointer-events-auto relative z-10 flex h-24 w-24 sm:h-32 sm:w-32 lg:h-[min(170px,32dvh)] lg:w-[min(170px,32dvh)] shrink-0 items-center justify-center overflow-hidden rounded-full bg-prestige-gold text-4xl text-black shadow-[0_0_28px_rgba(255,200,60,0.45),0_12px_40px_rgba(0,0,0,0.35)] transition-transform active:scale-[0.98] touch-manipulation ${auraFeverMed ? 'saturate-150 brightness-110' : ''}`}
+                      className={`pointer-events-auto relative z-10 flex h-24 w-24 sm:h-32 sm:w-32 lg:h-[min(170px,32dvh)] lg:w-[min(170px,32dvh)] shrink-0 items-center justify-center overflow-visible rounded-full bg-prestige-gold text-4xl text-black shadow-[0_0_28px_rgba(255,200,60,0.45),0_12px_40px_rgba(0,0,0,0.35)] touch-manipulation ${auraFeverMed ? 'saturate-150 brightness-110' : ''}`}
                     >
-                      {mediatorParticipant?.videoTrack ? (
-                        <>
-                          <motion.div
-                            aria-hidden
-                            className="pointer-events-none absolute -inset-[2px] z-[5] rounded-full"
-                            animate={{
-                              boxShadow:
-                                auraMed > 0
-                                  ? `0 0 ${20 + auraMed}px rgba(255,200,60,${Math.min(1, 0.4 + auraMed / 100)})`
-                                  : 'none',
-                            }}
-                            transition={{ type: 'tween', duration: 0.35 }}
-                          />
+                      <div className="absolute inset-0 z-[12] overflow-hidden rounded-full">
+                        {mediatorParticipant?.videoTrack ? (
                           <ParticipantVideo
                             videoTrack={mediatorParticipant.videoTrack}
                             audioTrack={mediatorIsLocal ? undefined : mediatorParticipant.audioTrack}
@@ -3682,13 +3676,13 @@ export function TikTokStyleArena({
                             mirror={mediatorIsLocal}
                             className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full bg-black object-cover rounded-full"
                           />
-                        </>
-                      ) : (
-                        <span className="pointer-events-none absolute inset-0 flex h-full w-full min-h-0 items-center justify-center font-mono text-3xl font-black text-white md:text-4xl">
-                          {mediatorName?.[0]?.toUpperCase() || '·'}
-                        </span>
-                      )}
-                    </button>
+                        ) : (
+                          <span className="pointer-events-none absolute inset-0 flex h-full w-full min-h-0 items-center justify-center font-mono text-3xl font-black text-white md:text-4xl">
+                            {mediatorName?.[0]?.toUpperCase() || '·'}
+                          </span>
+                        )}
+                      </div>
+                    </motion.button>
                   </div>
                   <button
                     type="button"
@@ -3708,7 +3702,7 @@ export function TikTokStyleArena({
 
               {/* RIGHT — Participant B */}
               <motion.div
-                className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-hidden bg-[#08080A] rounded-r-3xl lg:rounded-3xl border-l border-white/10 shadow-lg flex items-center justify-center"
+                className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-visible bg-[#08080A] rounded-r-3xl lg:rounded-3xl border-l border-white/10 shadow-lg flex items-center justify-center"
                 animate={
                   rematchSequence
                     ? { x: [0, 5, -5, 4, -4, 3, -3, 0], y: [0, -3, 3, -2, 2, 0], scale: 1 }
@@ -3755,7 +3749,7 @@ export function TikTokStyleArena({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[4]"
+                      className="pointer-events-none absolute inset-0 z-[22]"
                     >
                       <motion.div
                         className="absolute inset-0"
@@ -3778,7 +3772,7 @@ export function TikTokStyleArena({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className={`pointer-events-none absolute inset-0 ${gloryIntenseB ? 'z-[8]' : 'z-[6]'}`}
+                      className="pointer-events-none absolute inset-0 z-[22]"
                     >
                       <motion.div
                         className="absolute inset-0"
@@ -3827,7 +3821,7 @@ export function TikTokStyleArena({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[5] block"
+                      className="pointer-events-none absolute inset-0 z-[23] block"
                     >
                       <motion.div
                         className="absolute inset-0"
@@ -3860,6 +3854,18 @@ export function TikTokStyleArena({
                     </motion.div>
                   )}
                 </AnimatePresence>
+                <motion.div
+                  aria-hidden
+                  className="pointer-events-none absolute -inset-[8px] z-[1] rounded-r-3xl lg:rounded-3xl"
+                  animate={{
+                    boxShadow:
+                      auraB > 0
+                        ? `0 0 ${20 + auraB}px rgba(16,185,129,${Math.min(1, 0.4 + auraB / 100)})`
+                        : 'none',
+                  }}
+                  transition={{ type: 'tween', duration: 0.35 }}
+                />
+                <div className="absolute inset-0 z-[10] overflow-hidden rounded-r-3xl lg:rounded-3xl">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={rightPanel?.sessionId ? `vid-right-${rightPanel.sessionId}` : 'empty-right'}
@@ -3871,17 +3877,6 @@ export function TikTokStyleArena({
                   >
                     {rightPanel?.videoTrack ? (
                       <>
-                        <motion.div
-                          aria-hidden
-                          className="pointer-events-none absolute -inset-[2px] z-[5] rounded-r-3xl lg:rounded-3xl"
-                          animate={{
-                            boxShadow:
-                              auraB > 0
-                                ? `0 0 ${20 + auraB}px rgba(16,185,129,${Math.min(1, 0.4 + auraB / 100)})`
-                                : 'none',
-                          }}
-                          transition={{ type: 'tween', duration: 0.35 }}
-                        />
                         <ParticipantVideo
                           videoTrack={rightPanel.videoTrack}
                           audioTrack={rightPanelIsLocal ? undefined : rightPanel.audioTrack}
@@ -3892,17 +3887,6 @@ export function TikTokStyleArena({
                       </>
                     ) : (
                       <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
-                        <motion.div
-                          aria-hidden
-                          className="pointer-events-none absolute -inset-[2px] z-[2] rounded-r-3xl lg:rounded-3xl"
-                          animate={{
-                            boxShadow:
-                              auraB > 0
-                                ? `0 0 ${20 + auraB}px rgba(16,185,129,${Math.min(1, 0.4 + auraB / 100)})`
-                                : 'none',
-                          }}
-                          transition={{ type: 'tween', duration: 0.35 }}
-                        />
                         <motion.div
                           className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.12)_0%,transparent_60%)]"
                           animate={{ opacity: [0.3, 0.7, 0.3], scale: [0.95, 1.05, 0.95] }}
@@ -3929,10 +3913,12 @@ export function TikTokStyleArena({
                     )}
                   </motion.div>
                 </AnimatePresence>
+                </div>
                 {/* Vote tap overlay — viewers tap to vote for this challenger */}
                 {isViewer && (
-                  <button
+                  <motion.button
                     type="button"
+                    whileTap={{ scale: 0.96, filter: 'brightness(1.2)' }}
                     onClick={() => {
                       emitTapSupport('B');
                       preferSide('B');
@@ -3945,8 +3931,9 @@ export function TikTokStyleArena({
                   effectiveDailyRoomUrl &&
                   (isHost || userRole === 'challenger') &&
                   !rightPanelIsLocal && (
-                  <button
+                  <motion.button
                     type="button"
+                    whileTap={{ scale: 0.96, filter: 'brightness(1.2)' }}
                     onClick={() => emitTapSupport('B')}
                     className="absolute inset-0 z-[28] touch-manipulation bg-transparent"
                     aria-label="Envoyer du soutien au challenger B"
