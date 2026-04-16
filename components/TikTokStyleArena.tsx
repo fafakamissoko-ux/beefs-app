@@ -3230,8 +3230,10 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* TikTok Battle : vidéo 60% + chat overlay */}
-      <div className="relative flex min-h-0 w-full max-w-full flex-1 flex-col bg-[#08080A]">
+      {/* TikTok Battle : calques stricts — vidéo (fond) + UI chat (md+) ; mobile inchangé (flex-col) */}
+      <div className="relative min-h-0 h-full w-full max-w-full flex-1 flex flex-col overflow-hidden bg-[#08080A] md:block">
+        {/* CALQUE 1 — scène vidéo + îlots header (fond) */}
+        <div className="relative z-0 min-h-0 w-full shrink-0 flex flex-1 flex-col md:absolute md:inset-0 md:h-auto md:w-full md:min-h-0">
         {effectiveDailyRoomUrl ? (
           <div
             className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] landscape:flex-1 lg:flex-1 overflow-visible lg:pb-0 max-lg:pb-28 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem]' : 'pt-24 max-sm:pt-28'}`}
@@ -4327,74 +4329,13 @@ export function TikTokStyleArena({
         </div>
         </div>
       </div>
+        </div>
 
-      {/* ── Médiateur — barre de commande (privée) — ouverture via bouton header (plus de FAB) ── */}
-      {isHost && isJoined && !beefEnded && effectiveDailyRoomUrl && (
-        <>
-          <MediatorSidebar
-            open={mediatorSidebarOpen}
-            onClose={() => setMediatorSidebarOpen(false)}
-            timerActive={timerActive}
-            beefTimerPaused={timerPaused}
-            onPauseBeefTimer={pauseBeefTimer}
-            onResumeBeefTimer={resumeBeefTimer}
-            onResetBeefTimer={resetBeefTimerToFull}
-            startingBeef={startingBeef}
-            onStartBeef={async () => {
-              setStartingBeef(true);
-              try {
-                await startBeefTimer();
-              } finally {
-                setStartingBeef(false);
-              }
-            }}
-            onVerdict={handleMediatorVerdict}
-            remoteRows={mediatorRemoteRows}
-            speakingTurnActive={speakingTurnActive}
-            speakingTurnPaused={speakingTurnPaused}
-            hotMicSpeakerSlot={hotMicSpeakerSlot}
-            onHotMic={startHotMicTurn}
-            onStopSpeakingTurn={stopTimer}
-            onPauseSpeakingTurn={pauseSpeakingTurn}
-            onResumeSpeakingTurn={resumeSpeakingTurn}
-            onRestartSpeakingTurn={restartSpeakingTurn}
-            beefTimeFormatted={formatBeefTime(beefTimeRemaining)}
-            onSetChallengerMuted={handleMediatorChallengerMute}
-            onEjectParticipant={async (sid) => {
-              const ok = await ejectRemoteParticipant(sid);
-              if (ok) toast('Participant expulsé', 'success');
-              else {
-                toast(
-                  'Expulsion impossible (participant introuvable ou droits Daily insuffisants).',
-                  'error',
-                );
-              }
-            }}
-            onAdjustTime={adjustBeefTime}
-            mediatorMicEnabled={micEnabled}
-            mediatorCamEnabled={camEnabled}
-            onMediatorToggleMic={() => void toggleMic()}
-            onMediatorToggleCam={() => void toggleCam()}
-            beefRemainingSec={beefTimeRemaining}
-            maxBeefDurationSec={MAX_BEEF_DURATION}
-            parolePresetSec={parolePresetSec}
-            onParolePresetSecChange={setParolePresetSec}
-            announcementText={announcementTicker}
-            onPublishAnnouncement={publishAnnouncementBanner}
-            onClearAnnouncement={clearAnnouncementBanner}
-            pendingInvites={pendingInvites}
-            onAcceptPendingInvite={handleAcceptPendingInvite}
-            onRejectPendingInvite={handleRejectPendingInvite}
-            onInviteParticipant={handleInviteFromModal}
-            inviteExcludeParticipantIds={inviteExcludeParticipantIds}
-            inviteCurrentUserId={userId}
-          />
-        </>
-      )}
-
-      {/* ── Dock social : top-[60%] aligné sur la zone vidéo — pas de chevauchement avec micro/cam (z vidéo > dock) ── */}
+      {/* CALQUE 2 — chat & réactions (pointer-events-none : les taps traversent vers la vidéo hors zones actives) */}
+      <div className="relative z-10 flex min-h-0 w-full flex-col justify-end p-2 pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:w-full landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] md:absolute md:inset-0 md:p-4">
       {!beefEnded && (
-        <div className="pointer-events-none absolute bottom-0 z-[55] flex min-h-0 flex-col justify-end overflow-visible max-lg:inset-x-0 max-lg:w-full max-lg:top-[60%] landscape:top-auto landscape:bottom-0 landscape:h-[120px] lg:inset-x-0 lg:top-auto lg:h-[35vh] lg:px-6">
+        <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col justify-end overflow-visible lg:px-2">
+        <div className="pointer-events-auto mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:max-w-none">
         <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
           <div
             className="grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_auto_auto] gap-y-2 overflow-hidden lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(12.5rem,15rem)] lg:grid-rows-[minmax(0,1fr)_auto] lg:gap-x-6 lg:gap-y-0"
@@ -4402,7 +4343,7 @@ export function TikTokStyleArena({
           >
           <div
             ref={chatMessagesScrollRef}
-            className="min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:row-start-1 max-lg:min-h-0 max-lg:max-h-[min(30svh,240px)] max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] lg:col-start-1 lg:row-start-1 lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
+            className="pointer-events-auto min-h-0 min-w-0 max-h-[30vh] overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:row-start-1 max-lg:min-h-0 max-lg:max-h-[min(30svh,240px)] max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] md:max-h-[40vh] lg:col-start-1 lg:row-start-1 lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -4626,6 +4567,70 @@ export function TikTokStyleArena({
           </div>
         </div>
         </div>
+        </div>
+      )}
+
+      </div>
+
+      {isHost && (
+        <MediatorSidebar
+          open={mediatorSidebarOpen}
+          onClose={() => setMediatorSidebarOpen(false)}
+          timerActive={timerActive}
+          beefTimerPaused={timerPaused}
+          onPauseBeefTimer={pauseBeefTimer}
+          onResumeBeefTimer={resumeBeefTimer}
+          onResetBeefTimer={resetBeefTimerToFull}
+          startingBeef={startingBeef}
+          onStartBeef={async () => {
+            setStartingBeef(true);
+            try {
+              await startBeefTimer();
+            } finally {
+              setStartingBeef(false);
+            }
+          }}
+          onVerdict={handleMediatorVerdict}
+          remoteRows={mediatorRemoteRows}
+          speakingTurnActive={speakingTurnActive}
+          speakingTurnPaused={speakingTurnPaused}
+          hotMicSpeakerSlot={hotMicSpeakerSlot}
+          onHotMic={startHotMicTurn}
+          onStopSpeakingTurn={stopTimer}
+          onPauseSpeakingTurn={pauseSpeakingTurn}
+          onResumeSpeakingTurn={resumeSpeakingTurn}
+          onRestartSpeakingTurn={restartSpeakingTurn}
+          beefTimeFormatted={formatBeefTime(beefTimeRemaining)}
+          onSetChallengerMuted={handleMediatorChallengerMute}
+          onEjectParticipant={async (sid) => {
+            const ok = await ejectRemoteParticipant(sid);
+            if (ok) toast('Participant expulsé', 'success');
+            else {
+              toast(
+                'Expulsion impossible (participant introuvable ou droits Daily insuffisants).',
+                'error',
+              );
+            }
+          }}
+          onAdjustTime={adjustBeefTime}
+          mediatorMicEnabled={micEnabled}
+          mediatorCamEnabled={camEnabled}
+          onMediatorToggleMic={() => void toggleMic()}
+          onMediatorToggleCam={() => void toggleCam()}
+          beefRemainingSec={beefTimeRemaining}
+          maxBeefDurationSec={MAX_BEEF_DURATION}
+          parolePresetSec={parolePresetSec}
+          onParolePresetSecChange={setParolePresetSec}
+          announcementText={announcementTicker}
+          onPublishAnnouncement={publishAnnouncementBanner}
+          onClearAnnouncement={clearAnnouncementBanner}
+          pendingInvites={pendingInvites}
+          onAcceptPendingInvite={handleAcceptPendingInvite}
+          onRejectPendingInvite={handleRejectPendingInvite}
+          onInviteParticipant={handleInviteFromModal}
+          inviteExcludeParticipantIds={inviteExcludeParticipantIds}
+          inviteCurrentUserId={userId}
+        />
       )}
 
       </div>
