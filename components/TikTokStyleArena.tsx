@@ -300,6 +300,12 @@ export function TikTokStyleArena({
       void join(preJoinMediaStream);
     }
   }, [hasJoined, dailyRoomUrl, isJoined, isJoining, join, preJoinMediaStream]);
+
+  /** Diagnostic #58 : URL Daily (écart env / salle). */
+  useEffect(() => {
+    console.log('🔗 DAILY URL:', dailyRoomUrl);
+  }, [dailyRoomUrl]);
+
   const [flyingReactions, setFlyingReactions] = useState<FlyingReactionEntry[]>([]);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportTargetUser, setReportTargetUser] = useState<{
@@ -1020,13 +1026,6 @@ export function TikTokStyleArena({
     return () => clearTimeout(t);
   }, [auraMed]);
 
-  const auraIntensityA = Math.round(15 + (auraA / 100) * 45);
-  const auraOpacityA = (0.2 + (auraA / 100) * 0.6).toFixed(2);
-  const auraIntensityB = Math.round(15 + (auraB / 100) * 45);
-  const auraOpacityB = (0.2 + (auraB / 100) * 0.6).toFixed(2);
-  const auraIntensityMed = Math.round(20 + (auraMed / 100) * 50);
-  const auraOpacityMed = (0.3 + (auraMed / 100) * 0.7).toFixed(2);
-
   /** Aura prestige-gold — cadre sponsor : les gains remontent au Host quand un soutien financier est détecté.
    *  TODO: brancher sur l'événement gift broadcast ; pour l'instant, activé par l'aura A ou B > 60. */
   const sponsorAuraActive = auraA > 60 || auraB > 60;
@@ -1728,14 +1727,6 @@ export function TikTokStyleArena({
       if (target === 'A') setAuraA((v) => Math.min(100, v + boost));
       else setAuraB((v) => Math.min(100, v + boost));
     }
-    const xPercent =
-      target === 'A' ? 14 + Math.random() * 16 : target === 'B' ? 70 + Math.random() * 16 : 44 + Math.random() * 12;
-    const entry = createFlyingReactionEntry('❤️', {
-      x: xPercent,
-      opacityMul: 0.5,
-      scaleMul: 0.82,
-    });
-    setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
     channelRef.current
       ?.send({
         type: 'broadcast',
@@ -3418,13 +3409,24 @@ export function TikTokStyleArena({
                     transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
                   >
                     {leftPanel?.videoTrack ? (
-                      <ParticipantVideo
-                        videoTrack={leftPanel.videoTrack}
-                        audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack}
-                        muted={leftPanelIsLocal ? true : leftRemoteAudioMuted}
-                        mirror={leftPanelIsLocal}
-                        className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full object-cover"
-                      />
+                      <>
+                        <ParticipantVideo
+                          videoTrack={leftPanel.videoTrack}
+                          audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack}
+                          muted={leftPanelIsLocal ? true : leftRemoteAudioMuted}
+                          mirror={leftPanelIsLocal}
+                          className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full bg-black object-cover"
+                        />
+                        <motion.div
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 z-20 rounded-l-xl lg:rounded-2xl border-2 border-cobalt-400"
+                          style={{ opacity: auraA / 100 }}
+                          animate={{
+                            boxShadow: `0 0 ${20 + auraA / 2}px rgba(59, 130, 246, ${Math.min(1, 0.12 + (auraA / 100) * 0.75)})`,
+                          }}
+                          transition={{ type: 'tween', duration: 0.35 }}
+                        />
+                      </>
                     ) : (
                       <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
                         <motion.div
@@ -3616,13 +3618,24 @@ export function TikTokStyleArena({
                       className={`pointer-events-auto relative flex h-24 w-24 sm:h-32 sm:w-32 lg:h-[min(170px,32dvh)] lg:w-[min(170px,32dvh)] shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-prestige-gold bg-prestige-gold text-4xl text-black shadow-glow ring-2 ring-prestige-gold/40 transition-transform active:scale-[0.98] touch-manipulation ${auraFeverMed ? 'saturate-150 brightness-110' : ''} ${mediatorMicEnabled ? 'animate-pulse shadow-[0_0_40px_rgba(251,191,36,0.6)]' : ''}`}
                     >
                       {mediatorParticipant?.videoTrack ? (
-                        <ParticipantVideo
-                          videoTrack={mediatorParticipant.videoTrack}
-                          audioTrack={mediatorIsLocal ? undefined : mediatorParticipant.audioTrack}
-                          muted={mediatorIsLocal}
-                          mirror={mediatorIsLocal}
-                          className="pointer-events-none absolute inset-0 z-10 h-full w-full rounded-full object-cover"
-                        />
+                        <>
+                          <ParticipantVideo
+                            videoTrack={mediatorParticipant.videoTrack}
+                            audioTrack={mediatorIsLocal ? undefined : mediatorParticipant.audioTrack}
+                            muted={mediatorIsLocal}
+                            mirror={mediatorIsLocal}
+                            className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full bg-black object-cover rounded-full"
+                          />
+                          <motion.div
+                            aria-hidden
+                            className="pointer-events-none absolute inset-0 z-20 rounded-full border-2 border-prestige-gold"
+                            style={{ opacity: auraMed / 100 }}
+                            animate={{
+                              boxShadow: `0 0 ${20 + auraMed / 2}px rgba(251, 191, 36, ${Math.min(1, 0.15 + (auraMed / 100) * 0.65)})`,
+                            }}
+                            transition={{ type: 'tween', duration: 0.35 }}
+                          />
+                        </>
                       ) : (
                         <span className="pointer-events-none absolute inset-0 flex h-full w-full min-h-0 items-center justify-center font-mono text-3xl font-black text-white md:text-4xl">
                           {mediatorName?.[0]?.toUpperCase() || '·'}
@@ -3810,13 +3823,24 @@ export function TikTokStyleArena({
                     transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
                   >
                     {rightPanel?.videoTrack ? (
-                      <ParticipantVideo
-                        videoTrack={rightPanel.videoTrack}
-                        audioTrack={rightPanelIsLocal ? undefined : rightPanel.audioTrack}
-                        muted={rightPanelIsLocal ? true : rightRemoteAudioMuted}
-                        mirror={rightPanelIsLocal}
-                        className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full object-cover"
-                      />
+                      <>
+                        <ParticipantVideo
+                          videoTrack={rightPanel.videoTrack}
+                          audioTrack={rightPanelIsLocal ? undefined : rightPanel.audioTrack}
+                          muted={rightPanelIsLocal ? true : rightRemoteAudioMuted}
+                          mirror={rightPanelIsLocal}
+                          className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full bg-black object-cover"
+                        />
+                        <motion.div
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 z-20 rounded-r-xl lg:rounded-2xl border-2 border-emerald-400"
+                          style={{ opacity: auraB / 100 }}
+                          animate={{
+                            boxShadow: `0 0 ${20 + auraB / 2}px rgba(16, 185, 129, ${Math.min(1, 0.12 + (auraB / 100) * 0.75)})`,
+                          }}
+                          transition={{ type: 'tween', duration: 0.35 }}
+                        />
+                      </>
                     ) : (
                       <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
                         <motion.div
