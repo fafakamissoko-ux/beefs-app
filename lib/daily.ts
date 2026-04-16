@@ -47,10 +47,9 @@ class DailyManager {
         userName: userData.username,
       });
 
-      console.log('✅ Joined Daily.co room:', roomUrl);
       return this.callObject;
     } catch (error) {
-      console.error('❌ Error joining Daily.co room:', error);
+      console.error('Error joining Daily.co room');
       throw error;
     }
   }
@@ -64,7 +63,6 @@ class DailyManager {
       await this.callObject.destroy();
       this.callObject = null;
       this.participants.clear();
-      console.log('👋 Left Daily.co room');
     }
   }
 

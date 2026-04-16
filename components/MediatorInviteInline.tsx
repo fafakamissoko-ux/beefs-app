@@ -101,7 +101,7 @@ export function MediatorInviteInline({
 
       const err = byUsername.error || byDisplayName.error;
       if (err) {
-        console.warn('[MediatorInvite] search users:', err.message, err);
+        console.warn('[MediatorInvite] search users indisponible');
         setResults([]);
         setPhase('error');
         setErrorMessage(
@@ -118,9 +118,9 @@ export function MediatorInviteInline({
 
       setResults(merged);
       setPhase(merged.length > 0 ? 'results' : 'empty');
-    } catch (e) {
+    } catch {
       if (seq !== requestSeq.current) return;
-      console.warn('[MediatorInvite] search exception:', e);
+      console.warn('[MediatorInvite] search exception');
       setResults([]);
       setPhase('error');
       setErrorMessage('Erreur lors de la recherche. Réessaie dans un instant.');

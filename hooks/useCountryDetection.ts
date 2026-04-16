@@ -20,7 +20,6 @@ export function useCountryDetection() {
           setCountry(testCountryData);
           setTestMode(true);
           setLoading(false);
-          console.log('🧪 TEST MODE:', testCountryData.name, testCountryData.currency);
           return;
         }
 
@@ -33,8 +32,8 @@ export function useCountryDetection() {
         } else {
           setCountry(COUNTRIES.DEFAULT);
         }
-      } catch (error) {
-        console.warn('Failed to detect country, using default:', error);
+      } catch {
+        console.warn('Failed to detect country, using default');
         setCountry(COUNTRIES.DEFAULT);
       } finally {
         setLoading(false);

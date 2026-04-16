@@ -95,13 +95,11 @@ export function useDailyRoom({ roomUrl, userData, autoJoin = true }: UseDailyRoo
   useEffect(() => {
     if (!callObject) return;
 
-    const handleParticipantJoined = (event?: DailyEventObject) => {
-      console.log('👤 Participant joined:', event?.participant);
+    const handleParticipantJoined = () => {
       updateParticipants();
     };
 
-    const handleParticipantLeft = (event?: DailyEventObject) => {
-      console.log('👋 Participant left:', event?.participant);
+    const handleParticipantLeft = () => {
       updateParticipants();
     };
 
@@ -121,8 +119,8 @@ export function useDailyRoom({ roomUrl, userData, autoJoin = true }: UseDailyRoo
       );
     };
 
-    const handleError = (event?: DailyEventObject) => {
-      console.error('Daily.co error:', event);
+    const handleError = () => {
+      console.error('Daily.co error');
       setError('Connection error');
     };
 

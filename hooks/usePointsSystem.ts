@@ -22,26 +22,18 @@ export function usePointsSystem({ userId, roomId, initialPoints = 1000 }: UsePoi
     return () => clearInterval(interval);
   }, []);
 
-  const addPoints = useCallback((amount: number, reason?: string) => {
+  const addPoints = useCallback((amount: number, _reason?: string) => {
     setPoints(prev => prev + amount);
     setPointsEarned(prev => prev + amount);
-    
-    if (reason) {
-      console.log(`+${amount} points: ${reason}`);
-    }
   }, []);
 
-  const spendPoints = useCallback((amount: number, reason?: string): boolean => {
+  const spendPoints = useCallback((amount: number, _reason?: string): boolean => {
     if (amount > points) {
       return false; // Not enough points
     }
     
     setPoints(prev => prev - amount);
-    
-    if (reason) {
-      console.log(`-${amount} points: ${reason}`);
-    }
-    
+
     return true;
   }, [points]);
 

@@ -196,8 +196,6 @@ export default function ProfileContent() {
           .maybeSingle();
 
         if (!data) {
-          console.log('User not found in users table, creating...');
-          
           const { data: newUser, error: insertError } = await supabase
             .from('users')
             .insert({
@@ -213,7 +211,7 @@ export default function ProfileContent() {
             .single();
 
           if (insertError) {
-            console.error('Error creating user:', insertError);
+            console.error('Error creating user');
             throw insertError;
           }
 

@@ -27,7 +27,6 @@ interface WithdrawalRequest {
   users?: {
     display_name: string;
     username: string;
-    email: string;
   };
 }
 
@@ -199,7 +198,7 @@ export default function AdminRetraitsPage() {
                     </div>
                     <p className="text-gray-300 text-sm">
                       <span className="font-semibold">{r.users?.display_name || r.users?.username}</span>
-                      <span className="text-gray-500"> · {r.users?.email}</span>
+                      <span className="text-gray-500"> @{r.users?.username}</span>
                     </p>
                     <p className="text-gray-500 text-xs mt-1">
                       {new Date(r.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}

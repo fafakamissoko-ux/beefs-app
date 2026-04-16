@@ -435,7 +435,7 @@ export function TikTokStyleArena({
       .eq('beef_id', roomId)
       .eq('invite_status', 'pending');
     if (error) {
-      console.warn('[Live] Invités en attente:', error.message);
+      console.warn('[Live] Invités en attente : chargement impossible');
       return;
     }
     const raw = (data ?? []) as unknown as ParticipantPendingRow[];
@@ -456,7 +456,6 @@ export function TikTokStyleArena({
 
   const handleAcceptPendingInvite = useCallback(
     async (inviteUserId: string) => {
-      console.log("⚖️ Médiateur : J'accepte l'utilisateur", inviteUserId);
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('beef_participants')
@@ -540,7 +539,6 @@ export function TikTokStyleArena({
           filter: `beef_id=eq.${roomId}`,
         },
         (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
-          console.log('📡 SIGNAL REÇU - Changement participant:', payload);
           const newRow = payload.new;
           const oldRow = payload.old;
           const rawUid = newRow.user_id;
@@ -548,23 +546,18 @@ export function TikTokStyleArena({
             typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
           const myId = String(userId);
           if (rowUserStr === myId) {
-            console.log("👤 C'est mon ID ! Statut actuel:", newRow.invite_status);
             if (newRow.invite_status === 'accepted') {
               if (oldRow?.invite_status === 'accepted') {
-                console.log('⏭️ Déjà accepted côté old row, skip modale.');
                 return;
               }
-              console.log('✅ MATCH ! Activation de la modale.');
               setAcceptedInviteAlert(true);
             }
           }
         },
       )
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('📶 spectator_invite_sync SUBSCRIBED', { roomId, userId });
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn('📶 spectator_invite_sync', status);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn('[Live] spectator_invite_sync canal indisponible');
         }
       });
 
@@ -1325,11 +1318,6 @@ export function TikTokStyleArena({
     serverAccess,
   ]);
 
-  /** Diagnostic #58 : URL Daily effective (props + GET access spectateur). */
-  useEffect(() => {
-    console.log('🔗 DAILY URL:', effectiveDailyRoomUrl);
-  }, [effectiveDailyRoomUrl]);
-
   const accessResolved = serverAccess !== null;
   const serverLocked =
     isViewer &&
@@ -1417,7 +1405,7 @@ export function TikTokStyleArena({
       if (!res.ok) throw new Error(data.error || 'Erreur');
       toast('Demande envoyée ! Le médiateur va te répondre.', 'success');
     } catch (error) {
-      console.error('Erreur lors de la demande:', error);
+      console.error('Erreur lors de la demande');
       const msg = error instanceof Error ? error.message : 'Impossible d’envoyer la demande.';
       toast(msg, 'error');
     }
@@ -1793,7 +1781,6 @@ export function TikTokStyleArena({
         if (slot === 'M') setAuraMed((v) => Math.min(100, v + boost));
       })
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
-        console.log('[Live] Received broadcast message from:', payload.user_name);
         addRemoteMessage(payload.user_name, payload.content, payload.initial, payload.id);
       })
       .on('broadcast', { event: 'pulse_voice' }, ({ payload }: any) => {
@@ -1980,7 +1967,6 @@ export function TikTokStyleArena({
         endSummaryTimerRef.current = setTimeout(() => router.replace('/feed'), 12000);
       })
       .subscribe((status: string) => {
-        console.log('[Live] Broadcast channel:', status);
         if (status === 'SUBSCRIBED') {
           channelRef.current = channel;
           setLiveConnected(true);
@@ -2941,7 +2927,7 @@ export function TikTokStyleArena({
       }
 
       setVisibleMessages((prev) => prev.filter((m) => m.id !== pendingId));
-      console.error('[Live] Message insert failed:', error?.message, error);
+      console.error('[Live] Message insert failed');
       if (error && isRlsPolicyError(error)) {
         toast(
           'Envoi temporairement refusé (limite ou droits). Réessaie dans un instant.',
@@ -2955,7 +2941,7 @@ export function TikTokStyleArena({
 
     messageSendChainRef.current = messageSendChainRef.current
       .then(() => attemptInsert(0))
-      .catch((e) => console.error('[Live] Message send chain:', e));
+      .catch(() => console.error('[Live] Message send chain'));
   };
 
   const isUuid = (s: string) =>

@@ -8,31 +8,19 @@ export function useServiceWorker() {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
-          console.log('Service Worker registered:', registration);
-
           // Check for updates every hour
           setInterval(() => {
             registration.update();
           }, 60 * 60 * 1000);
         })
-        .catch((error) => {
-          console.error('Service Worker registration failed:', error);
+        .catch(() => {
+          console.error('Service Worker registration failed');
         });
     }
   }, []);
 }
 
 export function usePushNotifications() {
-  useEffect(() => {
-    if ('Notification' in window && 'serviceWorker' in navigator) {
-      // Request permission for notifications
-      if (Notification.permission === 'default') {
-        // Don't auto-request, wait for user action
-        console.log('Push notifications available');
-      }
-    }
-  }, []);
-
   const requestPermission = async () => {
     if (!('Notification' in window)) {
       console.warn('Notifications not supported');
@@ -42,8 +30,8 @@ export function usePushNotifications() {
     try {
       const permission = await Notification.requestPermission();
       return permission === 'granted';
-    } catch (error) {
-      console.error('Error requesting notification permission:', error);
+    } catch {
+      console.error('Error requesting notification permission');
       return false;
     }
   };
@@ -64,8 +52,8 @@ export function usePushNotifications() {
       });
 
       return subscription;
-    } catch (error) {
-      console.error('Error subscribing to push:', error);
+    } catch {
+      console.error('Error subscribing to push');
       return null;
     }
   };

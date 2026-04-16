@@ -191,7 +191,6 @@ export function useDailyCall(
 
       co.on('joined-meeting', () => {
         clearJoinWatchdog();
-        console.log('✅ Daily.co joined-meeting');
         setIsJoined(true);
         setIsJoining(false);
         refreshParticipants(co);
@@ -201,8 +200,7 @@ export function useDailyCall(
       co.on('participant-updated', () => refreshParticipants(co));
       co.on('participant-left', () => refreshParticipants(co));
       // Fired when a track becomes active — crucial to detect when camera is ready
-      co.on('track-started', (e: any) => {
-        console.log('🎥 Daily.co track-started:', e?.track?.kind);
+      co.on('track-started', () => {
         refreshParticipants(co);
       });
       co.on('track-stopped', () => refreshParticipants(co));
@@ -215,13 +213,13 @@ export function useDailyCall(
       });
       co.on('error', (e: any) => {
         clearJoinWatchdog();
-        console.error('❌ Daily.co error:', e);
+        console.error('Daily.co error');
         setError(e?.errorMsg || 'Erreur de connexion');
         setIsJoining(false);
       });
       co.on('load-attempt-failed', (e: any) => {
         clearJoinWatchdog();
-        console.error('❌ Daily load-attempt-failed:', e);
+        console.error('Daily load-attempt-failed');
         setError(e?.errorMsg || 'Impossible de charger la salle Daily (token, réseau ou salle expirée).');
         setIsJoining(false);
       });
@@ -231,7 +229,6 @@ export function useDailyCall(
         setIsJoining(false);
       });
 
-      console.log('🔌 Daily.co joining room:', roomUrl, viewerMode ? '(viewer)' : '');
       const userData = buildDailyJoinUserData(arenaUserId);
       /** Jeton : priorité au token `beef/access`, sinon émission legacy `daily/meeting-token`. */
       let token: string | undefined;
@@ -365,12 +362,12 @@ export function useDailyCall(
         if (!co) return;
         const id = resolveDailySessionId(co, sessionId);
         if (!id) {
-          console.warn('[Daily] setRemoteParticipantAudio: session introuvable', sessionId);
+          console.warn('[Daily] setRemoteParticipantAudio: session introuvable');
           return;
         }
         co.updateParticipant(id, { setAudio: enabled });
       } catch (e) {
-        console.warn('[Daily] setRemoteParticipantAudio', e);
+        console.warn('[Daily] setRemoteParticipantAudio échoué');
       }
     };
     // Double rAF : meilleure prise en charge après gestes tactiles (iOS / WebView).
@@ -389,7 +386,7 @@ export function useDailyCall(
       const co = callRef.current;
       const id = resolveDailySessionId(co, sessionId);
       if (!id) {
-        console.warn('[Daily] ejectRemoteParticipant: session introuvable', sessionId);
+        console.warn('[Daily] ejectRemoteParticipant: session introuvable');
         return false;
       }
       const out = co.updateParticipant(id, { eject: true }) as unknown;
@@ -397,8 +394,8 @@ export function useDailyCall(
         await (out as Promise<unknown>);
       }
       return true;
-    } catch (e) {
-      console.warn('[Daily] ejectRemoteParticipant', e);
+    } catch {
+      console.warn('[Daily] ejectRemoteParticipant échoué');
       return false;
     }
   }, []);
@@ -408,13 +405,11 @@ export function useDailyCall(
     if (!isJoined) return;
 
     const handleOffline = () => {
-      console.log('📡 Network lost — will auto-reconnect when online');
       reconnectingRef.current = true;
     };
 
     const handleOnline = async () => {
       if (!reconnectingRef.current || !callRef.current) return;
-      console.log('📡 Network back — attempting auto-reconnect');
 
       try {
         const co = callRef.current;
@@ -481,8 +476,8 @@ export function useDailyCall(
             startAudioOff: viewerModeRef.current,
           });
         }
-      } catch (err) {
-        console.error('Auto-reconnect failed:', err);
+      } catch {
+        console.error('Auto-reconnect failed');
         reconnectingRef.current = false;
       }
     };

@@ -21,8 +21,7 @@ export async function GET(req: NextRequest) {
       *,
       users (
         display_name,
-        username,
-        email
+        username
       )
     `)
     .order('created_at', { ascending: false });

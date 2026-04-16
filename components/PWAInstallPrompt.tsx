@@ -98,7 +98,6 @@ export function PWAInstallPrompt() {
       setIsInstalled(true);
       setShowPrompt(false);
       clearShowTimer();
-      console.log('PWA installed successfully');
     };
     window.addEventListener('appinstalled', onAppInstalled);
 
@@ -113,13 +112,7 @@ export function PWAInstallPrompt() {
     if (!deferredPrompt) return;
 
     deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      console.log('User accepted install');
-    } else {
-      console.log('User dismissed install');
-    }
+    await deferredPrompt.userChoice;
 
     setDeferredPrompt(null);
     setShowPrompt(false);

@@ -120,11 +120,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, stripeE
 
   const packCheck = validatePointPackFromMetadata(packIdRaw, pointsRaw);
   if (!packCheck.ok) {
-    console.error('[stripe webhook] Metadata pack invalide:', packCheck.reason, {
-      sessionId: session.id,
-      pack_id: packIdRaw,
-      points_amount: pointsRaw,
-    });
+    console.error('[stripe webhook] Metadata pack invalide:', packCheck.reason);
     return;
   }
 

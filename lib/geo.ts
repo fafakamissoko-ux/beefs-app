@@ -93,8 +93,8 @@ export async function detectUserCountry(): Promise<CountryData> {
     if (data.country && COUNTRIES[data.country]) {
       return COUNTRIES[data.country];
     }
-  } catch (error) {
-    console.warn('Cloudflare geo detection failed:', error);
+  } catch {
+    console.warn('Cloudflare geo detection failed');
   }
 
   // Fallback: Browser language

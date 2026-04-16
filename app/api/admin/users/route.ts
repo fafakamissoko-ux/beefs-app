@@ -20,14 +20,12 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from('users')
-      .select(
-        'id, username, display_name, email, points, role, is_banned, created_at, avatar_url',
-      )
+      .select('id, username, display_name, points, role, is_banned, created_at, avatar_url')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[admin/users]', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('[admin/users] lecture impossible');
+      return NextResponse.json({ error: 'Erreur lecture utilisateurs' }, { status: 500 });
     }
 
     return NextResponse.json({ users: data ?? [] });

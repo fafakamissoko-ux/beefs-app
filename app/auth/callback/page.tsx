@@ -14,7 +14,7 @@ function AuthCallbackInner() {
       const err = searchParams.get('error');
       const errDesc = searchParams.get('error_description');
       if (err) {
-        console.error('OAuth / auth redirect error:', err, errDesc);
+        console.error('OAuth / auth redirect error');
         router.replace(`/login?error=${encodeURIComponent(errDesc || err)}`);
         return;
       }
@@ -37,7 +37,7 @@ function AuthCallbackInner() {
         } = await supabase.auth.getSession();
 
         if (sessionError || !session) {
-          console.error('Auth callback session:', sessionError);
+          console.error('Auth callback session:', sessionError?.message ?? 'session manquante');
           router.replace('/login?error=verification_failed');
           return;
         }
@@ -57,8 +57,8 @@ function AuthCallbackInner() {
 
         const next = searchParams.get('next') || '/feed';
         router.replace(next.startsWith('/') ? next : '/feed');
-      } catch (e) {
-        console.error('Auth callback:', e);
+      } catch {
+        console.error('Auth callback: erreur inattendue');
         router.replace('/login?error=verification_failed');
       }
     };

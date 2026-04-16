@@ -16,7 +16,6 @@ interface UserRow {
   id: string;
   username: string;
   display_name: string | null;
-  email: string;
   points: number;
   role: 'user' | 'admin' | 'moderator';
   is_banned: boolean;
@@ -95,7 +94,6 @@ export default function AdminUsersPage() {
     return users.filter(
       u =>
         u.username.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
         (u.display_name && u.display_name.toLowerCase().includes(q)),
     );
   }, [users, search]);
@@ -105,15 +103,31 @@ export default function AdminUsersPage() {
 
   const toggleBan = async (u: UserRow) => {
     if (u.is_banned) {
-      // Unban
+      // Unban (email / banned_emails côté serveur uniquement)
       setActionLoading(u.id);
       try {
-        await supabase.from('users').update({ is_banned: false, banned_until: null, ban_reason: null }).eq('id', u.id);
-        await supabase.from('banned_emails').delete().eq('email', u.email);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          toast('Session expirée', 'error');
+          return;
+        }
+        const res = await fetch('/api/admin/users/moderation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ action: 'unban', userId: u.id }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Erreur');
         setUsers(prev => prev.map(x => (x.id === u.id ? { ...x, is_banned: false } : x)));
         toast(`${u.username} débanni`, 'success');
-      } catch { toast('Erreur', 'error'); }
-      finally { setActionLoading(null); }
+      } catch {
+        toast('Erreur', 'error');
+      } finally {
+        setActionLoading(null);
+      }
     } else {
       // Open ban modal
       setBanDuration('permanent');
@@ -134,24 +148,36 @@ export default function AdminUsersPage() {
         : banDuration === '30d' ? new Date(Date.now() + 30 * 86400000).toISOString()
         : null;
 
-      await supabase.from('users').update({
-        is_banned: true,
-        banned_until: bannedUntil,
-        ban_reason: banReason || null,
-      }).eq('id', u.id);
-
-      // Block email from re-registering
-      await supabase.from('banned_emails').upsert({
-        email: u.email,
-        reason: banReason || 'Banni par admin',
-        banned_by: user?.id,
-      }, { onConflict: 'email' });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast('Session expirée', 'error');
+        return;
+      }
+      const res = await fetch('/api/admin/users/moderation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          action: 'ban',
+          userId: u.id,
+          bannedUntil,
+          banReason: banReason || null,
+          bannedBy: user?.id ?? null,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof json.error === 'string' ? json.error : 'Erreur');
 
       setUsers(prev => prev.map(x => (x.id === u.id ? { ...x, is_banned: true } : x)));
       toast(`${u.username} banni ${banDuration === 'permanent' ? 'définitivement' : `pour ${banDuration}`}`, 'success');
       setModal(null);
-    } catch { toast('Erreur lors du bannissement', 'error'); }
-    finally { setActionLoading(null); }
+    } catch {
+      toast('Erreur lors du bannissement', 'error');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const changeRole = async (u: UserRow, newRole: string) => {
@@ -249,7 +275,7 @@ export default function AdminUsersPage() {
             <Search className="w-5 h-5 text-gray-500 shrink-0" />
             <input
               type="text"
-              placeholder="Rechercher par pseudo ou email..."
+              placeholder="Rechercher par pseudo ou nom…"
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none text-sm"
@@ -304,7 +330,6 @@ export default function AdminUsersPage() {
                   <thead>
                     <tr className="border-b border-white/[0.06]">
                       <th className="text-left text-gray-500 font-medium px-5 py-3">Utilisateur</th>
-                      <th className="text-left text-gray-500 font-medium px-3 py-3">Email</th>
                       <th className="text-center text-gray-500 font-medium px-3 py-3">Points</th>
                       <th className="text-center text-gray-500 font-medium px-3 py-3">Rôle</th>
                       <th className="text-center text-gray-500 font-medium px-3 py-3">Statut</th>
@@ -330,7 +355,6 @@ export default function AdminUsersPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-3 py-3 text-gray-400 truncate max-w-[180px]">{u.email}</td>
                         <td className="px-3 py-3 text-center">
                           <span className="text-yellow-400 font-bold">{u.points.toLocaleString('fr-FR')}</span>
                         </td>
@@ -418,7 +442,6 @@ export default function AdminUsersPage() {
                         </span>
                       </div>
                       <p className="text-gray-500 text-xs">@{u.username}</p>
-                      <p className="text-gray-500 text-xs truncate">{u.email}</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-yellow-400 font-bold text-sm">{u.points.toLocaleString('fr-FR')}</p>
@@ -542,7 +565,6 @@ export default function AdminUsersPage() {
                     </div>
                     <div>
                       <h3 className="text-white font-bold">Bannir @{modal.user.username}</h3>
-                      <p className="text-gray-500 text-xs">{modal.user.email}</p>
                     </div>
                   </div>
                   <div className="space-y-4 mb-6">
@@ -581,8 +603,10 @@ export default function AdminUsersPage() {
                       />
                     </div>
                     <div className="p-3 rounded-xl text-xs" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                      <p className="text-red-400 font-semibold mb-1">L'email sera bloqué</p>
-                      <p className="text-gray-500">{modal.user.email} ne pourra plus créer de nouveau compte.</p>
+                      <p className="text-red-400 font-semibold mb-1">Blocage réinscription</p>
+                      <p className="text-gray-500">
+                        L’adresse liée au compte sera ajoutée à la liste d’exclusion côté serveur (aucune donnée sensible affichée ici).
+                      </p>
                     </div>
                   </div>
                   <div className="flex gap-3">

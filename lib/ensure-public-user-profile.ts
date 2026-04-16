@@ -25,7 +25,7 @@ export async function ensurePublicUserProfile(supabase: SupabaseClient, user: Us
 
     const email = (user.email ?? '').trim();
     if (!email) {
-      console.warn('[ensurePublicUserProfile] Session sans email — impossible de créer public.users');
+      console.warn('[ensurePublicUserProfile] Identité incomplète — création du profil public reportée');
       return;
     }
 
@@ -66,7 +66,7 @@ export async function ensurePublicUserProfile(supabase: SupabaseClient, user: Us
         is_verified: !!user.email_confirmed_at,
         needs_arena_username: true,
       });
-      if (e2) console.error('[ensurePublicUserProfile] insert', e2);
+      if (e2) console.error('[ensurePublicUserProfile] insert échoué');
     }
   })();
 

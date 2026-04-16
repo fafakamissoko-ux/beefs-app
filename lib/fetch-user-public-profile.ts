@@ -29,7 +29,7 @@ export async function fetchUserPublicByIds(
   const { data, error } = await supabase.from('user_public_profile').select(columns).in('id', unique);
 
   if (error) {
-    console.error('[fetchUserPublicByIds]', error.message);
+    console.error('[fetchUserPublicByIds] erreur');
     return map;
   }
 

@@ -80,8 +80,8 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
         });
         setRows(list);
       }
-    } catch (e) {
-      console.error('FollowListModal load error:', e);
+    } catch {
+      console.error('FollowListModal load error');
       toast('Impossible de charger la liste', 'error');
       setRows([]);
     } finally {
@@ -150,8 +150,8 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
         setFollowingIds((prev) => new Set(prev).add(targetId));
         toast('Vous suivez cet utilisateur', 'success');
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      console.error('FollowListModal follow action error');
       toast('Erreur lors de l\'action', 'error');
     } finally {
       setActionId(null);
