@@ -71,15 +71,16 @@ function formatNavBadgeCount(count: number): string {
 }
 
 /** Raccourci clavier affiché dans la barre : ⌘K (Apple) ou Ctrl+K (Windows/Linux), rendu via <kbd> pour éviter les glyphes cassés. */
-function SearchKeyboardShortcut() {
+function SearchKeyboardShortcut({ visibleFrom = 'lg' }: { visibleFrom?: 'lg' | 'xl' }) {
   const [modKey, setModKey] = useState<'⌘' | 'Ctrl'>('Ctrl');
   useEffect(() => {
     if (typeof navigator === 'undefined') return;
     const apple = /Mac|iPhone|iPad|iPod/.test(navigator.platform ?? '');
     setModKey(apple ? '⌘' : 'Ctrl');
   }, []);
+  const visClass = visibleFrom === 'xl' ? 'xl:inline-flex' : 'lg:inline-flex';
   return (
-    <span className="hidden shrink-0 items-center gap-0.5 lg:inline-flex" aria-hidden>
+    <span className={`hidden shrink-0 items-center gap-0.5 ${visClass}`} aria-hidden>
       <kbd className="pointer-events-none inline-flex h-5 min-w-[1.35rem] select-none items-center justify-center rounded border border-white/12 bg-black/35 px-1 font-sans text-[10px] font-semibold leading-none text-white/55 shadow-[inset_0_-1px_0_rgba(0,0,0,0.4)]">
         {modKey}
       </kbd>
@@ -277,6 +278,9 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
     return () => { supabase.removeChannel(channel); };
   }, [user, pathname, toast, loadUnreadCounts]);
 
+  /** Liens masqués jusqu’à xl sur la barre horizontale (shell full) — évite le carambolage laptop. */
+  const navSecondaryHrefs = new Set(['/notifications', '/live', '/points', '/invitations']);
+
   const navItems = [
     { href: '/feed', label: 'Fil d’actu', icon: Home, badge: 0 },
     {
@@ -366,15 +370,21 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   type="button"
                   aria-label="Ouvrir la recherche"
                   onClick={() => openSearch()}
-                  className={`glass-prestige flex min-h-[44px] w-full max-w-xs shrink-0 items-center gap-3 rounded-[2px] px-4 py-2 text-left transition hover:bg-white/[0.06] md:max-w-[150px] lg:max-w-[250px] ${
-                    shell === 'phone' ? 'lg:mr-0 lg:max-w-none lg:w-full' : ''
+                  className={`glass-prestige flex min-h-[44px] items-center gap-3 rounded-[2px] px-4 py-2 text-left transition hover:bg-white/[0.06] shrink ${
+                    shell === 'phone'
+                      ? 'w-full max-w-xs lg:mr-0 lg:max-w-none lg:w-full'
+                      : 'w-[100px] md:w-[150px] xl:w-[250px]'
                   }`}
                 >
                   <Search className="h-4 w-4 shrink-0 text-gray-500" strokeWidth={1.75} aria-hidden />
-                  <span className="min-w-0 truncate text-sm text-gray-400 md:hidden lg:inline lg:min-w-0 lg:flex-1">
+                  <span
+                    className={`min-w-0 truncate text-sm text-gray-400 md:hidden lg:min-w-0 lg:flex-1 ${
+                      shell === 'phone' ? 'lg:inline' : 'xl:inline'
+                    }`}
+                  >
                     Rechercher un dossier, un médiateur…
                   </span>
-                  <SearchKeyboardShortcut />
+                  <SearchKeyboardShortcut visibleFrom={shell === 'phone' ? 'lg' : 'xl'} />
                 </button>
               )}
               {user &&
@@ -390,7 +400,9 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         active
                           ? 'text-white bg-white/[0.08]'
                           : 'text-gray-500 hover:text-gray-200 hover:bg-white/[0.04]'
-                      } ${shell === 'phone' ? 'lg:w-full lg:justify-start lg:px-4' : ''}`}
+                      } ${shell === 'full' && navSecondaryHrefs.has(item.href) ? 'hidden xl:flex' : ''} ${
+                        shell === 'phone' ? 'lg:w-full lg:justify-start lg:px-4' : ''
+                      }`}
                     >
                       <div className="relative">
                         <Icon className={`w-[18px] h-[18px] ${active && (item.href === '/live' || item.href === '/points') ? 'text-brand-400' : ''}`} />
