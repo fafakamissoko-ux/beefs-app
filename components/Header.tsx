@@ -370,7 +370,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   type="button"
                   aria-label="Ouvrir la recherche"
                   onClick={() => openSearch()}
-                  className={`glass-prestige flex min-h-[44px] items-center gap-3 rounded-[2px] px-4 py-2 text-left transition hover:bg-white/[0.06] shrink ${
+                  className={`glass-prestige hidden min-h-[44px] items-center gap-3 rounded-[2px] px-4 py-2 text-left transition hover:bg-white/[0.06] shrink lg:flex ${
                     shell === 'phone'
                       ? 'w-full max-w-xs lg:mr-0 lg:max-w-none lg:w-full'
                       : 'w-[100px] md:w-[150px] xl:w-[250px]'
@@ -425,7 +425,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
             {/* Right — bas de sidebar (lg+) */}
             <div
               className={`relative z-[5] hidden shrink-0 ${
-                shell === 'full' ? 'lg:flex lg:items-center lg:gap-2' : 'md:flex md:items-center md:gap-2'
+                shell === 'full' ? 'lg:flex lg:items-center gap-2 md:gap-4' : 'md:flex md:items-center gap-2 md:gap-4'
               } ${shell === 'phone' ? 'lg:mt-auto lg:w-full lg:flex-col lg:items-stretch lg:gap-4' : ''}`}
             >
               {user ? (
@@ -433,22 +433,22 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   <Link
                     href="/create"
                     prefetch
-                    className={`brand-gradient flex min-h-[44px] items-center gap-1.5 rounded-[2px] px-4 py-2 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97] ${
+                    className={`brand-gradient flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-[2px] px-4 py-2 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97] ${
                       shell === 'phone' ? 'lg:w-full lg:justify-center' : ''
                     }`}
                   >
-                    <Swords className="h-4 w-4" aria-hidden />
+                    <Swords className="h-4 w-4 shrink-0" aria-hidden />
                     <span className="md:hidden lg:inline">Initier</span>
                   </Link>
 
-                  <div className="relative" data-user-menu>
+                  <div className="relative shrink-0" data-user-menu>
                     <button
                       onClick={() => setUserMenuOpen(!userMenuOpen)}
-                      className={`flex items-center gap-2 px-2.5 py-1.5 hover:bg-white/[0.06] rounded-xl transition-all ${
+                      className={`flex shrink-0 items-center gap-2 px-2.5 py-1.5 hover:bg-white/[0.06] rounded-xl transition-all ${
                         shell === 'phone' ? 'lg:w-full lg:justify-between' : ''
                       }`}
                     >
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ring-2 ring-white/10 brand-gradient">
+                      <div className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-white font-bold text-xs ring-2 ring-white/10 brand-gradient">
                         {user.user_metadata?.username?.[0]?.toUpperCase() || 'U'}
                       </div>
                       <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
