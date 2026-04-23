@@ -2988,7 +2988,7 @@ export function TikTokStyleArena({
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black md:h-[calc(100dvh-3.5rem)] md:max-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100vh-3.5rem)]">
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black md:h-[calc(100dvh-3.5rem)] md:max-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100vh-3.5rem)] lg:flex-row">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -3230,8 +3230,9 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* TikTok Battle : calques stricts — vidéo (fond) + UI chat (md+) ; mobile inchangé (flex-col) */}
-      <div className="relative min-h-0 h-full w-full max-w-full flex-1 flex flex-col overflow-hidden bg-[#08080A] md:block md:min-h-0 md:flex-1">
+      {/* Zone vidéo (gauche du split-screen desktop, bloc hermétique en flux flex).
+          ZÉRO absolute : reste dans le flux flex-1 pour partager l'espace avec l'aside droite. */}
+      <div className="relative min-h-0 h-full w-full flex-1 min-w-0 flex flex-col overflow-hidden bg-black">
         {/* CALQUE 1 — scène vidéo + îlots header (fond) */}
         <div className="relative z-0 flex min-h-0 w-full shrink-0 flex-1 flex-col md:absolute md:inset-0 md:h-full md:w-full md:min-h-0">
         {effectiveDailyRoomUrl ? (
@@ -4331,19 +4332,24 @@ export function TikTokStyleArena({
       </div>
         </div>
 
-      {/* CALQUE 2 — chat & réactions (pointer-events-none : les taps traversent vers la vidéo hors zones actives) */}
-      <div className="relative z-10 flex min-h-0 w-full flex-col justify-end p-2 pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:w-full landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] md:absolute md:bottom-0 md:left-0 md:right-0 md:top-0 md:z-50 md:p-4">
+      {/* CALQUE 2 — chat & réactions.
+          Mobile (< lg) : overlay absolu sur le bas 40% de la vidéo (TikTok Live pur), pointer-events-none pour laisser les taps traverser.
+          Desktop (lg+) : aside hermétique à droite, w-96, bordure gauche, fond opaque, dans le flux flex-row. */}
+      <aside className="relative flex min-h-0 w-full flex-col justify-end p-2 pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:z-10 max-lg:w-full landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] lg:pointer-events-auto lg:w-96 lg:shrink-0 lg:h-full lg:border-l lg:border-white/10 lg:bg-[#08080A] lg:p-0">
       {!beefEnded && (
         <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col justify-end overflow-visible lg:px-2">
         <div className="pointer-events-auto mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:max-w-none">
         <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
           <div
-            className="grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_auto_auto] gap-y-2 overflow-hidden lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(12.5rem,15rem)] lg:grid-rows-[minmax(0,1fr)_auto] lg:gap-x-6 lg:gap-y-0"
+            className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden"
             aria-live="polite"
           >
+          {/* Zone messages — respire (Architecte #3) :
+              mobile : w-[85%] max-h-[40vh] overflow-y-auto, juste au-dessus de la barre.
+              desktop : largeur complète, fade-top via mask-image pour l'effet TikTok Live. */}
           <div
             ref={chatMessagesScrollRef}
-            className="pointer-events-auto min-h-0 min-w-0 max-h-[30vh] overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:row-start-1 max-lg:min-h-0 max-lg:max-h-[min(30svh,240px)] max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] md:max-h-[40vh] lg:col-start-1 lg:row-start-1 lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
+            className="pointer-events-auto min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:w-[85%] max-lg:max-h-[40vh] lg:w-full lg:max-h-[min(40vh,360px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -4419,88 +4425,57 @@ export function TikTokStyleArena({
             <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
           </div>
 
+          {/* Barre d'action unifiée (mobile + desktop) — pattern strict Architecte :
+              [ Input (flex-1) ] [ 😀 Emojis ] [ 🎁 Cadeaux ] [ ➤ Envoyer ]
+              Pas de cœur enflammé, pas de grille de quick reactions, pas de ✋. */}
           <div
             ref={reactionDockRef}
-            className="relative z-[200] isolate flex max-lg:row-start-2 max-lg:w-full max-lg:shrink-0 max-lg:flex-row max-lg:flex-wrap max-lg:items-center max-lg:justify-center max-lg:gap-1 max-lg:overflow-visible max-lg:px-1 max-lg:py-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex lg:w-auto lg:min-w-0 lg:max-w-[15rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-stretch lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+            className="pointer-events-auto flex w-full flex-row items-center gap-2 px-3 pb-4"
           >
-            {/* Desktop : grille 2×5 (10 réactions) + 😀 / cœur / cadeau */}
-            <div
-              role="toolbar"
-              aria-label="Réactions rapides"
-              className="mb-0 hidden w-full shrink-0 gap-1 px-0.5 lg:mb-0 lg:grid lg:w-[12.25rem] lg:grid-cols-5 lg:grid-rows-2 lg:justify-items-center"
-            >
-              {ARENA_QUICK_REACTIONS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => handleReaction(emoji)}
-                  aria-label={`Réaction ${emoji}`}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform duration-75 hover:bg-white/10 active:scale-90 touch-manipulation"
-                >
-                  <span aria-hidden>{emoji}</span>
-                </button>
-              ))}
+            <div className="flex-1 min-w-0">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    void handleSendMessage();
+                  }
+                }}
+                placeholder="Ajouter un commentaire..."
+                aria-label="Message dans le chat du direct"
+                autoComplete="off"
+                enterKeyHint="send"
+                className="w-full rounded-full bg-white/10 px-4 py-2 text-[13px] text-white placeholder-white/50 backdrop-blur-md focus:outline-none focus:ring-1 focus:ring-white/30"
+              />
             </div>
-            <div
-              role="toolbar"
-              aria-label="Réactions rapides"
-              className="touch-pan-x flex max-w-full flex-nowrap justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-0.5 hide-scrollbar [-webkit-overflow-scrolling:touch] lg:hidden"
-            >
-              {ARENA_QUICK_REACTIONS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => handleReaction(emoji)}
-                  aria-label={`Réaction ${emoji}`}
-                  className="flex h-9 min-h-[2.25rem] w-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-full bg-black/40 text-[15px] shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform duration-75 hover:bg-white/10 active:scale-90 touch-manipulation"
-                >
-                  <span aria-hidden>{emoji}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="relative z-[210] flex flex-wrap items-center justify-center gap-2 overflow-visible max-lg:gap-1.5 lg:shrink-0">
-              <motion.button
+            <div className="flex shrink-0 items-center gap-2">
+              <button
                 type="button"
-                whileTap={{ scale: 0.96 }}
-                transition={{ duration: 0.08, ease: 'easeOut' }}
                 onClick={() => {
                   setShowGiftPicker(false);
                   setShowAllReactions((v) => !v);
                 }}
                 aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
                 aria-expanded={showAllReactions}
-                className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-white/[0.06] text-lg shadow-[0_6px_22px_rgba(0,0,0,0.35)] backdrop-blur-md touch-manipulation"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg transition-colors hover:bg-white/20"
               >
                 <span aria-hidden>😀</span>
-              </motion.button>
-
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.96 }}
-                transition={{ duration: 0.08, ease: 'easeOut' }}
-                onClick={() => handleReaction(HEART_ON_FIRE)}
-                aria-label="Envoyer une réaction cœur enflammé"
-                className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-white/[0.06] text-xl leading-none shadow-[0_6px_22px_rgba(0,0,0,0.35)] backdrop-blur-md touch-manipulation"
-              >
-                <span aria-hidden>{HEART_ON_FIRE}</span>
-              </motion.button>
-
+              </button>
               <div className="relative flex shrink-0">
-                <motion.button
+                <button
                   type="button"
-                  whileTap={{ scale: 0.96 }}
-                  transition={{ duration: 0.08, ease: 'easeOut' }}
                   onClick={() => {
                     setShowAllReactions(false);
                     setShowGiftPicker((v) => !v);
                   }}
                   aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
                   aria-expanded={showGiftPicker}
-                  className="flex h-10 w-10 select-none touch-manipulation items-center justify-center rounded-full bg-gradient-to-br from-ember-600/90 to-cobalt-700/80 shadow-[0_8px_28px_rgba(0,0,0,0.45),0_0_24px_rgba(251,146,60,0.15)]"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400 text-sm shadow-lg transition-transform active:scale-95"
                 >
-                  <Gift className="h-[18px] w-[18px] text-white" strokeWidth={1.2} aria-hidden />
-                </motion.button>
+                  <Gift className="h-4 w-4 text-white" aria-hidden />
+                </button>
                 <FeatureGuide
                   id="arena-gift"
                   title="Envoyer un cadeau"
@@ -4510,58 +4485,15 @@ export function TikTokStyleArena({
                   suppress={featureGuideSuppress}
                 />
               </div>
-
-            </div>
-          </div>
-
-          <div className="relative z-[130] min-w-0 max-lg:row-start-3 max-lg:shrink-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1 lg:col-start-1 lg:row-start-2">
-            <div className="flex min-w-0 flex-col gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                {isViewer && (
-                  <button
-                    type="button"
-                    onClick={() => void handleRaiseHand()}
-                    aria-label="Demander à monter sur le ring"
-                    className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] transition-colors hover:bg-white/[0.12]"
-                  >
-                    <span className="text-lg" aria-hidden>
-                      ✋
-                    </span>
-                  </button>
-                )}
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      void handleSendMessage();
-                    }
-                  }}
-                  placeholder="Message..."
-                  aria-label="Message dans le chat du direct"
-                  autoComplete="off"
-                  enterKeyHint="send"
-                  className="min-w-0 flex-1 rounded-3xl bg-[#08080a]/65 py-2 pl-2.5 pr-3 text-[13px] font-medium tracking-tight text-white shadow-[0_8px_32px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.04)] placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_24px_rgba(59,130,246,0.22),0_8px_32px_rgba(0,0,0,0.45)]"
-                />
-                <button
-                  type="button"
-                  disabled={!chatInput.trim()}
-                  onClick={() => void handleSendMessage()}
-                  aria-label="Envoyer le message"
-                  className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-cobalt-500 hover:bg-cobalt-600 disabled:pointer-events-none disabled:opacity-35"
-                >
-                  <Send className="h-3.5 w-3.5 text-white" strokeWidth={1} aria-hidden />
-                </button>
-              </div>
-              <FeatureGuide
-                id="arena-chat"
-                title="Chat en direct"
-                description="Envoie des messages visibles par tous les viewers et participants."
-                position="top"
-                suppress={featureGuideSuppress}
-              />
+              <button
+                type="button"
+                disabled={!chatInput.trim()}
+                onClick={() => void handleSendMessage()}
+                aria-label="Envoyer le message"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 transition-colors hover:bg-brand-600 disabled:pointer-events-none disabled:opacity-35"
+              >
+                <Send className="h-4 w-4 text-white" aria-hidden />
+              </button>
             </div>
           </div>
           </div>
@@ -4570,7 +4502,7 @@ export function TikTokStyleArena({
         </div>
       )}
 
-      </div>
+      </aside>
 
       {isHost && (
         <MediatorSidebar
@@ -4658,7 +4590,7 @@ export function TikTokStyleArena({
                   right: dockPickerPos.right,
                   zIndex: 560,
                 }}
-                className="pointer-events-auto max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-3xl border border-white/[0.1] bg-[#0c0c0f]/98 p-2 pt-1.5 shadow-2xl backdrop-blur-xl"
+                className="pointer-events-auto max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-2xl border border-white/[0.1] bg-[#121215] p-2 pt-1.5 shadow-2xl backdrop-blur-xl"
               >
                 <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2">
                   <span className="pl-0.5 text-[11px] font-semibold text-white/75">Réactions</span>
@@ -4706,7 +4638,7 @@ export function TikTokStyleArena({
                   right: dockPickerPos.right,
                   zIndex: 560,
                 }}
-                className="pointer-events-auto w-[min(calc(100vw-1.5rem),220px)] rounded-3xl border border-white/12 bg-[#0c0c0f]/98 p-3 pt-2 shadow-2xl backdrop-blur-xl"
+                className="pointer-events-auto w-[min(calc(100vw-1.5rem),220px)] rounded-2xl border border-white/12 bg-[#121215] p-3 pt-2 shadow-2xl backdrop-blur-xl"
               >
                 <div className="mb-2 flex items-start justify-between gap-2 border-b border-white/[0.08] pb-2">
                   <p className="min-w-0 flex-1 pl-0.5 text-[11px] font-semibold leading-snug text-white/75">
