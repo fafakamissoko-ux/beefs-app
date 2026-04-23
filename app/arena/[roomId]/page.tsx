@@ -132,7 +132,9 @@ export default function ArenaPage() {
       }
 
       setHost({
-        id: beef.mediator_id,
+        /** Manifeste orphelin : mediator_id NULL → on sentinelle à '' pour éviter
+         *  les `.trim()` sur null dans `lib/participant-identity.ts`. */
+        id: beef.mediator_id ?? '',
         name: displayNameFromPublicRow(medRow, 'Médiateur'),
         isHost: true,
         videoEnabled: true,

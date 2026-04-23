@@ -1464,10 +1464,19 @@ export function TikTokStyleArena({
 
   /**
    * Remotes qui correspondent à des challengers attendus (beef_participants), pas le médiateur ni un inconnu.
-   * Ordre stable : tri parent (participant d’abord). Slots A/B = [0] et [1].
+   * Ordre stable : tri par arenaUserId (UUID Supabase), fallback sessionId Daily.
+   * Grave l'ordre dans le marbre → plus de chaises musicales quand un 2nd challenger rejoint.
    * Exclut le participant local (challenger ou spectateur) pour ne jamais dupliquer le même flux sur les deux dalles.
    */
   const challengerRemoteSlots = useMemo(() => {
+    const stableSort = <T extends { arenaUserId: string | null; sessionId: string }>(arr: T[]): T[] => {
+      return [...arr].sort((a, b) => {
+        const ka = (a.arenaUserId ?? a.sessionId ?? '').toLowerCase();
+        const kb = (b.arenaUserId ?? b.sessionId ?? '').toLowerCase();
+        return ka.localeCompare(kb);
+      });
+    };
+
     const matched = sortedRemoteParticipants.filter(
       (p) => matchRemoteToExpectedBeefParticipant(p, host.id, host.name, participantRoles) !== null,
     );
@@ -1475,15 +1484,16 @@ export function TikTokStyleArena({
       ? matched
       : matched.filter((p) => p.sessionId !== localParticipant.sessionId);
     if (withoutSelf.length > 0 || Object.keys(participantRoles).length > 0) {
-      return withoutSelf;
+      return stableSort(withoutSelf);
     }
     /* Rôles beef pas encore hydratés : exclure uniquement le médiateur + le local (évite deux fois le même challenger). */
     const naive = sortedRemoteParticipants.filter(
       (p) => !remoteMatchesMediator(p, host.id, host.name),
     );
-    return !localParticipant?.sessionId
+    const naiveWithoutSelf = !localParticipant?.sessionId
       ? naive
       : naive.filter((p) => p.sessionId !== localParticipant.sessionId);
+    return stableSort(naiveWithoutSelf);
   }, [
     sortedRemoteParticipants,
     host.id,
