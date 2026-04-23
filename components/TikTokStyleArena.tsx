@@ -114,25 +114,11 @@ const TOP_10_REACTIONS = [
   '👍', '😂', '🔥', '💯', '👏', '😮', '💀', '❤️', '🎉', '🚀'
 ];
 
-// 🔥 CATALOGUE ÉMOJIS PICKER — inspiré TikTok Live (5 catégories, ~100 émojis)
+// 🔥 TOUTES LES RÉACTIONS POPULAIRES (24)
 const POPULAR_REACTIONS = [
-  // Visages & émotions (≈ 32)
-  '😂', '😭', '😍', '🥰', '😎', '🤩', '🥳', '😊', '😁', '😆',
-  '😜', '😇', '🤗', '🤔', '😮', '😳', '😲', '🫢', '🙄', '😴',
-  '🥴', '🤯', '😱', '😤', '😡', '🤬', '😈', '💀', '👻', '🤡',
-  '🥸', '🤓',
-  // Mains & gestes (≈ 18)
-  '👍', '👎', '👏', '🙌', '🙏', '💪', '✊', '🤝', '🫶', '👊',
-  '🤞', '🤘', '🤟', '👌', '✌️', '👋', '💅', '🫡',
-  // Cœurs & amour (≈ 14)
-  '❤️', '❤️‍🔥', '💖', '💕', '💘', '💓', '💞', '💝', '💗', '💜',
-  '💙', '💚', '🧡', '🤍',
-  // Objets & prestige (≈ 18)
-  '🔥', '💯', '⚡', '✨', '🌟', '💎', '👑', '🏆', '🥇', '🎯',
-  '🎉', '🎊', '🚀', '💥', '💫', '⭐', '🎁', '💰',
-  // Visages animaux & fun (≈ 14)
-  '🦁', '🐯', '🐻', '🦊', '🐼', '🙈', '🙉', '🙊', '🐸', '🦄',
-  '🐉', '👀', '🧠', '🎭',
+  '👍', '👎', '😂', '🔥', '💯', '👏', '🤔', '😮', '💀', 
+  '🎯', '⚡', '💪', '🧠', '👀', '🤯', '😡', '❤️', '🎉', 
+  '🙌', '💎', '🌟', '✨', '🚀', '💥'
 ];
 
 /** Bandeau mobile : 10 emojis scroll ; desktop : grille 2×5 + panneau 😀 pour le reste. */
@@ -333,13 +319,7 @@ export function TikTokStyleArena({
   const [dockPickerPos, setDockPickerPos] = useState<{ bottom: number; right: number } | null>(null);
   /** Colonne emoji / cadeaux / partage — fermeture au tap extérieur */
   const reactionDockRef = useRef<HTMLDivElement>(null);
-  const reactionDockRefDesktop = useRef<HTMLDivElement>(null);
   const chatMessagesScrollRef = useRef<HTMLDivElement>(null);
-  const chatMessagesScrollRefDesktop = useRef<HTMLDivElement>(null);
-  const chatMessagesEndRefDesktop = useRef<HTMLDivElement>(null);
-  /** Layout TikTok : mobile = overlay flottant, ≥ lg = sidebar droite fixe.
-   *  Le basculement est géré 100 % en CSS (`lg:hidden` / `hidden lg:flex`) ;
-   *  seule l'ancre du picker émojis/cadeau utilise matchMedia inline. */
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const announcementClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -352,11 +332,7 @@ export function TikTokStyleArena({
       setDockPickerPos(null);
       return;
     }
-    /** Sélection du dock actif selon le layout : sidebar desktop ≥ lg, overlay mobile sinon. */
-    const preferDesktop = window.matchMedia('(min-width: 1024px)').matches;
-    const el = preferDesktop
-      ? reactionDockRefDesktop.current ?? reactionDockRef.current
-      : reactionDockRef.current ?? reactionDockRefDesktop.current;
+    const el = reactionDockRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
     if (r.width < 4 && r.height < 4) return;
@@ -388,11 +364,9 @@ export function TikTokStyleArena({
   useEffect(() => {
     if (!showAllReactions && !showGiftPicker) return;
     const onPointerDown = (e: PointerEvent) => {
+      const root = reactionDockRef.current;
       const target = e.target;
-      const mobileRoot = reactionDockRef.current;
-      const desktopRoot = reactionDockRefDesktop.current;
-      if (mobileRoot?.contains(target as Node)) return;
-      if (desktopRoot?.contains(target as Node)) return;
+      if (root?.contains(target as Node)) return;
       if (target instanceof Element && target.closest('[data-arena-dock-popover]')) return;
       setShowAllReactions(false);
       setShowGiftPicker(false);
@@ -423,12 +397,11 @@ export function TikTokStyleArena({
   const scrollChatToEnd = useCallback(() => {
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
-        const elMobile = chatMessagesScrollRef.current;
-        if (elMobile) elMobile.scrollTop = elMobile.scrollHeight;
-        const elDesktop = chatMessagesScrollRefDesktop.current;
-        if (elDesktop) elDesktop.scrollTop = elDesktop.scrollHeight;
+        const el = chatMessagesScrollRef.current;
+        if (el) {
+          el.scrollTop = el.scrollHeight;
+        }
         chatMessagesEndRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
-        chatMessagesEndRefDesktop.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
       });
     });
   }, []);
@@ -3025,7 +2998,7 @@ export function TikTokStyleArena({
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black lg:flex-row">
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black md:h-[calc(100dvh-3.5rem)] md:max-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100vh-3.5rem)]">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -3267,24 +3240,10 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* TikTok Battle — scène vidéo (bloc hermétique gauche du split-screen desktop).
-          Mobile (flex-col) : prend 100% de l'espace car le chat overlay est absolute.
-          Desktop (lg:flex-row) : flex-1 min-w-0 occupe la largeur restante avant l'aside. */}
-      <div className="relative min-h-0 h-full w-full flex-1 min-w-0 flex flex-col overflow-hidden bg-[#08080A]">
-        {/* Bouton d'évasion Mode Immersif — collé à l'arène, jamais au-dessus du chat */}
-        {!beefEnded && !isLeaving && (
-          <button
-            type="button"
-            onClick={handleLeave}
-            aria-label="Quitter l'arène"
-            className="absolute left-4 top-4 z-[100] flex h-10 items-center gap-2 rounded-full bg-black/50 px-4 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/10"
-          >
-            <span aria-hidden>←</span>
-            <span className="hidden sm:inline">Quitter</span>
-          </button>
-        )}
-        {/* CALQUE 1 — scène vidéo (plus d'absolute : reste dans le flux flex-1) */}
-        <div className="relative z-0 flex flex-1 flex-col h-full min-w-0 bg-black overflow-hidden">
+      {/* TikTok Battle : calques stricts — vidéo (fond) + UI chat (md+) ; mobile inchangé (flex-col) */}
+      <div className="relative min-h-0 h-full w-full max-w-full flex-1 flex flex-col overflow-hidden bg-[#08080A] md:block md:min-h-0 md:flex-1">
+        {/* CALQUE 1 — scène vidéo + îlots header (fond) */}
+        <div className="relative z-0 flex min-h-0 w-full shrink-0 flex-1 flex-col md:absolute md:inset-0 md:h-full md:w-full md:min-h-0">
         {effectiveDailyRoomUrl ? (
           <div
             className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] overflow-visible max-lg:pb-28 landscape:flex-1 md:h-full md:min-h-0 md:flex-1 md:shrink-0 md:pb-0 lg:flex-1 lg:pb-0 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem] md:pt-0' : 'pt-24 max-sm:pt-28 md:pt-0'}`}
@@ -4274,211 +4233,312 @@ export function TikTokStyleArena({
         </div>
         )}
 
-      {/* ── Header vidéo : 3 blocs absolus indépendants, scoped au conteneur vidéo ──
-          • Annonce (top full-width, si active) — z-[80]
-          • Chrono (top-center) — z-[80]
-          • LIVE + Spectateurs (top-right) — z-50 per Architecte
-          z-[80] > dalles vidéo z-[65] pour ne pas voler les taps. */}
-      {arenaHasAnnouncement && (
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-[80] border-b border-white/10 bg-black/65 px-3 py-2 backdrop-blur-md">
-          <p className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white">
-            {announcementTicker}
-          </p>
-        </div>
-      )}
+      {/* ── Header fixe : annonce puis chrono / LIVE (pile unique, mobile + desktop) ── */}
+      {/* z-[80] > zone vidéo z-[65] : sinon la dalle droite volait les taps sur LIVE / Sliders (tableau de bord) */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[80] flex w-full flex-col p-2 lg:p-4">
+        {arenaHasAnnouncement && (
+          <div className="pointer-events-none shrink-0 border-b border-white/10 bg-black/65 px-3 py-2 backdrop-blur-md">
+            <p className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white">
+              {announcementTicker}
+            </p>
+          </div>
+        )}
+        <div
+          className={`pointer-events-none grid w-full grid-cols-1 items-start gap-2 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 ${arenaHasAnnouncement ? 'px-4 pb-3 pt-2' : 'p-4'}`}
+        >
+        <div className="pointer-events-none hidden min-w-0 sm:block" aria-hidden />
 
-      <div
-        className={`pointer-events-none absolute left-1/2 z-[80] -translate-x-1/2 ${
-          arenaHasAnnouncement ? 'top-14' : 'top-4'
-        }`}
-      >
-        <div className="glass-prestige pointer-events-auto flex flex-col items-center justify-center gap-0.5 rounded-full px-4 py-2 text-center">
-          {isJoined && timerActive ? (
+        <div className="pointer-events-none flex justify-center">
+          <div className="glass-prestige pointer-events-auto flex flex-col items-center justify-center gap-0.5 rounded-full px-4 py-2 text-center">
+            {isJoined && timerActive ? (
+              <div
+                className={`flex items-center gap-1 font-mono text-xs font-bold tabular-nums ${
+                  timerPaused
+                    ? 'text-amber-200'
+                    : beefTimeRemaining <= 5 * 60
+                      ? 'text-red-300'
+                      : 'text-white/90'
+                }`}
+              >
+                {timerPaused ? (
+                  <Pause className="h-3 w-3 shrink-0" strokeWidth={1.2} aria-hidden />
+                ) : (
+                  <Timer className="h-3 w-3 shrink-0" strokeWidth={1.2} aria-hidden />
+                )}
+                <span>{formatBeefTime(beefTimeRemaining)}</span>
+                {timerPaused && (
+                  <span className="text-[9px] font-black uppercase tracking-wide text-amber-200 animate-pulse">Pause</span>
+                )}
+              </div>
+            ) : isJoined && !timerActive && isHost ? (
+              <span className="font-mono text-[9px] uppercase tracking-wider text-white/50">Pas de chrono</span>
+            ) : isJoined && !timerActive && !isHost ? (
+              <span className="max-w-[14rem] font-mono text-[9px] uppercase leading-tight tracking-wider text-white/45">
+                Chrono au lancement (médiateur)
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="pointer-events-none flex justify-center sm:justify-end">
+          <div className="glass-prestige pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-full py-1.5 pl-2 pr-1.5 sm:gap-2 sm:pl-3">
             <div
-              className={`flex items-center gap-1 font-mono text-xs font-bold tabular-nums ${
-                timerPaused
-                  ? 'text-amber-200'
-                  : beefTimeRemaining <= 5 * 60
-                    ? 'text-red-300'
-                    : 'text-white/90'
+              className={`flex items-center rounded-full px-2 py-0.5 ${
+                liveBadgeHot
+                  ? 'animate-pulse bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.45)]'
+                  : 'bg-white/10'
               }`}
             >
-              {timerPaused ? (
-                <Pause className="h-3 w-3 shrink-0" strokeWidth={1.2} aria-hidden />
-              ) : (
-                <Timer className="h-3 w-3 shrink-0" strokeWidth={1.2} aria-hidden />
-              )}
-              <span>{formatBeefTime(beefTimeRemaining)}</span>
-              {timerPaused && (
-                <span className="text-[9px] font-black uppercase tracking-wide text-amber-200 animate-pulse">Pause</span>
-              )}
+              <div
+                className={`mr-1 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-white' : 'bg-amber-300'}`}
+              />
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-white">LIVE</span>
             </div>
-          ) : isJoined && !timerActive && isHost ? (
-            <span className="font-mono text-[9px] uppercase tracking-wider text-white/50">Pas de chrono</span>
-          ) : isJoined && !timerActive && !isHost ? (
-            <span className="max-w-[14rem] font-mono text-[9px] uppercase leading-tight tracking-wider text-white/45">
-              Chrono au lancement (médiateur)
-            </span>
-          ) : null}
-        </div>
-      </div>
-
-      {/* LIVE + Spectateurs + Share + (Sliders | Close) — top-right strict per Architecte */}
-      <div
-        className={`pointer-events-none absolute right-0 z-50 p-4 ${
-          arenaHasAnnouncement ? 'top-12' : 'top-0'
-        }`}
-      >
-        <div className="glass-prestige pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-full py-1.5 pl-2 pr-1.5 sm:gap-2 sm:pl-3">
-          <div
-            className={`flex items-center rounded-full px-2 py-0.5 ${
-              liveBadgeHot
-                ? 'animate-pulse bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.45)]'
-                : 'bg-white/10'
-            }`}
-          >
-            <div
-              className={`mr-1 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-white' : 'bg-amber-300'}`}
-            />
-            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-white">LIVE</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowViewerList(true)}
-            className="flex items-center gap-1 rounded-full px-1.5 py-1 transition-colors hover:bg-white/10"
-            aria-label="Spectateurs"
-          >
-            <Eye className="h-3.5 w-3.5 text-white" strokeWidth={1.2} aria-hidden />
-            <span className="min-w-[1ch] font-mono text-[11px] font-medium tabular-nums text-white">
-              {liveViewerCount > 0 ? liveViewerCount : '—'}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={onShare}
-            aria-label="Partager le direct"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
-          >
-            <Share2 className="h-[17px] w-[17px] text-white" strokeWidth={1.2} aria-hidden />
-          </button>
-          {isHost ? (
             <button
               type="button"
-              onClick={() => setMediatorSidebarOpen((o) => !o)}
-              aria-expanded={mediatorSidebarOpen}
-              aria-label={
-                mediatorSidebarOpen ? 'Fermer la commande médiateur' : 'Ouvrir la commande médiateur'
-              }
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-amber-200 transition-colors hover:bg-white/10 hover:text-white"
+              onClick={() => setShowViewerList(true)}
+              className="flex items-center gap-1 rounded-full px-1.5 py-1 transition-colors hover:bg-white/10"
+              aria-label="Spectateurs"
             >
-              <Sliders className="h-5 w-5" strokeWidth={1.2} aria-hidden />
+              <Eye className="h-3.5 w-3.5 text-white" strokeWidth={1.2} aria-hidden />
+              <span className="min-w-[1ch] font-mono text-[11px] font-medium tabular-nums text-white">
+                {liveViewerCount > 0 ? liveViewerCount : '—'}
+              </span>
             </button>
-          ) : (
             <button
               type="button"
-              onClick={handleLeave}
-              aria-label="Quitter le direct"
+              onClick={onShare}
+              aria-label="Partager le direct"
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
             >
-              <X className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
+              <Share2 className="h-[17px] w-[17px] text-white" strokeWidth={1.2} aria-hidden />
             </button>
-          )}
+            {isHost ? (
+              <button
+                type="button"
+                onClick={() => setMediatorSidebarOpen((o) => !o)}
+                aria-expanded={mediatorSidebarOpen}
+                aria-label={
+                  mediatorSidebarOpen ? 'Fermer la commande médiateur' : 'Ouvrir la commande médiateur'
+                }
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-amber-200 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <Sliders className="h-5 w-5" strokeWidth={1.2} aria-hidden />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleLeave}
+                aria-label="Quitter le direct"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+              >
+                <X className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
+              </button>
+            )}
+          </div>
+        </div>
         </div>
       </div>
         </div>
 
-      {/* CALQUE 2 MOBILE — Overlay TikTok Live pur (lg:hidden).
-          Parent `absolute inset-0 pointer-events-none` : la vidéo reste cliquable ;
-          seuls les enfants interactifs (messages + action bar) capturent les events. */}
-      <div className="pointer-events-none absolute inset-0 z-50 flex flex-col justify-end px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
-        {!beefEnded && (
-          <>
-            {/* Zone messages — largeur contrainte (85% / sm:70%), fade-top via mask-image */}
-            <div
-              ref={chatMessagesScrollRef}
-              aria-live="polite"
-              className="pointer-events-auto mb-2 w-[85%] sm:w-[70%] max-h-[30vh] overflow-y-auto overflow-x-hidden hide-scrollbar [mask-image:linear-gradient(to_top,black_72%,transparent)] [-webkit-mask-image:linear-gradient(to_top,black_72%,transparent)]"
-            >
-              {visibleMessages.map((message) => {
-                const canDelete =
-                  isUuid(message.id) && (message.user_name === userName || isHost);
-                const clearLongPress = () => {
-                  if (longPressTimerRef.current) {
-                    clearTimeout(longPressTimerRef.current);
-                    longPressTimerRef.current = null;
-                  }
-                };
-                return (
-                  <motion.div
-                    key={message.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="relative mb-2 flex max-w-full flex-col"
-                  >
-                    <div className="mb-0.5 flex items-baseline gap-2 pl-1">
-                      <ProfileUserLink
-                        username={message.user_name}
-                        onArenaProfileClick={(q) => void openProfile(q, undefined)}
-                        className="text-[10px] font-bold uppercase tracking-wider text-white/60"
-                      >
-                        {message.user_name}
-                      </ProfileUserLink>
-                    </div>
-                    <div
-                      className={`relative inline-block max-w-full self-start rounded-2xl rounded-tl-sm border border-white/10 bg-black/45 px-3 py-1.5 text-sm leading-relaxed text-white shadow-[0_4px_20px_rgba(0,0,0,0.35)] backdrop-blur-md ${
-                        canDelete ? 'cursor-context-menu touch-manipulation' : ''
-                      }`}
-                      onContextMenu={
-                        canDelete
-                          ? (e) => {
-                              e.preventDefault();
-                              setContextMenuMsg(message.id);
-                            }
-                          : undefined
-                      }
-                      onTouchStart={
-                        canDelete
-                          ? () => {
-                              clearLongPress();
-                              longPressTimerRef.current = setTimeout(() => {
-                                longPressTimerRef.current = null;
-                                setContextMenuMsg(message.id);
-                              }, 550);
-                            }
-                          : undefined
-                      }
-                      onTouchEnd={canDelete ? clearLongPress : undefined}
-                      onTouchMove={canDelete ? clearLongPress : undefined}
+      {/* CALQUE 2 — chat & réactions (pointer-events-none : les taps traversent vers la vidéo hors zones actives) */}
+      <div className="relative z-10 flex min-h-0 w-full flex-col justify-end p-2 pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:w-full landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] md:absolute md:bottom-0 md:left-0 md:right-0 md:top-0 md:z-50 md:p-4">
+      {!beefEnded && (
+        <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col justify-end overflow-visible lg:px-2">
+        <div className="pointer-events-auto mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:max-w-none">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
+          <div
+            className="grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_auto_auto] gap-y-2 overflow-hidden lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(12.5rem,15rem)] lg:grid-rows-[minmax(0,1fr)_auto] lg:gap-x-6 lg:gap-y-0"
+            aria-live="polite"
+          >
+          <div
+            ref={chatMessagesScrollRef}
+            className="pointer-events-auto min-h-0 min-w-0 max-h-[30vh] overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:row-start-1 max-lg:min-h-0 max-lg:max-h-[min(30svh,240px)] max-lg:[mask-image:none] max-lg:[-webkit-mask-image:none] md:max-h-[40vh] lg:col-start-1 lg:row-start-1 lg:max-h-[min(32vh,320px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
+          >
+            {visibleMessages.map((message) => {
+              const canDelete =
+                isUuid(message.id) && (message.user_name === userName || isHost);
+              const clearLongPress = () => {
+                if (longPressTimerRef.current) {
+                  clearTimeout(longPressTimerRef.current);
+                  longPressTimerRef.current = null;
+                }
+              };
+              return (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="relative mb-3 flex max-w-full flex-col"
+                >
+                  <div className="mb-1 flex items-baseline gap-2 pl-1">
+                    <ProfileUserLink
+                      username={message.user_name}
+                      onArenaProfileClick={(q) => void openProfile(q, undefined)}
+                      className="text-[10px] font-bold uppercase tracking-wider text-white/50"
                     >
-                      <span className="break-words">{message.content}</span>
-                      {contextMenuMsg === message.id && (
-                        <div
-                          className="absolute bottom-full left-0 z-[50] mb-1 min-w-[8rem] rounded-2xl border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onClick={(e) => e.stopPropagation()}
+                      {message.user_name}
+                    </ProfileUserLink>
+                  </div>
+                  <div
+                    className={`relative inline-block max-w-[min(100%,28rem)] self-start rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-2 text-sm leading-relaxed text-white/90 shadow-[0_4px_30px_rgba(0,0,0,0.1)] backdrop-blur-md ${
+                      canDelete ? 'cursor-context-menu touch-manipulation' : ''
+                    }`}
+                    onContextMenu={
+                      canDelete
+                        ? (e) => {
+                            e.preventDefault();
+                            setContextMenuMsg(message.id);
+                          }
+                        : undefined
+                    }
+                    onTouchStart={
+                      canDelete
+                        ? () => {
+                            clearLongPress();
+                            longPressTimerRef.current = setTimeout(() => {
+                              longPressTimerRef.current = null;
+                              setContextMenuMsg(message.id);
+                            }, 550);
+                          }
+                        : undefined
+                    }
+                    onTouchEnd={canDelete ? clearLongPress : undefined}
+                    onTouchMove={canDelete ? clearLongPress : undefined}
+                  >
+                    <span className="break-words">{message.content}</span>
+                    {contextMenuMsg === message.id && (
+                      <div
+                        className="absolute bottom-full left-0 z-[50] mb-1 min-w-[8rem] rounded-2xl border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-white/10"
+                          onClick={() => handleDeleteMessage(message.id)}
                         >
-                          <button
-                            type="button"
-                            className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-white/10"
-                            onClick={() => handleDeleteMessage(message.id)}
-                          >
-                            Supprimer
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-              <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
+                          Supprimer
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+            <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
+          </div>
+
+          <div
+            ref={reactionDockRef}
+            className="relative z-[200] isolate flex max-lg:row-start-2 max-lg:w-full max-lg:shrink-0 max-lg:flex-row max-lg:flex-wrap max-lg:items-center max-lg:justify-center max-lg:gap-1 max-lg:overflow-visible max-lg:px-1 max-lg:py-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex lg:w-auto lg:min-w-0 lg:max-w-[15rem] lg:flex-col lg:flex-nowrap lg:items-end lg:justify-end lg:gap-1.5 lg:self-stretch lg:border-l lg:border-white/10 lg:px-2 lg:py-2 lg:pl-6"
+          >
+            {/* Desktop : grille 2×5 (10 réactions) + 😀 / cœur / cadeau */}
+            <div
+              role="toolbar"
+              aria-label="Réactions rapides"
+              className="mb-0 hidden w-full shrink-0 gap-1 px-0.5 lg:mb-0 lg:grid lg:w-[12.25rem] lg:grid-cols-5 lg:grid-rows-2 lg:justify-items-center"
+            >
+              {ARENA_QUICK_REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => handleReaction(emoji)}
+                  aria-label={`Réaction ${emoji}`}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-lg shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform duration-75 hover:bg-white/10 active:scale-90 touch-manipulation"
+                >
+                  <span aria-hidden>{emoji}</span>
+                </button>
+              ))}
+            </div>
+            <div
+              role="toolbar"
+              aria-label="Réactions rapides"
+              className="touch-pan-x flex max-w-full flex-nowrap justify-center gap-0.5 overflow-x-auto overflow-y-hidden px-0.5 hide-scrollbar [-webkit-overflow-scrolling:touch] lg:hidden"
+            >
+              {ARENA_QUICK_REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => handleReaction(emoji)}
+                  aria-label={`Réaction ${emoji}`}
+                  className="flex h-9 min-h-[2.25rem] w-9 min-w-[2.25rem] shrink-0 items-center justify-center rounded-full bg-black/40 text-[15px] shadow-[0_4px_18px_rgba(0,0,0,0.4)] backdrop-blur-md transition-transform duration-75 hover:bg-white/10 active:scale-90 touch-manipulation"
+                >
+                  <span aria-hidden>{emoji}</span>
+                </button>
+              ))}
             </div>
 
-            {/* Action bar — input flex-1 à gauche, icônes shrink-0 à droite */}
-            <div
-              ref={reactionDockRef}
-              className="pointer-events-auto relative z-[60] flex w-full items-center gap-2"
-            >
-              <div className="relative flex min-w-0 flex-1 items-center">
+            <div className="relative z-[210] flex flex-wrap items-center justify-center gap-2 overflow-visible max-lg:gap-1.5 lg:shrink-0">
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.96 }}
+                transition={{ duration: 0.08, ease: 'easeOut' }}
+                onClick={() => {
+                  setShowGiftPicker(false);
+                  setShowAllReactions((v) => !v);
+                }}
+                aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
+                aria-expanded={showAllReactions}
+                className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-white/[0.06] text-lg shadow-[0_6px_22px_rgba(0,0,0,0.35)] backdrop-blur-md touch-manipulation"
+              >
+                <span aria-hidden>😀</span>
+              </motion.button>
+
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.96 }}
+                transition={{ duration: 0.08, ease: 'easeOut' }}
+                onClick={() => handleReaction(HEART_ON_FIRE)}
+                aria-label="Envoyer une réaction cœur enflammé"
+                className="flex h-10 w-10 shrink-0 select-none items-center justify-center rounded-full bg-white/[0.06] text-xl leading-none shadow-[0_6px_22px_rgba(0,0,0,0.35)] backdrop-blur-md touch-manipulation"
+              >
+                <span aria-hidden>{HEART_ON_FIRE}</span>
+              </motion.button>
+
+              <div className="relative flex shrink-0">
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                  transition={{ duration: 0.08, ease: 'easeOut' }}
+                  onClick={() => {
+                    setShowAllReactions(false);
+                    setShowGiftPicker((v) => !v);
+                  }}
+                  aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
+                  aria-expanded={showGiftPicker}
+                  className="flex h-10 w-10 select-none touch-manipulation items-center justify-center rounded-full bg-gradient-to-br from-ember-600/90 to-cobalt-700/80 shadow-[0_8px_28px_rgba(0,0,0,0.45),0_0_24px_rgba(251,146,60,0.15)]"
+                >
+                  <Gift className="h-[18px] w-[18px] text-white" strokeWidth={1.2} aria-hidden />
+                </motion.button>
+                <FeatureGuide
+                  id="arena-gift"
+                  title="Envoyer un cadeau"
+                  description="Soutiens le médiateur avec des points ! Les cadeaux s'affichent en live."
+                  position="top"
+                  align="end"
+                  suppress={featureGuideSuppress}
+                />
+              </div>
+
+            </div>
+          </div>
+
+          <div className="relative z-[130] min-w-0 max-lg:row-start-3 max-lg:shrink-0 px-2 pb-1.5 pt-0.5 sm:px-3 sm:pb-2 sm:pt-1 lg:col-start-1 lg:row-start-2">
+            <div className="flex min-w-0 flex-col gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                {isViewer && (
+                  <button
+                    type="button"
+                    onClick={() => void handleRaiseHand()}
+                    aria-label="Demander à monter sur le ring"
+                    className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] transition-colors hover:bg-white/[0.12]"
+                  >
+                    <span className="text-lg" aria-hidden>
+                      ✋
+                    </span>
+                  </button>
+                )}
                 <input
                   type="text"
                   value={chatInput}
@@ -4493,241 +4553,34 @@ export function TikTokStyleArena({
                   aria-label="Message dans le chat du direct"
                   autoComplete="off"
                   enterKeyHint="send"
-                  className="w-full min-w-0 rounded-full border border-white/10 bg-black/55 py-2 px-4 text-[13px] font-medium tracking-tight text-white placeholder-white/40 backdrop-blur-xl focus:border-cobalt-500/60 focus:outline-none"
+                  className="min-w-0 flex-1 rounded-3xl bg-[#08080a]/65 py-2 pl-2.5 pr-3 text-[13px] font-medium tracking-tight text-white shadow-[0_8px_32px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.04)] placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_24px_rgba(59,130,246,0.22),0_8px_32px_rgba(0,0,0,0.45)]"
                 />
-                <FeatureGuide
-                  id="arena-chat"
-                  title="Chat en direct"
-                  description="Envoie des messages visibles par tous les viewers et participants."
-                  position="top"
-                  suppress={featureGuideSuppress}
-                />
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {isViewer && (
-                  <button
-                    type="button"
-                    onClick={() => void handleRaiseHand()}
-                    aria-label="Demander à monter sur le ring"
-                    className="flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/10 backdrop-blur-md transition-colors hover:bg-white/15"
-                  >
-                    <span className="text-base" aria-hidden>✋</span>
-                  </button>
-                )}
-                <motion.button
+                <button
                   type="button"
-                  whileTap={{ scale: 0.92 }}
-                  transition={{ duration: 0.08, ease: 'easeOut' }}
-                  onClick={() => handleReaction(HEART_ON_FIRE)}
-                  aria-label="Envoyer une réaction cœur enflammé"
-                  className="flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/10 text-lg leading-none backdrop-blur-md"
+                  disabled={!chatInput.trim()}
+                  onClick={() => void handleSendMessage()}
+                  aria-label="Envoyer le message"
+                  className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-cobalt-500 hover:bg-cobalt-600 disabled:pointer-events-none disabled:opacity-35"
                 >
-                  <span aria-hidden>{HEART_ON_FIRE}</span>
-                </motion.button>
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.92 }}
-                  transition={{ duration: 0.08, ease: 'easeOut' }}
-                  onClick={() => {
-                    setShowGiftPicker(false);
-                    setShowAllReactions((v) => !v);
-                  }}
-                  aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
-                  aria-expanded={showAllReactions}
-                  className="flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/10 text-base backdrop-blur-md"
-                >
-                  <span aria-hidden>😀</span>
-                </motion.button>
-                <div className="relative flex shrink-0">
-                  <motion.button
-                    type="button"
-                    whileTap={{ scale: 0.92 }}
-                    transition={{ duration: 0.08, ease: 'easeOut' }}
-                    onClick={() => {
-                      setShowAllReactions(false);
-                      setShowGiftPicker((v) => !v);
-                    }}
-                    aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
-                    aria-expanded={showGiftPicker}
-                    className="flex h-10 w-10 shrink-0 select-none touch-manipulation items-center justify-center rounded-full bg-gradient-to-br from-ember-600/90 to-cobalt-700/80 shadow-[0_4px_18px_rgba(251,146,60,0.25)]"
-                  >
-                    <Gift className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
-                  </motion.button>
-                  <FeatureGuide
-                    id="arena-gift"
-                    title="Envoyer un cadeau"
-                    description="Soutiens le médiateur avec des points ! Les cadeaux s'affichent en live."
-                    position="top"
-                    align="end"
-                    suppress={featureGuideSuppress}
-                  />
-                </div>
+                  <Send className="h-3.5 w-3.5 text-white" strokeWidth={1} aria-hidden />
+                </button>
               </div>
+              <FeatureGuide
+                id="arena-chat"
+                title="Chat en direct"
+                description="Envoie des messages visibles par tous les viewers et participants."
+                position="top"
+                suppress={featureGuideSuppress}
+              />
             </div>
-          </>
-        )}
+          </div>
+          </div>
+        </div>
+        </div>
+        </div>
+      )}
+
       </div>
-
-      {/* CHAT SIDEBAR DESKTOP (Strapping #97 — TikTok Live desktop pattern)
-          Sidebar dédiée sur ≥ lg (1024 px). Remplace le Calque 2 overlay mobile
-          (caché via `lg:hidden`). Contient : header (avatar+viewers), messages,
-          action bar unifiée (input + ❤️ + 😀 + 🎁 + ➤). */}
-      <aside className="hidden lg:flex lg:w-96 lg:shrink-0 lg:h-full lg:flex-col lg:border-l lg:border-white/10 lg:bg-[#08080A] lg:relative">
-        {/* Header sidebar : avatar médiateur + pseudo + viewers count */}
-        <header className="shrink-0 border-b border-white/10 px-4 py-3 flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-cobalt-600 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.3)]">
-            {(host.name.charAt(0) || '?').toUpperCase()}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-white">{host.name}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className={`inline-flex items-center rounded-full px-1.5 py-[1px] font-mono text-[9px] font-bold uppercase tracking-wide text-white ${
-                liveBadgeHot ? 'bg-red-600/90 animate-pulse' : 'bg-red-600/70'
-              }`}>LIVE</span>
-              <button
-                type="button"
-                onClick={() => setShowViewerList(true)}
-                className="flex items-center gap-1 rounded-full px-1.5 py-0.5 transition-colors hover:bg-white/10"
-                aria-label="Spectateurs"
-              >
-                <Eye className="h-3 w-3 text-white/60" strokeWidth={1.5} aria-hidden />
-                <span className="font-mono text-[11px] tabular-nums text-white/70">
-                  {liveViewerCount > 0 ? liveViewerCount : '—'}
-                </span>
-              </button>
-            </div>
-          </div>
-          {!isHost && (
-            <button
-              type="button"
-              onClick={handleLeave}
-              aria-label="Quitter le direct"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
-            >
-              <X className="h-4 w-4 text-white/70" strokeWidth={1.5} aria-hidden />
-            </button>
-          )}
-        </header>
-
-        {!beefEnded && (
-          <>
-            {/* Messages list — scroll vertical */}
-            <div
-              ref={chatMessagesScrollRefDesktop}
-              className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-3 hide-scrollbar"
-            >
-              {visibleMessages.map((message) => {
-                const canDelete =
-                  isUuid(message.id) && (message.user_name === userName || isHost);
-                return (
-                  <motion.div
-                    key={`desktop-${message.id}`}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-2.5 flex flex-col"
-                  >
-                    <div className="flex items-baseline gap-2 mb-0.5">
-                      <ProfileUserLink
-                        username={message.user_name}
-                        onArenaProfileClick={(q) => void openProfile(q, undefined)}
-                        className="text-[10px] font-bold uppercase tracking-wider text-white/50"
-                      >
-                        {message.user_name}
-                      </ProfileUserLink>
-                    </div>
-                    <div className="inline-block rounded-2xl rounded-tl-sm border border-white/10 bg-white/[0.05] px-3 py-1.5 text-sm leading-relaxed text-white/90 self-start max-w-full">
-                      <span className="break-words">{message.content}</span>
-                      {canDelete && (
-                        <button
-                          type="button"
-                          className="ml-2 align-middle text-[10px] text-red-300/70 hover:text-red-300"
-                          onClick={() => handleDeleteMessage(message.id)}
-                          aria-label="Supprimer ce message"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-              <div ref={chatMessagesEndRefDesktop} className="h-px w-full shrink-0" aria-hidden />
-            </div>
-
-            {/* Action bar unifiée desktop : [Input flex-1] [😀] [🎁] [➤] (pattern strict Architecte). */}
-            <div
-              ref={reactionDockRefDesktop}
-              className="shrink-0 border-t border-white/10 bg-black/60 backdrop-blur-md p-3"
-            >
-              <div className="flex w-full items-center gap-2">
-                <div className="relative flex min-w-0 flex-1 items-center gap-1.5">
-                  {isViewer && (
-                    <button
-                      type="button"
-                      onClick={() => void handleRaiseHand()}
-                      aria-label="Demander à monter sur le ring"
-                      className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] transition-colors hover:bg-white/[0.12]"
-                    >
-                      <span className="text-base" aria-hidden>✋</span>
-                    </button>
-                  )}
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        void handleSendMessage();
-                      }
-                    }}
-                    placeholder="Message..."
-                    aria-label="Message dans le chat du direct"
-                    autoComplete="off"
-                    enterKeyHint="send"
-                    className="min-w-0 flex-1 rounded-3xl bg-[#08080a]/70 py-2 px-3.5 text-[13px] font-medium tracking-tight text-white placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_0_1px_rgba(59,130,246,0.35)]"
-                  />
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowGiftPicker(false);
-                      setShowAllReactions((v) => !v);
-                    }}
-                    aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
-                    aria-expanded={showAllReactions}
-                    className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] hover:bg-white/[0.12]"
-                  >
-                    <span aria-hidden className="text-base">😀</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAllReactions(false);
-                      setShowGiftPicker((v) => !v);
-                    }}
-                    aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
-                    aria-expanded={showGiftPicker}
-                    className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-gradient-to-br from-ember-600/90 to-cobalt-700/80 shadow-[0_4px_18px_rgba(251,146,60,0.25)]"
-                  >
-                    <Gift className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!chatInput.trim()}
-                    onClick={() => void handleSendMessage()}
-                    aria-label="Envoyer le message"
-                    className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-cobalt-500 hover:bg-cobalt-600 disabled:pointer-events-none disabled:opacity-35"
-                  >
-                    <Send className="h-3.5 w-3.5 text-white" strokeWidth={1} aria-hidden />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-      </aside>
 
       {isHost && (
         <MediatorSidebar

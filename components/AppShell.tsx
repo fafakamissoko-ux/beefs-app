@@ -25,7 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const roomImmersive = isRoomImmersiveRoute(pathname ?? null);
   const standalone = isStandalonePublicPage(pathname ?? null);
 
-  if (standalone || roomImmersive) {
+  if (standalone) {
     return <>{children}</>;
   }
 
