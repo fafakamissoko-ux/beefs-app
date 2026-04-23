@@ -3025,7 +3025,7 @@ export function TikTokStyleArena({
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black md:h-[calc(100dvh-3.5rem)] md:max-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100vh-3.5rem)] lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_24rem] 2xl:grid-cols-[minmax(0,1fr)_26.25rem]">
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black md:h-[calc(100dvh-3.5rem)] md:max-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100vh-3.5rem)] lg:grid lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_384px] 2xl:grid-cols-[1fr_420px]">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -4572,7 +4572,7 @@ export function TikTokStyleArena({
           Sidebar dédiée sur ≥ lg (1024 px). Remplace le Calque 2 overlay mobile
           (caché via `lg:hidden`). Contient : header (avatar+viewers), messages,
           action bar unifiée (input + ❤️ + 😀 + 🎁 + ➤). */}
-      <aside className="hidden lg:flex lg:col-start-2 lg:row-start-1 lg:h-full lg:w-full lg:flex-col lg:border-l lg:border-white/10 lg:bg-[#08080A]/95 lg:backdrop-blur-sm">
+      <aside className="hidden lg:flex lg:col-start-2 lg:row-start-1 lg:h-full lg:min-w-0 lg:w-full lg:flex-col lg:overflow-hidden lg:border-l lg:border-white/10 lg:bg-[#08080A]/95 lg:backdrop-blur-sm">
         {/* Header sidebar : avatar médiateur + pseudo + viewers count */}
         <header className="shrink-0 border-b border-white/10 px-4 py-3 flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-cobalt-600 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.3)]">
