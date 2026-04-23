@@ -2990,7 +2990,7 @@ export function TikTokStyleArena({
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
   return (
-    <div className="absolute inset-0 flex flex-col overflow-hidden bg-black lg:flex-row-reverse">
+    <div className="fixed inset-0 z-[9999] flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -3232,10 +3232,251 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* Zone vidéo (droite du split-screen desktop, bloc hermétique en flux flex-row-reverse).
-          ZÉRO absolute : reste dans le flux flex-1 pour partager l'espace avec l'aside gauche.
-          Sur mobile : occupe 100% — le bouton Quitter flotte en top-left (pas de Navbar globale). */}
-      <div className="relative flex-1 min-w-0 h-full flex flex-col bg-[#08080A] justify-center overflow-hidden">
+      {/* CALQUE 2 — chat & réactions. DOM order (Architecte final) : aside AVANT la zone vidéo,
+          avec root en `lg:flex-row` naturel (pas de flex-row-reverse). Le chat est à gauche physiquement.
+          Mobile : l'aside devient overlay absolu bottom (max-lg:absolute), le flux flex-col laisse 100% à la vidéo. */}
+      <aside className="relative flex min-h-0 w-full flex-col pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:z-[150] max-lg:w-full max-lg:justify-end max-lg:p-2 landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] lg:pointer-events-auto lg:w-[350px] lg:min-w-[350px] lg:shrink-0 lg:h-full lg:border-r lg:border-white/10 lg:bg-[#0c0c0f] lg:p-0 lg:z-[100]">
+      {/* Header du chat — desktop only — burger menu (nav) + live badge.
+          Remplace la Navbar globale cachée en mode immersif /arena/*. */}
+      <header className="relative z-30 hidden shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3 lg:flex">
+        <button
+          type="button"
+          onClick={() => setShowArenaMenu((v) => !v)}
+          aria-label={showArenaMenu ? 'Fermer le menu' : 'Ouvrir le menu de navigation'}
+          aria-expanded={showArenaMenu}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"
+        >
+          <Menu className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+        </button>
+
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div
+            className={`flex items-center rounded-full px-2 py-0.5 ${
+              liveBadgeHot
+                ? 'animate-pulse bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.45)]'
+                : 'bg-white/10'
+            }`}
+          >
+            <div
+              className={`mr-1 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-white' : 'bg-amber-300'}`}
+            />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-white">LIVE</span>
+          </div>
+          <span className="min-w-0 truncate text-xs font-semibold text-white/80">Chat en direct</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowViewerList(true)}
+          aria-label="Spectateurs"
+          className="flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-white/80 transition-colors hover:bg-white/10"
+        >
+          <Eye className="h-3.5 w-3.5" strokeWidth={1.2} aria-hidden />
+          <span className="min-w-[1ch] font-mono text-[11px] font-medium tabular-nums">
+            {liveViewerCount > 0 ? liveViewerCount : '—'}
+          </span>
+        </button>
+
+        {showArenaMenu && (
+          <div
+            className="absolute left-4 top-full z-[200] mt-2 flex w-48 flex-col rounded-xl border border-white/10 bg-[#121215] py-2 shadow-2xl"
+            onClick={() => setShowArenaMenu(false)}
+          >
+            <button
+              type="button"
+              onClick={() => router.push('/feed')}
+              className="px-4 py-2 text-left text-sm text-white transition-colors hover:bg-white/10"
+            >
+              🏠 Retour au Feed
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/messages')}
+              className="px-4 py-2 text-left text-sm text-white transition-colors hover:bg-white/10"
+            >
+              💬 Messages
+            </button>
+            <div className="my-1 h-px w-full bg-white/10" />
+            <button
+              type="button"
+              onClick={handleLeave}
+              className="px-4 py-2 text-left text-sm text-red-400 transition-colors hover:bg-white/10"
+            >
+              🚪 Quitter l&apos;Arène
+            </button>
+          </div>
+        )}
+      </header>
+      {!beefEnded && (
+        <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col justify-end overflow-visible lg:px-2">
+        <div className="pointer-events-auto mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:max-w-none">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
+          <div
+            className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden"
+            aria-live="polite"
+          >
+          {/* Zone messages — respire (Architecte #3) :
+              mobile : w-[85%] max-h-[40vh] overflow-y-auto, juste au-dessus de la barre.
+              desktop : largeur complète, fade-top via mask-image pour l'effet TikTok Live. */}
+          <div
+            ref={chatMessagesScrollRef}
+            className="pointer-events-auto flex min-h-0 min-w-0 flex-1 flex-col justify-end overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:w-[85%] max-lg:max-h-[40vh] lg:w-full lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
+          >
+            {visibleMessages.map((message) => {
+              const canDelete =
+                isUuid(message.id) && (message.user_name === userName || isHost);
+              const clearLongPress = () => {
+                if (longPressTimerRef.current) {
+                  clearTimeout(longPressTimerRef.current);
+                  longPressTimerRef.current = null;
+                }
+              };
+              return (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="relative mb-3 flex max-w-full flex-col"
+                >
+                  <div className="mb-1 flex items-baseline gap-2 pl-1">
+                    <ProfileUserLink
+                      username={message.user_name}
+                      onArenaProfileClick={(q) => void openProfile(q, undefined)}
+                      className="text-[10px] font-bold uppercase tracking-wider text-white/50"
+                    >
+                      {message.user_name}
+                    </ProfileUserLink>
+                  </div>
+                  <div
+                    className={`relative inline-block max-w-[min(100%,28rem)] self-start rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-2 text-sm leading-relaxed text-white/90 shadow-[0_4px_30px_rgba(0,0,0,0.1)] backdrop-blur-md ${
+                      canDelete ? 'cursor-context-menu touch-manipulation' : ''
+                    }`}
+                    onContextMenu={
+                      canDelete
+                        ? (e) => {
+                            e.preventDefault();
+                            setContextMenuMsg(message.id);
+                          }
+                        : undefined
+                    }
+                    onTouchStart={
+                      canDelete
+                        ? () => {
+                            clearLongPress();
+                            longPressTimerRef.current = setTimeout(() => {
+                              longPressTimerRef.current = null;
+                              setContextMenuMsg(message.id);
+                            }, 550);
+                          }
+                        : undefined
+                    }
+                    onTouchEnd={canDelete ? clearLongPress : undefined}
+                    onTouchMove={canDelete ? clearLongPress : undefined}
+                  >
+                    <span className="break-words">{message.content}</span>
+                    {contextMenuMsg === message.id && (
+                      <div
+                        className="absolute bottom-full left-0 z-[50] mb-1 min-w-[8rem] rounded-2xl border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-white/10"
+                          onClick={() => handleDeleteMessage(message.id)}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+            <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
+          </div>
+
+          {/* Barre d'action unifiée (mobile + desktop) — pattern strict Architecte :
+              [ Input (flex-1) ] [ 😀 Emojis ] [ 🎁 Cadeaux ] [ ➤ Envoyer ]
+              Pas de cœur enflammé, pas de grille de quick reactions, pas de ✋. */}
+          <div
+            ref={reactionDockRef}
+            className="pointer-events-auto mt-auto flex w-full shrink-0 flex-row items-center gap-2 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 lg:border-t lg:border-white/10 lg:bg-black/40 lg:p-3"
+          >
+            <div className="flex-1 min-w-0">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    void handleSendMessage();
+                  }
+                }}
+                placeholder="Ajouter un commentaire..."
+                aria-label="Message dans le chat du direct"
+                autoComplete="off"
+                enterKeyHint="send"
+                className="w-full rounded-full bg-white/10 px-4 py-2 text-[13px] text-white placeholder-white/50 backdrop-blur-md focus:outline-none focus:ring-1 focus:ring-white/30"
+              />
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGiftPicker(false);
+                  setShowAllReactions((v) => !v);
+                }}
+                aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
+                aria-expanded={showAllReactions}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg transition-colors hover:bg-white/20"
+              >
+                <span aria-hidden>😀</span>
+              </button>
+              <div className="relative flex shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAllReactions(false);
+                    setShowGiftPicker((v) => !v);
+                  }}
+                  aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
+                  aria-expanded={showGiftPicker}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400 text-sm shadow-lg transition-transform active:scale-95"
+                >
+                  <Gift className="h-4 w-4 text-white" aria-hidden />
+                </button>
+                <FeatureGuide
+                  id="arena-gift"
+                  title="Envoyer un cadeau"
+                  description="Soutiens le médiateur avec des points ! Les cadeaux s'affichent en live."
+                  position="top"
+                  align="end"
+                  suppress={featureGuideSuppress}
+                />
+              </div>
+              <button
+                type="button"
+                disabled={!chatInput.trim()}
+                onClick={() => void handleSendMessage()}
+                aria-label="Envoyer le message"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 transition-colors hover:bg-brand-600 disabled:pointer-events-none disabled:opacity-35"
+              >
+                <Send className="h-4 w-4 text-white" aria-hidden />
+              </button>
+            </div>
+          </div>
+          </div>
+        </div>
+        </div>
+        </div>
+      )}
+
+      </aside>
+
+      {/* Zone vidéo (flex-1, naturellement à droite du chat grâce à l'ordre DOM). */}
+      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[#08080A]">
         {/* Bouton Quitter MOBILE — top-left, lg:hidden (sur desktop c'est le menu burger du chat qui prend le relais). */}
         {!beefEnded && !isLeaving && (
           <button
@@ -3248,11 +3489,9 @@ export function TikTokStyleArena({
             <span className="hidden sm:inline">Quitter</span>
           </button>
         )}
-        {/* CALQUE 1 — scène vidéo + îlots header.
-            Sur desktop : absolute inset-0 DE LA ZONE VIDÉO (pas du root), donc ne déborde PAS sur le chat aside —
-            la zone vidéo est elle-même flex-1 à côté de l'aside. Cela fournit le contexte absolu requis pour
-            que le conteneur split-screen (dalles flex-row items-stretch) remplisse toute la hauteur (clé Architecte). */}
-        <div className="relative z-0 flex h-full min-h-0 w-full flex-1 flex-col md:absolute md:inset-0 md:h-full md:w-full md:min-h-0">
+        {/* CALQUE 1 — scène vidéo + îlots header. ZÉRO absolute : flex-1 en flux pur (clé Architecte #finale).
+            Les dalles (split-screen) sont elles-mêmes flex-1 en flux, pas d'overlay absolu parasite. */}
+        <div className="relative z-0 flex h-full min-h-0 w-full flex-1 flex-col">
         {effectiveDailyRoomUrl ? (
           <div
             className={`relative z-[65] pointer-events-none flex h-full min-h-0 w-full flex-1 overflow-visible ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem] md:pt-0' : 'pt-24 max-sm:pt-28 md:pt-0'}`}
@@ -3268,7 +3507,7 @@ export function TikTokStyleArena({
             />
             {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
             <div
-              className={`pointer-events-none absolute z-10 flex min-h-0 flex-row items-stretch gap-1 max-lg:inset-y-0 max-lg:left-1/2 max-lg:h-full max-lg:w-full max-lg:-translate-x-1/2 max-lg:px-1 md:inset-0 md:h-full md:w-full md:translate-x-0 md:gap-4 md:px-6 transition-shadow duration-700 ${sponsorGlow}`}
+              className={`relative z-10 flex min-h-0 w-full flex-1 flex-row items-stretch gap-1 px-1 pt-24 md:gap-4 md:px-6 lg:pt-0 transition-shadow duration-700 ${sponsorGlow}`}
             >
               {/* LEFT — Participant A */}
               <motion.div
@@ -3531,10 +3770,10 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                {/* Contrôles gauche (pseudo + mic/cam) — clé Architecte :
-                    Desktop : bottom-6 (ancrés au sol de la dalle, le chat est un aside à gauche, pas d'overlap).
-                    Mobile  : bottom-[38vh] (posés juste au-dessus du chat overlay qui prend les 35vh du bas). */}
-                <div className="pointer-events-auto absolute inset-x-0 bottom-6 max-lg:bottom-[38vh] z-[140] flex flex-col items-center gap-2">
+                {/* Contrôles gauche (pseudo + mic/cam) — clé Architecte finale :
+                    Desktop : bottom-6 (ancrés au sol de la dalle).
+                    Mobile  : top-4 bottom-auto (collés en haut de la dalle, bas libre pour le chat overlay). */}
+                <div className="pointer-events-auto absolute inset-x-0 bottom-6 z-[140] flex flex-col items-center gap-2 max-lg:top-4 max-lg:bottom-auto">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3971,8 +4210,8 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                {/* Contrôles droite : idem gauche — bottom-6 desktop, bottom-[38vh] mobile (clé Architecte). */}
-                <div className="pointer-events-auto absolute inset-x-0 bottom-6 max-lg:bottom-[38vh] z-[140] flex flex-col items-center gap-2">
+                {/* Contrôles droite : idem gauche — bottom-6 desktop, top-4 mobile (clé Architecte finale). */}
+                <div className="pointer-events-auto absolute inset-x-0 bottom-6 z-[140] flex flex-col items-center gap-2 max-lg:top-4 max-lg:bottom-auto">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -4067,7 +4306,7 @@ export function TikTokStyleArena({
         ) : (
         /* Placeholder — même hauteur vidéo que avec room */
         <div className="relative z-[65] pointer-events-none flex h-full min-h-0 w-full flex-1 overflow-hidden">
-          <div className="pointer-events-none absolute z-10 flex min-h-0 flex-row items-stretch gap-1 max-lg:inset-y-0 max-lg:left-1/2 max-lg:h-full max-lg:w-full max-lg:-translate-x-1/2 max-lg:px-1 md:inset-0 md:h-full md:w-full md:translate-x-0 md:gap-4 md:px-6">
+          <div className="relative z-10 flex min-h-0 w-full flex-1 flex-row items-stretch gap-1 px-1 pt-24 md:gap-4 md:px-6 lg:pt-0">
           {debaters[0] ? (
             <div className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-hidden bg-[#08080A] rounded-l-3xl lg:rounded-3xl border-r border-white/20 shadow-lg flex flex-col items-center justify-center">
               <div className="pointer-events-none absolute left-4 top-4 z-[50] flex w-[calc(100%-2rem)] items-start justify-start gap-2">
@@ -4352,249 +4591,6 @@ export function TikTokStyleArena({
         </div>
       </div>
         </div>
-
-      {/* CALQUE 2 — chat & réactions.
-          Mobile (< lg) : overlay absolu sur le bas 40% de la vidéo (TikTok Live pur), pointer-events-none pour laisser les taps traverser.
-          Desktop (lg+) : aside hermétique à GAUCHE (via lg:flex-row-reverse sur le root), w-96, bordure droite, fond opaque, dans le flux flex-row. */}
-      <aside className="relative flex min-h-0 w-full flex-col pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:z-10 max-lg:w-full max-lg:justify-end max-lg:p-2 landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] lg:pointer-events-auto lg:w-[350px] lg:shrink-0 lg:h-full lg:border-r lg:border-white/10 lg:bg-[#0c0c0f] lg:p-0 lg:z-[100]">
-      {/* Header du chat — desktop only — burger menu (nav) + live badge.
-          Remplace la Navbar globale cachée en mode immersif /arena/*. */}
-      <header className="relative z-30 hidden shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3 lg:flex">
-        <button
-          type="button"
-          onClick={() => setShowArenaMenu((v) => !v)}
-          aria-label={showArenaMenu ? 'Fermer le menu' : 'Ouvrir le menu de navigation'}
-          aria-expanded={showArenaMenu}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"
-        >
-          <Menu className="h-5 w-5" strokeWidth={1.5} aria-hidden />
-        </button>
-
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <div
-            className={`flex items-center rounded-full px-2 py-0.5 ${
-              liveBadgeHot
-                ? 'animate-pulse bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.45)]'
-                : 'bg-white/10'
-            }`}
-          >
-            <div
-              className={`mr-1 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-white' : 'bg-amber-300'}`}
-            />
-            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-white">LIVE</span>
-          </div>
-          <span className="min-w-0 truncate text-xs font-semibold text-white/80">Chat en direct</span>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setShowViewerList(true)}
-          aria-label="Spectateurs"
-          className="flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-white/80 transition-colors hover:bg-white/10"
-        >
-          <Eye className="h-3.5 w-3.5" strokeWidth={1.2} aria-hidden />
-          <span className="min-w-[1ch] font-mono text-[11px] font-medium tabular-nums">
-            {liveViewerCount > 0 ? liveViewerCount : '—'}
-          </span>
-        </button>
-
-        {showArenaMenu && (
-          <div
-            className="absolute left-4 top-full z-[200] mt-2 flex w-48 flex-col rounded-xl border border-white/10 bg-[#121215] py-2 shadow-2xl"
-            onClick={() => setShowArenaMenu(false)}
-          >
-            <button
-              type="button"
-              onClick={() => router.push('/feed')}
-              className="px-4 py-2 text-left text-sm text-white transition-colors hover:bg-white/10"
-            >
-              🏠 Retour au Feed
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push('/messages')}
-              className="px-4 py-2 text-left text-sm text-white transition-colors hover:bg-white/10"
-            >
-              💬 Messages
-            </button>
-            <div className="my-1 h-px w-full bg-white/10" />
-            <button
-              type="button"
-              onClick={handleLeave}
-              className="px-4 py-2 text-left text-sm text-red-400 transition-colors hover:bg-white/10"
-            >
-              🚪 Quitter l&apos;Arène
-            </button>
-          </div>
-        )}
-      </header>
-      {!beefEnded && (
-        <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col justify-end overflow-visible lg:px-2">
-        <div className="pointer-events-auto mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:max-w-none">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
-          <div
-            className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden"
-            aria-live="polite"
-          >
-          {/* Zone messages — respire (Architecte #3) :
-              mobile : w-[85%] max-h-[40vh] overflow-y-auto, juste au-dessus de la barre.
-              desktop : largeur complète, fade-top via mask-image pour l'effet TikTok Live. */}
-          <div
-            ref={chatMessagesScrollRef}
-            className="pointer-events-auto flex min-h-0 min-w-0 flex-1 flex-col justify-end overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:w-[85%] max-lg:max-h-[40vh] lg:w-full lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
-          >
-            {visibleMessages.map((message) => {
-              const canDelete =
-                isUuid(message.id) && (message.user_name === userName || isHost);
-              const clearLongPress = () => {
-                if (longPressTimerRef.current) {
-                  clearTimeout(longPressTimerRef.current);
-                  longPressTimerRef.current = null;
-                }
-              };
-              return (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="relative mb-3 flex max-w-full flex-col"
-                >
-                  <div className="mb-1 flex items-baseline gap-2 pl-1">
-                    <ProfileUserLink
-                      username={message.user_name}
-                      onArenaProfileClick={(q) => void openProfile(q, undefined)}
-                      className="text-[10px] font-bold uppercase tracking-wider text-white/50"
-                    >
-                      {message.user_name}
-                    </ProfileUserLink>
-                  </div>
-                  <div
-                    className={`relative inline-block max-w-[min(100%,28rem)] self-start rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-2 text-sm leading-relaxed text-white/90 shadow-[0_4px_30px_rgba(0,0,0,0.1)] backdrop-blur-md ${
-                      canDelete ? 'cursor-context-menu touch-manipulation' : ''
-                    }`}
-                    onContextMenu={
-                      canDelete
-                        ? (e) => {
-                            e.preventDefault();
-                            setContextMenuMsg(message.id);
-                          }
-                        : undefined
-                    }
-                    onTouchStart={
-                      canDelete
-                        ? () => {
-                            clearLongPress();
-                            longPressTimerRef.current = setTimeout(() => {
-                              longPressTimerRef.current = null;
-                              setContextMenuMsg(message.id);
-                            }, 550);
-                          }
-                        : undefined
-                    }
-                    onTouchEnd={canDelete ? clearLongPress : undefined}
-                    onTouchMove={canDelete ? clearLongPress : undefined}
-                  >
-                    <span className="break-words">{message.content}</span>
-                    {contextMenuMsg === message.id && (
-                      <div
-                        className="absolute bottom-full left-0 z-[50] mb-1 min-w-[8rem] rounded-2xl border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-white/10"
-                          onClick={() => handleDeleteMessage(message.id)}
-                        >
-                          Supprimer
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-            <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
-          </div>
-
-          {/* Barre d'action unifiée (mobile + desktop) — pattern strict Architecte :
-              [ Input (flex-1) ] [ 😀 Emojis ] [ 🎁 Cadeaux ] [ ➤ Envoyer ]
-              Pas de cœur enflammé, pas de grille de quick reactions, pas de ✋. */}
-          <div
-            ref={reactionDockRef}
-            className="pointer-events-auto mt-auto flex w-full shrink-0 flex-row items-center gap-2 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 lg:border-t lg:border-white/10 lg:bg-black/40 lg:p-3"
-          >
-            <div className="flex-1 min-w-0">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    void handleSendMessage();
-                  }
-                }}
-                placeholder="Ajouter un commentaire..."
-                aria-label="Message dans le chat du direct"
-                autoComplete="off"
-                enterKeyHint="send"
-                className="w-full rounded-full bg-white/10 px-4 py-2 text-[13px] text-white placeholder-white/50 backdrop-blur-md focus:outline-none focus:ring-1 focus:ring-white/30"
-              />
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowGiftPicker(false);
-                  setShowAllReactions((v) => !v);
-                }}
-                aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
-                aria-expanded={showAllReactions}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg transition-colors hover:bg-white/20"
-              >
-                <span aria-hidden>😀</span>
-              </button>
-              <div className="relative flex shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAllReactions(false);
-                    setShowGiftPicker((v) => !v);
-                  }}
-                  aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
-                  aria-expanded={showGiftPicker}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400 text-sm shadow-lg transition-transform active:scale-95"
-                >
-                  <Gift className="h-4 w-4 text-white" aria-hidden />
-                </button>
-                <FeatureGuide
-                  id="arena-gift"
-                  title="Envoyer un cadeau"
-                  description="Soutiens le médiateur avec des points ! Les cadeaux s'affichent en live."
-                  position="top"
-                  align="end"
-                  suppress={featureGuideSuppress}
-                />
-              </div>
-              <button
-                type="button"
-                disabled={!chatInput.trim()}
-                onClick={() => void handleSendMessage()}
-                aria-label="Envoyer le message"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 transition-colors hover:bg-brand-600 disabled:pointer-events-none disabled:opacity-35"
-              >
-                <Send className="h-4 w-4 text-white" aria-hidden />
-              </button>
-            </div>
-          </div>
-          </div>
-        </div>
-        </div>
-        </div>
-      )}
-
-      </aside>
 
       {isHost && (
         <MediatorSidebar
