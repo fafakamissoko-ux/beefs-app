@@ -345,7 +345,7 @@ export default function ArenaPage() {
   }
 
   return (
-    <div className="fixed left-1/2 top-14 z-40 h-[calc(100dvh-3.5rem)] max-lg:w-full max-lg:max-w-md -translate-x-1/2 overflow-hidden lg:left-64 lg:right-0 lg:top-0 lg:h-dvh lg:translate-x-0">
+    <div className="fixed inset-0 z-50 h-dvh w-screen overflow-hidden bg-black">
       <TikTokStyleArena
         host={host}
         roomId={roomId}
