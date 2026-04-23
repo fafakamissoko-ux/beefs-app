@@ -3235,7 +3235,7 @@ export function TikTokStyleArena({
       {/* Zone vidéo (droite du split-screen desktop, bloc hermétique en flux flex-row-reverse).
           ZÉRO absolute : reste dans le flux flex-1 pour partager l'espace avec l'aside gauche.
           Sur mobile : occupe 100% — le bouton Quitter flotte en top-left (pas de Navbar globale). */}
-      <div className="relative flex h-full min-w-0 flex-1 flex-col justify-center overflow-hidden bg-[#08080A]">
+      <div className="relative flex-1 min-w-0 h-full flex flex-col bg-[#08080A] justify-center overflow-hidden">
         {/* Bouton Quitter MOBILE — top-left, lg:hidden (sur desktop c'est le menu burger du chat qui prend le relais). */}
         {!beefEnded && !isLeaving && (
           <button
@@ -3248,8 +3248,9 @@ export function TikTokStyleArena({
             <span className="hidden sm:inline">Quitter</span>
           </button>
         )}
-        {/* CALQUE 1 — scène vidéo + îlots header (fond) */}
-        <div className="relative z-0 flex min-h-0 w-full shrink-0 flex-1 flex-col md:absolute md:inset-0 md:h-full md:w-full md:min-h-0">
+        {/* CALQUE 1 — scène vidéo + îlots header (fond). Reste en flux flex-1 pour partager la hauteur
+            avec les overlays sans glisser sous l'aside (Correctif Architecte #1). */}
+        <div className="relative z-0 flex h-full min-h-0 w-full flex-1 flex-col">
         {effectiveDailyRoomUrl ? (
           <div
             className={`relative z-[65] pointer-events-none flex h-full min-h-0 w-full flex-1 overflow-visible ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem] md:pt-0' : 'pt-24 max-sm:pt-28 md:pt-0'}`}
@@ -3528,8 +3529,9 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                {/* Bas dalle : pseudo + micro/cam — z élevé + pointer-events pour rester au-dessus du dock chat */}
-                <div className="pointer-events-auto absolute bottom-3 left-1/2 z-[140] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
+                {/* Haut dalle : pseudo + micro/cam ancrés en top-16 pour libérer le bas (Correctif Architecte #2).
+                    Évacue mobile : les contrôles ne sont plus écrasés par le chat overlay. */}
+                <div className="pointer-events-auto absolute top-16 left-1/2 z-[140] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -3966,7 +3968,8 @@ export function TikTokStyleArena({
                     {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                <div className="pointer-events-auto absolute bottom-3 left-1/2 z-[140] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
+                {/* Haut dalle droite : pseudo + micro/cam en top-16 (Correctif Architecte #2). */}
+                <div className="pointer-events-auto absolute top-16 left-1/2 z-[140] flex w-[min(92%,16rem)] max-w-[min(18rem,calc(100%-1rem))] -translate-x-1/2 flex-col items-center gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
