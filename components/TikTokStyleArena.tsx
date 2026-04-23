@@ -3025,7 +3025,7 @@ export function TikTokStyleArena({
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black md:h-[calc(100dvh-3.5rem)] md:max-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100vh-3.5rem)] lg:flex-row">
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black lg:flex-row">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -3280,11 +3280,10 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* TikTok Battle : calques stricts — vidéo (fond) + UI chat (md+ mobile overlay) ;
-          Strapping #97 : sur ≥ lg, flex-row parent → flex-1 prend la largeur restante
-          après l'aside (320/384/420 px). `min-w-0` évite que le contenu vidéo force
-          overflow et pousse l'aside hors écran. */}
-      <div className="relative min-h-0 h-full flex-1 min-w-0 flex flex-col overflow-hidden bg-[#08080A] md:block md:min-h-0 lg:h-full">
+      {/* TikTok Battle — scène vidéo.
+          Mobile (flex-col) : prend 100% de l'espace car le chat overlay est absolute.
+          Desktop (lg:flex-row) : flex-1 min-w-0 occupe la largeur restante après l'aside. */}
+      <div className="relative min-h-0 h-full w-full flex-1 min-w-0 flex flex-col overflow-hidden bg-[#08080A]">
         {/* CALQUE 1 — scène vidéo + îlots header (fond) */}
         <div className="relative z-0 flex min-h-0 w-full shrink-0 flex-1 flex-col md:absolute md:inset-0 md:h-full md:w-full md:min-h-0">
         {effectiveDailyRoomUrl ? (
@@ -4384,202 +4383,185 @@ export function TikTokStyleArena({
       </div>
         </div>
 
-      {/* CALQUE 2 — chat & réactions MOBILE (overlay flottant).
-          Strapping #97 : sur ≥ lg, ce calque est désactivé (`lg:hidden`) et la sidebar droite
-          hors-TikTokBattle prend le relais avec le même contenu (messages + action bar). */}
-      <div className="relative z-10 flex min-h-0 w-full flex-col justify-end p-2 pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:w-full landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] md:absolute md:inset-0 md:z-50 md:p-6 lg:hidden">
-      {!beefEnded && (
-        <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col justify-end overflow-visible lg:px-2">
-        {/* mx-auto max-w-md : centrage mobile.  lg:mx-0 lg:max-w-none : le chat + dock occupent
-            pleinement leur colonne respective au lieu de rester 448 px à gauche. */}
-        <div className="pointer-events-auto mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:mx-0 lg:max-w-none">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none lg:bg-none">
-          <div
-            className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden"
-            aria-live="polite"
-          >
-          <div
-            ref={chatMessagesScrollRef}
-            className="pointer-events-auto min-h-0 min-w-0 flex-1 max-h-[min(30svh,240px)] overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar"
-          >
-            {visibleMessages.map((message) => {
-              const canDelete =
-                isUuid(message.id) && (message.user_name === userName || isHost);
-              const clearLongPress = () => {
-                if (longPressTimerRef.current) {
-                  clearTimeout(longPressTimerRef.current);
-                  longPressTimerRef.current = null;
-                }
-              };
-              return (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="relative mb-3 flex max-w-full flex-col"
-                >
-                  <div className="mb-1 flex items-baseline gap-2 pl-1">
-                    <ProfileUserLink
-                      username={message.user_name}
-                      onArenaProfileClick={(q) => void openProfile(q, undefined)}
-                      className="text-[10px] font-bold uppercase tracking-wider text-white/50"
-                    >
-                      {message.user_name}
-                    </ProfileUserLink>
-                  </div>
-                  <div
-                    className={`relative inline-block max-w-[min(100%,28rem)] self-start rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-2 text-sm leading-relaxed text-white/90 shadow-[0_4px_30px_rgba(0,0,0,0.1)] backdrop-blur-md ${
-                      canDelete ? 'cursor-context-menu touch-manipulation' : ''
-                    }`}
-                    onContextMenu={
-                      canDelete
-                        ? (e) => {
-                            e.preventDefault();
-                            setContextMenuMsg(message.id);
-                          }
-                        : undefined
-                    }
-                    onTouchStart={
-                      canDelete
-                        ? () => {
-                            clearLongPress();
-                            longPressTimerRef.current = setTimeout(() => {
-                              longPressTimerRef.current = null;
-                              setContextMenuMsg(message.id);
-                            }, 550);
-                          }
-                        : undefined
-                    }
-                    onTouchEnd={canDelete ? clearLongPress : undefined}
-                    onTouchMove={canDelete ? clearLongPress : undefined}
-                  >
-                    <span className="break-words">{message.content}</span>
-                    {contextMenuMsg === message.id && (
-                      <div
-                        className="absolute bottom-full left-0 z-[50] mb-1 min-w-[8rem] rounded-2xl border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-white/10"
-                          onClick={() => handleDeleteMessage(message.id)}
-                        >
-                          Supprimer
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-            <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
-          </div>
-
-          {/* Barre d'action unifiée mobile : input + ❤️ + 😀 + 🎁 + ➤ (pattern TikTok Live) */}
-          <div
-            ref={reactionDockRef}
-            className="relative z-[200] pointer-events-auto shrink-0 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1"
-          >
-            <div className="flex min-w-0 items-center gap-1.5">
-              {isViewer && (
-                <button
-                  type="button"
-                  onClick={() => void handleRaiseHand()}
-                  aria-label="Demander à monter sur le ring"
-                  className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] transition-colors hover:bg-white/[0.12]"
-                >
-                  <span className="text-base" aria-hidden>✋</span>
-                </button>
-              )}
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    void handleSendMessage();
+      {/* CALQUE 2 MOBILE — Overlay TikTok Live pur (lg:hidden).
+          Parent `absolute inset-0 pointer-events-none` : la vidéo reste cliquable ;
+          seuls les enfants interactifs (messages + action bar) capturent les events. */}
+      <div className="pointer-events-none absolute inset-0 z-50 flex flex-col justify-end px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
+        {!beefEnded && (
+          <>
+            {/* Zone messages — largeur contrainte (85% / sm:70%), fade-top via mask-image */}
+            <div
+              ref={chatMessagesScrollRef}
+              aria-live="polite"
+              className="pointer-events-auto mb-2 w-[85%] sm:w-[70%] max-h-[30vh] overflow-y-auto overflow-x-hidden hide-scrollbar [mask-image:linear-gradient(to_top,black_72%,transparent)] [-webkit-mask-image:linear-gradient(to_top,black_72%,transparent)]"
+            >
+              {visibleMessages.map((message) => {
+                const canDelete =
+                  isUuid(message.id) && (message.user_name === userName || isHost);
+                const clearLongPress = () => {
+                  if (longPressTimerRef.current) {
+                    clearTimeout(longPressTimerRef.current);
+                    longPressTimerRef.current = null;
                   }
-                }}
-                placeholder="Message..."
-                aria-label="Message dans le chat du direct"
-                autoComplete="off"
-                enterKeyHint="send"
-                className="min-w-0 flex-1 rounded-3xl bg-[#08080a]/70 py-2 px-3 text-[13px] font-medium tracking-tight text-white shadow-[0_8px_32px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.04)] placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_0_1px_rgba(59,130,246,0.4),0_8px_32px_rgba(0,0,0,0.45)]"
-              />
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.96 }}
-                transition={{ duration: 0.08, ease: 'easeOut' }}
-                onClick={() => handleReaction(HEART_ON_FIRE)}
-                aria-label="Envoyer une réaction cœur enflammé"
-                className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] text-lg leading-none backdrop-blur-md"
-              >
-                <span aria-hidden>{HEART_ON_FIRE}</span>
-              </motion.button>
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.96 }}
-                transition={{ duration: 0.08, ease: 'easeOut' }}
-                onClick={() => {
-                  setShowGiftPicker(false);
-                  setShowAllReactions((v) => !v);
-                }}
-                aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
-                aria-expanded={showAllReactions}
-                className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] text-base backdrop-blur-md"
-              >
-                <span aria-hidden>😀</span>
-              </motion.button>
-              <div className="relative flex shrink-0">
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.96 }}
-                  transition={{ duration: 0.08, ease: 'easeOut' }}
-                  onClick={() => {
-                    setShowAllReactions(false);
-                    setShowGiftPicker((v) => !v);
+                };
+                return (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative mb-2 flex max-w-full flex-col"
+                  >
+                    <div className="mb-0.5 flex items-baseline gap-2 pl-1">
+                      <ProfileUserLink
+                        username={message.user_name}
+                        onArenaProfileClick={(q) => void openProfile(q, undefined)}
+                        className="text-[10px] font-bold uppercase tracking-wider text-white/60"
+                      >
+                        {message.user_name}
+                      </ProfileUserLink>
+                    </div>
+                    <div
+                      className={`relative inline-block max-w-full self-start rounded-2xl rounded-tl-sm border border-white/10 bg-black/45 px-3 py-1.5 text-sm leading-relaxed text-white shadow-[0_4px_20px_rgba(0,0,0,0.35)] backdrop-blur-md ${
+                        canDelete ? 'cursor-context-menu touch-manipulation' : ''
+                      }`}
+                      onContextMenu={
+                        canDelete
+                          ? (e) => {
+                              e.preventDefault();
+                              setContextMenuMsg(message.id);
+                            }
+                          : undefined
+                      }
+                      onTouchStart={
+                        canDelete
+                          ? () => {
+                              clearLongPress();
+                              longPressTimerRef.current = setTimeout(() => {
+                                longPressTimerRef.current = null;
+                                setContextMenuMsg(message.id);
+                              }, 550);
+                            }
+                          : undefined
+                      }
+                      onTouchEnd={canDelete ? clearLongPress : undefined}
+                      onTouchMove={canDelete ? clearLongPress : undefined}
+                    >
+                      <span className="break-words">{message.content}</span>
+                      {contextMenuMsg === message.id && (
+                        <div
+                          className="absolute bottom-full left-0 z-[50] mb-1 min-w-[8rem] rounded-2xl border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-white/10"
+                            onClick={() => handleDeleteMessage(message.id)}
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+              <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
+            </div>
+
+            {/* Action bar — input flex-1 à gauche, icônes shrink-0 à droite */}
+            <div
+              ref={reactionDockRef}
+              className="pointer-events-auto relative z-[60] flex w-full items-center gap-2"
+            >
+              <div className="relative flex min-w-0 flex-1 items-center">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      void handleSendMessage();
+                    }
                   }}
-                  aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
-                  aria-expanded={showGiftPicker}
-                  className="flex h-9 w-9 shrink-0 select-none touch-manipulation items-center justify-center rounded-full bg-gradient-to-br from-ember-600/90 to-cobalt-700/80 shadow-[0_4px_18px_rgba(251,146,60,0.25)]"
-                >
-                  <Gift className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
-                </motion.button>
+                  placeholder="Message..."
+                  aria-label="Message dans le chat du direct"
+                  autoComplete="off"
+                  enterKeyHint="send"
+                  className="w-full min-w-0 rounded-full border border-white/10 bg-black/55 py-2 px-4 text-[13px] font-medium tracking-tight text-white placeholder-white/40 backdrop-blur-xl focus:border-cobalt-500/60 focus:outline-none"
+                />
                 <FeatureGuide
-                  id="arena-gift"
-                  title="Envoyer un cadeau"
-                  description="Soutiens le médiateur avec des points ! Les cadeaux s'affichent en live."
+                  id="arena-chat"
+                  title="Chat en direct"
+                  description="Envoie des messages visibles par tous les viewers et participants."
                   position="top"
-                  align="end"
                   suppress={featureGuideSuppress}
                 />
               </div>
-              <button
-                type="button"
-                disabled={!chatInput.trim()}
-                onClick={() => void handleSendMessage()}
-                aria-label="Envoyer le message"
-                className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-cobalt-500 hover:bg-cobalt-600 disabled:pointer-events-none disabled:opacity-35"
-              >
-                <Send className="h-3.5 w-3.5 text-white" strokeWidth={1} aria-hidden />
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {isViewer && (
+                  <button
+                    type="button"
+                    onClick={() => void handleRaiseHand()}
+                    aria-label="Demander à monter sur le ring"
+                    className="flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/10 backdrop-blur-md transition-colors hover:bg-white/15"
+                  >
+                    <span className="text-base" aria-hidden>✋</span>
+                  </button>
+                )}
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.92 }}
+                  transition={{ duration: 0.08, ease: 'easeOut' }}
+                  onClick={() => handleReaction(HEART_ON_FIRE)}
+                  aria-label="Envoyer une réaction cœur enflammé"
+                  className="flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/10 text-lg leading-none backdrop-blur-md"
+                >
+                  <span aria-hidden>{HEART_ON_FIRE}</span>
+                </motion.button>
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.92 }}
+                  transition={{ duration: 0.08, ease: 'easeOut' }}
+                  onClick={() => {
+                    setShowGiftPicker(false);
+                    setShowAllReactions((v) => !v);
+                  }}
+                  aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
+                  aria-expanded={showAllReactions}
+                  className="flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/10 text-base backdrop-blur-md"
+                >
+                  <span aria-hidden>😀</span>
+                </motion.button>
+                <div className="relative flex shrink-0">
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.92 }}
+                    transition={{ duration: 0.08, ease: 'easeOut' }}
+                    onClick={() => {
+                      setShowAllReactions(false);
+                      setShowGiftPicker((v) => !v);
+                    }}
+                    aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
+                    aria-expanded={showGiftPicker}
+                    className="flex h-10 w-10 shrink-0 select-none touch-manipulation items-center justify-center rounded-full bg-gradient-to-br from-ember-600/90 to-cobalt-700/80 shadow-[0_4px_18px_rgba(251,146,60,0.25)]"
+                  >
+                    <Gift className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
+                  </motion.button>
+                  <FeatureGuide
+                    id="arena-gift"
+                    title="Envoyer un cadeau"
+                    description="Soutiens le médiateur avec des points ! Les cadeaux s'affichent en live."
+                    position="top"
+                    align="end"
+                    suppress={featureGuideSuppress}
+                  />
+                </div>
+              </div>
             </div>
-            <FeatureGuide
-              id="arena-chat"
-              title="Chat en direct"
-              description="Envoie des messages visibles par tous les viewers et participants."
-              position="top"
-              suppress={featureGuideSuppress}
-            />
-          </div>
-          </div>
-        </div>
-        </div>
-        </div>
-      )}
-
+          </>
+        )}
       </div>
 
       {/* CHAT SIDEBAR DESKTOP (Strapping #97 — TikTok Live desktop pattern)
@@ -4668,79 +4650,75 @@ export function TikTokStyleArena({
               <div ref={chatMessagesEndRefDesktop} className="h-px w-full shrink-0" aria-hidden />
             </div>
 
-            {/* Action bar unifiée : input + ❤️ + 😀 + 🎁 + ➤ (style TikTok Live) */}
+            {/* Action bar unifiée desktop : [Input flex-1] [😀] [🎁] [➤] (pattern strict Architecte). */}
             <div
               ref={reactionDockRefDesktop}
               className="shrink-0 border-t border-white/10 bg-black/60 backdrop-blur-md p-3"
             >
-              <div className="flex items-center gap-1.5">
-                {isViewer && (
+              <div className="flex w-full items-center gap-2">
+                <div className="relative flex min-w-0 flex-1 items-center gap-1.5">
+                  {isViewer && (
+                    <button
+                      type="button"
+                      onClick={() => void handleRaiseHand()}
+                      aria-label="Demander à monter sur le ring"
+                      className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] transition-colors hover:bg-white/[0.12]"
+                    >
+                      <span className="text-base" aria-hidden>✋</span>
+                    </button>
+                  )}
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        void handleSendMessage();
+                      }
+                    }}
+                    placeholder="Message..."
+                    aria-label="Message dans le chat du direct"
+                    autoComplete="off"
+                    enterKeyHint="send"
+                    className="min-w-0 flex-1 rounded-3xl bg-[#08080a]/70 py-2 px-3.5 text-[13px] font-medium tracking-tight text-white placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_0_1px_rgba(59,130,246,0.35)]"
+                  />
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={() => void handleRaiseHand()}
-                    aria-label="Demander à monter sur le ring"
-                    className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] transition-colors hover:bg-white/[0.12]"
+                    onClick={() => {
+                      setShowGiftPicker(false);
+                      setShowAllReactions((v) => !v);
+                    }}
+                    aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
+                    aria-expanded={showAllReactions}
+                    className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] hover:bg-white/[0.12]"
                   >
-                    <span className="text-base" aria-hidden>✋</span>
+                    <span aria-hidden className="text-base">😀</span>
                   </button>
-                )}
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      void handleSendMessage();
-                    }
-                  }}
-                  placeholder="Message..."
-                  aria-label="Message dans le chat du direct"
-                  autoComplete="off"
-                  enterKeyHint="send"
-                  className="min-w-0 flex-1 rounded-3xl bg-[#08080a]/70 py-2 px-3.5 text-[13px] font-medium tracking-tight text-white placeholder-white/35 backdrop-blur-2xl focus:outline-none focus:shadow-[0_0_0_1px_rgba(59,130,246,0.35)]"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleReaction(HEART_ON_FIRE)}
-                  aria-label="Envoyer une réaction cœur enflammé"
-                  className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] text-lg hover:bg-white/[0.12]"
-                >
-                  <span aria-hidden>{HEART_ON_FIRE}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowGiftPicker(false);
-                    setShowAllReactions((v) => !v);
-                  }}
-                  aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
-                  aria-expanded={showAllReactions}
-                  className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-white/[0.06] hover:bg-white/[0.12]"
-                >
-                  <span aria-hidden className="text-base">😀</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAllReactions(false);
-                    setShowGiftPicker((v) => !v);
-                  }}
-                  aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
-                  aria-expanded={showGiftPicker}
-                  className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-gradient-to-br from-ember-600/90 to-cobalt-700/80 shadow-[0_4px_18px_rgba(251,146,60,0.25)]"
-                >
-                  <Gift className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  disabled={!chatInput.trim()}
-                  onClick={() => void handleSendMessage()}
-                  aria-label="Envoyer le message"
-                  className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-cobalt-500 hover:bg-cobalt-600 disabled:pointer-events-none disabled:opacity-35"
-                >
-                  <Send className="h-3.5 w-3.5 text-white" strokeWidth={1} aria-hidden />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAllReactions(false);
+                      setShowGiftPicker((v) => !v);
+                    }}
+                    aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
+                    aria-expanded={showGiftPicker}
+                    className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-gradient-to-br from-ember-600/90 to-cobalt-700/80 shadow-[0_4px_18px_rgba(251,146,60,0.25)]"
+                  >
+                    <Gift className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!chatInput.trim()}
+                    onClick={() => void handleSendMessage()}
+                    aria-label="Envoyer le message"
+                    className="flex h-9 w-9 shrink-0 touch-manipulation items-center justify-center rounded-full bg-cobalt-500 hover:bg-cobalt-600 disabled:pointer-events-none disabled:opacity-35"
+                  >
+                    <Send className="h-3.5 w-3.5 text-white" strokeWidth={1} aria-hidden />
+                  </button>
+                </div>
               </div>
             </div>
           </>
