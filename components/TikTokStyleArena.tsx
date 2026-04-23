@@ -4341,12 +4341,17 @@ export function TikTokStyleArena({
       </div>
         </div>
 
-      {/* CALQUE 2 — chat & réactions (pointer-events-none : les taps traversent vers la vidéo hors zones actives) */}
-      <div className="relative z-10 flex min-h-0 w-full flex-col justify-end p-2 pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:w-full landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] md:absolute md:bottom-0 md:left-0 md:right-0 md:top-0 md:z-50 md:p-4">
+      {/* CALQUE 2 — chat & réactions (pointer-events-none : les taps traversent vers la vidéo hors zones actives)
+          Option 2 (Strapping #96) : z-axis isolation stricte sur Desktop. Le calque flotte par-dessus
+          les vidéos en full-bleed (md:inset-0), mais la grille interne 2-colonnes (messages | dock émojis)
+          est conservée sur lg+ pour garder la disposition « Twitch-like ». Mobile inchangé. */}
+      <div className="relative z-10 flex min-h-0 w-full flex-col justify-end p-2 pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:w-full landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] md:absolute md:inset-0 md:z-50 md:p-6">
       {!beefEnded && (
         <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col justify-end overflow-visible lg:px-2">
-        <div className="pointer-events-auto mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:max-w-none">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
+        {/* mx-auto max-w-md : centrage mobile.  lg:mx-0 lg:max-w-none : le chat + dock occupent
+            pleinement leur colonne respective au lieu de rester 448 px à gauche. */}
+        <div className="pointer-events-auto mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:mx-0 lg:max-w-none">
+        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none lg:bg-none">
           <div
             className="grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_auto_auto] gap-y-2 overflow-hidden lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(12.5rem,15rem)] lg:grid-rows-[minmax(0,1fr)_auto] lg:gap-x-6 lg:gap-y-0"
             aria-live="polite"
