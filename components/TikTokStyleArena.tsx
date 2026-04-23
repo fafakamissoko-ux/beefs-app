@@ -3036,19 +3036,6 @@ export function TikTokStyleArena({
         </div>
       )}
 
-      {/* Bouton d'évasion Mode Immersif — remplace la Navbar cachée sur /arena/* */}
-      {!beefEnded && !isLeaving && (
-        <button
-          type="button"
-          onClick={handleLeave}
-          aria-label="Quitter l'arène"
-          className="absolute left-4 top-4 z-[100] flex h-10 items-center gap-2 rounded-full bg-black/50 px-4 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/10"
-        >
-          <span aria-hidden>←</span>
-          <span className="hidden sm:inline">Quitter</span>
-        </button>
-      )}
-
       <VerdictConfettiBurst active={verdictConfetti} />
       <RematchVerdictOverlay
         visible={rematchSequence && !beefEnded}
@@ -3280,12 +3267,24 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* TikTok Battle — scène vidéo.
+      {/* TikTok Battle — scène vidéo (bloc hermétique gauche du split-screen desktop).
           Mobile (flex-col) : prend 100% de l'espace car le chat overlay est absolute.
-          Desktop (lg:flex-row) : flex-1 min-w-0 occupe la largeur restante après l'aside. */}
+          Desktop (lg:flex-row) : flex-1 min-w-0 occupe la largeur restante avant l'aside. */}
       <div className="relative min-h-0 h-full w-full flex-1 min-w-0 flex flex-col overflow-hidden bg-[#08080A]">
-        {/* CALQUE 1 — scène vidéo + îlots header (fond) */}
-        <div className="relative z-0 flex min-h-0 w-full shrink-0 flex-1 flex-col md:absolute md:inset-0 md:h-full md:w-full md:min-h-0">
+        {/* Bouton d'évasion Mode Immersif — collé à l'arène, jamais au-dessus du chat */}
+        {!beefEnded && !isLeaving && (
+          <button
+            type="button"
+            onClick={handleLeave}
+            aria-label="Quitter l'arène"
+            className="absolute left-4 top-4 z-[100] flex h-10 items-center gap-2 rounded-full bg-black/50 px-4 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/10"
+          >
+            <span aria-hidden>←</span>
+            <span className="hidden sm:inline">Quitter</span>
+          </button>
+        )}
+        {/* CALQUE 1 — scène vidéo (plus d'absolute : reste dans le flux flex-1) */}
+        <div className="relative z-0 flex flex-1 flex-col h-full min-w-0 bg-black overflow-hidden">
         {effectiveDailyRoomUrl ? (
           <div
             className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] overflow-visible max-lg:pb-28 landscape:flex-1 md:h-full md:min-h-0 md:flex-1 md:shrink-0 md:pb-0 lg:flex-1 lg:pb-0 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem] md:pt-0' : 'pt-24 max-sm:pt-28 md:pt-0'}`}
@@ -4275,110 +4274,115 @@ export function TikTokStyleArena({
         </div>
         )}
 
-      {/* ── Header fixe : annonce puis chrono / LIVE (pile unique, mobile + desktop) ── */}
-      {/* z-[80] > zone vidéo z-[65] : sinon la dalle droite volait les taps sur LIVE / Sliders (tableau de bord) */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[80] flex w-full flex-col p-2 lg:p-4">
-        {arenaHasAnnouncement && (
-          <div className="pointer-events-none shrink-0 border-b border-white/10 bg-black/65 px-3 py-2 backdrop-blur-md">
-            <p className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white">
-              {announcementTicker}
-            </p>
-          </div>
-        )}
-        <div
-          className={`pointer-events-none grid w-full grid-cols-1 items-start gap-2 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 ${arenaHasAnnouncement ? 'px-4 pb-3 pt-2' : 'p-4'}`}
-        >
-        <div className="pointer-events-none hidden min-w-0 sm:block" aria-hidden />
-
-        <div className="pointer-events-none flex justify-center">
-          <div className="glass-prestige pointer-events-auto flex flex-col items-center justify-center gap-0.5 rounded-full px-4 py-2 text-center">
-            {isJoined && timerActive ? (
-              <div
-                className={`flex items-center gap-1 font-mono text-xs font-bold tabular-nums ${
-                  timerPaused
-                    ? 'text-amber-200'
-                    : beefTimeRemaining <= 5 * 60
-                      ? 'text-red-300'
-                      : 'text-white/90'
-                }`}
-              >
-                {timerPaused ? (
-                  <Pause className="h-3 w-3 shrink-0" strokeWidth={1.2} aria-hidden />
-                ) : (
-                  <Timer className="h-3 w-3 shrink-0" strokeWidth={1.2} aria-hidden />
-                )}
-                <span>{formatBeefTime(beefTimeRemaining)}</span>
-                {timerPaused && (
-                  <span className="text-[9px] font-black uppercase tracking-wide text-amber-200 animate-pulse">Pause</span>
-                )}
-              </div>
-            ) : isJoined && !timerActive && isHost ? (
-              <span className="font-mono text-[9px] uppercase tracking-wider text-white/50">Pas de chrono</span>
-            ) : isJoined && !timerActive && !isHost ? (
-              <span className="max-w-[14rem] font-mono text-[9px] uppercase leading-tight tracking-wider text-white/45">
-                Chrono au lancement (médiateur)
-              </span>
-            ) : null}
-          </div>
+      {/* ── Header vidéo : 3 blocs absolus indépendants, scoped au conteneur vidéo ──
+          • Annonce (top full-width, si active) — z-[80]
+          • Chrono (top-center) — z-[80]
+          • LIVE + Spectateurs (top-right) — z-50 per Architecte
+          z-[80] > dalles vidéo z-[65] pour ne pas voler les taps. */}
+      {arenaHasAnnouncement && (
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-[80] border-b border-white/10 bg-black/65 px-3 py-2 backdrop-blur-md">
+          <p className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white">
+            {announcementTicker}
+          </p>
         </div>
+      )}
 
-        <div className="pointer-events-none flex justify-center sm:justify-end">
-          <div className="glass-prestige pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-full py-1.5 pl-2 pr-1.5 sm:gap-2 sm:pl-3">
+      <div
+        className={`pointer-events-none absolute left-1/2 z-[80] -translate-x-1/2 ${
+          arenaHasAnnouncement ? 'top-14' : 'top-4'
+        }`}
+      >
+        <div className="glass-prestige pointer-events-auto flex flex-col items-center justify-center gap-0.5 rounded-full px-4 py-2 text-center">
+          {isJoined && timerActive ? (
             <div
-              className={`flex items-center rounded-full px-2 py-0.5 ${
-                liveBadgeHot
-                  ? 'animate-pulse bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.45)]'
-                  : 'bg-white/10'
+              className={`flex items-center gap-1 font-mono text-xs font-bold tabular-nums ${
+                timerPaused
+                  ? 'text-amber-200'
+                  : beefTimeRemaining <= 5 * 60
+                    ? 'text-red-300'
+                    : 'text-white/90'
               }`}
             >
-              <div
-                className={`mr-1 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-white' : 'bg-amber-300'}`}
-              />
-              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-white">LIVE</span>
+              {timerPaused ? (
+                <Pause className="h-3 w-3 shrink-0" strokeWidth={1.2} aria-hidden />
+              ) : (
+                <Timer className="h-3 w-3 shrink-0" strokeWidth={1.2} aria-hidden />
+              )}
+              <span>{formatBeefTime(beefTimeRemaining)}</span>
+              {timerPaused && (
+                <span className="text-[9px] font-black uppercase tracking-wide text-amber-200 animate-pulse">Pause</span>
+              )}
             </div>
+          ) : isJoined && !timerActive && isHost ? (
+            <span className="font-mono text-[9px] uppercase tracking-wider text-white/50">Pas de chrono</span>
+          ) : isJoined && !timerActive && !isHost ? (
+            <span className="max-w-[14rem] font-mono text-[9px] uppercase leading-tight tracking-wider text-white/45">
+              Chrono au lancement (médiateur)
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      {/* LIVE + Spectateurs + Share + (Sliders | Close) — top-right strict per Architecte */}
+      <div
+        className={`pointer-events-none absolute right-0 z-50 p-4 ${
+          arenaHasAnnouncement ? 'top-12' : 'top-0'
+        }`}
+      >
+        <div className="glass-prestige pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-full py-1.5 pl-2 pr-1.5 sm:gap-2 sm:pl-3">
+          <div
+            className={`flex items-center rounded-full px-2 py-0.5 ${
+              liveBadgeHot
+                ? 'animate-pulse bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.45)]'
+                : 'bg-white/10'
+            }`}
+          >
+            <div
+              className={`mr-1 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-white' : 'bg-amber-300'}`}
+            />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-white">LIVE</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowViewerList(true)}
+            className="flex items-center gap-1 rounded-full px-1.5 py-1 transition-colors hover:bg-white/10"
+            aria-label="Spectateurs"
+          >
+            <Eye className="h-3.5 w-3.5 text-white" strokeWidth={1.2} aria-hidden />
+            <span className="min-w-[1ch] font-mono text-[11px] font-medium tabular-nums text-white">
+              {liveViewerCount > 0 ? liveViewerCount : '—'}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={onShare}
+            aria-label="Partager le direct"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+          >
+            <Share2 className="h-[17px] w-[17px] text-white" strokeWidth={1.2} aria-hidden />
+          </button>
+          {isHost ? (
             <button
               type="button"
-              onClick={() => setShowViewerList(true)}
-              className="flex items-center gap-1 rounded-full px-1.5 py-1 transition-colors hover:bg-white/10"
-              aria-label="Spectateurs"
+              onClick={() => setMediatorSidebarOpen((o) => !o)}
+              aria-expanded={mediatorSidebarOpen}
+              aria-label={
+                mediatorSidebarOpen ? 'Fermer la commande médiateur' : 'Ouvrir la commande médiateur'
+              }
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-amber-200 transition-colors hover:bg-white/10 hover:text-white"
             >
-              <Eye className="h-3.5 w-3.5 text-white" strokeWidth={1.2} aria-hidden />
-              <span className="min-w-[1ch] font-mono text-[11px] font-medium tabular-nums text-white">
-                {liveViewerCount > 0 ? liveViewerCount : '—'}
-              </span>
+              <Sliders className="h-5 w-5" strokeWidth={1.2} aria-hidden />
             </button>
+          ) : (
             <button
               type="button"
-              onClick={onShare}
-              aria-label="Partager le direct"
+              onClick={handleLeave}
+              aria-label="Quitter le direct"
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
             >
-              <Share2 className="h-[17px] w-[17px] text-white" strokeWidth={1.2} aria-hidden />
+              <X className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
             </button>
-            {isHost ? (
-              <button
-                type="button"
-                onClick={() => setMediatorSidebarOpen((o) => !o)}
-                aria-expanded={mediatorSidebarOpen}
-                aria-label={
-                  mediatorSidebarOpen ? 'Fermer la commande médiateur' : 'Ouvrir la commande médiateur'
-                }
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-amber-200 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <Sliders className="h-5 w-5" strokeWidth={1.2} aria-hidden />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleLeave}
-                aria-label="Quitter le direct"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
-              >
-                <X className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
-              </button>
-            )}
-          </div>
-        </div>
+          )}
         </div>
       </div>
         </div>
@@ -4568,7 +4572,7 @@ export function TikTokStyleArena({
           Sidebar dédiée sur ≥ lg (1024 px). Remplace le Calque 2 overlay mobile
           (caché via `lg:hidden`). Contient : header (avatar+viewers), messages,
           action bar unifiée (input + ❤️ + 😀 + 🎁 + ➤). */}
-      <aside className="hidden lg:flex lg:w-80 xl:w-96 2xl:w-[420px] lg:shrink-0 lg:h-full lg:flex-col lg:overflow-hidden lg:border-l lg:border-white/10 lg:bg-[#08080A]/95 lg:backdrop-blur-sm">
+      <aside className="hidden lg:flex lg:w-96 lg:shrink-0 lg:h-full lg:flex-col lg:border-l lg:border-white/10 lg:bg-[#08080A] lg:relative">
         {/* Header sidebar : avatar médiateur + pseudo + viewers count */}
         <header className="shrink-0 border-b border-white/10 px-4 py-3 flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-cobalt-600 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.3)]">
