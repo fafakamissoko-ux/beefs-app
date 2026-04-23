@@ -320,7 +320,7 @@ export function TikTokStyleArena({
   const [dockPickersMounted, setDockPickersMounted] = useState(false);
   const [dockPickerPos, setDockPickerPos] = useState<{ bottom: number; right: number } | null>(null);
   /** Colonne emoji / cadeaux / partage — fermeture au tap extérieur */
-  const reactionDockRef = useRef<HTMLDivElement>(null);
+  const reactionDockRef = useRef<HTMLDivElement | null>(null);
   const chatMessagesScrollRef = useRef<HTMLDivElement>(null);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const announcementClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2990,7 +2990,7 @@ export function TikTokStyleArena({
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
   return (
-    <div className="fixed inset-0 z-[9999] flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row">
+    <div className="fixed inset-0 z-40 flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -3235,7 +3235,7 @@ export function TikTokStyleArena({
       {/* CALQUE 2 — chat & réactions. DOM order (Architecte final) : aside AVANT la zone vidéo,
           avec root en `lg:flex-row` naturel (pas de flex-row-reverse). Le chat est à gauche physiquement.
           Mobile : l'aside devient overlay absolu bottom (max-lg:absolute), le flux flex-col laisse 100% à la vidéo. */}
-      <aside className="relative flex min-h-0 w-full flex-col pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:z-[150] max-lg:w-full max-lg:justify-end max-lg:p-2 landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] lg:pointer-events-auto lg:w-[350px] lg:min-w-[350px] lg:shrink-0 lg:h-full lg:border-r lg:border-white/10 lg:bg-[#0c0c0f] lg:p-0 lg:z-[100]">
+      <aside className="relative flex min-h-0 w-full flex-col pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[50%] max-lg:z-[150] max-lg:w-full max-lg:justify-end landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] lg:pointer-events-auto lg:w-[350px] lg:min-w-[350px] lg:shrink-0 lg:h-full lg:border-r lg:border-white/10 lg:bg-[#0c0c0f] lg:z-[100]">
       {/* Header du chat — desktop only — burger menu (nav) + live badge.
           Remplace la Navbar globale cachée en mode immersif /arena/*. */}
       <header className="relative z-30 hidden shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3 lg:flex">
@@ -3310,7 +3310,7 @@ export function TikTokStyleArena({
       {!beefEnded && (
         <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col justify-end overflow-visible lg:px-2">
         <div className="pointer-events-auto mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:max-w-none">
-        <div className="pointer-events-auto flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 px-2 pt-6 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
+        <div className="pointer-events-none flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 pt-12 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden"
             aria-live="polite"
@@ -3400,7 +3400,7 @@ export function TikTokStyleArena({
               [ Input (flex-1) ] [ 😀 Emojis ] [ 🎁 Cadeaux ] [ ➤ Envoyer ]
               Pas de cœur enflammé, pas de grille de quick reactions, pas de ✋. */}
           <div
-            ref={reactionDockRef}
+            ref={(el) => { if (el && el.clientWidth > 0) reactionDockRef.current = el; }}
             className="pointer-events-auto mt-auto flex w-full shrink-0 flex-row items-center gap-2 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 lg:border-t lg:border-white/10 lg:bg-black/40 lg:p-3"
           >
             <div className="flex-1 min-w-0">
@@ -3529,7 +3529,7 @@ export function TikTokStyleArena({
         <div className={`absolute inset-0 flex flex-row items-stretch z-0 transition-shadow duration-700 ${sponsorGlow}`}>
 
           {/* --- DALLE GAUCHE (Challenger A) --- */}
-          <div className="relative flex-1 min-w-0 h-full border-r-2 border-black overflow-hidden bg-[#08080a]">
+          <div className="relative flex-1 min-w-0 h-full lg:border-r-2 lg:border-black overflow-hidden bg-[#08080a]">
             <AnimatePresence mode="wait">
               <motion.div key={leftPanel?.sessionId || 'empty-left'} className="absolute inset-0" initial={{ opacity: 0.88 }} animate={{ opacity: 1 }} exit={{ opacity: 0.75 }}>
                 {leftPanel?.videoTrack ? (
@@ -3577,7 +3577,7 @@ export function TikTokStyleArena({
           </div>
 
           {/* --- DALLE DROITE (Challenger B) --- */}
-          <div className="relative flex-1 min-w-0 h-full bg-[#08080a] overflow-hidden border-l-2 border-black">
+          <div className="relative flex-1 min-w-0 h-full bg-[#08080a] overflow-hidden lg:border-l-2 lg:border-black">
             <AnimatePresence mode="wait">
               <motion.div key={rightPanel?.sessionId || 'empty-right'} className="absolute inset-0" initial={{ opacity: 0.88 }} animate={{ opacity: 1 }} exit={{ opacity: 0.75 }}>
                 {rightPanel?.videoTrack ? (
