@@ -3267,8 +3267,10 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* TikTok Battle : calques stricts — vidéo (fond) + UI chat (md+) ; mobile inchangé (flex-col) */}
-      <div className="relative min-h-0 h-full w-full max-w-full flex-1 flex flex-col overflow-hidden bg-[#08080A] md:block md:min-h-0 md:flex-1">
+      {/* TikTok Battle : calques stricts — vidéo (fond) + UI chat (md+ mobile overlay) ;
+          Strapping #97 : sur ≥ lg, l'aside-sidebar à droite prend le chat, le TikTok
+          Battle = colonne vidéo flex-1. `min-w-0` évite qu'un enfant force overflow. */}
+      <div className="relative min-h-0 h-full flex-1 min-w-0 flex flex-col overflow-hidden bg-[#08080A] md:block md:min-h-0 lg:order-1">
         {/* CALQUE 1 — scène vidéo + îlots header (fond) */}
         <div className="relative z-0 flex min-h-0 w-full shrink-0 flex-1 flex-col md:absolute md:inset-0 md:h-full md:w-full md:min-h-0">
         {effectiveDailyRoomUrl ? (
@@ -4570,7 +4572,7 @@ export function TikTokStyleArena({
           Sidebar dédiée sur ≥ lg (1024 px). Remplace le Calque 2 overlay mobile
           (caché via `lg:hidden`). Contient : header (avatar+viewers), messages,
           action bar unifiée (input + ❤️ + 😀 + 🎁 + ➤). */}
-      <aside className="hidden lg:flex lg:w-80 xl:w-96 2xl:w-[420px] shrink-0 flex-col border-l border-white/10 bg-[#08080A]/95 backdrop-blur-sm">
+      <aside className="hidden lg:flex lg:order-2 lg:w-80 xl:w-96 2xl:w-[420px] lg:shrink-0 lg:h-full lg:flex-col lg:border-l lg:border-white/10 lg:bg-[#08080A]/95 lg:backdrop-blur-sm">
         {/* Header sidebar : avatar médiateur + pseudo + viewers count */}
         <header className="shrink-0 border-b border-white/10 px-4 py-3 flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-cobalt-600 text-sm font-bold text-white shadow-[0_4px_14px_rgba(0,0,0,0.3)]">
