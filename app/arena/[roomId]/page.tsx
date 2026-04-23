@@ -132,9 +132,7 @@ export default function ArenaPage() {
       }
 
       setHost({
-        /** Manifeste orphelin : mediator_id NULL → on sentinelle à '' pour éviter
-         *  les `.trim()` sur null dans `lib/participant-identity.ts`. */
-        id: beef.mediator_id ?? '',
+        id: beef.mediator_id,
         name: displayNameFromPublicRow(medRow, 'Médiateur'),
         isHost: true,
         videoEnabled: true,
@@ -345,7 +343,7 @@ export default function ArenaPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 h-dvh w-screen overflow-hidden bg-black">
+    <div className="fixed left-1/2 top-14 z-40 h-[calc(100dvh-3.5rem)] max-lg:w-full max-lg:max-w-md -translate-x-1/2 overflow-hidden lg:left-64 lg:right-0 lg:top-0 lg:h-dvh lg:translate-x-0">
       <TikTokStyleArena
         host={host}
         roomId={roomId}

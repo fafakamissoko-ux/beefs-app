@@ -85,44 +85,34 @@ export interface BeefParticipantRowMeta {
   matchAliases: string[];
 }
 
-/**
- * Remote Daily correspond au médiateur (présence / grâce).
- * Défense anti-null : `mediatorUserId` peut être null/vide en Manifeste orphelin
- * (beefs.mediator_id = NULL). On considère alors qu'aucun remote ne peut être
- * « médiateur » — comportement souhaité.
- */
+/** Remote Daily correspond au médiateur (présence / grâce). */
 export function remoteMatchesMediator(
   remote: { userName: string; arenaUserId: string | null },
-  mediatorUserId: string | null | undefined,
-  mediatorDisplayName: string | null | undefined,
+  mediatorUserId: string,
+  mediatorDisplayName: string,
 ): boolean {
-  const mid = (mediatorUserId ?? '').trim().toLowerCase();
-  if (!mid) return false;
+  const mid = mediatorUserId.trim().toLowerCase();
   if (remote.arenaUserId && remote.arenaUserId === mid) return true;
   const nu = normalizeParticipantLabel(remote.userName);
-  const mn = normalizeParticipantLabel(mediatorDisplayName ?? '');
+  const mn = normalizeParticipantLabel(mediatorDisplayName);
   return nu.length > 0 && mn.length > 0 && nu === mn;
 }
 
 /**
  * Remote = challenger (ou témoin) attendu dans beef_participants, pas le médiateur.
  * Priorité : arenaUserId (UUID validé côté join) puis alias de profil uniquement pour les user_id connus.
- * Défense anti-null : `mediatorUserId` peut être null/vide en Manifeste orphelin.
  */
 export function matchRemoteToExpectedBeefParticipant(
   remote: { userName: string; arenaUserId: string | null },
-  mediatorUserId: string | null | undefined,
-  mediatorDisplayName: string | null | undefined,
+  mediatorUserId: string,
+  mediatorDisplayName: string,
   roles: Record<string, BeefParticipantRowMeta>,
 ): { userId: string; role: string } | null {
-  const mid = (mediatorUserId ?? '').trim().toLowerCase();
+  const mid = mediatorUserId.trim().toLowerCase();
+  if (remote.arenaUserId && remote.arenaUserId === mid) return null;
   const nu = normalizeParticipantLabel(remote.userName);
-  const mn = normalizeParticipantLabel(mediatorDisplayName ?? '');
-
-  if (mid) {
-    if (remote.arenaUserId && remote.arenaUserId === mid) return null;
-    if (nu && mn && nu === mn) return null;
-  }
+  const mn = normalizeParticipantLabel(mediatorDisplayName);
+  if (nu && mn && nu === mn) return null;
 
   if (remote.arenaUserId && remote.arenaUserId !== mid) {
     const row = roles[remote.arenaUserId];
@@ -130,7 +120,7 @@ export function matchRemoteToExpectedBeefParticipant(
   }
   if (!nu) return null;
   for (const [uid, meta] of Object.entries(roles)) {
-    if (mid && uid === mid) continue;
+    if (uid === mid) continue;
     if (meta.matchAliases.includes(nu)) return { userId: uid, role: meta.role };
   }
   return null;
