@@ -23,6 +23,7 @@ import {
   Sliders,
   Calendar,
   Flame,
+  Menu,
 } from 'lucide-react';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { ChatPanel } from './ChatPanel';
@@ -223,6 +224,7 @@ export function TikTokStyleArena({
   const [mediatorSidebarOpen, setMediatorSidebarOpen] = useState(false);
   const [showGiftPicker, setShowGiftPicker] = useState(false);
   const [showViewerList, setShowViewerList] = useState(false);
+  const [showArenaMenu, setShowArenaMenu] = useState(false);
   /** Spectateur promu co-hôte : le médiateur a accepté l’invitation (beef_participants). */
   const [acceptedInviteAlert, setAcceptedInviteAlert] = useState(false);
 
@@ -2988,7 +2990,7 @@ export function TikTokStyleArena({
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black md:h-[calc(100dvh-3.5rem)] md:max-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100vh-3.5rem)] lg:flex-row">
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black md:h-[calc(100dvh-3.5rem)] md:max-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100vh-3.5rem)] lg:flex-row-reverse">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -3230,9 +3232,22 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* Zone vidéo (gauche du split-screen desktop, bloc hermétique en flux flex).
-          ZÉRO absolute : reste dans le flux flex-1 pour partager l'espace avec l'aside droite. */}
+      {/* Zone vidéo (droite du split-screen desktop, bloc hermétique en flux flex-row-reverse).
+          ZÉRO absolute : reste dans le flux flex-1 pour partager l'espace avec l'aside gauche.
+          Sur mobile : occupe 100% — le bouton Quitter flotte en top-left (pas de Navbar globale). */}
       <div className="relative min-h-0 h-full w-full flex-1 min-w-0 flex flex-col overflow-hidden bg-black">
+        {/* Bouton Quitter MOBILE — top-left, lg:hidden (sur desktop c'est le menu burger du chat qui prend le relais). */}
+        {!beefEnded && !isLeaving && (
+          <button
+            type="button"
+            onClick={handleLeave}
+            aria-label="Quitter l'arène"
+            className="absolute left-4 top-4 z-[100] flex h-10 items-center gap-2 rounded-full bg-black/50 px-4 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/10 lg:hidden"
+          >
+            <span aria-hidden>←</span>
+            <span className="hidden sm:inline">Quitter</span>
+          </button>
+        )}
         {/* CALQUE 1 — scène vidéo + îlots header (fond) */}
         <div className="relative z-0 flex min-h-0 w-full shrink-0 flex-1 flex-col md:absolute md:inset-0 md:h-full md:w-full md:min-h-0">
         {effectiveDailyRoomUrl ? (
@@ -4334,8 +4349,79 @@ export function TikTokStyleArena({
 
       {/* CALQUE 2 — chat & réactions.
           Mobile (< lg) : overlay absolu sur le bas 40% de la vidéo (TikTok Live pur), pointer-events-none pour laisser les taps traverser.
-          Desktop (lg+) : aside hermétique à droite, w-96, bordure gauche, fond opaque, dans le flux flex-row. */}
-      <aside className="relative flex min-h-0 w-full flex-col justify-end p-2 pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:z-10 max-lg:w-full landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] lg:pointer-events-auto lg:w-96 lg:shrink-0 lg:h-full lg:border-l lg:border-white/10 lg:bg-[#08080A] lg:p-0">
+          Desktop (lg+) : aside hermétique à GAUCHE (via lg:flex-row-reverse sur le root), w-96, bordure droite, fond opaque, dans le flux flex-row. */}
+      <aside className="relative flex min-h-0 w-full flex-col p-2 pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:z-10 max-lg:w-full max-lg:justify-end landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] lg:pointer-events-auto lg:w-96 lg:shrink-0 lg:h-full lg:border-r lg:border-white/10 lg:bg-[#08080A] lg:p-0">
+      {/* Header du chat — desktop only — burger menu (nav) + live badge.
+          Remplace la Navbar globale cachée en mode immersif /arena/*. */}
+      <header className="relative z-30 hidden shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3 lg:flex">
+        <button
+          type="button"
+          onClick={() => setShowArenaMenu((v) => !v)}
+          aria-label={showArenaMenu ? 'Fermer le menu' : 'Ouvrir le menu de navigation'}
+          aria-expanded={showArenaMenu}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"
+        >
+          <Menu className="h-5 w-5" strokeWidth={1.5} aria-hidden />
+        </button>
+
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <div
+            className={`flex items-center rounded-full px-2 py-0.5 ${
+              liveBadgeHot
+                ? 'animate-pulse bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.45)]'
+                : 'bg-white/10'
+            }`}
+          >
+            <div
+              className={`mr-1 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-white' : 'bg-amber-300'}`}
+            />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-white">LIVE</span>
+          </div>
+          <span className="min-w-0 truncate text-xs font-semibold text-white/80">Chat en direct</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowViewerList(true)}
+          aria-label="Spectateurs"
+          className="flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-white/80 transition-colors hover:bg-white/10"
+        >
+          <Eye className="h-3.5 w-3.5" strokeWidth={1.2} aria-hidden />
+          <span className="min-w-[1ch] font-mono text-[11px] font-medium tabular-nums">
+            {liveViewerCount > 0 ? liveViewerCount : '—'}
+          </span>
+        </button>
+
+        {showArenaMenu && (
+          <div
+            className="absolute left-4 top-full z-[200] mt-2 flex w-48 flex-col rounded-xl border border-white/10 bg-[#121215] py-2 shadow-2xl"
+            onClick={() => setShowArenaMenu(false)}
+          >
+            <button
+              type="button"
+              onClick={() => router.push('/feed')}
+              className="px-4 py-2 text-left text-sm text-white transition-colors hover:bg-white/10"
+            >
+              🏠 Retour au Feed
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/messages')}
+              className="px-4 py-2 text-left text-sm text-white transition-colors hover:bg-white/10"
+            >
+              💬 Messages
+            </button>
+            <div className="my-1 h-px w-full bg-white/10" />
+            <button
+              type="button"
+              onClick={handleLeave}
+              className="px-4 py-2 text-left text-sm text-red-400 transition-colors hover:bg-white/10"
+            >
+              🚪 Quitter l&apos;Arène
+            </button>
+          </div>
+        )}
+      </header>
       {!beefEnded && (
         <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col justify-end overflow-visible lg:px-2">
         <div className="pointer-events-auto mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:max-w-none">
