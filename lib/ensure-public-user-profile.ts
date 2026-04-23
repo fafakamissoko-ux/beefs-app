@@ -32,11 +32,10 @@ export async function ensurePublicUserProfile(supabase: SupabaseClient, user: Us
     const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
     const str = (k: string) => (typeof meta[k] === 'string' ? String(meta[k]).trim() : '');
     /**
-     * Le user a-t-il fourni son pseudo lui-même (signup classique via AuthContext.signUp) ?
-     * - Si oui : on garde son choix, pas d'écran d'onboarding (`needs_arena_username = false`).
-     * - Si non (OAuth Google / Apple) : on auto-génère un slug et on déclenche l'onboarding.
+     * Pseudo : choix manuel (form signUp) prioritaire, sinon `preferred_username` OAuth,
+     * sinon slug depuis l'email, sinon `u_<uid>`. Pas d'écran d'onboarding obligatoire :
+     * en cas de collision on suffixe et l'utilisateur peut renommer dans Paramètres.
      */
-    const userChoseUsername = Boolean(str('username'));
     let username = str('username') || str('preferred_username') || slugUsername(email.split('@')[0] || '', user.id);
     const display_name =
       str('display_name') || str('full_name') || str('name') || username;
@@ -47,11 +46,8 @@ export async function ensurePublicUserProfile(supabase: SupabaseClient, user: Us
     if (availErr) {
       console.warn('[ensurePublicUserProfile] check_username_available', availErr.message);
     }
-    /** Conflit de pseudo : on suffixe pour insérer, et on impose l'onboarding pour rectifier. */
-    let mustOnboard = !userChoseUsername;
     if (available !== true) {
       username = `${username.slice(0, 20)}_${user.id.slice(0, 6)}`;
-      mustOnboard = true;
     }
 
     const { error } = await supabase.from('users').insert({
@@ -61,7 +57,7 @@ export async function ensurePublicUserProfile(supabase: SupabaseClient, user: Us
       display_name,
       points: 0,
       is_verified: !!user.email_confirmed_at,
-      needs_arena_username: mustOnboard,
+      needs_arena_username: false,
     });
 
     if (error) {
@@ -75,7 +71,7 @@ export async function ensurePublicUserProfile(supabase: SupabaseClient, user: Us
         display_name,
         points: 0,
         is_verified: !!user.email_confirmed_at,
-        needs_arena_username: true,
+        needs_arena_username: false,
       });
       if (e2) console.error('[ensurePublicUserProfile] insert échoué');
     }
