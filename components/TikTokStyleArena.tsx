@@ -3476,1121 +3476,189 @@ export function TikTokStyleArena({
       </aside>
 
       {/* Zone vidéo (flex-1, naturellement à droite du chat grâce à l'ordre DOM). */}
-      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[#08080A]">
-        {/* Bouton Quitter MOBILE — top-left, lg:hidden (sur desktop c'est le menu burger du chat qui prend le relais). */}
-        {!beefEnded && !isLeaving && (
-          <button
-            type="button"
-            onClick={handleLeave}
-            aria-label="Quitter l'arène"
-            className="absolute left-4 top-4 z-[100] flex h-10 items-center gap-2 rounded-full bg-black/50 px-4 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/10 lg:hidden"
-          >
-            <span aria-hidden>←</span>
-            <span className="hidden sm:inline">Quitter</span>
-          </button>
-        )}
-        {/* CALQUE 1 — scène vidéo + îlots header. ZÉRO absolute : flex-1 en flux pur (clé Architecte #finale).
-            Les dalles (split-screen) sont elles-mêmes flex-1 en flux, pas d'overlay absolu parasite. */}
-        <div className="relative z-0 flex h-full min-h-0 w-full flex-1 flex-col">
-        {effectiveDailyRoomUrl ? (
-          <div
-            className={`relative z-[65] pointer-events-none flex h-full min-h-0 w-full flex-1 overflow-visible ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem] md:pt-0' : 'pt-24 max-sm:pt-28 md:pt-0'}`}
-          >
-            <motion.div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 z-[11] mix-blend-screen"
-              animate={{
-                boxShadow: globalHeatGlow,
-                opacity: globalHeat > 0 ? Math.min(0.55, 0.1 + globalHeat / 140) : 0,
-              }}
-              transition={{ type: 'tween', duration: 0.45 }}
-            />
-            {/* Espace sous le header Islands (fixed) — dalles vidéo en squircle */}
-            <div
-              className={`relative z-10 flex min-h-0 w-full flex-1 flex-row items-stretch gap-1 px-1 pt-24 md:gap-4 md:px-6 lg:pt-0 transition-shadow duration-700 ${sponsorGlow}`}
-            >
-              {/* LEFT — Participant A */}
-              <motion.div
-                className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-visible bg-[#08080A] rounded-l-3xl lg:rounded-3xl border-r border-white/20 shadow-lg flex items-center justify-center"
-                animate={
-                  rematchSequence
-                    ? { x: [0, -5, 5, -4, 4, -3, 3, 0], y: [0, 3, -3, 2, -2, 0], scale: 1 }
-                    : {
-                        x: 0,
-                        y: 0,
-                        scale: gloryIntenseA ? 1.075 : gloryChallengerSlot === 'A' ? 1.04 : 1,
-                      }
-                }
-                transition={
-                  rematchSequence
-                    ? { duration: 0.35, repeat: 22, ease: 'easeInOut' }
-                    : { duration: gloryIntenseA ? 0.35 : 0.2 }
-                }
-              >
-                {isHost && auraA >= 100 && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setGloryChallengerSlot('A');
-                    }}
-                    className="pointer-events-auto absolute bottom-3 left-3 z-[130] shrink-0 rounded-full bg-white/20 px-2 py-1 font-mono text-[7px] font-black uppercase tracking-wide text-white shadow-[0_0_12px_rgba(255,255,255,0.35)] backdrop-blur-md hover:bg-white/30"
-                  >
-                    Gloire
-                  </button>
-                )}
-                <div className="pointer-events-none absolute left-4 top-4 z-[130] flex w-[calc(100%-3rem)] items-start justify-start gap-2">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null);
-                    }}
-                    className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-left font-mono text-xs font-semibold text-white lg:hidden"
-                  >
-                    {leftPanelName}
-                  </button>
-                </div>
-                <AnimatePresence>
-                  {leftNeonAudio && (
-                    <motion.div
-                      key="left-speaking"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[22]"
-                    >
-                      <motion.div
-                        className="absolute inset-0"
-                        animate={{
-                          boxShadow: [
-                            'inset 0 0 32px rgba(0, 240, 255, 0.25)',
-                            'inset 0 0 56px rgba(145, 70, 255, 0.35)',
-                            'inset 0 0 32px rgba(0, 240, 255, 0.25)',
-                          ],
-                        }}
-                        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <AnimatePresence>
-                  {gloryChallengerSlot === 'A' && (
-                    <motion.div
-                      key="glory-overlay-a"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[22]"
-                    >
-                      <motion.div
-                        className="absolute inset-0"
-                        animate={{
-                          boxShadow: gloryIntenseA
-                            ? [
-                                'inset 0 0 56px rgba(255,255,255,0.75)',
-                                'inset 0 0 120px rgba(200,230,255,0.95)',
-                                'inset 0 0 72px rgba(255,255,255,0.85)',
-                                'inset 0 0 120px rgba(186,220,255,0.9)',
-                                'inset 0 0 56px rgba(255,255,255,0.75)',
-                              ]
-                            : [
-                                'inset 0 0 40px rgba(255,255,255,0.4)',
-                                'inset 0 0 88px rgba(186,230,255,0.55)',
-                                'inset 0 0 40px rgba(255,255,255,0.4)',
-                              ],
-                        }}
-                        transition={{
-                          duration: gloryIntenseA ? 0.45 : 0.75,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                        }}
-                      />
-                      {gloryIntenseA && (
-                        <motion.div
-                          className="absolute inset-0 mix-blend-screen"
-                          animate={{
-                            opacity: [0.25, 0.55, 0.3, 0.5, 0.25],
-                            background: [
-                              'radial-gradient(circle at 30% 40%, rgba(255,255,255,0.5) 0%, transparent 55%)',
-                              'radial-gradient(circle at 70% 55%, rgba(200,240,255,0.55) 0%, transparent 50%)',
-                              'radial-gradient(circle at 50% 35%, rgba(255,255,255,0.45) 0%, transparent 60%)',
-                            ],
-                          }}
-                          transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                        />
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <AnimatePresence>
-                  {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
-                    <motion.div
-                      key="left-hotmic-ember"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[23] block"
-                    >
-                      <motion.div
-                        className="absolute inset-0"
-                        animate={{
-                          boxShadow: speakingTurnPaused
-                            ? [
-                                'inset 0 0 44px rgba(255,77,0,0.16)',
-                                'inset 0 0 58px rgba(255,120,0,0.24)',
-                                'inset 0 0 44px rgba(255,77,0,0.16)',
-                              ]
-                            : [
-                                'inset 0 0 38px rgba(255,77,0,0.42)',
-                                'inset 0 0 76px rgba(255,85,0,0.62)',
-                                'inset 0 0 38px rgba(255,77,0,0.42)',
-                              ],
-                        }}
-                        transition={{
-                          duration: speakingTurnPaused ? 3 : 2,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                        }}
-                      />
-                      <motion.div
-                        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(255,77,0,0.28)_0%,rgba(255,77,0,0.1)_45%,transparent_70%)]"
-                        animate={{
-                          opacity: speakingTurnPaused ? [0.18, 0.32, 0.18] : [0.38, 0.62, 0.38],
-                        }}
-                        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <motion.div
-                  aria-hidden
-                  className="pointer-events-none absolute -inset-[8px] z-[1] rounded-l-3xl lg:rounded-3xl"
-                  animate={{
-                    boxShadow:
-                      auraA > 0
-                        ? `0 0 ${20 + auraA}px rgba(59,130,246,${Math.min(1, 0.4 + auraA / 100)})`
-                        : 'none',
-                  }}
-                  transition={{ type: 'tween', duration: 0.35 }}
-                />
-                <div className="absolute inset-0 z-[10] overflow-hidden rounded-l-3xl lg:rounded-3xl">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={leftPanel?.sessionId ? `vid-left-${leftPanel.sessionId}` : 'empty-left'}
-                    className="absolute inset-0"
-                    initial={{ opacity: 0.88, scale: 1.02 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0.75 }}
-                    transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-                  >
-                    {leftPanel?.videoTrack ? (
-                      <>
-                        <ParticipantVideo
-                          videoTrack={leftPanel.videoTrack}
-                          audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack}
-                          muted={leftPanelIsLocal ? true : leftRemoteAudioMuted}
-                          mirror={leftPanelIsLocal}
-                          className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full bg-black object-cover"
-                        />
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
-                        <motion.div
-                          className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.12)_0%,transparent_60%)]"
-                          animate={{ opacity: [0.3, 0.7, 0.3], scale: [0.95, 1.05, 0.95] }}
-                          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                        />
-                        <div className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full border border-cobalt-500/20 bg-cobalt-500/10 shadow-[0_0_40px_rgba(59,130,246,0.15)]">
-                          <motion.span
-                            className="text-4xl"
-                            animate={{ rotate: [-2, 2, -2] }}
-                            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                          >
-                            ⚖️
-                          </motion.span>
-                        </div>
-                        {!leftPanel && (
-                          <div className="relative z-10 mt-6 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
-                            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-cobalt-400" />
-                            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-white/60">
-                              Installation à la table...
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-                </div>
-                {/* Vote tap overlay — viewers tap to vote for this challenger */}
-                {isViewer && (
-                  <motion.button
-                    type="button"
-                    whileTap={{ scale: 0.96, filter: 'brightness(1.2)' }}
-                    onClick={() => {
-                      emitTapSupport('A');
-                      preferSide('A');
-                    }}
-                    className="absolute inset-0 z-[28] touch-manipulation"
-                    aria-label={`Soutenir ${leftPanelName}`}
-                  />
-                )}
-                {!beefEnded &&
-                  effectiveDailyRoomUrl &&
-                  (isHost || userRole === 'challenger') &&
-                  !leftPanelIsLocal && (
-                  <motion.button
-                    type="button"
-                    whileTap={{ scale: 0.96, filter: 'brightness(1.2)' }}
-                    onClick={() => emitTapSupport('A')}
-                    className="absolute inset-0 z-[28] touch-manipulation bg-transparent"
-                    aria-label="Envoyer du soutien au challenger A"
-                  />
-                )}
-                {/* Vote guide — first time only */}
-                {isViewer && (
-                  <div className="pointer-events-none absolute top-24 left-1/2 z-[8] -translate-x-1/2">
-                    <FeatureGuide
-                      id="arena-vote"
-                      title="Soutenir un challenger"
-                      description="Tape sur l'écran d'un challenger pour renforcer son aura ! Tu peux changer de panneau à tout moment."
-                      position="bottom"
-                      suppress={featureGuideSuppress}
-                      stack="under-tap-overlays"
-                    />
-                  </div>
-                )}
-                {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
-                  <div className="pointer-events-none absolute left-1/2 top-14 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1.5 font-mono text-[11px] font-black tabular-nums text-white shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
-                    {speakingTurnPaused && (
-                      <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
-                    )}
-                    {Math.floor(speakingTurnRemaining / 60)}:
-                    {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                  </div>
-                )}
-                {/* Contrôles gauche (pseudo + mic/cam) — clé Architecte finale :
-                    Desktop : bottom-6 (ancrés au sol de la dalle).
-                    Mobile  : top-4 bottom-auto (collés en haut de la dalle, bas libre pour le chat overlay). */}
-                <div className="pointer-events-auto absolute inset-x-0 bottom-6 z-[140] flex flex-col items-center gap-2 max-lg:top-4 max-lg:bottom-auto">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null);
-                    }}
-                    className="glass-prestige flex max-w-full touch-manipulation items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3"
-                  >
-                    <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold uppercase text-white"
-                      aria-hidden
-                    >
-                      {leftPanelName.trim().startsWith('En attente') ? '—' : (leftPanelName.charAt(0) || '?').toUpperCase()}
-                    </span>
-                    <span className="max-w-[150px] truncate text-left font-sans text-sm font-bold text-white" title={leftPanelName}>
-                      {leftPanelName}
-                    </span>
-                  </button>
-                  {leftPanelIsLocal && !isViewer && (
-                    <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          toggleMic();
-                        }}
-                        aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
-                        className={`flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all active:scale-95 ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
-                      >
-                        {micEnabled ? (
-                          <Mic className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                        ) : (
-                          <MicOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          toggleCam();
-                        }}
-                        aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
-                        className={`flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all active:scale-95 ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
-                      >
-                        {camEnabled ? (
-                          <Video className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                        ) : (
-                          <VideoOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                        )}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
+      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-black z-10">
 
-              {/* CENTER — Médiateur : hit targets seulement sur la bulle et le badge (évite de bloquer micro/cam des challengers) */}
-              <div className="pointer-events-none absolute left-1/2 top-1/2 z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
-                <motion.div
-                  initial={{ scale: 0.8 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                  className="pointer-events-none flex flex-col items-center gap-2"
-                >
-                  <div className="relative flex items-center justify-center">
-                    <AnimatePresence>
-                      {mediatorNeonAudio && (
-                        <motion.div
-                          key="mediator-gold-aura"
-                          initial={{ scale: 0.92 }}
-                          animate={{ scale: 1 }}
-                          exit={{ scale: 0.95 }}
-                          className="pointer-events-none absolute -inset-4 rounded-full sm:-inset-5"
-                          aria-hidden
-                        >
-                          {/* Ondes — uniquement lueurs (pas de ring/border) pour ne pas assombrir la vidéo */}
-                          <motion.div
-                            className="absolute inset-0 rounded-full"
-                            animate={{
-                              scale: [1, 1.12, 1],
-                              boxShadow: [
-                                '0 0 18px rgba(255,200,60,0.2)',
-                                '0 0 32px rgba(255,200,60,0.38)',
-                                '0 0 18px rgba(255,200,60,0.2)',
-                              ],
-                            }}
-                            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                          />
-                          <motion.div
-                            className="absolute inset-0 rounded-full"
-                            animate={{
-                              scale: [1, 1.2, 1],
-                              boxShadow: [
-                                '0 0 14px rgba(255,200,60,0.15)',
-                                '0 0 40px rgba(255,200,60,0.32)',
-                                '0 0 14px rgba(255,200,60,0.15)',
-                              ],
-                            }}
-                            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: 0.35 }}
-                          />
-                          <motion.div
-                            className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_40%,rgba(255,200,60,0.14)_0%,rgba(255,200,60,0.05)_45%,transparent_72%)]"
-                            animate={{
-                              scale: [1, 1.04, 1],
-                            }}
-                            transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-                          />
-                          <motion.div
-                            className="absolute inset-0 rounded-full"
-                            animate={{
-                              boxShadow: [
-                                '0 0 28px rgba(255, 200, 100, 0.52), 0 0 64px rgba(255, 220, 140, 0.28)',
-                                '0 0 52px rgba(255, 215, 80, 0.72), 0 0 96px rgba(255, 235, 180, 0.38)',
-                                '0 0 28px rgba(255, 200, 100, 0.52), 0 0 64px rgba(255, 220, 140, 0.28)',
-                              ],
-                            }}
-                            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-                          />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                    {mediatorMicEnabled && (
-                      <motion.div
-                        aria-hidden
-                        className="pointer-events-none absolute -inset-2 z-[6] rounded-full"
-                        animate={{
-                          boxShadow: [
-                            '0 0 16px rgba(255,200,60,0.35)',
-                            '0 0 36px rgba(255,200,60,0.58)',
-                            '0 0 16px rgba(255,200,60,0.35)',
-                          ],
-                        }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                    )}
-                    <MediatorSupportHalo burstKey={supportBurst.M} />
-                    <motion.div
-                      aria-hidden
-                      className="pointer-events-none absolute -inset-[6px] z-[5] rounded-full"
-                      animate={{
-                        boxShadow:
-                          auraMed > 0
-                            ? `0 0 ${20 + auraMed}px rgba(255,200,60,${Math.min(1, 0.4 + auraMed / 100)})`
-                            : 'none',
-                      }}
-                      transition={{ type: 'tween', duration: 0.35 }}
-                    />
-                    <motion.button
-                      type="button"
-                      whileTap={{ scale: 0.96, filter: 'brightness(1.2)' }}
-                      onClick={() => emitTapSupport('M')}
-                      aria-label="Envoyer du soutien au médiateur"
-                      className={`pointer-events-auto relative z-10 flex h-24 w-24 sm:h-32 sm:w-32 lg:h-[min(170px,32dvh)] lg:w-[min(170px,32dvh)] shrink-0 items-center justify-center overflow-visible rounded-full bg-prestige-gold text-4xl text-black shadow-[0_0_28px_rgba(255,200,60,0.45),0_12px_40px_rgba(0,0,0,0.35)] touch-manipulation ${auraFeverMed ? 'saturate-150 brightness-110' : ''}`}
-                    >
-                      <div className="absolute inset-0 z-[12] overflow-hidden rounded-full">
-                        {mediatorParticipant?.videoTrack ? (
-                          <ParticipantVideo
-                            videoTrack={mediatorParticipant.videoTrack}
-                            audioTrack={mediatorIsLocal ? undefined : mediatorParticipant.audioTrack}
-                            muted={mediatorIsLocal}
-                            mirror={mediatorIsLocal}
-                            className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full bg-black object-cover rounded-full"
-                          />
-                        ) : (
-                          <span className="pointer-events-none absolute inset-0 flex h-full w-full min-h-0 items-center justify-center font-mono text-3xl font-black text-white md:text-4xl">
-                            {mediatorName?.[0]?.toUpperCase() || '·'}
-                          </span>
-                        )}
-                      </div>
-                    </motion.button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void openProfile(mediatorName, host.id);
-                    }}
-                    className="pointer-events-auto flex max-w-[min(72vw,16rem)] touch-manipulation items-center justify-center gap-2 rounded-full bg-black/50 px-3 py-1.5 shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-opacity hover:opacity-95"
-                  >
-                    <Award className="h-4 w-4 shrink-0 text-amber-200/90" strokeWidth={1.2} aria-hidden />
-                    <span className="max-w-[min(56vw,12rem)] truncate text-center font-mono text-sm font-semibold text-white">
-                      {mediatorName}
-                    </span>
-                  </button>
-                </motion.div>
-              </div>
-
-              {/* RIGHT — Participant B */}
-              <motion.div
-                className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-visible bg-[#08080A] rounded-r-3xl lg:rounded-3xl border-l border-white/10 shadow-lg flex items-center justify-center"
-                animate={
-                  rematchSequence
-                    ? { x: [0, 5, -5, 4, -4, 3, -3, 0], y: [0, -3, 3, -2, 2, 0], scale: 1 }
-                    : {
-                        x: 0,
-                        y: 0,
-                        scale: gloryIntenseB ? 1.075 : gloryChallengerSlot === 'B' ? 1.04 : 1,
-                      }
-                }
-                transition={
-                  rematchSequence
-                    ? { duration: 0.35, repeat: 22, ease: 'easeInOut' }
-                    : { duration: gloryIntenseB ? 0.35 : 0.2 }
-                }
-              >
-                {isHost && auraB >= 100 && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setGloryChallengerSlot('B');
-                    }}
-                    className="pointer-events-auto absolute bottom-3 right-3 z-[130] shrink-0 rounded-full bg-white/20 px-2 py-1 font-mono text-[7px] font-black uppercase tracking-wide text-white shadow-[0_0_12px_rgba(255,255,255,0.35)] backdrop-blur-md hover:bg-white/30"
-                  >
-                    Gloire
-                  </button>
-                )}
-                <div className="pointer-events-none absolute inset-x-4 top-4 z-[130] flex items-start justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
-                    }}
-                    className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-center font-mono text-xs font-semibold text-white lg:hidden"
-                  >
-                    {rightPanelName}
-                  </button>
-                </div>
-                <AnimatePresence>
-                  {rightNeonAudio && (
-                    <motion.div
-                      key="right-speaking"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[22]"
-                    >
-                      <motion.div
-                        className="absolute inset-0"
-                        animate={{
-                          boxShadow: [
-                            'inset 0 0 32px rgba(16, 185, 129, 0.22)',
-                            'inset 0 0 56px rgba(45, 212, 191, 0.28)',
-                            'inset 0 0 32px rgba(16, 185, 129, 0.22)',
-                          ],
-                        }}
-                        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <AnimatePresence>
-                  {gloryChallengerSlot === 'B' && (
-                    <motion.div
-                      key="glory-overlay-b"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[22]"
-                    >
-                      <motion.div
-                        className="absolute inset-0"
-                        animate={{
-                          boxShadow: gloryIntenseB
-                            ? [
-                                'inset 0 0 56px rgba(255,255,255,0.72)',
-                                'inset 0 0 118px rgba(167,243,208,0.92)',
-                                'inset 0 0 72px rgba(255,255,255,0.8)',
-                                'inset 0 0 118px rgba(110,231,183,0.88)',
-                                'inset 0 0 56px rgba(255,255,255,0.72)',
-                              ]
-                            : [
-                                'inset 0 0 40px rgba(255,255,255,0.4)',
-                                'inset 0 0 88px rgba(52,211,153,0.45)',
-                                'inset 0 0 40px rgba(255,255,255,0.4)',
-                              ],
-                        }}
-                        transition={{
-                          duration: gloryIntenseB ? 0.45 : 0.75,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                        }}
-                      />
-                      {gloryIntenseB && (
-                        <motion.div
-                          className="absolute inset-0 mix-blend-screen"
-                          animate={{
-                            opacity: [0.25, 0.52, 0.28, 0.48, 0.25],
-                            background: [
-                              'radial-gradient(circle at 65% 42%, rgba(255,255,255,0.48) 0%, transparent 55%)',
-                              'radial-gradient(circle at 35% 58%, rgba(167,243,208,0.5) 0%, transparent 50%)',
-                              'radial-gradient(circle at 50% 38%, rgba(255,255,255,0.42) 0%, transparent 58%)',
-                            ],
-                          }}
-                          transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-                        />
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <AnimatePresence>
-                  {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
-                    <motion.div
-                      key="right-hotmic-emerald"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="pointer-events-none absolute inset-0 z-[23] block"
-                    >
-                      <motion.div
-                        className="absolute inset-0"
-                        animate={{
-                          boxShadow: speakingTurnPaused
-                            ? [
-                                'inset 0 0 44px rgba(16,185,129,0.16)',
-                                'inset 0 0 58px rgba(52,211,153,0.24)',
-                                'inset 0 0 44px rgba(16,185,129,0.16)',
-                              ]
-                            : [
-                                'inset 0 0 38px rgba(16,185,129,0.38)',
-                                'inset 0 0 76px rgba(45,212,191,0.52)',
-                                'inset 0 0 38px rgba(16,185,129,0.38)',
-                              ],
-                        }}
-                        transition={{
-                          duration: speakingTurnPaused ? 3 : 2,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                        }}
-                      />
-                      <motion.div
-                        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(16,185,129,0.28)_0%,rgba(52,211,153,0.1)_45%,transparent_70%)]"
-                        animate={{
-                          opacity: speakingTurnPaused ? [0.18, 0.32, 0.18] : [0.38, 0.62, 0.38],
-                        }}
-                        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <motion.div
-                  aria-hidden
-                  className="pointer-events-none absolute -inset-[8px] z-[1] rounded-r-3xl lg:rounded-3xl"
-                  animate={{
-                    boxShadow:
-                      auraB > 0
-                        ? `0 0 ${20 + auraB}px rgba(16,185,129,${Math.min(1, 0.4 + auraB / 100)})`
-                        : 'none',
-                  }}
-                  transition={{ type: 'tween', duration: 0.35 }}
-                />
-                <div className="absolute inset-0 z-[10] overflow-hidden rounded-r-3xl lg:rounded-3xl">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={rightPanel?.sessionId ? `vid-right-${rightPanel.sessionId}` : 'empty-right'}
-                    className="absolute inset-0"
-                    initial={{ opacity: 0.88, scale: 1.02 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0.75 }}
-                    transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-                  >
-                    {rightPanel?.videoTrack ? (
-                      <>
-                        <ParticipantVideo
-                          videoTrack={rightPanel.videoTrack}
-                          audioTrack={rightPanelIsLocal ? undefined : rightPanel.audioTrack}
-                          muted={rightPanelIsLocal ? true : rightRemoteAudioMuted}
-                          mirror={rightPanelIsLocal}
-                          className="pointer-events-none absolute inset-0 z-10 h-full min-h-0 w-full bg-black object-cover"
-                        />
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 z-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-[#08080A]">
-                        <motion.div
-                          className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.12)_0%,transparent_60%)]"
-                          animate={{ opacity: [0.3, 0.7, 0.3], scale: [0.95, 1.05, 0.95] }}
-                          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                        />
-                        <div className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full border border-emerald-500/20 bg-emerald-500/10 shadow-[0_0_40px_rgba(16,185,129,0.18)]">
-                          <motion.span
-                            className="text-4xl"
-                            animate={{ rotate: [-2, 2, -2] }}
-                            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-                          >
-                            ⚖️
-                          </motion.span>
-                        </div>
-                        {!rightPanel && (
-                          <div className="relative z-10 mt-6 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
-                            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                            <span className="font-mono text-[10px] font-medium uppercase tracking-widest text-white/60">
-                              Installation à la table...
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-                </div>
-                {/* Vote tap overlay — viewers tap to vote for this challenger */}
-                {isViewer && (
-                  <motion.button
-                    type="button"
-                    whileTap={{ scale: 0.96, filter: 'brightness(1.2)' }}
-                    onClick={() => {
-                      emitTapSupport('B');
-                      preferSide('B');
-                    }}
-                    className="absolute inset-0 z-[28] touch-manipulation"
-                    aria-label={`Soutenir ${rightPanelName}`}
-                  />
-                )}
-                {!beefEnded &&
-                  effectiveDailyRoomUrl &&
-                  (isHost || userRole === 'challenger') &&
-                  !rightPanelIsLocal && (
-                  <motion.button
-                    type="button"
-                    whileTap={{ scale: 0.96, filter: 'brightness(1.2)' }}
-                    onClick={() => emitTapSupport('B')}
-                    className="absolute inset-0 z-[28] touch-manipulation bg-transparent"
-                    aria-label="Envoyer du soutien au challenger B"
-                  />
-                )}
-                {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
-                  <div className="pointer-events-none absolute left-1/2 top-14 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-black/50 px-2.5 py-1.5 font-mono text-[11px] font-black tabular-nums text-white shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
-                    {speakingTurnPaused && (
-                      <span className="text-[9px] font-black uppercase tracking-tight text-amber-300">Pause</span>
-                    )}
-                    {Math.floor(speakingTurnRemaining / 60)}:
-                    {(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                  </div>
-                )}
-                {/* Contrôles droite : idem gauche — bottom-6 desktop, top-4 mobile (clé Architecte finale). */}
-                <div className="pointer-events-auto absolute inset-x-0 bottom-6 z-[140] flex flex-col items-center gap-2 max-lg:top-4 max-lg:bottom-auto">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
-                    }}
-                    className="glass-prestige flex max-w-full touch-manipulation items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3"
-                  >
-                    <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold uppercase text-white"
-                      aria-hidden
-                    >
-                      {rightPanelName.trim().startsWith('En attente') ? '—' : (rightPanelName.charAt(0) || '?').toUpperCase()}
-                    </span>
-                    <span className="max-w-[150px] truncate text-left font-sans text-sm font-bold text-white" title={rightPanelName}>
-                      {rightPanelName}
-                    </span>
-                  </button>
-                  {rightPanelIsLocal && !isViewer && (
-                    <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          toggleMic();
-                        }}
-                        aria-label={micEnabled ? 'Couper le microphone' : 'Activer le microphone'}
-                        className={`flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all active:scale-95 ${micEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
-                      >
-                        {micEnabled ? (
-                          <Mic className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                        ) : (
-                          <MicOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          toggleCam();
-                        }}
-                        aria-label={camEnabled ? 'Couper la caméra' : 'Activer la caméra'}
-                        className={`flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-full bg-black/55 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all active:scale-95 ${camEnabled ? 'text-white hover:bg-white/10' : 'bg-red-600/90 text-white'}`}
-                      >
-                        {camEnabled ? (
-                          <Video className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                        ) : (
-                          <VideoOff className="h-[18px] w-[18px]" strokeWidth={1.2} aria-hidden />
-                        )}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-
-            </div>
-            <div className="pointer-events-none absolute inset-0 z-[45]">
-              <FlyingReactionsLayer
-                  reactions={flyingReactions}
-                  onRemove={(id) => setFlyingReactions((prev) => prev.filter((r) => r.id !== id))}
-                />
-                <AnimatePresence>
-                  {giftPrestigeFlash > 0 && (
-                    <motion.div
-                      key={giftPrestigeFlash}
-                      initial={{ opacity: 0.5 }}
-                      animate={{ opacity: 0 }}
-                      transition={{ duration: 0.9, ease: 'easeOut' }}
-                      className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_40%,rgba(251,191,36,0.42),transparent_55%)]"
-                    />
-                  )}
-                </AnimatePresence>
-            </div>
-
-            {/* Joining indicator */}
-            {isJoining && (
-              <div className="pointer-events-auto absolute inset-0 z-[160] flex items-center justify-center bg-black/60">
-                <div className="flex items-center gap-3 rounded-3xl bg-black/90 px-6 py-4">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
-                  <span className="font-semibold text-white">Connexion en cours...</span>
-                </div>
-              </div>
-            )}
-            {callError && (
-              <div className="absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-full border border-red-500 bg-red-900/90 px-4 py-2">
-                <span className="text-sm text-red-300">⚠️ {callError}</span>
-              </div>
-            )}
-          </div>
-        ) : (
-        /* Placeholder — même hauteur vidéo que avec room */
-        <div className="relative z-[65] pointer-events-none flex h-full min-h-0 w-full flex-1 overflow-hidden">
-          <div className="relative z-10 flex min-h-0 w-full flex-1 flex-row items-stretch gap-1 px-1 pt-24 md:gap-4 md:px-6 lg:pt-0">
-          {debaters[0] ? (
-            <div className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-hidden bg-[#08080A] rounded-l-3xl lg:rounded-3xl border-r border-white/20 shadow-lg flex flex-col items-center justify-center">
-              <div className="pointer-events-none absolute left-4 top-4 z-[50] flex w-[calc(100%-2rem)] items-start justify-start gap-2">
-                <button
-                  type="button"
-                  onClick={() => void openProfile(debaters[0].name, debaters[0].id)}
-                  className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-left font-mono text-xs font-semibold text-white"
-                >
-                  {debaters[0].name}
-                </button>
-              </div>
-              <div
-                className={`absolute inset-0 flex h-full min-h-0 w-full items-center justify-center bg-cobalt-500/10 text-5xl font-black text-white/80 ${
-                  speakingTurnTarget === debaters[0]?.id ? 'ring-2 ring-inset ring-cobalt-400' : ''
-                }`}
-              >
-                👤
-              </div>
-              <AnimatePresence>
-                {speakingTurnTarget === debaters[0]?.id && timerRunning && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0, y: -10 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0, opacity: 0, y: -10 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                    className={`absolute right-4 top-14 z-20 rounded-3xl bg-black/95 px-4 py-2 shadow-2xl backdrop-blur-xl border-[3px] border-solid ${
-                      speakingTurnRemaining <= 10
-                        ? 'border-ember-600'
-                        : speakingTurnRemaining <= 30
-                          ? 'border-ember-500/80'
-                          : 'border-cobalt-500/80'
-                    }`}
-                  >
-                    <div
-                      className={`text-4xl font-black tabular-nums ${
-                        speakingTurnRemaining <= 10
-                          ? 'text-ember-500 animate-pulse'
-                          : speakingTurnRemaining <= 30
-                            ? 'text-ember-400'
-                            : 'text-cobalt-400'
-                      }`}
-                    >
-                      {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                    </div>
-                    <div className="text-[10px] text-white/60 text-center mt-1 font-medium">Temps restant</div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ) : (
-            <div className="pointer-events-auto relative flex min-h-0 h-full min-w-0 flex-1 overflow-hidden bg-[#08080A] rounded-l-3xl border-r border-white/20 lg:rounded-3xl">
-              <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-cobalt-500/5">
-                <motion.div 
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="text-5xl"
-                >
-                  👤
-                </motion.div>
-                <p className="mt-2 text-[11px] font-medium text-white/50">En attente...</p>
-              </div>
-            </div>
+        {/* 1. HEADER GLOBAL FLOTTANT (Minimaliste, superposé) */}
+        <div className="absolute top-0 inset-x-0 z-[200] p-4 flex justify-between items-start pointer-events-none">
+          {!beefEnded && !isLeaving && (
+            <button onClick={handleLeave} className="lg:hidden pointer-events-auto flex h-8 items-center gap-1.5 rounded-full bg-black/40 px-3 text-[13px] font-semibold text-white backdrop-blur-md transition-colors hover:bg-black/60">
+              <span aria-hidden>←</span> <span className="hidden sm:inline">Quitter</span>
+            </button>
           )}
 
-          {/* Médiateur — bulle 170px prestige (jaune) */}
-          <div className="pointer-events-auto absolute left-1/2 top-1/2 z-50 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.3 }}
-              className="relative flex flex-col items-center gap-2"
-            >
-              <div
-                className={`flex h-24 w-24 sm:h-32 sm:w-32 lg:h-[min(170px,32dvh)] lg:w-[min(170px,32dvh)] shrink-0 items-center justify-center rounded-full border-4 border-prestige-gold bg-prestige-gold text-4xl text-black shadow-glow ring-2 ring-prestige-gold/40${mediatorMicEnabled ? ' animate-pulse shadow-[0_0_40px_rgba(251,191,36,0.6)]' : ''}`}
-              >
-                👤
+          <div className="flex flex-col items-end gap-2 pointer-events-auto ml-auto">
+            <div className="flex items-center gap-2">
+              <div className={`flex items-center rounded-full bg-black/40 backdrop-blur-md px-2.5 py-1 ${liveBadgeHot ? 'shadow-[0_0_15px_rgba(220,38,38,0.5)]' : ''}`}>
+                <div className={`mr-1.5 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}`} />
+                <span className="font-mono text-[10px] font-black uppercase text-white">LIVE</span>
               </div>
-              <button
-                type="button"
-                onClick={() => void openProfile(mediatorName, host.id)}
-                className="flex max-w-[min(72vw,16rem)] items-center justify-center gap-2 rounded-full bg-black/50 px-3 py-1.5 shadow-[0_16px_44px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-opacity hover:opacity-95"
-              >
-                <Award className="h-4 w-4 shrink-0 text-amber-200/90" strokeWidth={1.2} aria-hidden />
-                <span className="max-w-[min(56vw,12rem)] truncate text-center font-mono text-sm font-semibold text-white">
-                  {mediatorName}
-                </span>
+              <button onClick={() => setShowViewerList(true)} className="flex items-center gap-1 rounded-full bg-black/40 backdrop-blur-md px-2.5 py-1 transition-colors hover:bg-black/60">
+                <Eye className="h-3.5 w-3.5 text-white" />
+                <span className="font-mono text-[11px] font-bold text-white">{liveViewerCount > 0 ? liveViewerCount : '—'}</span>
               </button>
-              {/* Debate Title */}
-              <div className="relative mt-1">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                  <AnimatePresence>
-                    {showDebateTitle && (
-                      <motion.div
-                        initial={{ scale: 0, opacity: 0, y: -10 }}
-                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0, opacity: 0, y: -10 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                        className="rounded-full bg-gradient-to-r from-cobalt-600/95 via-emerald-500/95 to-cobalt-500/95 px-4 py-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.55),0_0_32px_rgba(16,185,129,0.12)] backdrop-blur-2xl"
-                      >
-                        <h2 className="text-white text-[10px] sm:text-xs font-black text-center drop-shadow-lg">
-                          {debateTitle}
-                        </h2>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {debaters[1] ? (
-            <div className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-hidden bg-[#08080A] rounded-r-3xl lg:rounded-3xl border-l border-white/10 shadow-lg flex flex-col items-center justify-center">
-              <div className="pointer-events-none absolute inset-x-4 top-4 z-[50] flex items-start justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => void openProfile(debaters[1].name, debaters[1].id)}
-                  className="pointer-events-auto max-w-[min(100%,14rem)] truncate text-center font-mono text-xs font-semibold text-white"
-                >
-                  {debaters[1].name}
+              <button onClick={onShare} className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-md transition-colors hover:bg-black/60">
+                <Share2 className="h-4 w-4 text-white" />
+              </button>
+              {isHost && (
+                <button onClick={() => setMediatorSidebarOpen(o => !o)} className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-md transition-colors hover:bg-black/60 text-amber-300">
+                  <Sliders className="h-4 w-4" />
                 </button>
-              </div>
-              <div
-                className={`absolute inset-0 flex h-full min-h-0 w-full items-center justify-center bg-emerald-500/10 text-5xl font-black text-white/80 ${
-                  speakingTurnTarget === debaters[1]?.id ? 'ring-2 ring-inset ring-emerald-400' : ''
-                }`}
-              >
-                👤
-              </div>
-              <AnimatePresence>
-                {speakingTurnTarget === debaters[1]?.id && timerRunning && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0, y: -10 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0, opacity: 0, y: -10 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                    className={`absolute left-4 top-14 z-20 rounded-3xl bg-black/95 px-4 py-2 shadow-2xl backdrop-blur-xl border-[3px] border-solid ${
-                      speakingTurnRemaining <= 10
-                        ? 'border-emerald-600'
-                        : speakingTurnRemaining <= 30
-                          ? 'border-emerald-500/80'
-                          : 'border-emerald-400/80'
-                    }`}
-                  >
-                    <div
-                      className={`text-4xl font-black tabular-nums ${
-                        speakingTurnRemaining <= 10
-                          ? 'text-emerald-400 animate-pulse'
-                          : speakingTurnRemaining <= 30
-                            ? 'text-emerald-300'
-                            : 'text-emerald-200'
-                      }`}
-                    >
-                      {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                    </div>
-                    <div className="text-[10px] text-white/60 text-center mt-1 font-medium">Temps restant</div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              )}
             </div>
-          ) : (
-            <div className="pointer-events-auto relative flex min-h-0 h-full min-w-0 flex-1 overflow-hidden rounded-r-3xl border-l border-white/10 bg-[#08080A] lg:rounded-3xl">
-              <div className="absolute inset-0 flex h-full min-h-0 w-full flex-col items-center justify-center bg-emerald-500/5">
-                <motion.div 
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  className="text-5xl"
-                >
-                  👤
-                </motion.div>
-                <p className="mt-2 text-[11px] font-medium text-white/50">En attente...</p>
+            {isJoined && timerActive && (
+              <div className="flex items-center gap-1.5 font-mono text-[13px] font-bold tabular-nums text-white bg-black/50 px-3 py-1 rounded-full backdrop-blur-md border border-white/10">
+                 {timerPaused ? <Pause className="h-3.5 w-3.5 text-amber-300" /> : <Timer className="h-3.5 w-3.5" />}
+                 <span className={timerPaused ? 'text-amber-300' : beefTimeRemaining <= 300 ? 'text-red-400' : 'text-white'}>
+                   {formatBeefTime(beefTimeRemaining)}
+                 </span>
               </div>
-            </div>
-          )}
+            )}
+            {arenaHasAnnouncement && (
+              <div className="rounded-full bg-black/70 px-3 py-1.5 backdrop-blur-md border border-white/10">
+                <p className="text-center font-mono text-[9px] font-bold uppercase tracking-widest text-white">
+                  {announcementTicker}
+                </p>
+              </div>
+            )}
           </div>
         </div>
-        )}
 
-      {/* ── Header fixe : annonce puis chrono / LIVE (pile unique, mobile + desktop) ── */}
-      {/* z-[80] > zone vidéo z-[65] : sinon la dalle droite volait les taps sur LIVE / Sliders (tableau de bord) */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-[80] flex w-full flex-col p-2 lg:p-4">
-        {arenaHasAnnouncement && (
-          <div className="pointer-events-none shrink-0 border-b border-white/10 bg-black/65 px-3 py-2 backdrop-blur-md">
-            <p className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-white">
-              {announcementTicker}
-            </p>
-          </div>
-        )}
-        <div
-          className={`pointer-events-none grid w-full grid-cols-1 items-start gap-2 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 ${arenaHasAnnouncement ? 'px-4 pb-3 pt-2' : 'p-4'}`}
-        >
-        <div className="pointer-events-none hidden min-w-0 sm:block" aria-hidden />
+        {/* 2. SPLIT SCREEN FULL-BLEED (Prend 100% de l'espace, séparation nette) */}
+        <motion.div aria-hidden className="pointer-events-none absolute inset-0 z-[11] mix-blend-screen" animate={{ boxShadow: globalHeatGlow, opacity: globalHeat > 0 ? Math.min(0.55, 0.1 + globalHeat / 140) : 0 }} transition={{ type: 'tween', duration: 0.45 }} />
 
-        <div className="pointer-events-none flex justify-center">
-          <div className="glass-prestige pointer-events-auto flex flex-col items-center justify-center gap-0.5 rounded-full px-4 py-2 text-center">
-            {isJoined && timerActive ? (
-              <div
-                className={`flex items-center gap-1 font-mono text-xs font-bold tabular-nums ${
-                  timerPaused
-                    ? 'text-amber-200'
-                    : beefTimeRemaining <= 5 * 60
-                      ? 'text-red-300'
-                      : 'text-white/90'
-                }`}
-              >
-                {timerPaused ? (
-                  <Pause className="h-3 w-3 shrink-0" strokeWidth={1.2} aria-hidden />
+        <div className={`absolute inset-0 flex flex-row items-stretch z-0 transition-shadow duration-700 ${sponsorGlow}`}>
+
+          {/* --- DALLE GAUCHE (Challenger A) --- */}
+          <div className="relative flex-1 min-w-0 h-full border-r-2 border-black overflow-hidden bg-[#08080a]">
+            <AnimatePresence mode="wait">
+              <motion.div key={leftPanel?.sessionId || 'empty-left'} className="absolute inset-0" initial={{ opacity: 0.88 }} animate={{ opacity: 1 }} exit={{ opacity: 0.75 }}>
+                {leftPanel?.videoTrack ? (
+                  <ParticipantVideo videoTrack={leftPanel.videoTrack} audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack} muted={leftPanelIsLocal ? true : leftRemoteAudioMuted} mirror={leftPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" />
                 ) : (
-                  <Timer className="h-3 w-3 shrink-0" strokeWidth={1.2} aria-hidden />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#08080A]">
+                    <motion.div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.12)_0%,transparent_60%)]" animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 4, repeat: Infinity }} />
+                    <span className="text-5xl opacity-30 relative z-10">👤</span>
+                    {!leftPanel && (
+                      <div className="relative z-10 mt-4 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
+                        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-cobalt-400" />
+                        <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-white/50">En attente</span>
+                      </div>
+                    )}
+                  </div>
                 )}
-                <span>{formatBeefTime(beefTimeRemaining)}</span>
-                {timerPaused && (
-                  <span className="text-[9px] font-black uppercase tracking-wide text-amber-200 animate-pulse">Pause</span>
+              </motion.div>
+            </AnimatePresence>
+
+            {leftNeonAudio && <div className="pointer-events-none absolute inset-0 z-[22] shadow-[inset_0_0_40px_rgba(0,240,255,0.3)] animate-pulse" />}
+            {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
+               <div className="pointer-events-none absolute inset-0 z-[23] shadow-[inset_0_0_50px_rgba(255,77,0,0.3)] bg-[radial-gradient(circle_at_50%_42%,rgba(255,77,0,0.15)_0%,transparent_70%)]" />
+            )}
+            {isViewer && (
+               <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('A'); preferSide('A'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label={`Soutenir ${leftPanelName}`} />
+            )}
+
+            {/* Contrôles minimalistes ancrés en bas à gauche */}
+            <div className="absolute left-3 max-lg:bottom-[36vh] bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
+              {leftPanelIsLocal && !isViewer && (
+                <div className="flex gap-2 mb-1">
+                  <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Video className="h-4 w-4" /></button>
+                </div>
+              )}
+              <button onClick={(e) => { e.stopPropagation(); void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null); }} className="text-white text-[13px] font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight max-w-[140px] truncate">
+                @{leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
+              </button>
+              {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
+                <div className="rounded-full bg-red-600/90 px-2 py-0.5 text-[10px] font-black text-white shadow-lg animate-pulse mt-0.5 border border-white/20">
+                  {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* --- DALLE DROITE (Challenger B) --- */}
+          <div className="relative flex-1 min-w-0 h-full bg-[#08080a] overflow-hidden border-l-2 border-black">
+            <AnimatePresence mode="wait">
+              <motion.div key={rightPanel?.sessionId || 'empty-right'} className="absolute inset-0" initial={{ opacity: 0.88 }} animate={{ opacity: 1 }} exit={{ opacity: 0.75 }}>
+                {rightPanel?.videoTrack ? (
+                  <ParticipantVideo videoTrack={rightPanel.videoTrack} audioTrack={rightPanelIsLocal ? undefined : rightPanel.audioTrack} muted={rightPanelIsLocal ? true : rightRemoteAudioMuted} mirror={rightPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#08080A]">
+                    <motion.div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.12)_0%,transparent_60%)]" animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 4, repeat: Infinity }} />
+                    <span className="text-5xl opacity-30 relative z-10">👤</span>
+                    {!rightPanel && (
+                      <div className="relative z-10 mt-4 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
+                        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                        <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-white/50">En attente</span>
+                      </div>
+                    )}
+                  </div>
                 )}
-              </div>
-            ) : isJoined && !timerActive && isHost ? (
-              <span className="font-mono text-[9px] uppercase tracking-wider text-white/50">Pas de chrono</span>
-            ) : isJoined && !timerActive && !isHost ? (
-              <span className="max-w-[14rem] font-mono text-[9px] uppercase leading-tight tracking-wider text-white/45">
-                Chrono au lancement (médiateur)
-              </span>
-            ) : null}
+              </motion.div>
+            </AnimatePresence>
+
+            {rightNeonAudio && <div className="pointer-events-none absolute inset-0 z-[22] shadow-[inset_0_0_40px_rgba(16,185,129,0.3)] animate-pulse" />}
+            {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
+               <div className="pointer-events-none absolute inset-0 z-[23] shadow-[inset_0_0_50px_rgba(16,185,129,0.3)] bg-[radial-gradient(circle_at_50%_42%,rgba(16,185,129,0.15)_0%,transparent_70%)]" />
+            )}
+            {isViewer && (
+               <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('B'); preferSide('B'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label={`Soutenir ${rightPanelName}`} />
+            )}
+
+            {/* Contrôles minimalistes ancrés en bas à gauche */}
+            <div className="absolute left-3 max-lg:bottom-[36vh] bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
+              {rightPanelIsLocal && !isViewer && (
+                <div className="flex gap-2 mb-1">
+                  <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Video className="h-4 w-4" /></button>
+                </div>
+              )}
+              <button onClick={(e) => { e.stopPropagation(); void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null); }} className="text-white text-[13px] font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight max-w-[140px] truncate">
+                @{rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
+              </button>
+              {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
+                <div className="rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-black text-white shadow-lg animate-pulse mt-0.5 border border-white/20">
+                  {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="pointer-events-none flex justify-center sm:justify-end">
-          <div className="glass-prestige pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 rounded-full py-1.5 pl-2 pr-1.5 sm:gap-2 sm:pl-3">
-            <div
-              className={`flex items-center rounded-full px-2 py-0.5 ${
-                liveBadgeHot
-                  ? 'animate-pulse bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.45)]'
-                  : 'bg-white/10'
-              }`}
-            >
-              <div
-                className={`mr-1 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-white' : 'bg-amber-300'}`}
-              />
-              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-white">LIVE</span>
+        {/* 3. LE MÉDIATEUR (CENTRE ABSOLU) - Bulle majestueuse */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[150] flex flex-col items-center gap-2 pointer-events-none">
+          {showDebateTitle && (
+            <div className="rounded-full bg-black/80 px-4 py-1.5 mb-1 shadow-2xl backdrop-blur-md border border-white/15">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500 text-[11px] font-black uppercase tracking-wider">{debateTitle}</span>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowViewerList(true)}
-              className="flex items-center gap-1 rounded-full px-1.5 py-1 transition-colors hover:bg-white/10"
-              aria-label="Spectateurs"
-            >
-              <Eye className="h-3.5 w-3.5 text-white" strokeWidth={1.2} aria-hidden />
-              <span className="min-w-[1ch] font-mono text-[11px] font-medium tabular-nums text-white">
-                {liveViewerCount > 0 ? liveViewerCount : '—'}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={onShare}
-              aria-label="Partager le direct"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
-            >
-              <Share2 className="h-[17px] w-[17px] text-white" strokeWidth={1.2} aria-hidden />
-            </button>
-            {isHost ? (
-              <button
-                type="button"
-                onClick={() => setMediatorSidebarOpen((o) => !o)}
-                aria-expanded={mediatorSidebarOpen}
-                aria-label={
-                  mediatorSidebarOpen ? 'Fermer la commande médiateur' : 'Ouvrir la commande médiateur'
-                }
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-amber-200 transition-colors hover:bg-white/10 hover:text-white"
-              >
-                <Sliders className="h-5 w-5" strokeWidth={1.2} aria-hidden />
-              </button>
+          )}
+          <button onClick={() => openProfile(mediatorName, host.id)} className={`pointer-events-auto flex h-28 w-28 sm:h-36 sm:w-36 lg:h-[190px] lg:w-[190px] shrink-0 items-center justify-center rounded-full border-[3px] border-amber-400 bg-[#08080a] shadow-[0_0_50px_rgba(251,191,36,0.3)] overflow-hidden transition-transform active:scale-95 ${mediatorNeonAudio ? 'shadow-[0_0_80px_rgba(251,191,36,0.6)] animate-pulse border-white' : ''}`}>
+            {mediatorParticipant?.videoTrack ? (
+              <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} audioTrack={mediatorIsLocal ? undefined : mediatorParticipant.audioTrack} muted={mediatorIsLocal} mirror={mediatorIsLocal} className="w-full h-full object-cover" />
             ) : (
-              <button
-                type="button"
-                onClick={handleLeave}
-                aria-label="Quitter le direct"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
-              >
-                <X className="h-4 w-4 text-white" strokeWidth={1.2} aria-hidden />
-              </button>
+              <span className="text-5xl text-white/30">👤</span>
             )}
+          </button>
+          <div className="pointer-events-auto rounded-full bg-black/80 px-3 py-1 backdrop-blur-md border border-white/10 mt-1 shadow-xl">
+            <span className="font-sans text-[11px] font-bold text-white truncate max-w-[130px] block text-center drop-shadow-md">
+              {mediatorName}
+            </span>
           </div>
         </div>
+
+        {/* 4. FLYING REACTIONS & INDICATORS */}
+        <div className="pointer-events-none absolute inset-0 z-[160]">
+          <FlyingReactionsLayer reactions={flyingReactions} onRemove={(id) => setFlyingReactions((p) => p.filter(r => r.id !== id))} />
+          {isJoining && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm pointer-events-auto">
+               <div className="flex items-center gap-3 rounded-full bg-black px-6 py-4 border border-white/10 shadow-2xl"><div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" /><span className="font-semibold text-white">Connexion sécurisée...</span></div>
+            </div>
+          )}
+          {callError && (
+            <div className="absolute left-1/2 top-20 -translate-x-1/2 rounded-full border border-red-500/50 bg-red-900/90 px-4 py-2 shadow-xl"><span className="text-sm font-semibold text-red-200">⚠️ {callError}</span></div>
+          )}
         </div>
-      </div>
-        </div>
+
 
       {isHost && (
         <MediatorSidebar
