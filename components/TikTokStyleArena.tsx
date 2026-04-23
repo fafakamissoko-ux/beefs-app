@@ -2990,7 +2990,7 @@ export function TikTokStyleArena({
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-black md:h-[calc(100dvh-3.5rem)] md:max-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100vh-3.5rem)] lg:flex-row-reverse">
+    <div className="absolute inset-0 flex flex-col overflow-hidden bg-black lg:flex-row-reverse">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -3235,7 +3235,7 @@ export function TikTokStyleArena({
       {/* Zone vidéo (droite du split-screen desktop, bloc hermétique en flux flex-row-reverse).
           ZÉRO absolute : reste dans le flux flex-1 pour partager l'espace avec l'aside gauche.
           Sur mobile : occupe 100% — le bouton Quitter flotte en top-left (pas de Navbar globale). */}
-      <div className="relative min-h-0 h-full w-full flex-1 min-w-0 flex flex-col overflow-hidden bg-black">
+      <div className="relative flex h-full min-w-0 flex-1 flex-col justify-center overflow-hidden bg-[#08080A]">
         {/* Bouton Quitter MOBILE — top-left, lg:hidden (sur desktop c'est le menu burger du chat qui prend le relais). */}
         {!beefEnded && !isLeaving && (
           <button
@@ -3252,7 +3252,7 @@ export function TikTokStyleArena({
         <div className="relative z-0 flex min-h-0 w-full shrink-0 flex-1 flex-col md:absolute md:inset-0 md:h-full md:w-full md:min-h-0">
         {effectiveDailyRoomUrl ? (
           <div
-            className={`relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] overflow-visible max-lg:pb-28 landscape:flex-1 md:h-full md:min-h-0 md:flex-1 md:shrink-0 md:pb-0 lg:flex-1 lg:pb-0 ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem] md:pt-0' : 'pt-24 max-sm:pt-28 md:pt-0'}`}
+            className={`relative z-[65] pointer-events-none flex h-full min-h-0 w-full flex-1 overflow-visible ${arenaHasAnnouncement ? 'pt-[8.5rem] max-sm:pt-[9.5rem] md:pt-0' : 'pt-24 max-sm:pt-28 md:pt-0'}`}
           >
             <motion.div
               aria-hidden
@@ -4060,7 +4060,7 @@ export function TikTokStyleArena({
           </div>
         ) : (
         /* Placeholder — même hauteur vidéo que avec room */
-        <div className="relative z-[65] pointer-events-none min-h-0 w-full shrink-0 flex-[0_0_60%] overflow-hidden landscape:flex-1 md:h-full md:min-h-0 md:flex-1 md:shrink-0 lg:flex-1">
+        <div className="relative z-[65] pointer-events-none flex h-full min-h-0 w-full flex-1 overflow-hidden">
           <div className="pointer-events-none absolute z-10 flex min-h-0 flex-row items-stretch gap-1 max-lg:inset-y-0 max-lg:left-1/2 max-lg:h-full max-lg:w-full max-lg:-translate-x-1/2 max-lg:px-1 md:inset-0 md:h-full md:w-full md:translate-x-0 md:gap-4 md:px-6">
           {debaters[0] ? (
             <div className="pointer-events-auto relative flex-1 min-w-0 min-h-0 h-full overflow-hidden bg-[#08080A] rounded-l-3xl lg:rounded-3xl border-r border-white/20 shadow-lg flex flex-col items-center justify-center">
@@ -4350,7 +4350,7 @@ export function TikTokStyleArena({
       {/* CALQUE 2 — chat & réactions.
           Mobile (< lg) : overlay absolu sur le bas 40% de la vidéo (TikTok Live pur), pointer-events-none pour laisser les taps traverser.
           Desktop (lg+) : aside hermétique à GAUCHE (via lg:flex-row-reverse sur le root), w-96, bordure droite, fond opaque, dans le flux flex-row. */}
-      <aside className="relative flex min-h-0 w-full flex-col p-2 pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:z-10 max-lg:w-full max-lg:justify-end landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] lg:pointer-events-auto lg:w-96 lg:shrink-0 lg:h-full lg:border-r lg:border-white/10 lg:bg-[#08080A] lg:p-0">
+      <aside className="relative flex min-h-0 w-full flex-col pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[60%] max-lg:z-10 max-lg:w-full max-lg:justify-end max-lg:p-2 landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] lg:pointer-events-auto lg:w-[350px] lg:shrink-0 lg:h-full lg:border-r lg:border-white/10 lg:bg-[#0c0c0f] lg:p-0 lg:z-[100]">
       {/* Header du chat — desktop only — burger menu (nav) + live badge.
           Remplace la Navbar globale cachée en mode immersif /arena/*. */}
       <header className="relative z-30 hidden shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3 lg:flex">
@@ -4435,7 +4435,7 @@ export function TikTokStyleArena({
               desktop : largeur complète, fade-top via mask-image pour l'effet TikTok Live. */}
           <div
             ref={chatMessagesScrollRef}
-            className="pointer-events-auto min-h-0 min-w-0 overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:w-[85%] max-lg:max-h-[40vh] lg:w-full lg:max-h-[min(40vh,360px)] lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
+            className="pointer-events-auto flex min-h-0 min-w-0 flex-1 flex-col justify-end overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:w-[85%] max-lg:max-h-[40vh] lg:w-full lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
           >
             {visibleMessages.map((message) => {
               const canDelete =
@@ -4516,7 +4516,7 @@ export function TikTokStyleArena({
               Pas de cœur enflammé, pas de grille de quick reactions, pas de ✋. */}
           <div
             ref={reactionDockRef}
-            className="pointer-events-auto flex w-full flex-row items-center gap-2 px-3 pb-4"
+            className="pointer-events-auto mt-auto flex w-full shrink-0 flex-row items-center gap-2 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 lg:border-t lg:border-white/10 lg:bg-black/40 lg:p-3"
           >
             <div className="flex-1 min-w-0">
               <input
