@@ -3036,6 +3036,19 @@ export function TikTokStyleArena({
         </div>
       )}
 
+      {/* Bouton d'évasion Mode Immersif — remplace la Navbar cachée sur /arena/* */}
+      {!beefEnded && !isLeaving && (
+        <button
+          type="button"
+          onClick={handleLeave}
+          aria-label="Quitter l'arène"
+          className="absolute left-4 top-4 z-[100] flex h-10 items-center gap-2 rounded-full bg-black/50 px-4 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/10"
+        >
+          <span aria-hidden>←</span>
+          <span className="hidden sm:inline">Quitter</span>
+        </button>
+      )}
+
       <VerdictConfettiBurst active={verdictConfetti} />
       <RematchVerdictOverlay
         visible={rematchSequence && !beefEnded}
