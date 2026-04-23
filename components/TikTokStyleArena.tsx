@@ -3309,7 +3309,7 @@ export function TikTokStyleArena({
       </header>
       {!beefEnded && (
         <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col justify-end overflow-visible lg:px-2">
-        <div className="pointer-events-auto mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:max-w-none">
+        <div className="pointer-events-none mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:max-w-none">
         <div className="pointer-events-none flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 pt-12 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
           <div
             className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden"
@@ -3400,7 +3400,7 @@ export function TikTokStyleArena({
               [ Input (flex-1) ] [ 😀 Emojis ] [ 🎁 Cadeaux ] [ ➤ Envoyer ]
               Pas de cœur enflammé, pas de grille de quick reactions, pas de ✋. */}
           <div
-            ref={(el) => { if (el && el.clientWidth > 0) reactionDockRef.current = el; }}
+            ref={reactionDockRef}
             className="pointer-events-auto mt-auto flex w-full shrink-0 flex-row items-center gap-2 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 lg:border-t lg:border-white/10 lg:bg-black/40 lg:p-3"
           >
             <div className="flex-1 min-w-0">
@@ -3558,7 +3558,7 @@ export function TikTokStyleArena({
             )}
 
             {/* Contrôles minimalistes ancrés en bas à gauche */}
-            <div className="absolute left-3 max-lg:bottom-[36vh] bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
+            <div className="absolute left-3 max-lg:bottom-[46vh] bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
               {leftPanelIsLocal && !isViewer && (
                 <div className="flex gap-2 mb-1">
                   <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
@@ -3606,7 +3606,7 @@ export function TikTokStyleArena({
             )}
 
             {/* Contrôles minimalistes ancrés en bas à gauche */}
-            <div className="absolute left-3 max-lg:bottom-[36vh] bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
+            <div className="absolute left-3 max-lg:bottom-[46vh] bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
               {rightPanelIsLocal && !isViewer && (
                 <div className="flex gap-2 mb-1">
                   <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
