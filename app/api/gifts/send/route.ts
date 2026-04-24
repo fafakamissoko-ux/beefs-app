@@ -1,11 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { updateUserBalance } from '@/lib/updateUserBalance';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
+
+type SendGiftResult = {
+  success?: boolean;
+  new_balance?: number;
+  gift_id?: string;
+};
+
+function mapRpcError(message: string): { status: number; body: string } {
+  const m = message.toLowerCase();
+  if (m.includes('points insuffisants') || m.includes('insuffisant')) {
+    return { status: 400, body: 'Points insuffisants' };
+  }
+  if (m.includes('destinataire invalide')) {
+    return { status: 400, body: 'Destinataire invalide' };
+  }
+  if (m.includes('montant invalide')) {
+    return { status: 400, body: 'Montant invalide' };
+  }
+  if (m.includes('type de cadeau invalide')) {
+    return { status: 400, body: 'Type de cadeau invalide' };
+  }
+  if (m.includes('beef') && m.includes('médiateur')) {
+    return { status: 400, body: 'Les cadeaux sont envoyés au médiateur de ce beef uniquement' };
+  }
+  if (m.includes('direct') || m.includes('live')) {
+    return { status: 400, body: 'Les cadeaux ne sont possibles que pendant un direct' };
+  }
+  return { status: 500, body: 'Erreur lors du transfert de points' };
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +47,9 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { global: { headers: { Authorization: authHeader } } }
     );
-    const { data: { user } } = await supabaseAuth.auth.getUser();
+    const {
+      data: { user },
+    } = await supabaseAuth.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
@@ -40,92 +70,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Destinataire invalide' }, { status: 400 });
     }
 
-    const { data: beef, error: beefErr } = await supabaseAdmin
-      .from('beefs')
-      .select('id, mediator_id, status')
-      .eq('id', beef_id)
-      .single();
-
-    if (beefErr || !beef) {
-      return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
-    }
-    if (beef.status !== 'live') {
-      return NextResponse.json({ error: 'Les cadeaux ne sont possibles que pendant un direct' }, { status: 400 });
-    }
-    if (beef.mediator_id !== recipient_id) {
-      return NextResponse.json(
-        { error: 'Les cadeaux sont envoyés au médiateur de ce beef uniquement' },
-        { status: 400 },
-      );
-    }
-
-    const { data: giftType, error: gtErr } = await supabaseAdmin
-      .from('gift_types')
-      .select('id, price, is_active')
-      .eq('id', gift_type_id)
-      .maybeSingle();
-
-    if (gtErr || !giftType || giftType.is_active === false) {
-      return NextResponse.json({ error: 'Type de cadeau invalide' }, { status: 400 });
-    }
-    if (points_amount !== giftType.price) {
-      return NextResponse.json({ error: 'Montant incohérent avec le catalogue' }, { status: 400 });
-    }
-
-    const { data: sender } = await supabaseAdmin
-      .from('users')
-      .select('points')
-      .eq('id', user.id)
-      .single();
-
-    if (!sender || sender.points < points_amount) {
-      return NextResponse.json({ error: 'Points insuffisants' }, { status: 400 });
-    }
-
-    let senderDebited = false;
-    try {
-      await updateUserBalance(supabaseAdmin, {
-        userId: user.id,
-        amount: -points_amount,
-        type: 'gift_sent',
-        description: `Cadeau envoyé (${gift_type_id})`,
-        metadata: { beef_id, recipient_id, gift_type_id },
-      });
-      senderDebited = true;
-      await updateUserBalance(supabaseAdmin, {
-        userId: recipient_id,
-        amount: points_amount,
-        type: 'gift_received',
-        description: `Cadeau reçu pendant un direct`,
-        metadata: { beef_id, sender_id: user.id, gift_type_id },
-      });
-    } catch {
-      if (senderDebited) {
-        try {
-          await updateUserBalance(supabaseAdmin, {
-            userId: user.id,
-            amount: points_amount,
-            type: 'refund',
-            description: 'Annulation cadeau — erreur crédit destinataire',
-            metadata: { beef_id, recipient_id, gift_type_id },
-          });
-        } catch {}
-      }
-      return NextResponse.json({ error: 'Erreur lors du transfert de points' }, { status: 500 });
-    }
-
-    await supabaseAdmin.from('gifts').insert({
-      beef_id,
-      sender_id: user.id,
-      recipient_id,
-      gift_type_id,
-      points_amount,
+    const { data, error } = await supabaseAdmin.rpc('send_gift', {
+      p_beef_id: beef_id,
+      p_sender_id: user.id,
+      p_recipient_id: recipient_id,
+      p_gift_type_id: gift_type_id,
+      p_points_amount: Math.floor(points_amount),
     });
 
-    const { data: senderAfter } = await supabaseAdmin.from('users').select('points').eq('id', user.id).single();
+    if (error) {
+      const mapped = mapRpcError(error.message || '');
+      return NextResponse.json({ error: mapped.body }, { status: mapped.status });
+    }
 
-    return NextResponse.json({ success: true, newBalance: senderAfter?.points ?? sender.points - points_amount });
-  } catch (error: any) {
+    const row = (data as SendGiftResult) ?? {};
+    const newBalance =
+      typeof row.new_balance === 'number' ? row.new_balance : undefined;
+    if (newBalance == null) {
+      return NextResponse.json({ error: 'Réponse serveur inattendue' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      newBalance,
+      giftId: row.gift_id ?? null,
+    });
+  } catch {
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

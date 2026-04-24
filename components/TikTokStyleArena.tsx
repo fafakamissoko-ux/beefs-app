@@ -61,6 +61,7 @@ import { useArenaVerdictStore } from '@/lib/stores/arenaVerdictStore';
 import { VerdictConfettiBurst, RematchVerdictOverlay } from './VerdictEffects';
 import { playRematchThunderSfx } from '@/lib/playVerdictSfx';
 import { MediatorSidebar, type MediatorRemoteRow } from './MediatorSidebar';
+import { FullscreenGiftAnimation, type ArenaBigGiftPayload } from './Arena/FullscreenGiftAnimation';
 
 /** Durée par défaut au lancement « Lancer le beef » (régie : +/- au-delà). */
 const DEFAULT_BEEF_DURATION = 60 * 60; // 60 min
@@ -693,6 +694,12 @@ export function TikTokStyleArena({
     supportBurstRef.current = supportBurst;
   }, [supportBurst]);
   const [giftPrestigeFlash, setGiftPrestigeFlash] = useState(0);
+  const [localArenaBigGift, setLocalArenaBigGift] = useState<ArenaBigGiftPayload | null>(null);
+  useEffect(() => {
+    if (!localArenaBigGift) return;
+    const t = window.setTimeout(() => setLocalArenaBigGift(null), 6000);
+    return () => window.clearTimeout(t);
+  }, [localArenaBigGift]);
   const [verdictConfetti, setVerdictConfetti] = useState(false);
   const [rematchSequence, setRematchSequence] = useState(false);
   const rematchVerdictTimerRef = useRef<number | null>(null);
@@ -3565,8 +3572,44 @@ export function TikTokStyleArena({
                           const data = await res.json();
                           if (!res.ok) throw new Error(data.error);
                           setUserPoints(data.newBalance);
+                          const medBoost = Math.min(25, 4 + Math.floor(gift.cost / 40));
+                          setAuraMed((v) => Math.min(100, v + medBoost));
                           if (gift.cost >= 50) {
                             setGiftPrestigeFlash((k) => k + 1);
+                          }
+                          const giftKey =
+                            data.giftId != null ? String(data.giftId) : `gift_${Date.now()}`;
+                          const msgContent = `a offert ${gift.emoji} ${gift.label} (${gift.cost} pts) au médiateur`;
+                          const initial = userName?.[0]?.toUpperCase() || '?';
+                          addRemoteMessage(userName, msgContent, initial, giftKey);
+                          void channelRef.current
+                            ?.send({
+                              type: 'broadcast',
+                              event: 'message',
+                              payload: {
+                                user_name: userName,
+                                content: msgContent,
+                                initial,
+                                id: giftKey,
+                              },
+                            })
+                            .catch(() => {});
+                          if (gift.cost >= 500) {
+                            const bigPayload: ArenaBigGiftPayload = {
+                              cost: gift.cost,
+                              label: gift.label,
+                              emoji: gift.emoji,
+                              giftTypeId: gift.id,
+                              senderName: userName,
+                            };
+                            setLocalArenaBigGift(bigPayload);
+                            void channelRef.current
+                              ?.send({
+                                type: 'broadcast',
+                                event: 'arena_big_gift',
+                                payload: bigPayload,
+                              })
+                              .catch(() => {});
                           }
                           toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
                         } catch (err: unknown) {
@@ -3828,6 +3871,11 @@ export function TikTokStyleArena({
           scrollbar-width: none;
         }
       `}</style>
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <FullscreenGiftAnimation roomId={roomId} localBigGift={localArenaBigGift} />,
+          document.body
+        )}
     </div>
   );
 }
