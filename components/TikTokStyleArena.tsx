@@ -367,10 +367,10 @@ export function TikTokStyleArena({
   useEffect(() => {
     if (!showAllReactions && !showGiftPicker) return;
     const onPointerDown = (e: PointerEvent) => {
-      const root = reactionDockRef.current;
       const target = e.target;
-      if (root?.contains(target as Node)) return;
-      if (target instanceof Element && target.closest('[data-arena-dock-popover]')) return;
+      if (target instanceof Element) {
+        if (target.closest('#dock-desktop') || target.closest('#dock-mobile') || target.closest('[data-arena-dock-popover]')) return;
+      }
       setShowAllReactions(false);
       setShowGiftPicker(false);
     };
@@ -2991,7 +2991,7 @@ export function TikTokStyleArena({
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
   return (
-    <div className="fixed inset-0 z-40 flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row">
+    <div className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row">
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -3293,7 +3293,7 @@ export function TikTokStyleArena({
               </div>
               <button onClick={() => setShowViewerList(true)} className="flex items-center gap-1 rounded-full bg-black/40 px-2 py-1"><Eye className="h-3.5 w-3.5 text-white" /><span className="text-[10px] text-white">{liveViewerCount > 0 ? liveViewerCount : '—'}</span></button>
               <button onClick={onShare} className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40"><Share2 className="h-3.5 w-3.5 text-white" /></button>
-              {isHost && <button onClick={() => setMediatorSidebarOpen(o => !o)} className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-amber-200"><Sliders className="h-3.5 w-3.5" /></button>}
+              {isHost && <button onClick={(e) => { e.stopPropagation(); setMediatorSidebarOpen(o => !o); }} className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-amber-300 hover:bg-black/60 shadow-lg"><Sliders className="h-4 w-4" /></button>}
             </div>
             {isJoined && timerActive && (
               <div className="flex items-center gap-1 text-xs text-white bg-black/40 px-2 py-1 rounded-full">{timerPaused ? <Pause className="h-3 w-3 text-amber-200" /> : <Timer className="h-3 w-3" />}{formatBeefTime(beefTimeRemaining)}</div>
@@ -3313,18 +3313,18 @@ export function TikTokStyleArena({
               </motion.div>
             </AnimatePresence>
             {!leftPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('A'); preferSide('A'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir A" />}
-            <div className="absolute left-3 max-lg:top-[4.5rem] max-lg:bottom-auto bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
-              <button onClick={(e) => { e.stopPropagation(); void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null); }} className="text-white text-[13px] font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight max-w-[140px] truncate">
+            <div className="absolute left-4 top-20 z-[140] flex flex-col items-start gap-2 pointer-events-auto">
+              <button onClick={(e) => { e.stopPropagation(); void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null); }} className="text-white text-sm font-black tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight max-w-[160px] truncate">
                 @{leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
               </button>
               {leftPanelIsLocal && !isViewer && (
-                <div className="flex gap-2 mt-0.5">
-                  <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
-                  <button onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Video className="h-4 w-4" /></button>
+                <div className="flex gap-2">
+                  <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-9 w-9 rounded-full items-center justify-center backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-9 w-9 rounded-full items-center justify-center backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Video className="h-4 w-4" /></button>
                 </div>
               )}
               {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
-                <div className="rounded-full bg-red-600/90 px-2 py-0.5 text-[10px] font-black text-white shadow-lg animate-pulse border border-white/20">
+                <div className="rounded-full bg-red-600/90 px-2.5 py-1 text-[11px] font-black text-white shadow-lg animate-pulse border border-white/20 mt-1">
                   {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                 </div>
               )}
@@ -3340,18 +3340,18 @@ export function TikTokStyleArena({
               </motion.div>
             </AnimatePresence>
             {!rightPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('B'); preferSide('B'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir B" />}
-            <div className="absolute left-3 max-lg:top-[4.5rem] max-lg:bottom-auto bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
-              <button onClick={(e) => { e.stopPropagation(); void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null); }} className="text-white text-[13px] font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight max-w-[140px] truncate">
+            <div className="absolute left-4 top-20 z-[140] flex flex-col items-start gap-2 pointer-events-auto">
+              <button onClick={(e) => { e.stopPropagation(); void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null); }} className="text-white text-sm font-black tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight max-w-[160px] truncate">
                 @{rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
               </button>
               {rightPanelIsLocal && !isViewer && (
-                <div className="flex gap-2 mt-0.5">
-                  <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
-                  <button onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Video className="h-4 w-4" /></button>
+                <div className="flex gap-2">
+                  <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-9 w-9 rounded-full items-center justify-center backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-9 w-9 rounded-full items-center justify-center backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Video className="h-4 w-4" /></button>
                 </div>
               )}
               {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
-                <div className="rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-black text-white shadow-lg animate-pulse border border-white/20">
+                <div className="rounded-full bg-emerald-500/90 px-2.5 py-1 text-[11px] font-black text-white shadow-lg animate-pulse border border-white/20 mt-1">
                   {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                 </div>
               )}
