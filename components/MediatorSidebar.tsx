@@ -183,7 +183,7 @@ export function MediatorSidebar({
                 <motion.button
                   type="button"
                   aria-label="Fermer le tableau de bord"
-                  className="fixed inset-0 z-modal-backdrop bg-black/50 backdrop-blur-[2px]"
+                  className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-[2px]"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -198,7 +198,7 @@ export function MediatorSidebar({
                   animate={{ y: 0 }}
                   exit={{ y: '100%' }}
                   transition={{ type: 'spring', damping: 32, stiffness: 380 }}
-                  className="fixed inset-x-0 bottom-0 z-modal mx-auto flex max-h-[min(88dvh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-t-[2.5rem] border-t border-white/10 bg-[#08080A]/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-24px_64px_rgba(0,0,0,0.6)] backdrop-blur-3xl"
+                  className="fixed inset-x-0 bottom-0 z-[9999] mx-auto flex max-h-[min(88dvh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-t-[2.5rem] border-t border-white/10 bg-[#08080A]/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-24px_64px_rgba(0,0,0,0.6)] backdrop-blur-3xl"
                 >
                   {/* Drag handle */}
                   <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-white/20" />
