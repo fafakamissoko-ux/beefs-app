@@ -115,11 +115,16 @@ const TOP_10_REACTIONS = [
   '👍', '😂', '🔥', '💯', '👏', '😮', '💀', '❤️', '🎉', '🚀'
 ];
 
-// 🔥 TOUTES LES RÉACTIONS POPULAIRES (24)
+// 🔥 TOUTES LES RÉACTIONS POPULAIRES (80)
 const POPULAR_REACTIONS = [
-  '👍', '👎', '😂', '🔥', '💯', '👏', '🤔', '😮', '💀', 
-  '🎯', '⚡', '💪', '🧠', '👀', '🤯', '😡', '❤️', '🎉', 
-  '🙌', '💎', '🌟', '✨', '🚀', '💥'
+  '👍', '👎', '😂', '🔥', '💯', '👏', '🤔', '😮', '💀', '🎯',
+  '⚡', '💪', '🧠', '👀', '🤯', '😡', '❤️', '🎉', '🙌', '💎',
+  '🌟', '✨', '🚀', '💥', '🤡', '👽', '👻', '🥶', '🥵', '😎',
+  '🤓', '🥳', '🤬', '🤮', '🤢', '🤧', '😇', '🤫', '🤭', '🥱',
+  '🤌', '🫶', '🤝', '🤘', '🤙', '🖐️', '👊', '🙏', '🏆', '🥇',
+  '🗣️', '🎙️', '🎤', '🎧', '📻', '🎸', '🥁', '🎭', '🎨', '🎬',
+  '🍿', '🍔', '🍕', '🍻', '🥂', '🍾', '🧊', '🧂', '🌶️', '🥩',
+  '🛑', '🚧', '🚨', '🧯', '🥊', '🥋', '🤺', '🏋️', '🤸', '✅'
 ];
 
 /** Bandeau mobile : 10 emojis scroll ; desktop : grille 2×5 + panneau 😀 pour le reste. */
@@ -3502,7 +3507,7 @@ export function TikTokStyleArena({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.98 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="pointer-events-auto w-[min(calc(100vw-1.5rem),220px)] rounded-2xl border border-white/12 bg-[#121215] p-3 pt-2 shadow-2xl backdrop-blur-xl"
+                className="pointer-events-auto max-h-[min(60dvh,380px)] w-[min(calc(100vw-1rem),340px)] overflow-y-auto overscroll-contain rounded-2xl border border-white/12 bg-[#121215] p-3 pt-2 shadow-2xl backdrop-blur-xl hide-scrollbar"
               >
                 <div className="mb-2 flex items-start justify-between gap-2 border-b border-white/[0.08] pb-2">
                   <p className="min-w-0 flex-1 pl-0.5 text-[11px] font-semibold leading-snug text-white/75">
@@ -3519,10 +3524,18 @@ export function TikTokStyleArena({
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
                   {[
-                    { emoji: '🌹', label: 'Rose', id: 'rose', cost: 10 },
-                    { emoji: '🔥', label: 'Fire', id: 'fire', cost: 25 },
-                    { emoji: '👑', label: 'Couronne', id: 'crown', cost: 100 },
-                    { emoji: '💎', label: 'Diamant', id: 'diamond', cost: 50 },
+                    { emoji: '🧂', label: 'Sel', id: 'salt', cost: 1 },
+                    { emoji: '🎤', label: 'Mic Drop', id: 'mic_drop', cost: 5 },
+                    { emoji: '🌶️', label: 'Spicy', id: 'spicy', cost: 10 },
+                    { emoji: '🧠', label: 'Big Brain', id: 'big_brain', cost: 25 },
+                    { emoji: '⚡', label: 'Foudre', id: 'lightning', cost: 50 },
+                    { emoji: '🥊', label: 'K.O.', id: 'ko', cost: 99 },
+                    { emoji: '💣', label: 'Banger', id: 'banger', cost: 199 },
+                    { emoji: '🐺', label: 'Loup', id: 'wolf', cost: 500 },
+                    { emoji: '☄️', label: 'Météore', id: 'meteor', cost: 1000 },
+                    { emoji: '🌋', label: 'Éruption', id: 'volcano', cost: 2500 },
+                    { emoji: '🏆', label: 'Champion', id: 'champion', cost: 5000 },
+                    { emoji: '🐐', label: 'G.O.A.T', id: 'goat', cost: 10000 },
                   ].map((gift) => (
                     <button
                       key={gift.label}
@@ -3530,18 +3543,12 @@ export function TikTokStyleArena({
                       onClick={async () => {
                         if (userPoints < gift.cost) {
                           toast(`Points insuffisants — il te manque ${gift.cost - userPoints} pts (solde ${userPoints})`, 'error', {
-                            action: {
-                              label: 'Recharger',
-                              onClick: () => goBuyPoints(),
-                            },
+                            action: { label: 'Recharger', onClick: () => goBuyPoints() },
                           });
                           return;
                         }
-
                         try {
-                          const {
-                            data: { session },
-                          } = await supabase.auth.getSession();
+                          const { data: { session } } = await supabase.auth.getSession();
                           const res = await fetch('/api/gifts/send', {
                             method: 'POST',
                             headers: {
@@ -3574,7 +3581,7 @@ export function TikTokStyleArena({
                         }
                         setShowGiftPicker(false);
                       }}
-                      className="flex touch-manipulation flex-col items-center gap-1 rounded-2xl bg-white/5 p-2 transition-transform active:scale-[0.98] hover:bg-white/12"
+                      className="flex flex-col items-center gap-1 rounded-2xl bg-white/5 p-2 hover:bg-white/12 active:scale-95"
                     >
                       <span className="text-2xl">{gift.emoji}</span>
                       <span className="text-[10px] font-bold text-white">{gift.label}</span>
