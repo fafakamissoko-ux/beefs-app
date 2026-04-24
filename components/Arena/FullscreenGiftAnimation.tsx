@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { REALTIME_LISTEN_TYPES } from '@supabase/realtime-js';
 import { supabase } from '@/lib/supabase/client';
 
 const BIG_GIFT_MIN = 500;
@@ -207,10 +208,9 @@ export function FullscreenGiftAnimation({ roomId, localBigGift }: Props) {
     if (!roomId) return;
     const ch = supabase
       .channel(`live_${roomId}`, { config: { broadcast: { self: false } } })
-      // Enveloppe Realtime (type+event+payload) : ne pas restreindre le 1er arg du callback,
-      // sinon TS 5.x choisit l'overload `on('system', …)` (erreur: 'broadcast' vs 'system').
-      .on('broadcast', { event: 'arena_big_gift' }, (envelope) => {
-        const payload = (envelope as { payload?: ArenaBigGiftPayload }).payload;
+      // Enum + callback `any` : évite que TS prenne l'overload `system` (Vercel / TS strict)
+      .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: 'arena_big_gift' }, (msg: any) => {
+        const payload = msg?.payload as ArenaBigGiftPayload | undefined;
         if (!payload || typeof payload.cost !== 'number' || payload.cost < BIG_GIFT_MIN) return;
         const p = payload;
         if (!p.label || !p.emoji || !p.senderName) return;
