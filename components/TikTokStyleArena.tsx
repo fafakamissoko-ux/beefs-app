@@ -3002,28 +3002,8 @@ export function TikTokStyleArena({
 
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
-  const announcementUI = (
-    <AnimatePresence>
-      {arenaHasAnnouncement && (
-        <motion.div
-          initial={{ y: -100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -100, opacity: 0 }}
-          className="absolute top-16 inset-x-0 z-[250] flex justify-center px-4 pointer-events-none"
-        >
-          <div className="bg-amber-500/90 backdrop-blur-md px-6 py-2 rounded-full shadow-2xl border border-white/20 max-w-2xl">
-            <p className="text-black font-black text-xs sm:text-sm uppercase tracking-wider text-center">
-              {announcementTicker}
-            </p>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-
   return (
     <div className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row">
-      {announcementUI}
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -3315,9 +3295,29 @@ export function TikTokStyleArena({
         {/* HEADER GLOBAL FLOTTANT */}
         <div className="absolute top-0 inset-x-0 z-[200] p-4 flex justify-between items-start pointer-events-none">
           {!beefEnded && !isLeaving && (
-            <button onClick={handleLeave} className="lg:hidden pointer-events-auto flex h-8 items-center gap-1 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur-sm">← <span className="hidden sm:inline">Quitter</span></button>
+            <button onClick={handleLeave} className="lg:hidden pointer-events-auto flex h-8 items-center gap-1 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur-sm shrink-0">← <span className="hidden sm:inline">Quitter</span></button>
           )}
-          <div className="flex flex-col items-end gap-2 pointer-events-auto ml-auto">
+          
+          <AnimatePresence>
+            {arenaHasAnnouncement && (
+              <motion.div
+                initial={{ y: -50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -50, opacity: 0 }}
+                className="flex-1 mx-2 sm:mx-4 overflow-hidden pointer-events-none flex items-center h-8"
+              >
+                <div className="w-full bg-amber-500/95 backdrop-blur-md rounded-full shadow-lg border border-white/20 overflow-hidden flex items-center h-full">
+                  <div className="whitespace-nowrap animate-[marquee_15s_linear_infinite] px-4 flex items-center">
+                    <p className="text-black font-black text-[10px] sm:text-[11px] uppercase tracking-wider inline-block">
+                      {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex flex-col items-end gap-2 pointer-events-auto ml-auto shrink-0">
             <div className="flex items-center gap-2">
               <div className={`flex items-center rounded-full bg-black/40 backdrop-blur-sm px-2 py-1`}>
                 <div className={`mr-1.5 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}`} />
@@ -3889,6 +3889,10 @@ export function TikTokStyleArena({
         .hide-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+        @keyframes marquee {
+          0% { transform: translateX(20%); }
+          100% { transform: translateX(-100%); }
         }
       `}</style>
       {typeof document !== 'undefined' &&

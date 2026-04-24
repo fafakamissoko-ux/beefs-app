@@ -335,84 +335,6 @@ export function MediatorSidebar({
               {/* ═══ TILE GRID ═══ */}
               <div className="grid grid-cols-2 gap-2.5">
 
-                {/* ── ANNONCE (ticker) — avant Verdict pour visibilité immédiate ── */}
-                <button
-                  type="button"
-                  onClick={() => setAnnounceEditorOpen((v) => !v)}
-                  className={`${TILE} ${announceEditorOpen ? 'border-amber-400/35 bg-amber-500/10' : ''}`}
-                >
-                  <Megaphone className={`${TILE_ICON} text-amber-300`} strokeWidth={1.2} />
-                  <span className={`${TILE_LABEL} text-amber-100`}>Annonce</span>
-                </button>
-
-                {/* Éditeur d’annonce : juste sous la tuile Annonce */}
-                <AnimatePresence initial={false}>
-                  {announceEditorOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-                      className="col-span-2 overflow-hidden"
-                    >
-                      <div className="rounded-[2.5rem] border border-white/12 bg-black/45 p-3 backdrop-blur-xl">
-                        <label htmlFor="mediator-announce-input" className="sr-only">
-                          Texte de l&apos;annonce
-                        </label>
-                        <textarea
-                          id="mediator-announce-input"
-                          value={announceDraft}
-                          onChange={(e) => setAnnounceDraft(e.target.value)}
-                          rows={2}
-                          placeholder="Message du bandeau…"
-                          className="mb-2 w-full resize-none rounded-3xl border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white placeholder-white/35 focus:border-amber-400/40 focus:outline-none"
-                        />
-                        <p className="mb-1.5 font-mono text-[8px] font-bold uppercase tracking-wider text-white/40">
-                          Durée d&apos;affichage
-                        </p>
-                        <div className="mb-3 flex flex-wrap gap-1.5">
-                          {([5, 10, 15, 30, 60] as const).map((sec) => (
-                            <button
-                              key={sec}
-                              type="button"
-                              onClick={() => setAnnounceDurationSec(sec)}
-                              className={`rounded-full px-2.5 py-1 font-mono text-[8px] font-black uppercase tracking-wide ${
-                                announceDurationSec === sec
-                                  ? 'bg-amber-500/40 text-amber-50'
-                                  : 'border border-white/12 bg-white/5 text-white/65 hover:bg-white/10'
-                              }`}
-                            >
-                              {sec}s
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onPublishAnnouncement(announceDraft.trim(), announceDurationSec);
-                              setAnnounceEditorOpen(false);
-                            }}
-                            className="rounded-full border border-amber-500/50 bg-amber-500/20 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-amber-50 hover:bg-amber-500/35"
-                          >
-                            Publier
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onClearAnnouncement();
-                              setAnnounceDraft('');
-                            }}
-                            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-white/75 hover:bg-white/10"
-                          >
-                            Effacer bannière
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
                 {/* ── VERDICT (col-span-2) ── */}
                 <button
                   type="button"
@@ -586,6 +508,82 @@ export function MediatorSidebar({
                   <Octagon className={`${TILE_ICON} text-red-500`} strokeWidth={1.2} />
                   <span className={`${TILE_LABEL} text-red-300`}>Fin</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAnnounceEditorOpen((v) => !v)}
+                  className={`${TILE} ${announceEditorOpen ? 'border-amber-400/35 bg-amber-500/10' : ''}`}
+                >
+                  <Megaphone className={`${TILE_ICON} text-amber-300`} strokeWidth={1.2} />
+                  <span className={`${TILE_LABEL} text-amber-100`}>Annonce</span>
+                </button>
+
+                <AnimatePresence initial={false}>
+                  {announceEditorOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                      className="col-span-2 overflow-hidden"
+                    >
+                      <div className="mt-2 rounded-[2.5rem] border border-white/12 bg-black/45 p-3 backdrop-blur-xl">
+                        <label htmlFor="mediator-announce-input" className="sr-only">
+                          Texte de l&apos;annonce
+                        </label>
+                        <textarea
+                          id="mediator-announce-input"
+                          value={announceDraft}
+                          onChange={(e) => setAnnounceDraft(e.target.value)}
+                          rows={2}
+                          placeholder="Message du bandeau…"
+                          className="mb-2 w-full resize-none rounded-3xl border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white placeholder-white/35 focus:border-amber-400/40 focus:outline-none"
+                        />
+                        <p className="mb-1.5 font-mono text-[8px] font-bold uppercase tracking-wider text-white/40">
+                          Durée d&apos;affichage
+                        </p>
+                        <div className="mb-3 flex flex-wrap gap-1.5">
+                          {([5, 10, 15, 30, 60] as const).map((sec) => (
+                            <button
+                              key={sec}
+                              type="button"
+                              onClick={() => setAnnounceDurationSec(sec)}
+                              className={`rounded-full px-2.5 py-1 font-mono text-[8px] font-black uppercase tracking-wide ${
+                                announceDurationSec === sec
+                                  ? 'bg-amber-500/40 text-amber-50'
+                                  : 'border border-white/12 bg-white/5 text-white/65 hover:bg-white/10'
+                              }`}
+                            >
+                              {sec}s
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onPublishAnnouncement(announceDraft.trim(), announceDurationSec);
+                              setAnnounceEditorOpen(false);
+                            }}
+                            className="rounded-full border border-amber-500/50 bg-amber-500/20 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-amber-50 hover:bg-amber-500/35"
+                          >
+                            Publier
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onClearAnnouncement();
+                              setAnnounceDraft('');
+                            }}
+                            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-white/75 hover:bg-white/10"
+                          >
+                            Effacer bannière
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Soundboard expanded */}
