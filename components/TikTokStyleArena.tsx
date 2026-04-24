@@ -334,8 +334,9 @@ export function TikTokStyleArena({
       setDockPickerPos(null);
       return;
     }
-    const el = reactionDockRef.current;
-    if (!el) return;
+      let el = document.getElementById('dock-desktop');
+      if (!el || el.clientWidth === 0) el = document.getElementById('dock-mobile');
+      if (!el) return;
     const r = el.getBoundingClientRect();
     if (r.width < 4 && r.height < 4) return;
     setDockPickerPos({
@@ -3267,7 +3268,7 @@ export function TikTokStyleArena({
             <div ref={chatMessagesEndRef} className="h-px w-full" />
           </div>
 
-          <div ref={(el) => { if (el && el.clientWidth > 0) reactionDockRef.current = el; }} className="mt-auto flex w-full shrink-0 items-center gap-2 p-3 border-t border-white/10 bg-black/40">
+          <div id="dock-desktop" className="mt-auto flex w-full shrink-0 items-center gap-2 p-3 border-t border-white/10 bg-black/40">
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full bg-white/10 px-4 py-2 text-[13px] text-white focus:outline-none" />
             <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg">😀</button>
             <button onClick={() => { setShowAllReactions(false); setShowGiftPicker(!showGiftPicker); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400"><Gift className="h-4 w-4 text-white" /></button>
@@ -3305,13 +3306,14 @@ export function TikTokStyleArena({
 
           {/* DALLE GAUCHE */}
           <div className="relative flex-1 min-w-0 h-full lg:border-r-2 lg:border-black overflow-hidden bg-[#08080a]">
+            <motion.div aria-hidden className="pointer-events-none absolute inset-0 z-10" animate={{ boxShadow: auraA > 0 ? `inset 0 0 ${30 + auraA}px rgba(59,130,246,${Math.min(1, 0.3 + auraA / 100)})` : 'none' }} transition={{ type: 'tween', duration: 0.35 }} />
             <AnimatePresence mode="wait">
               <motion.div key={leftPanel?.sessionId || 'empty'} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 {leftPanel?.videoTrack ? <ParticipantVideo videoTrack={leftPanel.videoTrack} muted={leftPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
               </motion.div>
             </AnimatePresence>
             {!leftPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('A'); preferSide('A'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir A" />}
-            <div className="absolute left-3 max-lg:bottom-[35vh] bottom-6 z-[140] flex flex-col items-start gap-1 pointer-events-auto">
+            <div className="absolute left-3 max-lg:top-[4.5rem] max-lg:bottom-auto bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
               {leftPanelIsLocal && !isViewer && (
                 <div className="flex gap-2 mb-1">
                   <button onClick={toggleMic} className={`flex h-8 w-8 rounded-full items-center justify-center ${micEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}><Mic className="h-4 w-4" /></button>
@@ -3324,13 +3326,14 @@ export function TikTokStyleArena({
 
           {/* DALLE DROITE */}
           <div className="relative flex-1 min-w-0 h-full bg-[#08080a] overflow-hidden">
+            <motion.div aria-hidden className="pointer-events-none absolute inset-0 z-10" animate={{ boxShadow: auraB > 0 ? `inset 0 0 ${30 + auraB}px rgba(16,185,129,${Math.min(1, 0.3 + auraB / 100)})` : 'none' }} transition={{ type: 'tween', duration: 0.35 }} />
             <AnimatePresence mode="wait">
               <motion.div key={rightPanel?.sessionId || 'empty'} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 {rightPanel?.videoTrack ? <ParticipantVideo videoTrack={rightPanel.videoTrack} muted={rightPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
               </motion.div>
             </AnimatePresence>
             {!rightPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('B'); preferSide('B'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir B" />}
-            <div className="absolute left-3 max-lg:bottom-[35vh] bottom-6 z-[140] flex flex-col items-start gap-1 pointer-events-auto">
+            <div className="absolute left-3 max-lg:top-[4.5rem] max-lg:bottom-auto bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
               {rightPanelIsLocal && !isViewer && (
                 <div className="flex gap-2 mb-1">
                   <button onClick={toggleMic} className={`flex h-8 w-8 rounded-full items-center justify-center ${micEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}><Mic className="h-4 w-4" /></button>
@@ -3344,9 +3347,11 @@ export function TikTokStyleArena({
 
         {/* MÉDIATEUR AU CENTRE */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[150] flex flex-col items-center gap-1 pointer-events-none">
-          <button onClick={() => openProfile(mediatorName, host.id)} className="pointer-events-auto flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full border-[3px] border-amber-400 bg-black overflow-hidden active:scale-95">
-            {mediatorParticipant?.videoTrack ? <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="w-full h-full object-cover" /> : <span className="text-5xl text-white/30 m-auto">👤</span>}
-          </button>
+          <motion.div animate={{ boxShadow: auraMed > 0 ? `0 0 ${40 + auraMed * 2}px rgba(251,191,36,${Math.min(1, 0.4 + auraMed / 100)})` : 'none' }} className="rounded-full">
+            <button onClick={() => openProfile(mediatorName, host.id)} className="pointer-events-auto flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full border-[3px] border-amber-400 bg-black overflow-hidden active:scale-95">
+              {mediatorParticipant?.videoTrack ? <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="w-full h-full object-cover" /> : <span className="text-5xl text-white/30 m-auto">👤</span>}
+            </button>
+          </motion.div>
           <div className="pointer-events-auto rounded-full bg-black/80 px-3 py-1 mt-1"><span className="text-[11px] font-bold text-white">{mediatorName}</span></div>
         </div>
 
@@ -3361,7 +3366,7 @@ export function TikTokStyleArena({
             ))}
             <div ref={chatMessagesScrollRef} />
           </div>
-          <div ref={(el) => { if (el && el.clientWidth > 0) reactionDockRef.current = el; }} className="pointer-events-auto flex w-full items-center gap-2 px-3 mt-auto shrink-0">
+          <div id="dock-mobile" className="pointer-events-auto flex w-full items-center gap-2 px-3 pb-2 mt-auto shrink-0">
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} className="flex-1 min-w-0 rounded-full bg-white/15 px-4 py-2 text-[13px] text-white focus:outline-none" placeholder="Message..." />
             <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg">😀</button>
             <button onClick={() => { setShowAllReactions(false); setShowGiftPicker(!showGiftPicker); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400"><Gift className="h-4 w-4 text-white" /></button>
@@ -3375,7 +3380,7 @@ export function TikTokStyleArena({
         </div>
       </div>
 
-      {isHost && (
+      {isHost && typeof document !== 'undefined' && createPortal(
         <MediatorSidebar
           open={mediatorSidebarOpen}
           onClose={() => setMediatorSidebarOpen(false)}
@@ -3433,7 +3438,8 @@ export function TikTokStyleArena({
           onInviteParticipant={handleInviteFromModal}
           inviteExcludeParticipantIds={inviteExcludeParticipantIds}
           inviteCurrentUserId={userId}
-        />
+        />,
+        document.body
       )}
 
       {dockPickersMounted &&
