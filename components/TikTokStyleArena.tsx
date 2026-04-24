@@ -3232,433 +3232,148 @@ export function TikTokStyleArena({
         </motion.div>
       )}
 
-      {/* CALQUE 2 — chat & réactions. DOM order (Architecte final) : aside AVANT la zone vidéo,
-          avec root en `lg:flex-row` naturel (pas de flex-row-reverse). Le chat est à gauche physiquement.
-          Mobile : l'aside devient overlay absolu bottom (max-lg:absolute), le flux flex-col laisse 100% à la vidéo. */}
-      <aside className="relative flex min-h-0 w-full flex-col pointer-events-none max-lg:absolute max-lg:inset-x-0 max-lg:bottom-0 max-lg:top-[50%] max-lg:z-[150] max-lg:w-full max-lg:justify-end landscape:max-lg:top-auto landscape:max-lg:bottom-0 landscape:max-lg:h-[120px] lg:pointer-events-auto lg:w-[350px] lg:min-w-[350px] lg:shrink-0 lg:h-full lg:border-r lg:border-white/10 lg:bg-[#0c0c0f] lg:z-[100]">
-      {/* Header du chat — desktop only — burger menu (nav) + live badge.
-          Remplace la Navbar globale cachée en mode immersif /arena/*. */}
-      <header className="relative z-30 hidden shrink-0 items-center gap-3 border-b border-white/10 px-4 py-3 lg:flex">
-        <button
-          type="button"
-          onClick={() => setShowArenaMenu((v) => !v)}
-          aria-label={showArenaMenu ? 'Fermer le menu' : 'Ouvrir le menu de navigation'}
-          aria-expanded={showArenaMenu}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"
-        >
-          <Menu className="h-5 w-5" strokeWidth={1.5} aria-hidden />
-        </button>
-
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <div
-            className={`flex items-center rounded-full px-2 py-0.5 ${
-              liveBadgeHot
-                ? 'animate-pulse bg-red-600 shadow-[0_4px_20px_rgba(220,38,38,0.45)]'
-                : 'bg-white/10'
-            }`}
-          >
-            <div
-              className={`mr-1 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-white' : 'bg-amber-300'}`}
-            />
-            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-white">LIVE</span>
-          </div>
-          <span className="min-w-0 truncate text-xs font-semibold text-white/80">Chat en direct</span>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setShowViewerList(true)}
-          aria-label="Spectateurs"
-          className="flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-white/80 transition-colors hover:bg-white/10"
-        >
-          <Eye className="h-3.5 w-3.5" strokeWidth={1.2} aria-hidden />
-          <span className="min-w-[1ch] font-mono text-[11px] font-medium tabular-nums">
-            {liveViewerCount > 0 ? liveViewerCount : '—'}
-          </span>
-        </button>
-
-        {showArenaMenu && (
-          <div
-            className="absolute left-4 top-full z-[200] mt-2 flex w-48 flex-col rounded-xl border border-white/10 bg-[#121215] py-2 shadow-2xl"
-            onClick={() => setShowArenaMenu(false)}
-          >
-            <button
-              type="button"
-              onClick={() => router.push('/feed')}
-              className="px-4 py-2 text-left text-sm text-white transition-colors hover:bg-white/10"
-            >
-              🏠 Retour au Feed
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push('/messages')}
-              className="px-4 py-2 text-left text-sm text-white transition-colors hover:bg-white/10"
-            >
-              💬 Messages
-            </button>
-            <div className="my-1 h-px w-full bg-white/10" />
-            <button
-              type="button"
-              onClick={handleLeave}
-              className="px-4 py-2 text-left text-sm text-red-400 transition-colors hover:bg-white/10"
-            >
-              🚪 Quitter l&apos;Arène
-            </button>
-          </div>
-        )}
-      </header>
-      {!beefEnded && (
-        <div className="pointer-events-none flex min-h-0 w-full flex-1 flex-col justify-end overflow-visible lg:px-2">
-        <div className="pointer-events-none mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-visible lg:max-w-none">
-        <div className="pointer-events-none flex min-h-0 flex-1 flex-col overflow-visible bg-gradient-to-t from-black/95 via-black/70 to-transparent max-lg:gap-1 lg:px-4 lg:pt-3 pt-12 pb-[max(0.5rem,env(safe-area-inset-bottom))] max-lg:landscape:bg-none">
-          <div
-            className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden"
-            aria-live="polite"
-          >
-          {/* Zone messages — respire (Architecte #3) :
-              mobile : w-[85%] max-h-[40vh] overflow-y-auto, juste au-dessus de la barre.
-              desktop : largeur complète, fade-top via mask-image pour l'effet TikTok Live. */}
-          <div
-            ref={chatMessagesScrollRef}
-            className="pointer-events-auto flex min-h-0 min-w-0 flex-1 flex-col justify-end overflow-y-auto overflow-x-hidden px-2 py-1.5 sm:px-4 sm:py-2 hide-scrollbar max-lg:w-[85%] max-lg:max-h-[40vh] lg:w-full lg:[mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,transparent_0%,rgba(0,0,0,0.5)_12%,#000_28%)]"
-          >
-            {visibleMessages.map((message) => {
-              const canDelete =
-                isUuid(message.id) && (message.user_name === userName || isHost);
-              const clearLongPress = () => {
-                if (longPressTimerRef.current) {
-                  clearTimeout(longPressTimerRef.current);
-                  longPressTimerRef.current = null;
-                }
-              };
-              return (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="relative mb-3 flex max-w-full flex-col"
-                >
-                  <div className="mb-1 flex items-baseline gap-2 pl-1">
-                    <ProfileUserLink
-                      username={message.user_name}
-                      onArenaProfileClick={(q) => void openProfile(q, undefined)}
-                      className="text-[10px] font-bold uppercase tracking-wider text-white/50"
-                    >
-                      {message.user_name}
-                    </ProfileUserLink>
-                  </div>
-                  <div
-                    className={`relative inline-block max-w-[min(100%,28rem)] self-start rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-2 text-sm leading-relaxed text-white/90 shadow-[0_4px_30px_rgba(0,0,0,0.1)] backdrop-blur-md ${
-                      canDelete ? 'cursor-context-menu touch-manipulation' : ''
-                    }`}
-                    onContextMenu={
-                      canDelete
-                        ? (e) => {
-                            e.preventDefault();
-                            setContextMenuMsg(message.id);
-                          }
-                        : undefined
-                    }
-                    onTouchStart={
-                      canDelete
-                        ? () => {
-                            clearLongPress();
-                            longPressTimerRef.current = setTimeout(() => {
-                              longPressTimerRef.current = null;
-                              setContextMenuMsg(message.id);
-                            }, 550);
-                          }
-                        : undefined
-                    }
-                    onTouchEnd={canDelete ? clearLongPress : undefined}
-                    onTouchMove={canDelete ? clearLongPress : undefined}
-                  >
-                    <span className="break-words">{message.content}</span>
-                    {contextMenuMsg === message.id && (
-                      <div
-                        className="absolute bottom-full left-0 z-[50] mb-1 min-w-[8rem] rounded-2xl border border-white/15 bg-black/95 py-1 shadow-xl backdrop-blur-md"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          className="w-full px-3 py-2 text-left text-sm text-red-300 hover:bg-white/10"
-                          onClick={() => handleDeleteMessage(message.id)}
-                        >
-                          Supprimer
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-            <div ref={chatMessagesEndRef} className="h-px w-full shrink-0 scroll-mt-1" aria-hidden />
-          </div>
-
-          {/* Barre d'action unifiée (mobile + desktop) — pattern strict Architecte :
-              [ Input (flex-1) ] [ 😀 Emojis ] [ 🎁 Cadeaux ] [ ➤ Envoyer ]
-              Pas de cœur enflammé, pas de grille de quick reactions, pas de ✋. */}
-          <div
-            ref={reactionDockRef}
-            className="pointer-events-auto mt-auto flex w-full shrink-0 flex-row items-center gap-2 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 lg:border-t lg:border-white/10 lg:bg-black/40 lg:p-3"
-          >
-            <div className="flex-1 min-w-0">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    void handleSendMessage();
-                  }
-                }}
-                placeholder="Ajouter un commentaire..."
-                aria-label="Message dans le chat du direct"
-                autoComplete="off"
-                enterKeyHint="send"
-                className="w-full rounded-full bg-white/10 px-4 py-2 text-[13px] text-white placeholder-white/50 backdrop-blur-md focus:outline-none focus:ring-1 focus:ring-white/30"
-              />
+      {/* === ASIDE CHAT (DESKTOP SEULEMENT) === */}
+      <aside className="hidden lg:flex relative min-h-0 w-[350px] min-w-[350px] shrink-0 h-full flex-col border-r border-white/10 bg-[#0c0c0f] z-[100]">
+        <header className="relative z-30 shrink-0 flex items-center gap-3 border-b border-white/10 px-4 py-3">
+          <button type="button" onClick={() => setShowArenaMenu(v => !v)} className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"><Menu className="h-5 w-5" strokeWidth={1.5} /></button>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className={`flex items-center rounded-full px-2 py-0.5 ${liveBadgeHot ? 'animate-pulse bg-red-600 shadow-glow' : 'bg-white/10'}`}>
+              <div className={`mr-1 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-white' : 'bg-amber-300'}`} />
+              <span className="font-mono text-[10px] font-bold uppercase text-white">LIVE</span>
             </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowGiftPicker(false);
-                  setShowAllReactions((v) => !v);
-                }}
-                aria-label={showAllReactions ? 'Fermer le panneau de réactions' : 'Ouvrir les réactions emoji'}
-                aria-expanded={showAllReactions}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg transition-colors hover:bg-white/20"
-              >
-                <span aria-hidden>😀</span>
-              </button>
-              <div className="relative flex shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAllReactions(false);
-                    setShowGiftPicker((v) => !v);
-                  }}
-                  aria-label={showGiftPicker ? 'Fermer les cadeaux' : 'Ouvrir les cadeaux'}
-                  aria-expanded={showGiftPicker}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400 text-sm shadow-lg transition-transform active:scale-95"
-                >
-                  <Gift className="h-4 w-4 text-white" aria-hidden />
-                </button>
-                <FeatureGuide
-                  id="arena-gift"
-                  title="Envoyer un cadeau"
-                  description="Soutiens le médiateur avec des points ! Les cadeaux s'affichent en live."
-                  position="top"
-                  align="end"
-                  suppress={featureGuideSuppress}
-                />
+            <span className="min-w-0 truncate text-xs font-semibold text-white/80">Chat</span>
+          </div>
+          <button type="button" onClick={() => setShowViewerList(true)} className="flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-white/80 hover:bg-white/10">
+            <Eye className="h-3.5 w-3.5" strokeWidth={1.2} />
+            <span className="font-mono text-[11px] font-medium">{liveViewerCount > 0 ? liveViewerCount : '—'}</span>
+          </button>
+          {showArenaMenu && (
+            <div className="absolute left-4 top-full z-[200] mt-2 flex w-48 flex-col rounded-xl border border-white/10 bg-[#121215] py-2 shadow-2xl" onClick={() => setShowArenaMenu(false)}>
+              <button type="button" onClick={() => router.push('/feed')} className="px-4 py-2 text-left text-sm text-white hover:bg-white/10">🏠 Retour au Feed</button>
+              <button type="button" onClick={() => router.push('/messages')} className="px-4 py-2 text-left text-sm text-white hover:bg-white/10">💬 Messages</button>
+              <div className="my-1 h-px w-full bg-white/10" />
+              <button type="button" onClick={handleLeave} className="px-4 py-2 text-left text-sm text-red-400 hover:bg-white/10">🚪 Quitter</button>
+            </div>
+          )}
+        </header>
+        <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+          <div ref={chatMessagesScrollRef} className="flex-1 overflow-y-auto px-4 py-2 hide-scrollbar">
+            {visibleMessages.map((msg) => (
+              <div key={msg.id} className="mb-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/50 mr-2">{msg.user_name}</span>
+                <div className="inline-block rounded-2xl rounded-tl-sm border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/90">{msg.content}</div>
               </div>
-              <button
-                type="button"
-                disabled={!chatInput.trim()}
-                onClick={() => void handleSendMessage()}
-                aria-label="Envoyer le message"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 transition-colors hover:bg-brand-600 disabled:pointer-events-none disabled:opacity-35"
-              >
-                <Send className="h-4 w-4 text-white" aria-hidden />
-              </button>
-            </div>
+            ))}
+            <div ref={chatMessagesEndRef} className="h-px w-full" />
           </div>
-          </div>
-        </div>
-        </div>
-        </div>
-      )}
 
+          <div ref={(el) => { if (el && el.clientWidth > 0) reactionDockRef.current = el; }} className="mt-auto flex w-full shrink-0 items-center gap-2 p-3 border-t border-white/10 bg-black/40">
+            <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full bg-white/10 px-4 py-2 text-[13px] text-white focus:outline-none" />
+            <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg">😀</button>
+            <button onClick={() => { setShowAllReactions(false); setShowGiftPicker(!showGiftPicker); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400"><Gift className="h-4 w-4 text-white" /></button>
+            <button onClick={() => void handleSendMessage()} disabled={!chatInput.trim()} className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 disabled:opacity-35"><Send className="h-4 w-4 text-white" /></button>
+          </div>
+        </div>
       </aside>
 
-      {/* Zone vidéo (flex-1, naturellement à droite du chat grâce à l'ordre DOM). */}
+      {/* === ZONE 2 : LA VIDÉO (AVEC OVERLAY CHAT MOBILE) === */}
       <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-black z-10">
 
-        {/* 1. HEADER GLOBAL FLOTTANT (Minimaliste, superposé) */}
+        {/* HEADER GLOBAL FLOTTANT */}
         <div className="absolute top-0 inset-x-0 z-[200] p-4 flex justify-between items-start pointer-events-none">
           {!beefEnded && !isLeaving && (
-            <button onClick={handleLeave} className="lg:hidden pointer-events-auto flex h-8 items-center gap-1.5 rounded-full bg-black/40 px-3 text-[13px] font-semibold text-white backdrop-blur-md transition-colors hover:bg-black/60">
-              <span aria-hidden>←</span> <span className="hidden sm:inline">Quitter</span>
-            </button>
+            <button onClick={handleLeave} className="lg:hidden pointer-events-auto flex h-8 items-center gap-1 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur-sm">← <span className="hidden sm:inline">Quitter</span></button>
           )}
-
           <div className="flex flex-col items-end gap-2 pointer-events-auto ml-auto">
             <div className="flex items-center gap-2">
-              <div className={`flex items-center rounded-full bg-black/40 backdrop-blur-md px-2.5 py-1 ${liveBadgeHot ? 'shadow-[0_0_15px_rgba(220,38,38,0.5)]' : ''}`}>
+              <div className={`flex items-center rounded-full bg-black/40 backdrop-blur-sm px-2 py-1`}>
                 <div className={`mr-1.5 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}`} />
-                <span className="font-mono text-[10px] font-black uppercase text-white">LIVE</span>
+                <span className="font-mono text-[10px] font-bold text-white">LIVE</span>
               </div>
-              <button onClick={() => setShowViewerList(true)} className="flex items-center gap-1 rounded-full bg-black/40 backdrop-blur-md px-2.5 py-1 transition-colors hover:bg-black/60">
-                <Eye className="h-3.5 w-3.5 text-white" />
-                <span className="font-mono text-[11px] font-bold text-white">{liveViewerCount > 0 ? liveViewerCount : '—'}</span>
-              </button>
-              <button onClick={onShare} className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-md transition-colors hover:bg-black/60">
-                <Share2 className="h-4 w-4 text-white" />
-              </button>
-              {isHost && (
-                <button onClick={() => setMediatorSidebarOpen(o => !o)} className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 backdrop-blur-md transition-colors hover:bg-black/60 text-amber-300">
-                  <Sliders className="h-4 w-4" />
-                </button>
-              )}
+              <button onClick={() => setShowViewerList(true)} className="flex items-center gap-1 rounded-full bg-black/40 px-2 py-1"><Eye className="h-3.5 w-3.5 text-white" /><span className="text-[10px] text-white">{liveViewerCount > 0 ? liveViewerCount : '—'}</span></button>
+              <button onClick={onShare} className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40"><Share2 className="h-3.5 w-3.5 text-white" /></button>
+              {isHost && <button onClick={() => setMediatorSidebarOpen(o => !o)} className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-amber-200"><Sliders className="h-3.5 w-3.5" /></button>}
             </div>
             {isJoined && timerActive && (
-              <div className="flex items-center gap-1.5 font-mono text-[13px] font-bold tabular-nums text-white bg-black/50 px-3 py-1 rounded-full backdrop-blur-md border border-white/10">
-                 {timerPaused ? <Pause className="h-3.5 w-3.5 text-amber-300" /> : <Timer className="h-3.5 w-3.5" />}
-                 <span className={timerPaused ? 'text-amber-300' : beefTimeRemaining <= 300 ? 'text-red-400' : 'text-white'}>
-                   {formatBeefTime(beefTimeRemaining)}
-                 </span>
-              </div>
-            )}
-            {arenaHasAnnouncement && (
-              <div className="rounded-full bg-black/70 px-3 py-1.5 backdrop-blur-md border border-white/10">
-                <p className="text-center font-mono text-[9px] font-bold uppercase tracking-widest text-white">
-                  {announcementTicker}
-                </p>
-              </div>
+              <div className="flex items-center gap-1 text-xs text-white bg-black/40 px-2 py-1 rounded-full">{timerPaused ? <Pause className="h-3 w-3 text-amber-200" /> : <Timer className="h-3 w-3" />}{formatBeefTime(beefTimeRemaining)}</div>
             )}
           </div>
         </div>
 
-        {/* 2. SPLIT SCREEN FULL-BLEED (Prend 100% de l'espace, séparation nette) */}
-        <motion.div aria-hidden className="pointer-events-none absolute inset-0 z-[11] mix-blend-screen" animate={{ boxShadow: globalHeatGlow, opacity: globalHeat > 0 ? Math.min(0.55, 0.1 + globalHeat / 140) : 0 }} transition={{ type: 'tween', duration: 0.45 }} />
+        {/* SPLIT SCREEN */}
+        <div className="absolute inset-0 flex flex-row items-stretch z-0">
 
-        <div className={`absolute inset-0 flex flex-row items-stretch z-0 transition-shadow duration-700 ${sponsorGlow}`}>
-
-          {/* --- DALLE GAUCHE (Challenger A) --- */}
+          {/* DALLE GAUCHE */}
           <div className="relative flex-1 min-w-0 h-full lg:border-r-2 lg:border-black overflow-hidden bg-[#08080a]">
             <AnimatePresence mode="wait">
-              <motion.div key={leftPanel?.sessionId || 'empty-left'} className="absolute inset-0" initial={{ opacity: 0.88 }} animate={{ opacity: 1 }} exit={{ opacity: 0.75 }}>
-                {leftPanel?.videoTrack ? (
-                  <ParticipantVideo videoTrack={leftPanel.videoTrack} audioTrack={leftPanelIsLocal ? undefined : leftPanel.audioTrack} muted={leftPanelIsLocal ? true : leftRemoteAudioMuted} mirror={leftPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#08080A]">
-                    <motion.div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.12)_0%,transparent_60%)]" animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 4, repeat: Infinity }} />
-                    <span className="text-5xl opacity-30 relative z-10">👤</span>
-                    {!leftPanel && (
-                      <div className="relative z-10 mt-4 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
-                        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-cobalt-400" />
-                        <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-white/50">En attente</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+              <motion.div key={leftPanel?.sessionId || 'empty'} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {leftPanel?.videoTrack ? <ParticipantVideo videoTrack={leftPanel.videoTrack} muted={leftPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
               </motion.div>
             </AnimatePresence>
-
-            {leftNeonAudio && <div className="pointer-events-none absolute inset-0 z-[22] shadow-[inset_0_0_40px_rgba(0,240,255,0.3)] animate-pulse" />}
-            {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
-               <div className="pointer-events-none absolute inset-0 z-[23] shadow-[inset_0_0_50px_rgba(255,77,0,0.3)] bg-[radial-gradient(circle_at_50%_42%,rgba(255,77,0,0.15)_0%,transparent_70%)]" />
-            )}
-            {isViewer && (
-               <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('A'); preferSide('A'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label={`Soutenir ${leftPanelName}`} />
-            )}
-
-            {/* Contrôles minimalistes ancrés en bas à gauche */}
-            <div className="absolute left-3 max-lg:bottom-[46vh] bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
+            {!leftPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('A'); preferSide('A'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir A" />}
+            <div className="absolute left-3 max-lg:bottom-[35vh] bottom-6 z-[140] flex flex-col items-start gap-1 pointer-events-auto">
               {leftPanelIsLocal && !isViewer && (
                 <div className="flex gap-2 mb-1">
-                  <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
-                  <button onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Video className="h-4 w-4" /></button>
+                  <button onClick={toggleMic} className={`flex h-8 w-8 rounded-full items-center justify-center ${micEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}><Mic className="h-4 w-4" /></button>
+                  <button onClick={toggleCam} className={`flex h-8 w-8 rounded-full items-center justify-center ${camEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}><Video className="h-4 w-4" /></button>
                 </div>
               )}
-              <button onClick={(e) => { e.stopPropagation(); void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null); }} className="text-white text-[13px] font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight max-w-[140px] truncate">
-                @{leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
-              </button>
-              {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
-                <div className="rounded-full bg-red-600/90 px-2 py-0.5 text-[10px] font-black text-white shadow-lg animate-pulse mt-0.5 border border-white/20">
-                  {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                </div>
-              )}
+              <span className="text-white text-[13px] font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">@{leftPanelName}</span>
             </div>
           </div>
 
-          {/* --- DALLE DROITE (Challenger B) --- */}
-          <div className="relative flex-1 min-w-0 h-full bg-[#08080a] overflow-hidden lg:border-l-2 lg:border-black">
+          {/* DALLE DROITE */}
+          <div className="relative flex-1 min-w-0 h-full bg-[#08080a] overflow-hidden">
             <AnimatePresence mode="wait">
-              <motion.div key={rightPanel?.sessionId || 'empty-right'} className="absolute inset-0" initial={{ opacity: 0.88 }} animate={{ opacity: 1 }} exit={{ opacity: 0.75 }}>
-                {rightPanel?.videoTrack ? (
-                  <ParticipantVideo videoTrack={rightPanel.videoTrack} audioTrack={rightPanelIsLocal ? undefined : rightPanel.audioTrack} muted={rightPanelIsLocal ? true : rightRemoteAudioMuted} mirror={rightPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#08080A]">
-                    <motion.div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.12)_0%,transparent_60%)]" animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ duration: 4, repeat: Infinity }} />
-                    <span className="text-5xl opacity-30 relative z-10">👤</span>
-                    {!rightPanel && (
-                      <div className="relative z-10 mt-4 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
-                        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                        <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-white/50">En attente</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+              <motion.div key={rightPanel?.sessionId || 'empty'} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                {rightPanel?.videoTrack ? <ParticipantVideo videoTrack={rightPanel.videoTrack} muted={rightPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
               </motion.div>
             </AnimatePresence>
-
-            {rightNeonAudio && <div className="pointer-events-none absolute inset-0 z-[22] shadow-[inset_0_0_40px_rgba(16,185,129,0.3)] animate-pulse" />}
-            {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
-               <div className="pointer-events-none absolute inset-0 z-[23] shadow-[inset_0_0_50px_rgba(16,185,129,0.3)] bg-[radial-gradient(circle_at_50%_42%,rgba(16,185,129,0.15)_0%,transparent_70%)]" />
-            )}
-            {isViewer && (
-               <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('B'); preferSide('B'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label={`Soutenir ${rightPanelName}`} />
-            )}
-
-            {/* Contrôles minimalistes ancrés en bas à gauche */}
-            <div className="absolute left-3 max-lg:bottom-[46vh] bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
+            {!rightPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('B'); preferSide('B'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir B" />}
+            <div className="absolute left-3 max-lg:bottom-[35vh] bottom-6 z-[140] flex flex-col items-start gap-1 pointer-events-auto">
               {rightPanelIsLocal && !isViewer && (
                 <div className="flex gap-2 mb-1">
-                  <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
-                  <button onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Video className="h-4 w-4" /></button>
+                  <button onClick={toggleMic} className={`flex h-8 w-8 rounded-full items-center justify-center ${micEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}><Mic className="h-4 w-4" /></button>
+                  <button onClick={toggleCam} className={`flex h-8 w-8 rounded-full items-center justify-center ${camEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}><Video className="h-4 w-4" /></button>
                 </div>
               )}
-              <button onClick={(e) => { e.stopPropagation(); void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null); }} className="text-white text-[13px] font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight max-w-[140px] truncate">
-                @{rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
-              </button>
-              {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
-                <div className="rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-black text-white shadow-lg animate-pulse mt-0.5 border border-white/20">
-                  {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                </div>
-              )}
+              <span className="text-white text-[13px] font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">@{rightPanelName}</span>
             </div>
           </div>
         </div>
 
-        {/* 3. LE MÉDIATEUR (CENTRE ABSOLU) - Bulle majestueuse */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[150] flex flex-col items-center gap-2 pointer-events-none">
-          {showDebateTitle && (
-            <div className="rounded-full bg-black/80 px-4 py-1.5 mb-1 shadow-2xl backdrop-blur-md border border-white/15">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-amber-500 text-[11px] font-black uppercase tracking-wider">{debateTitle}</span>
-            </div>
-          )}
-          <button onClick={() => openProfile(mediatorName, host.id)} className={`pointer-events-auto flex h-28 w-28 sm:h-36 sm:w-36 lg:h-[190px] lg:w-[190px] shrink-0 items-center justify-center rounded-full border-[3px] border-amber-400 bg-[#08080a] shadow-[0_0_50px_rgba(251,191,36,0.3)] overflow-hidden transition-transform active:scale-95 ${mediatorNeonAudio ? 'shadow-[0_0_80px_rgba(251,191,36,0.6)] animate-pulse border-white' : ''}`}>
-            {mediatorParticipant?.videoTrack ? (
-              <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} audioTrack={mediatorIsLocal ? undefined : mediatorParticipant.audioTrack} muted={mediatorIsLocal} mirror={mediatorIsLocal} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-5xl text-white/30">👤</span>
-            )}
+        {/* MÉDIATEUR AU CENTRE */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[150] flex flex-col items-center gap-1 pointer-events-none">
+          <button onClick={() => openProfile(mediatorName, host.id)} className="pointer-events-auto flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full border-[3px] border-amber-400 bg-black overflow-hidden active:scale-95">
+            {mediatorParticipant?.videoTrack ? <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="w-full h-full object-cover" /> : <span className="text-5xl text-white/30 m-auto">👤</span>}
           </button>
-          <div className="pointer-events-auto rounded-full bg-black/80 px-3 py-1 backdrop-blur-md border border-white/10 mt-1 shadow-xl">
-            <span className="font-sans text-[11px] font-bold text-white truncate max-w-[130px] block text-center drop-shadow-md">
-              {mediatorName}
-            </span>
+          <div className="pointer-events-auto rounded-full bg-black/80 px-3 py-1 mt-1"><span className="text-[11px] font-bold text-white">{mediatorName}</span></div>
+        </div>
+
+        {/* OVERLAY CHAT MOBILE (Intégré à la vidéo, invisible sur PC) */}
+        <div className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end bg-gradient-to-t from-black via-black/80 to-transparent pt-24 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
+          <div className="pointer-events-auto w-[85%] max-h-[30vh] overflow-y-auto px-3 mb-2 flex flex-col justify-end hide-scrollbar">
+            {visibleMessages.map((msg) => (
+              <div key={msg.id} className="mb-2">
+                <span className="text-[11px] font-bold text-white/60 mr-2">{msg.user_name}</span>
+                <span className="text-[13px] text-white drop-shadow-md">{msg.content}</span>
+              </div>
+            ))}
+            <div ref={chatMessagesScrollRef} />
+          </div>
+          <div ref={(el) => { if (el && el.clientWidth > 0) reactionDockRef.current = el; }} className="pointer-events-auto flex w-full items-center gap-2 px-3 mt-auto shrink-0">
+            <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} className="flex-1 min-w-0 rounded-full bg-white/15 px-4 py-2 text-[13px] text-white focus:outline-none" placeholder="Message..." />
+            <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg">😀</button>
+            <button onClick={() => { setShowAllReactions(false); setShowGiftPicker(!showGiftPicker); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400"><Gift className="h-4 w-4 text-white" /></button>
+            <button onClick={() => void handleSendMessage()} disabled={!chatInput.trim()} className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 disabled:opacity-50"><Send className="h-4 w-4 text-white" /></button>
           </div>
         </div>
 
-        {/* 4. FLYING REACTIONS & INDICATORS */}
+        {/* REACTIONS VOLANTES */}
         <div className="pointer-events-none absolute inset-0 z-[160]">
           <FlyingReactionsLayer reactions={flyingReactions} onRemove={(id) => setFlyingReactions((p) => p.filter(r => r.id !== id))} />
-          {isJoining && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm pointer-events-auto">
-               <div className="flex items-center gap-3 rounded-full bg-black px-6 py-4 border border-white/10 shadow-2xl"><div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-400 border-t-transparent" /><span className="font-semibold text-white">Connexion sécurisée...</span></div>
-            </div>
-          )}
-          {callError && (
-            <div className="absolute left-1/2 top-20 -translate-x-1/2 rounded-full border border-red-500/50 bg-red-900/90 px-4 py-2 shadow-xl"><span className="text-sm font-semibold text-red-200">⚠️ {callError}</span></div>
-          )}
         </div>
-
+      </div>
 
       {isHost && (
         <MediatorSidebar
@@ -3720,8 +3435,6 @@ export function TikTokStyleArena({
           inviteCurrentUserId={userId}
         />
       )}
-
-      </div>
 
       {dockPickersMounted &&
         typeof document !== 'undefined' &&
