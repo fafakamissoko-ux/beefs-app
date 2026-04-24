@@ -3002,8 +3002,28 @@ export function TikTokStyleArena({
 
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
+  const announcementUI = (
+    <AnimatePresence>
+      {arenaHasAnnouncement && (
+        <motion.div
+          initial={{ y: -100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -100, opacity: 0 }}
+          className="absolute top-16 inset-x-0 z-[250] flex justify-center px-4 pointer-events-none"
+        >
+          <div className="bg-amber-500/90 backdrop-blur-md px-6 py-2 rounded-full shadow-2xl border border-white/20 max-w-2xl">
+            <p className="text-black font-black text-xs sm:text-sm uppercase tracking-wider text-center">
+              {announcementTicker}
+            </p>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
     <div className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row">
+      {announcementUI}
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">

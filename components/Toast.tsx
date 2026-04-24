@@ -78,7 +78,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast: addToast }}>
       {children}
-      <div className="fixed top-16 right-4 z-toast flex flex-col gap-2 pointer-events-none max-w-sm w-full">
+      <div className="fixed top-16 right-4 z-[99999] flex flex-col gap-2 pointer-events-none max-w-sm w-full">
         <AnimatePresence>
           {toasts.map(t => {
             const variant = t.tone === 'ember' ? emberVariant : toastVariants[t.type];
