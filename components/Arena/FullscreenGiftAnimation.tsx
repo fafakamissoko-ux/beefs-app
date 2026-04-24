@@ -207,7 +207,10 @@ export function FullscreenGiftAnimation({ roomId, localBigGift }: Props) {
     if (!roomId) return;
     const ch = supabase
       .channel(`live_${roomId}`, { config: { broadcast: { self: false } } })
-      .on('broadcast', { event: 'arena_big_gift' }, ({ payload }: { payload?: ArenaBigGiftPayload }) => {
+      // Enveloppe Realtime (type+event+payload) : ne pas restreindre le 1er arg du callback,
+      // sinon TS 5.x choisit l'overload `on('system', …)` (erreur: 'broadcast' vs 'system').
+      .on('broadcast', { event: 'arena_big_gift' }, (envelope) => {
+        const payload = (envelope as { payload?: ArenaBigGiftPayload }).payload;
         if (!payload || typeof payload.cost !== 'number' || payload.cost < BIG_GIFT_MIN) return;
         const p = payload;
         if (!p.label || !p.emoji || !p.senderName) return;
