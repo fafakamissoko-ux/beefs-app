@@ -3314,13 +3314,20 @@ export function TikTokStyleArena({
             </AnimatePresence>
             {!leftPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('A'); preferSide('A'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir A" />}
             <div className="absolute left-3 max-lg:top-[4.5rem] max-lg:bottom-auto bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
+              <button onClick={(e) => { e.stopPropagation(); void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null); }} className="text-white text-[13px] font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight max-w-[140px] truncate">
+                @{leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
+              </button>
               {leftPanelIsLocal && !isViewer && (
-                <div className="flex gap-2 mb-1">
-                  <button onClick={toggleMic} className={`flex h-8 w-8 rounded-full items-center justify-center ${micEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}><Mic className="h-4 w-4" /></button>
-                  <button onClick={toggleCam} className={`flex h-8 w-8 rounded-full items-center justify-center ${camEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}><Video className="h-4 w-4" /></button>
+                <div className="flex gap-2 mt-0.5">
+                  <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Video className="h-4 w-4" /></button>
                 </div>
               )}
-              <span className="text-white text-[13px] font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">@{leftPanelName}</span>
+              {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
+                <div className="rounded-full bg-red-600/90 px-2 py-0.5 text-[10px] font-black text-white shadow-lg animate-pulse border border-white/20">
+                  {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                </div>
+              )}
             </div>
           </div>
 
@@ -3334,25 +3341,32 @@ export function TikTokStyleArena({
             </AnimatePresence>
             {!rightPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('B'); preferSide('B'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir B" />}
             <div className="absolute left-3 max-lg:top-[4.5rem] max-lg:bottom-auto bottom-6 z-[140] flex flex-col items-start gap-1.5 pointer-events-auto">
+              <button onClick={(e) => { e.stopPropagation(); void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null); }} className="text-white text-[13px] font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight max-w-[140px] truncate">
+                @{rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
+              </button>
               {rightPanelIsLocal && !isViewer && (
-                <div className="flex gap-2 mb-1">
-                  <button onClick={toggleMic} className={`flex h-8 w-8 rounded-full items-center justify-center ${micEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}><Mic className="h-4 w-4" /></button>
-                  <button onClick={toggleCam} className={`flex h-8 w-8 rounded-full items-center justify-center ${camEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}><Video className="h-4 w-4" /></button>
+                <div className="flex gap-2 mt-0.5">
+                  <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-8 w-8 rounded-full items-center justify-center backdrop-blur-md ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Video className="h-4 w-4" /></button>
                 </div>
               )}
-              <span className="text-white text-[13px] font-extrabold drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">@{rightPanelName}</span>
+              {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
+                <div className="rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-black text-white shadow-lg animate-pulse border border-white/20">
+                  {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* MÉDIATEUR AU CENTRE */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[150] flex flex-col items-center gap-1 pointer-events-none">
-          <motion.div animate={{ boxShadow: auraMed > 0 ? `0 0 ${40 + auraMed * 2}px rgba(251,191,36,${Math.min(1, 0.4 + auraMed / 100)})` : 'none' }} className="rounded-full">
-            <button onClick={() => openProfile(mediatorName, host.id)} className="pointer-events-auto flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full border-[3px] border-amber-400 bg-black overflow-hidden active:scale-95">
+          <motion.div animate={{ boxShadow: auraMed > 0 ? `0 0 ${40 + auraMed * 2}px rgba(251,191,36,${Math.min(1, 0.4 + auraMed / 100)})` : 'none' }} className="rounded-full pointer-events-auto">
+            <button type="button" onClick={() => { emitTapSupport('M'); preferSide('M' as any); }} className="flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full border-[3px] border-amber-400 bg-black overflow-hidden active:scale-95">
               {mediatorParticipant?.videoTrack ? <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="w-full h-full object-cover" /> : <span className="text-5xl text-white/30 m-auto">👤</span>}
             </button>
           </motion.div>
-          <div className="pointer-events-auto rounded-full bg-black/80 px-3 py-1 mt-1"><span className="text-[11px] font-bold text-white">{mediatorName}</span></div>
+          <button type="button" onClick={() => openProfile(mediatorName, host.id)} className="pointer-events-auto rounded-full bg-black/80 px-3 py-1 mt-1 hover:bg-black border border-white/10 shadow-lg"><span className="text-[11px] font-bold text-white">@{mediatorName}</span></button>
         </div>
 
         {/* OVERLAY CHAT MOBILE (Intégré à la vidéo, invisible sur PC) */}
@@ -3380,7 +3394,8 @@ export function TikTokStyleArena({
         </div>
       </div>
 
-      {isHost && typeof document !== 'undefined' && createPortal(
+      {isHost && (
+        <div className="absolute z-[9999]">
         <MediatorSidebar
           open={mediatorSidebarOpen}
           onClose={() => setMediatorSidebarOpen(false)}
@@ -3438,15 +3453,12 @@ export function TikTokStyleArena({
           onInviteParticipant={handleInviteFromModal}
           inviteExcludeParticipantIds={inviteExcludeParticipantIds}
           inviteCurrentUserId={userId}
-        />,
-        document.body
+        />
+        </div>
       )}
 
-      {dockPickersMounted &&
-        typeof document !== 'undefined' &&
-        dockPickerPos &&
-        (showAllReactions || showGiftPicker) &&
-        createPortal(
+      {dockPickersMounted && (showAllReactions || showGiftPicker) && (
+        <div className="absolute z-[9999] right-3 max-lg:bottom-[70px] bottom-[80px]">
           <AnimatePresence mode="wait">
             {showAllReactions && (
               <motion.div
@@ -3459,12 +3471,6 @@ export function TikTokStyleArena({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                style={{
-                  position: 'fixed',
-                  bottom: dockPickerPos.bottom,
-                  right: dockPickerPos.right,
-                  zIndex: 560,
-                }}
                 className="pointer-events-auto max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-2xl border border-white/[0.1] bg-[#121215] p-2 pt-1.5 shadow-2xl backdrop-blur-xl"
               >
                 <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2">
@@ -3507,12 +3513,6 @@ export function TikTokStyleArena({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.98 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                style={{
-                  position: 'fixed',
-                  bottom: dockPickerPos.bottom,
-                  right: dockPickerPos.right,
-                  zIndex: 560,
-                }}
                 className="pointer-events-auto w-[min(calc(100vw-1.5rem),220px)] rounded-2xl border border-white/12 bg-[#121215] p-3 pt-2 shadow-2xl backdrop-blur-xl"
               >
                 <div className="mb-2 flex items-start justify-between gap-2 border-b border-white/[0.08] pb-2">
@@ -3595,9 +3595,9 @@ export function TikTokStyleArena({
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>,
-          document.body,
-        )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* User Profile Modal */}
       <AnimatePresence>
