@@ -3313,19 +3313,21 @@ export function TikTokStyleArena({
               </motion.div>
             </AnimatePresence>
             {!leftPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('A'); preferSide('A'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir A" />}
-            <div className="absolute left-4 top-20 z-[140] flex flex-col items-start gap-2 pointer-events-auto">
-              <button onClick={(e) => { e.stopPropagation(); void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null); }} className="text-white text-sm font-black tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight max-w-[160px] truncate">
-                @{leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
-              </button>
+            <div className="absolute inset-x-4 max-lg:top-20 max-lg:bottom-auto lg:bottom-6 z-[140] flex flex-row items-center justify-between gap-3 pointer-events-auto">
+              <div className="flex flex-col items-start min-w-0 flex-1">
+                <button onClick={(e) => { e.stopPropagation(); void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null); }} className="text-white text-sm font-black tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight w-full truncate">
+                  @{leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
+                </button>
+                {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
+                  <div className="rounded-full bg-red-600/90 px-2.5 py-1 text-[11px] font-black text-white shadow-lg animate-pulse border border-white/20 mt-1">
+                    {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                  </div>
+                )}
+              </div>
               {leftPanelIsLocal && !isViewer && (
-                <div className="flex gap-2">
+                <div className="flex shrink-0 gap-2">
                   <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-9 w-9 rounded-full items-center justify-center backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
                   <button onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-9 w-9 rounded-full items-center justify-center backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Video className="h-4 w-4" /></button>
-                </div>
-              )}
-              {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
-                <div className="rounded-full bg-red-600/90 px-2.5 py-1 text-[11px] font-black text-white shadow-lg animate-pulse border border-white/20 mt-1">
-                  {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                 </div>
               )}
             </div>
@@ -3340,19 +3342,21 @@ export function TikTokStyleArena({
               </motion.div>
             </AnimatePresence>
             {!rightPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('B'); preferSide('B'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir B" />}
-            <div className="absolute left-4 top-20 z-[140] flex flex-col items-start gap-2 pointer-events-auto">
-              <button onClick={(e) => { e.stopPropagation(); void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null); }} className="text-white text-sm font-black tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight max-w-[160px] truncate">
-                @{rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
-              </button>
+            <div className="absolute inset-x-4 max-lg:top-20 max-lg:bottom-auto lg:bottom-6 z-[140] flex flex-row items-center justify-between gap-3 pointer-events-auto">
+              <div className="flex flex-col items-start min-w-0 flex-1">
+                <button onClick={(e) => { e.stopPropagation(); void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null); }} className="text-white text-sm font-black tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight w-full truncate">
+                  @{rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
+                </button>
+                {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
+                  <div className="rounded-full bg-emerald-500/90 px-2.5 py-1 text-[11px] font-black text-white shadow-lg animate-pulse border border-white/20 mt-1">
+                    {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                  </div>
+                )}
+              </div>
               {rightPanelIsLocal && !isViewer && (
-                <div className="flex gap-2">
+                <div className="flex shrink-0 gap-2">
                   <button onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-9 w-9 rounded-full items-center justify-center backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Mic className="h-4 w-4" /></button>
                   <button onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-9 w-9 rounded-full items-center justify-center backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}><Video className="h-4 w-4" /></button>
-                </div>
-              )}
-              {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
-                <div className="rounded-full bg-emerald-500/90 px-2.5 py-1 text-[11px] font-black text-white shadow-lg animate-pulse border border-white/20 mt-1">
-                  {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                 </div>
               )}
             </div>
@@ -3394,67 +3398,54 @@ export function TikTokStyleArena({
         </div>
       </div>
 
-      {isHost && (
-        <div className="absolute z-[9999]">
-        <MediatorSidebar
-          open={mediatorSidebarOpen}
-          onClose={() => setMediatorSidebarOpen(false)}
-          timerActive={timerActive}
-          beefTimerPaused={timerPaused}
-          onPauseBeefTimer={pauseBeefTimer}
-          onResumeBeefTimer={resumeBeefTimer}
-          onResetBeefTimer={resetBeefTimerToFull}
-          startingBeef={startingBeef}
-          onStartBeef={async () => {
-            setStartingBeef(true);
-            try {
-              await startBeefTimer();
-            } finally {
-              setStartingBeef(false);
-            }
-          }}
-          onVerdict={handleMediatorVerdict}
-          remoteRows={mediatorRemoteRows}
-          speakingTurnActive={speakingTurnActive}
-          speakingTurnPaused={speakingTurnPaused}
-          hotMicSpeakerSlot={hotMicSpeakerSlot}
-          onHotMic={startHotMicTurn}
-          onStopSpeakingTurn={stopTimer}
-          onPauseSpeakingTurn={pauseSpeakingTurn}
-          onResumeSpeakingTurn={resumeSpeakingTurn}
-          onRestartSpeakingTurn={restartSpeakingTurn}
-          beefTimeFormatted={formatBeefTime(beefTimeRemaining)}
-          onSetChallengerMuted={handleMediatorChallengerMute}
-          onEjectParticipant={async (sid) => {
-            const ok = await ejectRemoteParticipant(sid);
-            if (ok) toast('Participant expulsé', 'success');
-            else {
-              toast(
-                'Expulsion impossible (participant introuvable ou droits Daily insuffisants).',
-                'error',
-              );
-            }
-          }}
-          onAdjustTime={adjustBeefTime}
-          mediatorMicEnabled={micEnabled}
-          mediatorCamEnabled={camEnabled}
-          onMediatorToggleMic={() => void toggleMic()}
-          onMediatorToggleCam={() => void toggleCam()}
-          beefRemainingSec={beefTimeRemaining}
-          maxBeefDurationSec={MAX_BEEF_DURATION}
-          parolePresetSec={parolePresetSec}
-          onParolePresetSecChange={setParolePresetSec}
-          announcementText={announcementTicker}
-          onPublishAnnouncement={publishAnnouncementBanner}
-          onClearAnnouncement={clearAnnouncementBanner}
-          pendingInvites={pendingInvites}
-          onAcceptPendingInvite={handleAcceptPendingInvite}
-          onRejectPendingInvite={handleRejectPendingInvite}
-          onInviteParticipant={handleInviteFromModal}
-          inviteExcludeParticipantIds={inviteExcludeParticipantIds}
-          inviteCurrentUserId={userId}
-        />
-        </div>
+      {isHost && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[10000] pointer-events-none">
+          <div className="pointer-events-auto h-full w-full">
+            <MediatorSidebar
+              open={mediatorSidebarOpen}
+              onClose={() => setMediatorSidebarOpen(false)}
+              timerActive={timerActive}
+              beefTimerPaused={timerPaused}
+              onPauseBeefTimer={pauseBeefTimer}
+              onResumeBeefTimer={resumeBeefTimer}
+              onResetBeefTimer={resetBeefTimerToFull}
+              startingBeef={startingBeef}
+              onStartBeef={async () => { setStartingBeef(true); try { await startBeefTimer(); } finally { setStartingBeef(false); } }}
+              onVerdict={handleMediatorVerdict}
+              remoteRows={mediatorRemoteRows}
+              speakingTurnActive={speakingTurnActive}
+              speakingTurnPaused={speakingTurnPaused}
+              hotMicSpeakerSlot={hotMicSpeakerSlot}
+              onHotMic={startHotMicTurn}
+              onStopSpeakingTurn={stopTimer}
+              onPauseSpeakingTurn={pauseSpeakingTurn}
+              onResumeSpeakingTurn={resumeSpeakingTurn}
+              onRestartSpeakingTurn={restartSpeakingTurn}
+              beefTimeFormatted={formatBeefTime(beefTimeRemaining)}
+              onSetChallengerMuted={handleMediatorChallengerMute}
+              onEjectParticipant={async (sid) => { const ok = await ejectRemoteParticipant(sid); if (ok) toast('Participant expulsé', 'success'); else toast('Expulsion impossible.', 'error'); }}
+              onAdjustTime={adjustBeefTime}
+              mediatorMicEnabled={micEnabled}
+              mediatorCamEnabled={camEnabled}
+              onMediatorToggleMic={() => void toggleMic()}
+              onMediatorToggleCam={() => void toggleCam()}
+              beefRemainingSec={beefTimeRemaining}
+              maxBeefDurationSec={MAX_BEEF_DURATION}
+              parolePresetSec={parolePresetSec}
+              onParolePresetSecChange={setParolePresetSec}
+              announcementText={announcementTicker}
+              onPublishAnnouncement={publishAnnouncementBanner}
+              onClearAnnouncement={clearAnnouncementBanner}
+              pendingInvites={pendingInvites}
+              onAcceptPendingInvite={handleAcceptPendingInvite}
+              onRejectPendingInvite={handleRejectPendingInvite}
+              onInviteParticipant={handleInviteFromModal}
+              inviteExcludeParticipantIds={inviteExcludeParticipantIds}
+              inviteCurrentUserId={userId}
+            />
+          </div>
+        </div>,
+        document.body
       )}
 
       {dockPickersMounted && (showAllReactions || showGiftPicker) && (
