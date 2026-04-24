@@ -3313,7 +3313,7 @@ export function TikTokStyleArena({
               </motion.div>
             </AnimatePresence>
             {!leftPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('A'); preferSide('A'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir A" />}
-            <div className="absolute inset-x-4 max-lg:top-20 max-lg:bottom-auto lg:bottom-6 z-[140] flex flex-row items-center justify-between gap-3 pointer-events-auto">
+            <div className="absolute inset-x-4 max-lg:top-[4.5rem] max-lg:bottom-auto bottom-6 z-[140] flex flex-row items-center justify-between gap-3 pointer-events-auto">
               <div className="flex flex-col items-start min-w-0 flex-1">
                 <button onClick={(e) => { e.stopPropagation(); void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null); }} className="text-white text-sm font-black tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight w-full truncate">
                   @{leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
@@ -3342,7 +3342,7 @@ export function TikTokStyleArena({
               </motion.div>
             </AnimatePresence>
             {!rightPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('B'); preferSide('B'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir B" />}
-            <div className="absolute inset-x-4 max-lg:top-20 max-lg:bottom-auto lg:bottom-6 z-[140] flex flex-row items-center justify-between gap-3 pointer-events-auto">
+            <div className="absolute inset-x-4 max-lg:top-[4.5rem] max-lg:bottom-auto bottom-6 z-[140] flex flex-row items-center justify-between gap-3 pointer-events-auto">
               <div className="flex flex-col items-start min-w-0 flex-1">
                 <button onClick={(e) => { e.stopPropagation(); void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null); }} className="text-white text-sm font-black tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight w-full truncate">
                   @{rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
@@ -3374,7 +3374,7 @@ export function TikTokStyleArena({
         </div>
 
         {/* OVERLAY CHAT MOBILE (Intégré à la vidéo, invisible sur PC) */}
-        <div className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end bg-gradient-to-t from-black via-black/80 to-transparent pt-24 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
+        <div className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end bg-gradient-to-t from-black via-black/80 to-transparent pt-32 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
           <div className="pointer-events-auto w-[85%] max-h-[30vh] overflow-y-auto px-3 mb-2 flex flex-col justify-end hide-scrollbar">
             {visibleMessages.map((msg) => (
               <div key={msg.id} className="mb-2">
@@ -3398,58 +3398,56 @@ export function TikTokStyleArena({
         </div>
       </div>
 
-      {isHost && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[10000] pointer-events-none">
-          <div className="pointer-events-auto h-full w-full">
-            <MediatorSidebar
-              open={mediatorSidebarOpen}
-              onClose={() => setMediatorSidebarOpen(false)}
-              timerActive={timerActive}
-              beefTimerPaused={timerPaused}
-              onPauseBeefTimer={pauseBeefTimer}
-              onResumeBeefTimer={resumeBeefTimer}
-              onResetBeefTimer={resetBeefTimerToFull}
-              startingBeef={startingBeef}
-              onStartBeef={async () => { setStartingBeef(true); try { await startBeefTimer(); } finally { setStartingBeef(false); } }}
-              onVerdict={handleMediatorVerdict}
-              remoteRows={mediatorRemoteRows}
-              speakingTurnActive={speakingTurnActive}
-              speakingTurnPaused={speakingTurnPaused}
-              hotMicSpeakerSlot={hotMicSpeakerSlot}
-              onHotMic={startHotMicTurn}
-              onStopSpeakingTurn={stopTimer}
-              onPauseSpeakingTurn={pauseSpeakingTurn}
-              onResumeSpeakingTurn={resumeSpeakingTurn}
-              onRestartSpeakingTurn={restartSpeakingTurn}
-              beefTimeFormatted={formatBeefTime(beefTimeRemaining)}
-              onSetChallengerMuted={handleMediatorChallengerMute}
-              onEjectParticipant={async (sid) => { const ok = await ejectRemoteParticipant(sid); if (ok) toast('Participant expulsé', 'success'); else toast('Expulsion impossible.', 'error'); }}
-              onAdjustTime={adjustBeefTime}
-              mediatorMicEnabled={micEnabled}
-              mediatorCamEnabled={camEnabled}
-              onMediatorToggleMic={() => void toggleMic()}
-              onMediatorToggleCam={() => void toggleCam()}
-              beefRemainingSec={beefTimeRemaining}
-              maxBeefDurationSec={MAX_BEEF_DURATION}
-              parolePresetSec={parolePresetSec}
-              onParolePresetSecChange={setParolePresetSec}
-              announcementText={announcementTicker}
-              onPublishAnnouncement={publishAnnouncementBanner}
-              onClearAnnouncement={clearAnnouncementBanner}
-              pendingInvites={pendingInvites}
-              onAcceptPendingInvite={handleAcceptPendingInvite}
-              onRejectPendingInvite={handleRejectPendingInvite}
-              onInviteParticipant={handleInviteFromModal}
-              inviteExcludeParticipantIds={inviteExcludeParticipantIds}
-              inviteCurrentUserId={userId}
-            />
-          </div>
-        </div>,
-        document.body
+      {isHost && (
+        <MediatorSidebar
+          open={mediatorSidebarOpen}
+          onClose={() => setMediatorSidebarOpen(false)}
+          timerActive={timerActive}
+          beefTimerPaused={timerPaused}
+          onPauseBeefTimer={pauseBeefTimer}
+          onResumeBeefTimer={resumeBeefTimer}
+          onResetBeefTimer={resetBeefTimerToFull}
+          startingBeef={startingBeef}
+          onStartBeef={async () => { setStartingBeef(true); try { await startBeefTimer(); } finally { setStartingBeef(false); } }}
+          onVerdict={handleMediatorVerdict}
+          remoteRows={mediatorRemoteRows}
+          speakingTurnActive={speakingTurnActive}
+          speakingTurnPaused={speakingTurnPaused}
+          hotMicSpeakerSlot={hotMicSpeakerSlot}
+          onHotMic={startHotMicTurn}
+          onStopSpeakingTurn={stopTimer}
+          onPauseSpeakingTurn={pauseSpeakingTurn}
+          onResumeSpeakingTurn={resumeSpeakingTurn}
+          onRestartSpeakingTurn={restartSpeakingTurn}
+          beefTimeFormatted={formatBeefTime(beefTimeRemaining)}
+          onSetChallengerMuted={handleMediatorChallengerMute}
+          onEjectParticipant={async (sid) => { const ok = await ejectRemoteParticipant(sid); if (ok) toast('Participant expulsé', 'success'); else toast('Expulsion impossible.', 'error'); }}
+          onAdjustTime={adjustBeefTime}
+          mediatorMicEnabled={micEnabled}
+          mediatorCamEnabled={camEnabled}
+          onMediatorToggleMic={() => void toggleMic()}
+          onMediatorToggleCam={() => void toggleCam()}
+          beefRemainingSec={beefTimeRemaining}
+          maxBeefDurationSec={MAX_BEEF_DURATION}
+          parolePresetSec={parolePresetSec}
+          onParolePresetSecChange={setParolePresetSec}
+          announcementText={announcementTicker}
+          onPublishAnnouncement={publishAnnouncementBanner}
+          onClearAnnouncement={clearAnnouncementBanner}
+          pendingInvites={pendingInvites}
+          onAcceptPendingInvite={handleAcceptPendingInvite}
+          onRejectPendingInvite={handleRejectPendingInvite}
+          onInviteParticipant={handleInviteFromModal}
+          inviteExcludeParticipantIds={inviteExcludeParticipantIds}
+          inviteCurrentUserId={userId}
+        />
       )}
 
-      {dockPickersMounted && (showAllReactions || showGiftPicker) && (
-        <div className="absolute z-[9999] right-3 max-lg:bottom-[70px] bottom-[80px]">
+      {dockPickersMounted && (showAllReactions || showGiftPicker) && dockPickerPos && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed z-[10000]"
+          style={{ bottom: dockPickerPos.bottom, right: dockPickerPos.right }}
+        >
           <AnimatePresence mode="wait">
             {showAllReactions && (
               <motion.div
@@ -3587,7 +3585,8 @@ export function TikTokStyleArena({
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* User Profile Modal */}
