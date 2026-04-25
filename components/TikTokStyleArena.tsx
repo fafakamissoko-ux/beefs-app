@@ -3307,9 +3307,14 @@ export function TikTokStyleArena({
                 className="flex-1 mx-2 sm:mx-4 overflow-hidden pointer-events-none flex items-center h-8"
               >
                 <div className="w-full bg-amber-500/95 backdrop-blur-md rounded-full shadow-lg border border-white/20 overflow-hidden flex items-center h-full">
-                  <div className="whitespace-nowrap animate-[marquee_35s_linear_infinite] px-4 flex items-center">
+                  <div
+                    className="whitespace-nowrap flex items-center h-full pl-[100%]"
+                    style={{
+                      animation: `marquee ${Math.max(25, announcementTicker.length * 0.35)}s linear infinite`,
+                    }}
+                  >
                     <p className="text-black font-black text-[10px] sm:text-[11px] uppercase tracking-wider inline-block">
-                      {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker}
+                      {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker}
                     </p>
                   </div>
                 </div>
@@ -3891,7 +3896,7 @@ export function TikTokStyleArena({
           scrollbar-width: none;
         }
         @keyframes marquee {
-          0% { transform: translateX(100%); }
+          0% { transform: translateX(0); }
           100% { transform: translateX(-100%); }
         }
       `}</style>
