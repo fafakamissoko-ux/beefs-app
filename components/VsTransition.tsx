@@ -26,17 +26,17 @@ export function VsTransition({ challengerA, challengerB, debateTitle, onComplete
       exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
       transition={{ duration: 0.5, ease: 'easeInOut' }}
     >
-      {/* Moitié Gauche (Bleu Cobalt) */}
+      {/* Moitié Gauche (Violet) */}
       <motion.div
-        className="absolute inset-y-0 left-0 w-1/2 bg-cobalt-600/20 border-r border-cobalt-400/50"
+        className="absolute inset-y-0 left-0 w-1/2 bg-purple-600/20 border-r border-purple-400/50"
         initial={{ x: '-100%', skewX: -10 }}
         animate={{ x: 0, skewX: 0 }}
         transition={{ duration: 0.4, type: 'spring', damping: 15 }}
       />
 
-      {/* Moitié Droite (Rouge Braise) */}
+      {/* Moitié Droite (Émeraude) */}
       <motion.div
-        className="absolute inset-y-0 right-0 w-1/2 bg-ember-600/20 border-l border-ember-400/50"
+        className="absolute inset-y-0 right-0 w-1/2 bg-emerald-600/20 border-l border-emerald-400/50"
         initial={{ x: '100%', skewX: -10 }}
         animate={{ x: 0, skewX: 0 }}
         transition={{ duration: 0.4, type: 'spring', damping: 15 }}
@@ -50,7 +50,7 @@ export function VsTransition({ challengerA, challengerB, debateTitle, onComplete
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2, type: 'spring' }}
         >
-          <h2 className="text-right font-sans text-4xl sm:text-6xl md:text-7xl font-black uppercase text-white drop-shadow-[0_0_25px_rgba(0,82,255,0.9)] truncate max-w-full">
+          <h2 className="text-right font-sans text-4xl sm:text-6xl md:text-7xl font-black uppercase text-white drop-shadow-[0_0_25px_rgba(168,85,247,0.9)] truncate max-w-full">
             {challengerA}
           </h2>
         </motion.div>
@@ -61,7 +61,7 @@ export function VsTransition({ challengerA, challengerB, debateTitle, onComplete
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2, type: 'spring' }}
         >
-          <h2 className="text-left font-sans text-4xl sm:text-6xl md:text-7xl font-black uppercase text-white drop-shadow-[0_0_25px_rgba(255,77,0,0.9)] truncate max-w-full">
+          <h2 className="text-left font-sans text-4xl sm:text-6xl md:text-7xl font-black uppercase text-white drop-shadow-[0_0_25px_rgba(16,185,129,0.9)] truncate max-w-full">
             {challengerB}
           </h2>
         </motion.div>
