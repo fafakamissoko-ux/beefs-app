@@ -1,8 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Mic, MicOff, Video, VideoOff, ChevronDown, ArrowLeft } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, ChevronDown } from 'lucide-react';
 import { MutinyProtocol } from './MutinyProtocol';
 
 interface PreJoinScreenProps {
@@ -29,7 +28,6 @@ export function PreJoinScreen({
   onMutinyConfirm,
   onMutinyRefuse,
 }: PreJoinScreenProps) {
-  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   /** True si le MediaStream a été passé à Daily — ne pas stopper les pistes au démontage. */
@@ -144,25 +142,22 @@ export function PreJoinScreen({
     </div>
   );
 
-  const backToFeed = (
-    <button
-      type="button"
-      onClick={() => router.push('/feed')}
-      className="absolute left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-30 flex h-10 w-10 touch-manipulation items-center justify-center rounded-full border border-white/10 bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-black/50"
-      aria-label="Retour au feed"
-    >
-      <ArrowLeft className="h-5 w-5" strokeWidth={1.5} />
-    </button>
-  );
-
   if (viewerMode) {
     return (
-      <div className="relative flex h-full w-full touch-manipulation items-center justify-center overflow-y-auto overflow-x-hidden bg-obsidian p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-14 sm:pt-4">
+      <div className="relative flex h-full w-full touch-manipulation items-center justify-center overflow-y-auto overflow-x-hidden bg-obsidian p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {ambientLayer}
-        {backToFeed}
-        <div className="relative z-10 w-full max-w-md">
-          <div className="rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-5 shadow-2xl backdrop-blur-3xl sm:p-6">
-            <div className="space-y-5 text-center">
+        <div className="relative z-10 w-full max-w-md max-h-[90dvh] overflow-y-auto">
+          <div className="relative rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-5 shadow-2xl backdrop-blur-3xl sm:p-6">
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = '/feed';
+              }}
+              className="absolute left-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-white/10"
+            >
+              <span aria-hidden>←</span>
+            </button>
+            <div className="space-y-5 pt-10 text-center">
               <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/25 to-emerald-500/20 ring-1 ring-white/10 sm:h-24 sm:w-24">
                 <span className="text-4xl font-black text-white sm:text-5xl">{userName?.[0]?.toUpperCase() || '?'}</span>
               </div>
@@ -185,13 +180,21 @@ export function PreJoinScreen({
   }
 
   return (
-    <div className="relative flex h-full w-full touch-manipulation items-center justify-center overflow-y-auto overflow-x-hidden bg-obsidian p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-14 sm:pt-4 sm:pl-4">
+    <div className="relative flex h-full w-full touch-manipulation items-center justify-center overflow-y-auto overflow-x-hidden bg-obsidian p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pl-4">
       {ambientLayer}
-      {backToFeed}
-      <div className="relative z-10 w-full max-w-2xl">
-        <div className="space-y-3 rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-3 shadow-2xl backdrop-blur-3xl sm:space-y-4 sm:p-5 md:p-6">
+      <div className="relative z-10 w-full max-w-2xl max-h-[90dvh] overflow-y-auto">
+        <div className="relative space-y-3 rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-3 shadow-2xl backdrop-blur-3xl sm:space-y-4 sm:p-5 md:p-6">
+        <button
+          type="button"
+          onClick={() => {
+            window.location.href = '/feed';
+          }}
+          className="absolute top-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-white/10"
+        >
+          <span aria-hidden>←</span>
+        </button>
         {/* Title */}
-        <div className="px-0.5 text-center">
+        <div className="px-0.5 pt-8 text-center sm:pt-6">
           <h2 className="text-xl font-black tracking-tight text-white sm:text-2xl">Prêt à rejoindre ?</h2>
           <p className="mt-0.5 text-sm leading-relaxed text-white/50">Teste ta caméra et ton micro avant d&apos;entrer dans le beef</p>
         </div>
@@ -242,9 +245,9 @@ export function PreJoinScreen({
           )}
         </div>
 
-        {/* Controls — cartes glass, côte à côte dès le mobile */}
-        <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-3">
-          <div className="min-w-0 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-2 backdrop-blur-xl sm:rounded-[2rem] sm:p-3">
+        {/* Controls — cartes glass, côte à côte */}
+        <div className="flex w-full min-w-0 flex-row items-stretch justify-center gap-2 sm:gap-3">
+          <div className="min-w-0 flex-1 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-2 backdrop-blur-xl sm:rounded-[2rem] sm:p-3">
             <p className="mb-1.5 text-center font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-white/40 sm:mb-2 sm:text-[9px]">
               Caméra
             </p>
@@ -262,7 +265,7 @@ export function PreJoinScreen({
             </button>
           </div>
 
-          <div className="min-w-0 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-2 backdrop-blur-xl sm:rounded-[2rem] sm:p-3">
+          <div className="min-w-0 flex-1 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-2 backdrop-blur-xl sm:rounded-[2rem] sm:p-3">
             <p className="mb-1.5 text-center font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-white/40 sm:mb-2 sm:text-[9px]">
               Micro
             </p>

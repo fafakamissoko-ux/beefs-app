@@ -88,11 +88,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             return (
               <motion.div
                 key={t.id}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 12, scale: 0.92 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-[2.5rem] backdrop-blur-3xl ${variant}`}
+                className={`pointer-events-auto flex items-center gap-3 rounded-[2.5rem] px-5 py-4 backdrop-blur-3xl ${variant}`}
               >
                 <span>{icons[t.type]}</span>
                 <div className="flex-1 min-w-0 flex flex-col gap-2">
