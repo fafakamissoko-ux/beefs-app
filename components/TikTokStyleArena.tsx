@@ -64,6 +64,23 @@ import { playRematchThunderSfx } from '@/lib/playVerdictSfx';
 import { MediatorSidebar, type MediatorRemoteRow } from './MediatorSidebar';
 import { FullscreenGiftAnimation, type ArenaBigGiftPayload } from './Arena/FullscreenGiftAnimation';
 
+const SFX_MAP: Record<string, string> = {
+  horn: '/sounds/horn.mp3',
+  laugh: '/sounds/laugh.mp3',
+  slap: '/sounds/slap.mp3',
+  drumroll: '/sounds/drumroll.mp3',
+  crickets: '/sounds/crickets.mp3',
+  bell: '/sounds/bell.mp3',
+};
+
+const playSfx = (id: string) => {
+  const src = SFX_MAP[id];
+  if (!src) return;
+  const audio = new Audio(src);
+  audio.volume = 0.8;
+  audio.play().catch(() => console.warn('[Audio] Interaction requise'));
+};
+
 /** Durée par défaut au lancement « Lancer le beef » (régie : +/- au-delà). */
 const DEFAULT_BEEF_DURATION = 60 * 60; // 60 min
 /** Plafond ajustable depuis la régie (prolongations). */
@@ -1804,6 +1821,9 @@ export function TikTokStyleArena({
     });
 
     channel
+      .on('broadcast', { event: 'sfx' }, ({ payload }: any) => {
+        if (payload?.id) playSfx(payload.id);
+      })
       .on('broadcast', { event: 'reaction' }, ({ payload }: any) => {
         addRemoteReaction(payload.emoji, payload.supportSlot);
         const boost = liveViewerCountRef.current > 50 ? 4 : 12;
@@ -3585,6 +3605,36 @@ export function TikTokStyleArena({
           <FlyingReactionsLayer reactions={flyingReactions} onRemove={(id) => setFlyingReactions((p) => p.filter(r => r.id !== id))} />
         </div>
       </div>
+
+      {/* SOUNDBOARD FLOTTANT (HOST ONLY) */}
+      {isHost && !isCinematicMode && (
+        <div className="absolute right-2 sm:right-5 top-1/2 -translate-y-1/2 z-[250] flex flex-col gap-2 rounded-[2.5rem] bg-black/40 backdrop-blur-2xl border border-white/10 p-2 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+          {[
+            { id: 'horn', emoji: '📢', label: 'Airhorn' },
+            { id: 'laugh', emoji: '😂', label: 'Rires' },
+            { id: 'slap', emoji: '🥊', label: 'Punch' },
+            { id: 'drumroll', emoji: '🥁', label: 'Tension' },
+            { id: 'crickets', emoji: '🦗', label: 'Malaise' },
+            { id: 'bell', emoji: '🔔', label: 'Ding' },
+          ].map((sfx) => (
+            <button
+              key={sfx.id}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                playSfx(sfx.id);
+                void channelRef.current
+                  ?.send({ type: 'broadcast', event: 'sfx', payload: { id: sfx.id } })
+                  .catch(() => {});
+              }}
+              className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/5 hover:bg-white/20 active:scale-90 transition-all border border-white/5 shadow-inner"
+              title={sfx.label}
+            >
+              <span className="text-xl sm:text-2xl drop-shadow-md">{sfx.emoji}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {isHost && (
         <MediatorSidebar
