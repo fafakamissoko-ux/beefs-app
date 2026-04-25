@@ -425,24 +425,12 @@ export function TikTokStyleArena({
     }
   }, [mediatorSidebarOpen]);
 
-  // Auto-fermeture : 3s soundboard, 4s pickers (réactions / cadeaux), 3s menu PC
+  // Auto-fermeture : 3s soundboard, 3s menu PC (pickers : fermeture au tap extérieur uniquement)
   useEffect(() => {
     if (!soundboardExpanded) return;
     const t = setTimeout(() => setSoundboardExpanded(false), 3000);
     return () => clearTimeout(t);
   }, [soundboardExpanded]);
-
-  useEffect(() => {
-    if (!showAllReactions) return;
-    const t = setTimeout(() => setShowAllReactions(false), 4000);
-    return () => clearTimeout(t);
-  }, [showAllReactions]);
-
-  useEffect(() => {
-    if (!showGiftPicker) return;
-    const t = setTimeout(() => setShowGiftPicker(false), 4000);
-    return () => clearTimeout(t);
-  }, [showGiftPicker]);
 
   useEffect(() => {
     if (!showArenaMenu) return;
@@ -3113,6 +3101,20 @@ export function TikTokStyleArena({
     !beefEnded &&
     !remoteParticipants.some((p) => remoteMatchesMediator(p, host.id, host.name));
 
+  const leftChallengerAbsent =
+    isJoined &&
+    !beefEnded &&
+    challengersEverJoinedRef.current &&
+    !leftPanel &&
+    expectedChallengers.length >= 1;
+
+  const rightChallengerAbsent =
+    isJoined &&
+    !beefEnded &&
+    challengersEverJoinedRef.current &&
+    !rightPanel &&
+    expectedChallengers.length >= 2;
+
   return (
     <div
       onClick={(e) => {
@@ -3128,6 +3130,29 @@ export function TikTokStyleArena({
       }}
       className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row"
     >
+      {!isCinematicMode && arenaHasAnnouncement && (
+        <div
+          className="pointer-events-none fixed left-0 right-0 top-0 z-[500] hidden h-6 min-h-6 flex flex-col justify-center overflow-hidden border-b border-white/5 bg-black/20 backdrop-blur-md lg:block"
+          role="status"
+          aria-live="polite"
+        >
+          <div
+            className="whitespace-nowrap pl-[100%] flex h-full min-h-0 items-center"
+            style={{
+              animation: `marquee ${Math.max(25, announcementTicker.length * 0.35)}s linear infinite`,
+            }}
+          >
+            <p className="inline-block text-[8px] font-medium uppercase tracking-[0.25em] text-white/40 sm:text-[9px]">
+              {announcementTicker}
+              <span className="mx-8 inline opacity-40">·</span>
+              {announcementTicker}
+              <span className="mx-8 inline opacity-40">·</span>
+              {announcementTicker}
+            </p>
+          </div>
+        </div>
+      )}
+
       <AnimatePresence>
         {showVsScreen && (
           <div data-cinema-stay className="contents">
@@ -3419,7 +3444,10 @@ export function TikTokStyleArena({
 
         {/* HEADER GLOBAL FLOTTANT */}
         {!isCinematicMode && (
-          <div data-cinema-stay className="absolute top-0 inset-x-0 z-[200] p-4 flex justify-between items-start pointer-events-none">
+          <div
+            data-cinema-stay
+            className={`absolute inset-x-0 z-[200] p-4 flex justify-between items-start pointer-events-none ${arenaHasAnnouncement ? 'top-0 lg:top-6' : 'top-0'}`}
+          >
           {!beefEnded && !isLeaving && (
             <button
               type="button"
@@ -3440,17 +3468,17 @@ export function TikTokStyleArena({
                 initial={{ y: -50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: -50, opacity: 0 }}
-                className="flex-1 mx-2 sm:mx-4 overflow-hidden pointer-events-none flex items-center h-8"
+                className="flex-1 mx-2 sm:mx-4 overflow-hidden pointer-events-none flex items-center h-8 min-h-8 lg:hidden"
               >
-                <div className="w-full bg-amber-500/95 backdrop-blur-md rounded-full shadow-lg border border-white/20 overflow-hidden flex items-center h-full">
+                <div className="h-6 w-full overflow-hidden border-b border-white/5 bg-black/20 backdrop-blur-md">
                   <div
-                    className="whitespace-nowrap flex items-center h-full pl-[100%]"
+                    className="whitespace-nowrap flex h-full min-h-0 items-center pl-[100%]"
                     style={{
                       animation: `marquee ${Math.max(25, announcementTicker.length * 0.35)}s linear infinite`,
                     }}
                   >
-                    <p className="text-black font-black text-[10px] sm:text-[11px] uppercase tracking-wider inline-block">
-                      {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker}
+                    <p className="text-[8px] font-medium uppercase inline-block tracking-wide text-white/40 sm:text-[9px]">
+                      {announcementTicker} <span className="mx-6 opacity-40">·</span> {announcementTicker} <span className="mx-6 opacity-40">·</span> {announcementTicker}
                     </p>
                   </div>
                 </div>
@@ -3505,6 +3533,13 @@ export function TikTokStyleArena({
               filter: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 'grayscale(0.6) blur(3px)' : 'none',
             }}
           >
+            {leftChallengerAbsent && (
+              <div className="pointer-events-none absolute left-1/2 top-2 z-[35] -translate-x-1/2">
+                <span className="inline-block rounded-full border border-white/10 bg-black/50 px-2.5 py-0.5 font-mono text-[7px] font-bold uppercase tracking-[0.2em] text-white/50 backdrop-blur-sm">
+                  Absent
+                </span>
+              </div>
+            )}
             <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -3536,7 +3571,7 @@ export function TikTokStyleArena({
               data-cinema-stay
               className="absolute top-12 sm:top-6 left-3 z-[140] flex max-w-[min(100%,calc(100%-1.5rem))] flex-row items-center gap-2 pr-2 pointer-events-auto"
             >
-              <div className="flex min-w-0 max-w-[min(100%,12rem)] sm:max-w-[14rem] flex-col items-stretch gap-0.5 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-md">
+              <div className="flex min-w-0 max-w-[min(100%,12rem)] sm:max-w-[14rem] flex-col items-stretch gap-0.5 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-white/95 shadow-sm backdrop-blur-md">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -3595,6 +3630,13 @@ export function TikTokStyleArena({
               filter: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 'grayscale(0.6) blur(3px)' : 'none',
             }}
           >
+            {rightChallengerAbsent && (
+              <div className="pointer-events-none absolute left-1/2 top-2 z-[35] -translate-x-1/2">
+                <span className="inline-block rounded-full border border-white/10 bg-black/50 px-2.5 py-0.5 font-mono text-[7px] font-bold uppercase tracking-[0.2em] text-white/50 backdrop-blur-sm">
+                  Absent
+                </span>
+              </div>
+            )}
             <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -3626,7 +3668,7 @@ export function TikTokStyleArena({
               data-cinema-stay
               className="absolute top-12 sm:top-6 left-3 z-[140] flex max-w-[min(100%,calc(100%-1.5rem))] flex-row items-center gap-2 pr-2 pointer-events-auto"
             >
-              <div className="flex min-w-0 max-w-[min(100%,12rem)] sm:max-w-[14rem] flex-col items-stretch gap-0.5 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-md">
+              <div className="flex min-w-0 max-w-[min(100%,12rem)] sm:max-w-[14rem] flex-col items-stretch gap-0.5 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-white/95 shadow-sm backdrop-blur-md">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -3697,8 +3739,11 @@ export function TikTokStyleArena({
               className="flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full bg-black overflow-hidden active:scale-95 border border-transparent outline-none touch-manipulation"
             >
               {isWaitingForMediator ? (
-                <span className="m-auto flex h-full w-full items-center justify-center bg-black/50">
-                  <span className="h-9 w-9 shrink-0 rounded-full border-2 border-white/25 border-t-brand-400 animate-spin" aria-hidden />
+                <span className="m-auto flex h-full w-full items-center justify-center bg-black/40">
+                  <span
+                    className="h-5 w-5 shrink-0 rounded-full border-2 border-white/10 border-t-white/45 animate-spin"
+                    aria-hidden
+                  />
                 </span>
               ) : mediatorParticipant?.videoTrack ? (
                 <ParticipantVideo
@@ -3881,7 +3926,7 @@ export function TikTokStyleArena({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="pointer-events-auto max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-black/60 p-2 pt-1.5 shadow-2xl backdrop-blur-3xl"
+                className="pointer-events-auto max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-black/70 p-2 pt-1.5 backdrop-blur-3xl"
               >
                 <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2">
                   <span className="pl-0.5 text-[11px] font-semibold text-white/75">Réactions</span>
@@ -3923,7 +3968,7 @@ export function TikTokStyleArena({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.98 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="pointer-events-auto max-h-[min(60dvh,380px)] w-[min(calc(100vw-1rem),340px)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-black/60 p-3 pt-2 shadow-2xl backdrop-blur-3xl hide-scrollbar"
+                className="pointer-events-auto max-h-[min(60dvh,380px)] w-[min(calc(100vw-1rem),340px)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-black/70 p-3 pt-2 backdrop-blur-3xl hide-scrollbar"
               >
                 <div className="mb-2 flex items-start justify-between gap-2 border-b border-white/[0.08] pb-2">
                   <p className="min-w-0 flex-1 pl-0.5 text-[11px] font-semibold leading-snug text-white/75">
