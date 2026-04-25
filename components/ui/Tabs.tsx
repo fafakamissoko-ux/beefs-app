@@ -45,9 +45,11 @@ export function TabsList({
 export function TabsTrigger({
   value,
   children,
+  className = '',
 }: {
   value: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   const { value: selectedValue, onChange } = useContext(TabsContext);
   const isActive = selectedValue === value;
@@ -58,7 +60,7 @@ export function TabsTrigger({
       role="tab"
       aria-selected={isActive}
       onClick={() => onChange(value)}
-      className={`relative z-[1] rounded-full px-4 py-1.5 text-xs font-bold tracking-wide transition-colors duration-200 ${
+      className={`relative z-[1] min-w-0 flex-1 rounded-full px-2 py-1.5 text-xs font-bold tracking-wide transition-colors duration-200 sm:px-4 ${className} ${
         isActive
           ? 'text-white'
           : 'text-gray-500 hover:text-gray-200'

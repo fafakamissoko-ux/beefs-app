@@ -172,18 +172,20 @@ export function MediatorSidebar({
                 <motion.button
                   type="button"
                   aria-label="Fermer le tableau de bord"
-                  className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-[2px]"
+                  className="fixed inset-0 z-[9998] cursor-default bg-black/50 backdrop-blur-[2px]"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  onClick={onClose}
+                  onClick={() => onClose()}
                 />
 
-                {/* Bottom Sheet */}
+                {/* Bottom Sheet — stopPropagation : ne pas laisser le clic remonter au reste de l’app */}
                 <motion.aside
                   data-mediator-regie-sheet
                   role="dialog"
                   aria-label="Tableau de bord"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   initial={{ y: '100%' }}
                   animate={{ y: 0 }}
                   exit={{ y: '100%' }}
@@ -214,18 +216,31 @@ export function MediatorSidebar({
             <Tabs defaultValue="debate" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               <div className="mb-2 flex shrink-0 justify-center px-0.5">
                 <TabsList className="w-full max-w-md justify-stretch">
-                  <TabsTrigger value="debate">⚔️ Débat</TabsTrigger>
-                  <TabsTrigger value="guests">
-                    <span className="inline-flex items-center justify-center gap-1.5">
-                      👥 Invités
-                      {pendingInviteCount > 0 && (
-                        <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-ember-500 px-1 font-mono text-[8px] font-black leading-none text-black">
-                          {pendingInviteCount > 99 ? "99+" : pendingInviteCount}
-                        </span>
-                      )}
+                  <TabsTrigger value="debate">
+                    <span className="flex flex-col items-center gap-0.5 text-center">
+                      <span className="leading-tight">⚔️ Débat</span>
+                      <span className="text-[7px] font-semibold uppercase tracking-wider text-white/40">Chrono · Parole</span>
                     </span>
                   </TabsTrigger>
-                  <TabsTrigger value="tools">🛠️ Outils</TabsTrigger>
+                  <TabsTrigger value="guests">
+                    <span className="inline-flex flex-col items-center justify-center gap-0.5 text-center">
+                      <span className="inline-flex items-center justify-center gap-1.5 leading-tight">
+                        👥 Invités
+                        {pendingInviteCount > 0 && (
+                          <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-ember-500 px-1 font-mono text-[8px] font-black leading-none text-black">
+                            {pendingInviteCount > 99 ? "99+" : pendingInviteCount}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[7px] font-semibold uppercase tracking-wider text-white/40">File d&apos;attente</span>
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger value="tools">
+                    <span className="flex flex-col items-center gap-0.5 text-center">
+                      <span className="leading-tight">🛠️ Outils</span>
+                      <span className="text-[7px] font-semibold uppercase tracking-wider text-white/40">Annonce · Verdict</span>
+                    </span>
+                  </TabsTrigger>
                 </TabsList>
               </div>
               <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-1 pb-4 overscroll-contain hide-scrollbar">
@@ -442,7 +457,7 @@ export function MediatorSidebar({
                                   }}
                                   className="flex w-full items-center justify-center rounded-full border border-ember-500/40 bg-ember-500/12 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-ember-50 hover:bg-ember-500/25 disabled:cursor-not-allowed disabled:opacity-35"
                                 >
-                                  Lancer parole · {formatParole(parolePresetSec)}
+                                  Donner la parole · {formatParole(parolePresetSec)}
                                 </button>
                               )}
                               <div className="flex flex-wrap gap-1.5">
