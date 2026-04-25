@@ -3504,13 +3504,6 @@ export function TikTokStyleArena({
               filter: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 'grayscale(0.6) blur(3px)' : 'none',
             }}
           >
-            {leftChallengerAbsent && (
-              <div className="pointer-events-none absolute left-1/2 top-2 z-[35] -translate-x-1/2">
-                <span className="inline-block rounded-full border border-white/10 bg-black/50 px-2.5 py-0.5 font-mono text-[7px] font-bold uppercase tracking-[0.2em] text-white/50 backdrop-blur-sm">
-                  Absent
-                </span>
-              </div>
-            )}
             <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -3558,6 +3551,9 @@ export function TikTokStyleArena({
                     {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
                 )}
+                {leftChallengerAbsent && (
+                  <div className="text-[8px] font-bold uppercase tracking-widest text-red-400 animate-pulse mt-0.5">Absent</div>
+                )}
               </div>
               {leftPanelIsLocal && !isViewer && (
                 <div className="flex shrink-0 gap-1.5">
@@ -3601,13 +3597,6 @@ export function TikTokStyleArena({
               filter: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 'grayscale(0.6) blur(3px)' : 'none',
             }}
           >
-            {rightChallengerAbsent && (
-              <div className="pointer-events-none absolute left-1/2 top-2 z-[35] -translate-x-1/2">
-                <span className="inline-block rounded-full border border-white/10 bg-black/50 px-2.5 py-0.5 font-mono text-[7px] font-bold uppercase tracking-[0.2em] text-white/50 backdrop-blur-sm">
-                  Absent
-                </span>
-              </div>
-            )}
             <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -3654,6 +3643,9 @@ export function TikTokStyleArena({
                   <div className="text-[10px] font-black tabular-nums text-emerald-200/95">
                     {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
+                )}
+                {rightChallengerAbsent && (
+                  <div className="text-[8px] font-bold uppercase tracking-widest text-red-400 animate-pulse mt-0.5">Absent</div>
                 )}
               </div>
               {rightPanelIsLocal && !isViewer && (
@@ -4380,7 +4372,7 @@ export function TikTokStyleArena({
           animation: marquee-continuous 20s linear infinite;
         }
         .animate-marquee-continuous-fast {
-          animation: marquee-continuous 10s linear infinite;
+          animation: marquee-continuous 8s linear infinite;
         }
       `}</style>
       {typeof document !== 'undefined' &&
