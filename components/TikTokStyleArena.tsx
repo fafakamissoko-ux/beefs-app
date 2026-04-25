@@ -425,7 +425,7 @@ export function TikTokStyleArena({
     }
   }, [mediatorSidebarOpen]);
 
-  // Auto-fermeture 3s : soundboard, réactions, menu PC
+  // Auto-fermeture : 3s soundboard, 4s pickers (réactions / cadeaux), 3s menu PC
   useEffect(() => {
     if (!soundboardExpanded) return;
     const t = setTimeout(() => setSoundboardExpanded(false), 3000);
@@ -434,9 +434,15 @@ export function TikTokStyleArena({
 
   useEffect(() => {
     if (!showAllReactions) return;
-    const t = setTimeout(() => setShowAllReactions(false), 3000);
+    const t = setTimeout(() => setShowAllReactions(false), 4000);
     return () => clearTimeout(t);
   }, [showAllReactions]);
+
+  useEffect(() => {
+    if (!showGiftPicker) return;
+    const t = setTimeout(() => setShowGiftPicker(false), 4000);
+    return () => clearTimeout(t);
+  }, [showGiftPicker]);
 
   useEffect(() => {
     if (!showArenaMenu) return;
@@ -3100,6 +3106,13 @@ export function TikTokStyleArena({
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   };
 
+  const isWaitingForMediator =
+    !isHost &&
+    !mediatorWasConnectedRef.current &&
+    isJoined &&
+    !beefEnded &&
+    !remoteParticipants.some((p) => remoteMatchesMediator(p, host.id, host.name));
+
   return (
     <div
       onClick={(e) => {
@@ -3342,20 +3355,6 @@ export function TikTokStyleArena({
           </div>
         </motion.div>
       )}
-      {/* ── MEDIATOR WAITING MESSAGE (before mediator joins) ── */}
-      {!isHost && !mediatorWasConnectedRef.current && isJoined && !beefEnded && !remoteParticipants.some(p => remoteMatchesMediator(p, host.id, host.name)) && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute left-1/2 top-28 z-[100] flex -translate-x-1/2 items-center gap-3 rounded-full border border-white/10 bg-white/10 px-5 py-3 text-white shadow-glow-cyan backdrop-blur-sm"
-        >
-          <div className="w-5 h-5 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
-          <div className="text-sm font-medium">
-            En attente du médiateur...
-          </div>
-        </motion.div>
-      )}
-
       {/* ── NETWORK RECONNECTION OVERLAY ── */}
       {isOffline && !beefEnded && (
         <motion.div
@@ -3537,7 +3536,7 @@ export function TikTokStyleArena({
               data-cinema-stay
               className="absolute top-12 sm:top-6 left-3 z-[140] flex max-w-[min(100%,calc(100%-1.5rem))] flex-row items-center gap-2 pr-2 pointer-events-auto"
             >
-              <div className="flex min-w-0 max-w-[min(100%,12rem)] sm:max-w-[14rem] flex-col items-stretch gap-0.5 rounded-full border border-white/5 bg-black/40 px-3 py-1.5 backdrop-blur-md">
+              <div className="flex min-w-0 max-w-[min(100%,12rem)] sm:max-w-[14rem] flex-col items-stretch gap-0.5 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-md">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -3627,7 +3626,7 @@ export function TikTokStyleArena({
               data-cinema-stay
               className="absolute top-12 sm:top-6 left-3 z-[140] flex max-w-[min(100%,calc(100%-1.5rem))] flex-row items-center gap-2 pr-2 pointer-events-auto"
             >
-              <div className="flex min-w-0 max-w-[min(100%,12rem)] sm:max-w-[14rem] flex-col items-stretch gap-0.5 rounded-full border border-white/5 bg-black/40 px-3 py-1.5 backdrop-blur-md">
+              <div className="flex min-w-0 max-w-[min(100%,12rem)] sm:max-w-[14rem] flex-col items-stretch gap-0.5 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-md">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -3690,16 +3689,42 @@ export function TikTokStyleArena({
               type="button"
               onPointerDown={(e) => {
                 e.stopPropagation();
+                if (isWaitingForMediator) return;
                 emitTapSupport('M');
                 preferSide('M' as any);
               }}
               onDoubleClick={(e) => e.stopPropagation()}
               className="flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full bg-black overflow-hidden active:scale-95 border border-transparent outline-none touch-manipulation"
             >
-              {mediatorParticipant?.videoTrack ? <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="w-full h-full object-cover" /> : <span className="text-5xl text-white/30 m-auto">👤</span>}
+              {isWaitingForMediator ? (
+                <span className="m-auto flex h-full w-full items-center justify-center bg-black/50">
+                  <span className="h-9 w-9 shrink-0 rounded-full border-2 border-white/25 border-t-brand-400 animate-spin" aria-hidden />
+                </span>
+              ) : mediatorParticipant?.videoTrack ? (
+                <ParticipantVideo
+                  videoTrack={mediatorParticipant.videoTrack}
+                  muted={mediatorIsLocal}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-5xl text-white/30 m-auto">👤</span>
+              )}
             </button>
           </motion.div>
-          <button type="button" onClick={() => openProfile(mediatorName, host.id)} className="pointer-events-auto rounded-full bg-black/80 px-3 py-1 mt-1 hover:bg-black border border-white/10 shadow-lg"><span className="text-[11px] font-bold text-white">@{mediatorName}</span></button>
+          <button
+            type="button"
+            onClick={() => {
+              if (isWaitingForMediator) return;
+              void openProfile(mediatorName, host.id);
+            }}
+            className="pointer-events-auto rounded-full bg-black/80 px-3 py-1 mt-1 border border-white/10 shadow-lg hover:bg-black disabled:pointer-events-none disabled:opacity-90"
+            disabled={isWaitingForMediator}
+            aria-busy={isWaitingForMediator}
+          >
+            <span className="text-[11px] font-bold text-white">
+              {isWaitingForMediator ? 'En attente...' : `@${mediatorName}`}
+            </span>
+          </button>
         </div>
 
         {/* OVERLAY CHAT MOBILE (Intégré à la vidéo, invisible sur PC) */}
@@ -3856,7 +3881,7 @@ export function TikTokStyleArena({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="pointer-events-auto max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-2xl border border-white/[0.1] bg-[#121215] p-2 pt-1.5 shadow-2xl backdrop-blur-xl"
+                className="pointer-events-auto max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-black/60 p-2 pt-1.5 shadow-2xl backdrop-blur-3xl"
               >
                 <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2">
                   <span className="pl-0.5 text-[11px] font-semibold text-white/75">Réactions</span>
@@ -3898,7 +3923,7 @@ export function TikTokStyleArena({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.98 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="pointer-events-auto max-h-[min(60dvh,380px)] w-[min(calc(100vw-1rem),340px)] overflow-y-auto overscroll-contain rounded-2xl border border-white/12 bg-[#121215] p-3 pt-2 shadow-2xl backdrop-blur-xl hide-scrollbar"
+                className="pointer-events-auto max-h-[min(60dvh,380px)] w-[min(calc(100vw-1rem),340px)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-black/60 p-3 pt-2 shadow-2xl backdrop-blur-3xl hide-scrollbar"
               >
                 <div className="mb-2 flex items-start justify-between gap-2 border-b border-white/[0.08] pb-2">
                   <p className="min-w-0 flex-1 pl-0.5 text-[11px] font-semibold leading-snug text-white/75">
