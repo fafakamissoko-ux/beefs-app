@@ -181,6 +181,7 @@ export function MediatorSidebar({
 
                 {/* Bottom Sheet */}
                 <motion.aside
+                  data-mediator-regie-sheet
                   role="dialog"
                   aria-label="Tableau de bord"
                   initial={{ y: '100%' }}
@@ -213,10 +214,10 @@ export function MediatorSidebar({
             <Tabs defaultValue="debate" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
               <div className="mb-2 flex shrink-0 justify-center px-0.5">
                 <TabsList className="w-full max-w-md justify-stretch">
-                  <TabsTrigger value="debate">Débat</TabsTrigger>
+                  <TabsTrigger value="debate">⚔️ Débat</TabsTrigger>
                   <TabsTrigger value="guests">
                     <span className="inline-flex items-center justify-center gap-1.5">
-                      Invités
+                      👥 Invités
                       {pendingInviteCount > 0 && (
                         <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-ember-500 px-1 font-mono text-[8px] font-black leading-none text-black">
                           {pendingInviteCount > 99 ? "99+" : pendingInviteCount}
@@ -224,7 +225,7 @@ export function MediatorSidebar({
                       )}
                     </span>
                   </TabsTrigger>
-                  <TabsTrigger value="tools">Outils</TabsTrigger>
+                  <TabsTrigger value="tools">🛠️ Outils</TabsTrigger>
                 </TabsList>
               </div>
               <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-1 pb-4 overscroll-contain hide-scrollbar">
@@ -234,7 +235,14 @@ export function MediatorSidebar({
                       <motion.button
                         type="button"
                         disabled={startingBeef}
-                        onClick={() => void onStartBeef()}
+                        onClick={async () => {
+                          if (startingBeef) return;
+                          try {
+                            await onStartBeef();
+                          } finally {
+                            onClose();
+                          }
+                        }}
                         className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full border border-cobalt-500/80 bg-cobalt-500 py-3.5 font-mono text-[11px] font-black uppercase tracking-[0.18em] text-white shadow-[0_0_28px_rgba(59,130,246,0.55)] disabled:cursor-wait disabled:opacity-70"
                         animate={
                           startingBeef
@@ -428,7 +436,10 @@ export function MediatorSidebar({
                                 <button
                                   type="button"
                                   disabled={speakingTurnActive}
-                                  onClick={() => onHotMic(row.slot, parolePresetSec)}
+                                  onClick={() => {
+                                    onHotMic(row.slot, parolePresetSec);
+                                    onClose();
+                                  }}
                                   className="flex w-full items-center justify-center rounded-full border border-ember-500/40 bg-ember-500/12 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-ember-50 hover:bg-ember-500/25 disabled:cursor-not-allowed disabled:opacity-35"
                                 >
                                   Lancer parole · {formatParole(parolePresetSec)}
@@ -514,7 +525,10 @@ export function MediatorSidebar({
                             <div className="flex shrink-0 items-center gap-2">
                               <button
                                 type="button"
-                                onClick={() => onRejectPendingInvite?.(inv.userId)}
+                                onClick={() => {
+                                  onRejectPendingInvite?.(inv.userId);
+                                  onClose();
+                                }}
                                 className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-white/50 hover:bg-red-500/20 hover:text-red-400"
                                 aria-label="Refuser l’invitation"
                               >
@@ -522,7 +536,10 @@ export function MediatorSidebar({
                               </button>
                               <button
                                 type="button"
-                                onClick={() => onAcceptPendingInvite?.(inv.userId)}
+                                onClick={() => {
+                                  onAcceptPendingInvite?.(inv.userId);
+                                  onClose();
+                                }}
                                 className="rounded-full border border-brand-500/30 bg-brand-500/20 px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-wider text-brand-400 hover:bg-brand-500/40"
                               >
                                 Accepter
@@ -677,6 +694,7 @@ export function MediatorSidebar({
                                 onClick={() => {
                                   onPublishAnnouncement(announceDraft.trim(), announceDurationSec);
                                   setAnnounceEditorOpen(false);
+                                  onClose();
                                 }}
                                 className="rounded-full border border-amber-500/50 bg-amber-500/20 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-amber-50 hover:bg-amber-500/35"
                               >

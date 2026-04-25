@@ -24,6 +24,7 @@ import {
   Calendar,
   Flame,
   Menu,
+  Music,
 } from 'lucide-react';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { VsTransition } from './VsTransition';
@@ -251,6 +252,7 @@ export function TikTokStyleArena({
   const [showArenaMenu, setShowArenaMenu] = useState(false);
   const [isCinematicMode, setIsCinematicMode] = useState(false);
   const [showVsScreen, setShowVsScreen] = useState(true);
+  const [soundboardExpanded, setSoundboardExpanded] = useState(false);
   /** Spectateur promu co-hôte : le médiateur a accepté l’invitation (beef_participants). */
   const [acceptedInviteAlert, setAcceptedInviteAlert] = useState(false);
 
@@ -422,6 +424,52 @@ export function TikTokStyleArena({
       setShowGiftPicker(false);
     }
   }, [mediatorSidebarOpen]);
+
+  // Auto-fermeture 3s : soundboard, réactions, menu PC
+  useEffect(() => {
+    if (!soundboardExpanded) return;
+    const t = setTimeout(() => setSoundboardExpanded(false), 3000);
+    return () => clearTimeout(t);
+  }, [soundboardExpanded]);
+
+  useEffect(() => {
+    if (!showAllReactions) return;
+    const t = setTimeout(() => setShowAllReactions(false), 3000);
+    return () => clearTimeout(t);
+  }, [showAllReactions]);
+
+  useEffect(() => {
+    if (!showArenaMenu) return;
+    const t = setTimeout(() => setShowArenaMenu(false), 3000);
+    return () => clearTimeout(t);
+  }, [showArenaMenu]);
+
+  /** Clic extérieur → fermer la régie (le backdrop gère déjà le tap sur le voile) */
+  useEffect(() => {
+    if (!mediatorSidebarOpen) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target;
+      if (!(t instanceof Node)) return;
+      if (document.querySelector('[data-mediator-regie-sheet]')?.contains(t)) return;
+      if (document.querySelector('[data-mediator-sidebar-toggle]')?.contains(t)) return;
+      if (t instanceof Element && t.closest('[data-soundboard-dock]')) return;
+      setMediatorSidebarOpen(false);
+    };
+    document.addEventListener('mousedown', onDown, true);
+    return () => document.removeEventListener('mousedown', onDown, true);
+  }, [mediatorSidebarOpen]);
+
+  // Soundboard : clic extérieur du dock → repli
+  useEffect(() => {
+    if (!soundboardExpanded) return;
+    const onDown = (e: PointerEvent) => {
+      const el = e.target;
+      if (el instanceof Element && el.closest('[data-soundboard-dock]')) return;
+      setSoundboardExpanded(false);
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    return () => document.removeEventListener('pointerdown', onDown, true);
+  }, [soundboardExpanded]);
 
   const scrollChatToEnd = useCallback(() => {
     window.requestAnimationFrame(() => {
@@ -3417,7 +3465,19 @@ export function TikTokStyleArena({
               </div>
               <button onClick={() => setShowViewerList(true)} className="flex items-center gap-1 rounded-full bg-black/40 px-2 py-1"><Eye className="h-3.5 w-3.5 text-white" /><span className="text-[10px] text-white">{liveViewerCount > 0 ? liveViewerCount : '—'}</span></button>
               <button onClick={onShare} className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40"><Share2 className="h-3.5 w-3.5 text-white" /></button>
-              {isHost && <button onClick={(e) => { e.stopPropagation(); setMediatorSidebarOpen(o => !o); }} className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-amber-300 hover:bg-black/60 shadow-lg"><Sliders className="h-4 w-4" /></button>}
+              {isHost && (
+                <button
+                  type="button"
+                  data-mediator-sidebar-toggle
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMediatorSidebarOpen((o) => !o);
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-amber-300 hover:bg-black/60 shadow-lg"
+                >
+                  <Sliders className="h-4 w-4" />
+                </button>
+              )}
             </div>
             {isJoined && timerActive && (
               <div className="flex items-center gap-1 text-xs text-white bg-black/40 px-2 py-1 rounded-full">{timerPaused ? <Pause className="h-3 w-3 text-amber-200" /> : <Timer className="h-3 w-3" />}{formatBeefTime(beefTimeRemaining)}</div>
@@ -3606,33 +3666,64 @@ export function TikTokStyleArena({
         </div>
       </div>
 
-      {/* SOUNDBOARD FLOTTANT (HOST ONLY) */}
+      {/* SOUNDBOARD (HOST) — icône Music, pilule horizontale au clic */}
       {isHost && !isCinematicMode && (
-        <div className="absolute right-2 sm:right-5 top-1/2 -translate-y-1/2 z-[250] flex flex-col gap-2 rounded-[2.5rem] bg-black/40 backdrop-blur-2xl border border-white/10 p-2 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
-          {[
-            { id: 'horn', emoji: '📢', label: 'Airhorn' },
-            { id: 'laugh', emoji: '😂', label: 'Rires' },
-            { id: 'slap', emoji: '🥊', label: 'Punch' },
-            { id: 'drumroll', emoji: '🥁', label: 'Tension' },
-            { id: 'crickets', emoji: '🦗', label: 'Malaise' },
-            { id: 'bell', emoji: '🔔', label: 'Ding' },
-          ].map((sfx) => (
-            <button
-              key={sfx.id}
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                playSfx(sfx.id);
-                void channelRef.current
-                  ?.send({ type: 'broadcast', event: 'sfx', payload: { id: sfx.id } })
-                  .catch(() => {});
-              }}
-              className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/5 hover:bg-white/20 active:scale-90 transition-all border border-white/5 shadow-inner"
-              title={sfx.label}
-            >
-              <span className="text-xl sm:text-2xl drop-shadow-md">{sfx.emoji}</span>
-            </button>
-          ))}
+        <div
+          data-soundboard-dock
+          className="absolute right-2 top-1/2 z-[250] flex -translate-y-1/2 flex-row items-center gap-1.5 sm:right-5"
+        >
+          <AnimatePresence>
+            {soundboardExpanded && (
+              <motion.div
+                key="arena-sfx-pill"
+                initial={{ opacity: 0, x: 16, filter: 'blur(4px)' }}
+                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, x: 12, filter: 'blur(4px)' }}
+                transition={{ type: 'spring', damping: 28, stiffness: 340 }}
+                className="flex flex-row items-center gap-1 overflow-hidden rounded-full border border-white/10 bg-black/60 px-1.5 py-1 shadow-[0_0_32px_rgba(0,0,0,0.5)] backdrop-blur-2xl"
+              >
+                {(
+                  [
+                    { id: 'horn', emoji: '📢', label: 'Airhorn' },
+                    { id: 'laugh', emoji: '😂', label: 'Rires' },
+                    { id: 'slap', emoji: '🥊', label: 'Punch' },
+                    { id: 'drumroll', emoji: '🥁', label: 'Tension' },
+                    { id: 'crickets', emoji: '🦗', label: 'Malaise' },
+                    { id: 'bell', emoji: '🔔', label: 'Ding' },
+                  ] as const
+                ).map((sfx) => (
+                  <button
+                    key={sfx.id}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      playSfx(sfx.id);
+                      void channelRef.current
+                        ?.send({ type: 'broadcast', event: 'sfx', payload: { id: sfx.id } })
+                        .catch(() => {});
+                      setSoundboardExpanded(false);
+                    }}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/5 bg-white/5 transition-all hover:bg-white/20 active:scale-90"
+                    title={sfx.label}
+                  >
+                    <span className="text-lg drop-shadow-md sm:text-xl">{sfx.emoji}</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSoundboardExpanded((v) => !v);
+            }}
+            aria-label="Effets sonores"
+            aria-expanded={soundboardExpanded}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/50 text-amber-100 shadow-[0_0_32px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all hover:bg-white/10 active:scale-95"
+          >
+            <Music className="h-5 w-5" strokeWidth={1.6} />
+          </button>
         </div>
       )}
 
