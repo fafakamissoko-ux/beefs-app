@@ -1540,6 +1540,14 @@ export function TikTokStyleArena({
       ? (challengerRemoteSlots[1]?.userName || 'Challenger 2')
       : (challengerRemoteSlots[0]?.userName || 'Challenger 2');
 
+  const expectedChallengers = useMemo(
+    () =>
+      Object.values(participantRoles)
+        .filter((r) => r.role === 'participant')
+        .map((r) => r.name),
+    [participantRoles],
+  );
+
   const leftIsSpeaking =
     speakingTurnActive &&
     !!leftPanel?.arenaUserId &&
@@ -1767,18 +1775,18 @@ export function TikTokStyleArena({
   }, []);
 
   /** Boost par tap / réaction soutenue : assez fort pour contrebalancer le decay aura (−1 / 500 ms). */
-  const getAuraBoost = () => (liveViewerCountRef.current > 50 ? 2 : 5);
+  const getAuraBoost = () => (liveViewerCountRef.current > 50 ? 4 : 12);
 
   const emitTapSupport = useCallback((target: 'A' | 'B' | 'M') => {
     const boost = getAuraBoost();
     setGlobalHeat((v) => Math.min(100, v + 2));
     if (target === 'M') {
       setSupportBurst((p) => ({ ...p, M: p.M + 1 }));
-      setAuraMed((v) => Math.min(100, v + boost));
+      setAuraMed((v) => Math.min(300, v + boost));
     } else {
       setSupportBurst((p) => ({ ...p, [target]: p[target] + 1 }));
-      if (target === 'A') setAuraA((v) => Math.min(100, v + boost));
-      else setAuraB((v) => Math.min(100, v + boost));
+      if (target === 'A') setAuraA((v) => Math.min(300, v + boost));
+      else setAuraB((v) => Math.min(300, v + boost));
     }
     channelRef.current
       ?.send({
@@ -1798,11 +1806,11 @@ export function TikTokStyleArena({
     channel
       .on('broadcast', { event: 'reaction' }, ({ payload }: any) => {
         addRemoteReaction(payload.emoji, payload.supportSlot);
-        const boost = liveViewerCountRef.current > 50 ? 2 : 5;
+        const boost = liveViewerCountRef.current > 50 ? 4 : 12;
         const slot = payload?.supportSlot as 'A' | 'B' | 'M' | undefined;
-        if (slot === 'A') setAuraA((v) => Math.min(100, v + boost));
-        if (slot === 'B') setAuraB((v) => Math.min(100, v + boost));
-        if (slot === 'M') setAuraMed((v) => Math.min(100, v + boost));
+        if (slot === 'A') setAuraA((v) => Math.min(300, v + boost));
+        if (slot === 'B') setAuraB((v) => Math.min(300, v + boost));
+        if (slot === 'M') setAuraMed((v) => Math.min(300, v + boost));
         setGlobalHeat((v) => Math.min(100, v + 3));
       })
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
@@ -2111,11 +2119,11 @@ export function TikTokStyleArena({
       const boost = getAuraBoost();
       if (heartTarget === 'M') {
         setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
-        setAuraMed((v) => Math.min(100, v + boost));
+        setAuraMed((v) => Math.min(300, v + boost));
       } else {
         setSupportBurst((prev) => ({ ...prev, [heartTarget]: prev[heartTarget] + 1 }));
-        if (heartTarget === 'A') setAuraA((v) => Math.min(100, v + boost));
-        else setAuraB((v) => Math.min(100, v + boost));
+        if (heartTarget === 'A') setAuraA((v) => Math.min(300, v + boost));
+        else setAuraB((v) => Math.min(300, v + boost));
       }
       const xPercent =
         heartTarget === 'A'
@@ -3003,12 +3011,26 @@ export function TikTokStyleArena({
     // We're in the process of joining — show arena but with a connecting overlay
   }
 
-  const getMediatorDynamicColor = (val: number) => {
-    if (val < 100) return 'rgba(255, 255, 255, 0.8)'; // Blanc
-    if (val < 200) return 'rgba(212, 175, 55, 0.6)'; // Or pâle
-    return 'rgba(212, 175, 55, 1)'; // Or pur (Prestige Gold)
-  };
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
+
+  const finalChallengerA =
+    !leftPanelName || leftPanelName.trim().startsWith('En attente') || leftPanelName === 'Challenger 1'
+      ? expectedChallengers[0] || 'Challenger 1'
+      : leftPanelName;
+
+  const finalChallengerB =
+    !rightPanelName || rightPanelName.trim().startsWith('En attente') || rightPanelName === 'Challenger 2'
+      ? expectedChallengers[1] || 'Challenger 2'
+      : rightPanelName;
+
+  const getMediatorDynamicColor = (val: number) => {
+    const progress = Math.min(1, val / 200);
+    const r = Math.round(255 - (255 - 212) * progress);
+    const g = Math.round(255 - (255 - 175) * progress);
+    const b = Math.round(255 - (255 - 55) * progress);
+    const a = Math.min(1, 0.4 + progress * 0.6);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  };
 
   return (
     <div
@@ -3023,8 +3045,8 @@ export function TikTokStyleArena({
       <AnimatePresence>
         {showVsScreen && (
           <VsTransition
-            challengerA={leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
-            challengerB={rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
+            challengerA={finalChallengerA}
+            challengerB={finalChallengerB}
             debateTitle={debateTitle}
             onComplete={() => setShowVsScreen(false)}
           />
@@ -3383,17 +3405,22 @@ export function TikTokStyleArena({
           >
             <motion.div
               aria-hidden
-              className="pointer-events-none absolute inset-0 z-10"
+              className="pointer-events-none absolute inset-0 z-10 rounded-[inherit]"
               animate={{
                 boxShadow:
                   auraA > 0
-                    ? `0 0 ${40 + auraA}px rgba(168,85,247,${Math.min(0.8, auraA / 200)}), 0 0 0 ${auraA > 80 ? 2 : 1}px rgba(168,85,247,${Math.min(1, 0.2 + auraA / 100)})`
+                    ? `0 0 ${20 + auraA * 0.5}px rgba(168,85,247,${Math.min(0.8, 0.4 + auraA / 200)}), 0 0 0 ${auraA > 80 ? 2 : 1}px rgba(168,85,247,${Math.min(1, 0.3 + auraA / 100)})`
                     : '0 0 0 1px rgba(255,255,255,0.05)',
               }}
               transition={{ type: 'tween', duration: 0.35 }}
             />
             <AnimatePresence mode="wait">
-              <motion.div key={leftPanel?.sessionId || 'empty'} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div
+                key={leftPanel?.sessionId || 'empty'}
+                className="absolute inset-0 rounded-[inherit] overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
                 {leftPanel?.videoTrack ? <ParticipantVideo videoTrack={leftPanel.videoTrack} muted={leftPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
               </motion.div>
             </AnimatePresence>
@@ -3429,17 +3456,22 @@ export function TikTokStyleArena({
           >
             <motion.div
               aria-hidden
-              className="pointer-events-none absolute inset-0 z-10"
+              className="pointer-events-none absolute inset-0 z-10 rounded-[inherit]"
               animate={{
                 boxShadow:
                   auraB > 0
-                    ? `0 0 ${40 + auraB}px rgba(16,185,129,${Math.min(0.8, auraB / 200)}), 0 0 0 ${auraB > 80 ? 2 : 1}px rgba(16,185,129,${Math.min(1, 0.2 + auraB / 100)})`
+                    ? `0 0 ${20 + auraB * 0.5}px rgba(16,185,129,${Math.min(0.8, 0.4 + auraB / 200)}), 0 0 0 ${auraB > 80 ? 2 : 1}px rgba(16,185,129,${Math.min(1, 0.3 + auraB / 100)})`
                     : '0 0 0 1px rgba(255,255,255,0.05)',
               }}
               transition={{ type: 'tween', duration: 0.35 }}
             />
             <AnimatePresence mode="wait">
-              <motion.div key={rightPanel?.sessionId || 'empty'} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div
+                key={rightPanel?.sessionId || 'empty'}
+                className="absolute inset-0 rounded-[inherit] overflow-hidden"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
                 {rightPanel?.videoTrack ? <ParticipantVideo videoTrack={rightPanel.videoTrack} muted={rightPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
               </motion.div>
             </AnimatePresence>
@@ -3471,10 +3503,10 @@ export function TikTokStyleArena({
             animate={{
               boxShadow:
                 auraMed > 0
-                  ? `0 0 ${40 + auraMed}px ${getMediatorDynamicColor(auraMed)}, 0 0 0 ${auraMed > 150 ? 4 : 2}px ${getMediatorDynamicColor(auraMed)}`
+                  ? `0 0 ${20 + auraMed * 0.5}px ${getMediatorDynamicColor(auraMed)}, 0 0 0 ${auraMed > 150 ? 4 : 2}px ${getMediatorDynamicColor(auraMed)}`
                   : '0 0 0 2px rgba(255,255,255,0.3)',
             }}
-            className="rounded-full pointer-events-auto transition-all duration-500"
+            className="rounded-full pointer-events-auto"
           >
             <button
               type="button"
@@ -3482,7 +3514,7 @@ export function TikTokStyleArena({
                 emitTapSupport('M');
                 preferSide('M' as any);
               }}
-              className="flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full bg-black overflow-hidden active:scale-95 border-2 border-transparent transition-colors"
+              className="flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full bg-black overflow-hidden active:scale-95 border border-transparent"
             >
               {mediatorParticipant?.videoTrack ? <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="w-full h-full object-cover" /> : <span className="text-5xl text-white/30 m-auto">👤</span>}
             </button>
@@ -3680,7 +3712,7 @@ export function TikTokStyleArena({
                           if (!res.ok) throw new Error(data.error);
                           setUserPoints(data.newBalance);
                           const medBoost = Math.min(25, 4 + Math.floor(gift.cost / 40));
-                          setAuraMed((v) => Math.min(100, v + medBoost));
+                          setAuraMed((v) => Math.min(300, v + medBoost));
                           if (gift.cost >= 50) {
                             setGiftPrestigeFlash((k) => k + 1);
                           }
