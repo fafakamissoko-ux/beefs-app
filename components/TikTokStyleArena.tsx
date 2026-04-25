@@ -231,6 +231,7 @@ export function TikTokStyleArena({
   const [showGiftPicker, setShowGiftPicker] = useState(false);
   const [showViewerList, setShowViewerList] = useState(false);
   const [showArenaMenu, setShowArenaMenu] = useState(false);
+  const [isCinematicMode, setIsCinematicMode] = useState(false);
   /** Spectateur promu co-hôte : le médiateur a accepté l’invitation (beef_participants). */
   const [acceptedInviteAlert, setAcceptedInviteAlert] = useState(false);
 
@@ -3003,7 +3004,15 @@ export function TikTokStyleArena({
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
   return (
-    <div className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row">
+    <div
+      onDoubleClick={(e) => {
+        const target = e.target as HTMLElement;
+        // Ignore le double-clic s'il a lieu sur un élément interactif ou le chat
+        if (target.closest('button, input, textarea, a, aside, [id^="dock-"]')) return;
+        setIsCinematicMode(!isCinematicMode);
+      }}
+      className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row"
+    >
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -3246,7 +3255,8 @@ export function TikTokStyleArena({
       )}
 
       {/* === ASIDE CHAT (DESKTOP SEULEMENT) === */}
-      <aside className="hidden lg:flex relative min-h-0 w-[350px] min-w-[350px] shrink-0 h-full flex-col border-r border-white/10 bg-[#0c0c0f] z-[100]">
+      {!isCinematicMode && (
+        <aside className="hidden lg:flex relative min-h-0 w-[350px] min-w-[350px] shrink-0 h-full flex-col border-r border-white/10 bg-[#0c0c0f] z-[100]">
         <header className="relative z-30 shrink-0 flex items-center gap-3 border-b border-white/10 px-4 py-3">
           <button type="button" onClick={() => setShowArenaMenu(v => !v)} className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"><Menu className="h-5 w-5" strokeWidth={1.5} /></button>
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -3288,12 +3298,14 @@ export function TikTokStyleArena({
           </div>
         </div>
       </aside>
+      )}
 
       {/* === ZONE 2 : LA VIDÉO (AVEC OVERLAY CHAT MOBILE) === */}
       <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-black z-10">
 
         {/* HEADER GLOBAL FLOTTANT */}
-        <div className="absolute top-0 inset-x-0 z-[200] p-4 flex justify-between items-start pointer-events-none">
+        {!isCinematicMode && (
+          <div className="absolute top-0 inset-x-0 z-[200] p-4 flex justify-between items-start pointer-events-none">
           {!beefEnded && !isLeaving && (
             <button onClick={handleLeave} className="lg:hidden pointer-events-auto flex h-8 items-center gap-1 rounded-full bg-black/40 px-3 text-xs font-semibold text-white backdrop-blur-sm shrink-0">← <span className="hidden sm:inline">Quitter</span></button>
           )}
@@ -3337,12 +3349,20 @@ export function TikTokStyleArena({
             )}
           </div>
         </div>
+        )}
 
         {/* SPLIT SCREEN - Version Liquid Cards */}
         <div className="absolute inset-0 flex flex-row items-stretch z-0 p-2 sm:p-5 gap-2 sm:gap-5">
 
           {/* DALLE GAUCHE */}
-          <div className="relative flex-1 min-w-0 h-full overflow-hidden bg-[#08080a] rounded-[1.5rem] sm:rounded-[3.5rem] shadow-2xl border border-white/5">
+          <div
+            className="relative flex-1 min-w-0 h-full overflow-hidden bg-[#08080a] rounded-[1.5rem] sm:rounded-[3.5rem] shadow-2xl border border-white/5 transition-all duration-700"
+            style={{
+              opacity: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 0.3 : 1,
+              transform: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 'scale(1.02)' : 'scale(1)',
+              filter: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 'grayscale(0.6) blur(3px)' : 'none',
+            }}
+          >
             <motion.div aria-hidden className="pointer-events-none absolute inset-0 z-10" animate={{ boxShadow: auraA > 0 ? `inset 0 0 ${40 + auraA}px rgba(59,130,246,${Math.min(0.8, 0.4 + auraA / 100)})` : 'none' }} transition={{ type: 'tween', duration: 0.35 }} />
             <AnimatePresence mode="wait">
               <motion.div key={leftPanel?.sessionId || 'empty'} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -3371,7 +3391,14 @@ export function TikTokStyleArena({
           </div>
 
           {/* DALLE DROITE */}
-          <div className="relative flex-1 min-w-0 h-full bg-[#08080a] overflow-hidden rounded-[1.5rem] sm:rounded-[3.5rem] shadow-2xl border border-white/5">
+          <div
+            className="relative flex-1 min-w-0 h-full bg-[#08080a] overflow-hidden rounded-[1.5rem] sm:rounded-[3.5rem] shadow-2xl border border-white/5 transition-all duration-700"
+            style={{
+              opacity: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 0.3 : 1,
+              transform: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 'scale(1.02)' : 'scale(1)',
+              filter: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 'grayscale(0.6) blur(3px)' : 'none',
+            }}
+          >
             <motion.div aria-hidden className="pointer-events-none absolute inset-0 z-10" animate={{ boxShadow: auraB > 0 ? `inset 0 0 ${40 + auraB}px rgba(16,185,129,${Math.min(0.8, 0.4 + auraB / 100)})` : 'none' }} transition={{ type: 'tween', duration: 0.35 }} />
             <AnimatePresence mode="wait">
               <motion.div key={rightPanel?.sessionId || 'empty'} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -3411,7 +3438,8 @@ export function TikTokStyleArena({
         </div>
 
         {/* OVERLAY CHAT MOBILE (Intégré à la vidéo, invisible sur PC) */}
-        <div className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end bg-gradient-to-t from-black via-black/80 to-transparent pt-32 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
+        {!isCinematicMode && (
+          <div className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end bg-gradient-to-t from-black via-black/80 to-transparent pt-32 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none">
           <div className="pointer-events-auto w-[85%] max-h-[30vh] overflow-y-auto px-3 mb-2 flex flex-col justify-end hide-scrollbar">
             {visibleMessages.map((msg) => (
               <div key={msg.id} className="mb-2">
@@ -3428,6 +3456,7 @@ export function TikTokStyleArena({
             <button onClick={() => void handleSendMessage()} disabled={!chatInput.trim()} className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 disabled:opacity-50"><Send className="h-4 w-4 text-white" /></button>
           </div>
         </div>
+        )}
 
         {/* REACTIONS VOLANTES */}
         <div className="pointer-events-none absolute inset-0 z-[160]">
