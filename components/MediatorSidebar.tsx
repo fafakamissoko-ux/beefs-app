@@ -139,7 +139,7 @@ export function MediatorSidebar({
   const [announceEditorOpen, setAnnounceEditorOpen] = useState(false);
   const [announceDraft, setAnnounceDraft] = useState('');
   const [invitePanelOpen, setInvitePanelOpen] = useState(false);
-  const [announceDurationSec, setAnnounceDurationSec] = useState(12);
+  const [announceDurationSec, setAnnounceDurationSec] = useState(40);
   /** Chrono beef : réglage fin (+15/+30 + roulette) replié par défaut pour libérer le scroll */
   const [beefTimerExpanded, setBeefTimerExpanded] = useState(false);
   const [paroleWheelExpanded, setParoleWheelExpanded] = useState(false);
@@ -543,7 +543,7 @@ export function MediatorSidebar({
                           Durée d&apos;affichage
                         </p>
                         <div className="mb-3 flex flex-wrap gap-1.5">
-                          {([5, 10, 15, 30, 60] as const).map((sec) => (
+                          {([40, 80, 120, 300] as const).map((sec) => (
                             <button
                               key={sec}
                               type="button"

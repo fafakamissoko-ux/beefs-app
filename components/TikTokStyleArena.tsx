@@ -1823,7 +1823,7 @@ export function TikTokStyleArena({
           setAnnouncementTicker('');
           return;
         }
-        const d = Math.max(3, Math.min(120, Math.floor(Number(payload?.durationSec) || 12)));
+        const d = Math.max(40, Math.min(600, Math.floor(Number(payload?.durationSec) || 40)));
         setAnnouncementTicker(raw);
         announcementClearTimerRef.current = setTimeout(() => {
           setAnnouncementTicker('');
@@ -2792,7 +2792,7 @@ export function TikTokStyleArena({
         clearAnnouncementBanner();
         return;
       }
-      const d = Math.max(3, Math.min(120, Math.floor(durationSec) || 12));
+      const d = Math.max(40, Math.min(600, Math.floor(durationSec) || 40));
       setAnnouncementTicker(trimmed);
       announcementClearTimerRef.current = setTimeout(() => {
         setAnnouncementTicker('');
@@ -3307,9 +3307,9 @@ export function TikTokStyleArena({
                 className="flex-1 mx-2 sm:mx-4 overflow-hidden pointer-events-none flex items-center h-8"
               >
                 <div className="w-full bg-amber-500/95 backdrop-blur-md rounded-full shadow-lg border border-white/20 overflow-hidden flex items-center h-full">
-                  <div className="whitespace-nowrap animate-[marquee_15s_linear_infinite] px-4 flex items-center">
+                  <div className="whitespace-nowrap animate-[marquee_35s_linear_infinite] px-4 flex items-center">
                     <p className="text-black font-black text-[10px] sm:text-[11px] uppercase tracking-wider inline-block">
-                      {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker}
+                      {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker} <span className="mx-8 opacity-50">•</span> {announcementTicker}
                     </p>
                   </div>
                 </div>
@@ -3891,7 +3891,7 @@ export function TikTokStyleArena({
           scrollbar-width: none;
         }
         @keyframes marquee {
-          0% { transform: translateX(20%); }
+          0% { transform: translateX(100%); }
           100% { transform: translateX(-100%); }
         }
       `}</style>
