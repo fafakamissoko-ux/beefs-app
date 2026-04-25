@@ -3338,12 +3338,12 @@ export function TikTokStyleArena({
           </div>
         </div>
 
-        {/* SPLIT SCREEN */}
-        <div className="absolute inset-0 flex flex-row items-stretch z-0">
+        {/* SPLIT SCREEN - Version Liquid Cards */}
+        <div className="absolute inset-0 flex flex-col lg:flex-row items-stretch z-0 p-3 sm:p-5 gap-3 sm:gap-5">
 
           {/* DALLE GAUCHE */}
-          <div className="relative flex-1 min-w-0 h-full lg:border-r-2 lg:border-black overflow-hidden bg-[#08080a]">
-            <motion.div aria-hidden className="pointer-events-none absolute inset-0 z-10" animate={{ boxShadow: auraA > 0 ? `inset 0 0 ${30 + auraA}px rgba(59,130,246,${Math.min(1, 0.3 + auraA / 100)})` : 'none' }} transition={{ type: 'tween', duration: 0.35 }} />
+          <div className="relative flex-1 min-w-0 h-full overflow-hidden bg-[#08080a] rounded-[2.5rem] sm:rounded-[3.5rem] shadow-2xl border border-white/5">
+            <motion.div aria-hidden className="pointer-events-none absolute inset-0 z-10" animate={{ boxShadow: auraA > 0 ? `inset 0 0 ${40 + auraA}px rgba(59,130,246,${Math.min(0.8, 0.4 + auraA / 100)})` : 'none' }} transition={{ type: 'tween', duration: 0.35 }} />
             <AnimatePresence mode="wait">
               <motion.div key={leftPanel?.sessionId || 'empty'} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 {leftPanel?.videoTrack ? <ParticipantVideo videoTrack={leftPanel.videoTrack} muted={leftPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
@@ -3371,8 +3371,8 @@ export function TikTokStyleArena({
           </div>
 
           {/* DALLE DROITE */}
-          <div className="relative flex-1 min-w-0 h-full bg-[#08080a] overflow-hidden">
-            <motion.div aria-hidden className="pointer-events-none absolute inset-0 z-10" animate={{ boxShadow: auraB > 0 ? `inset 0 0 ${30 + auraB}px rgba(16,185,129,${Math.min(1, 0.3 + auraB / 100)})` : 'none' }} transition={{ type: 'tween', duration: 0.35 }} />
+          <div className="relative flex-1 min-w-0 h-full bg-[#08080a] overflow-hidden rounded-[2.5rem] sm:rounded-[3.5rem] shadow-2xl border border-white/5">
+            <motion.div aria-hidden className="pointer-events-none absolute inset-0 z-10" animate={{ boxShadow: auraB > 0 ? `inset 0 0 ${40 + auraB}px rgba(16,185,129,${Math.min(0.8, 0.4 + auraB / 100)})` : 'none' }} transition={{ type: 'tween', duration: 0.35 }} />
             <AnimatePresence mode="wait">
               <motion.div key={rightPanel?.sessionId || 'empty'} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 {rightPanel?.videoTrack ? <ParticipantVideo videoTrack={rightPanel.videoTrack} muted={rightPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
