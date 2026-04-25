@@ -26,6 +26,7 @@ import {
   Menu,
 } from 'lucide-react';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
+import { VsTransition } from './VsTransition';
 import { ChatPanel } from './ChatPanel';
 import { PreJoinScreen } from './PreJoinScreen';
 import { ParticipantVideo } from './ParticipantVideo';
@@ -232,6 +233,7 @@ export function TikTokStyleArena({
   const [showViewerList, setShowViewerList] = useState(false);
   const [showArenaMenu, setShowArenaMenu] = useState(false);
   const [isCinematicMode, setIsCinematicMode] = useState(false);
+  const [showVsScreen, setShowVsScreen] = useState(true);
   /** Spectateur promu co-hôte : le médiateur a accepté l’invitation (beef_participants). */
   const [acceptedInviteAlert, setAcceptedInviteAlert] = useState(false);
 
@@ -3013,6 +3015,17 @@ export function TikTokStyleArena({
       }}
       className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row"
     >
+      <AnimatePresence>
+        {showVsScreen && (
+          <VsTransition
+            challengerA={leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
+            challengerB={rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
+            debateTitle={debateTitle}
+            onComplete={() => setShowVsScreen(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
