@@ -35,11 +35,14 @@ export function useToast() {
 }
 
 const toastVariants: Record<ToastType, string> = {
-  success: 'bg-green-500/[0.12] border border-green-500/25 text-green-400',
-  error: 'bg-red-500/[0.12] border border-red-500/25 text-red-400',
-  info: 'bg-cyan-400/10 border border-cyan-400/20 text-cyan-300',
+  success:
+    'border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 shadow-[0_0_28px_rgba(16,185,129,0.35),0_0_56px_-8px_rgba(16,185,129,0.22),inset_0_0_0_1px_rgba(16,185,129,0.12)]',
+  error:
+    'border border-ember-500/40 bg-red-950/25 text-red-100 shadow-[0_0_32px_rgba(255,77,0,0.4),0_0_48px_-6px_rgba(239,68,68,0.28),inset_0_0_0_1px_rgba(255,77,0,0.12)]',
+  info: 'border border-cyan-400/25 bg-cyan-400/10 text-cyan-200 shadow-[0_0_24px_rgba(34,211,238,0.2)]',
 };
-const emberVariant = 'bg-ember-500/[0.12] border border-ember-500/35 text-amber-200';
+const emberVariant =
+  'border border-ember-500/40 bg-ember-500/12 text-amber-100 shadow-[0_0_32px_rgba(255,77,0,0.45),0_0_52px_-8px_rgba(255,100,50,0.2),inset_0_0_0_1px_rgba(255,77,0,0.12)]';
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -85,11 +88,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             return (
               <motion.div
                 key={t.id}
-                initial={{ opacity: 0, x: 40, scale: 0.95 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 40, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-[2rem] backdrop-blur-2xl shadow-2xl border border-white/5 ${variant}`}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-[2.5rem] backdrop-blur-3xl ${variant}`}
               >
                 <span>{icons[t.type]}</span>
                 <div className="flex-1 min-w-0 flex flex-col gap-2">
