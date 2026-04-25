@@ -1543,7 +1543,7 @@ export function TikTokStyleArena({
   const expectedChallengers = useMemo(
     () =>
       Object.values(participantRoles)
-        .filter((r) => r.role === 'participant')
+        .filter((r) => r.role !== 'mediator' && r.role !== 'host')
         .map((r) => r.name),
     [participantRoles],
   );
@@ -3042,6 +3042,21 @@ export function TikTokStyleArena({
       }}
       className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row"
     >
+      {/* Sécurité anti-blocage Mode Cinéma */}
+      <AnimatePresence>
+        {isCinematicMode && (
+          <motion.button
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            onClick={() => setIsCinematicMode(false)}
+            className="absolute top-20 left-1/2 -translate-x-1/2 z-[9999] rounded-full bg-white/20 px-6 py-2 backdrop-blur-md text-white font-bold text-[11px] uppercase tracking-widest shadow-xl border border-white/30 pointer-events-auto"
+          >
+            Quitter le mode cinéma
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {showVsScreen && (
           <VsTransition
@@ -3395,36 +3410,46 @@ export function TikTokStyleArena({
         <div className="absolute inset-0 flex flex-row items-stretch z-0 p-2 sm:p-5 gap-2 sm:gap-5">
 
           {/* DALLE GAUCHE */}
-          <div
-            className="relative flex-1 min-w-0 h-full overflow-hidden bg-[#08080a] rounded-[1.5rem] sm:rounded-[3.5rem] shadow-2xl border border-white/5 transition-all duration-700"
+          <motion.div
+            className="relative flex-1 min-w-0 h-full bg-[#08080a] rounded-[1.5rem] sm:rounded-[3.5rem] transition-all duration-700"
+            animate={{
+              boxShadow:
+                auraA > 0
+                  ? `0 0 ${20 + Math.min(auraA, 100) * 0.5}px rgba(168,85,247,${Math.min(0.8, 0.4 + auraA / 200)}), 0 0 0 ${auraA > 80 ? 2 : 1}px rgba(168,85,247,${Math.min(1, 0.3 + auraA / 100)})`
+                  : '0 0 0 1px rgba(255,255,255,0.05)',
+            }}
             style={{
               opacity: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 0.3 : 1,
               transform: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 'scale(1.02)' : 'scale(1)',
               filter: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 'grayscale(0.6) blur(3px)' : 'none',
             }}
           >
-            <motion.div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 z-10 rounded-[inherit]"
-              animate={{
-                boxShadow:
-                  auraA > 0
-                    ? `0 0 ${20 + auraA * 0.5}px rgba(168,85,247,${Math.min(0.8, 0.4 + auraA / 200)}), 0 0 0 ${auraA > 80 ? 2 : 1}px rgba(168,85,247,${Math.min(1, 0.3 + auraA / 100)})`
-                    : '0 0 0 1px rgba(255,255,255,0.05)',
-              }}
-              transition={{ type: 'tween', duration: 0.35 }}
-            />
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={leftPanel?.sessionId || 'empty'}
-                className="absolute inset-0 rounded-[inherit] overflow-hidden"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                {leftPanel?.videoTrack ? <ParticipantVideo videoTrack={leftPanel.videoTrack} muted={leftPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
-              </motion.div>
-            </AnimatePresence>
-            {!leftPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('A'); preferSide('A'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir A" />}
+            <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={leftPanel?.sessionId || 'empty'}
+                  className="absolute inset-0"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  {leftPanel?.videoTrack ? <ParticipantVideo videoTrack={leftPanel.videoTrack} muted={leftPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
+                </motion.div>
+              </AnimatePresence>
+              {!leftPanelIsLocal && (
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    emitTapSupport('A');
+                    preferSide('A');
+                  }}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  className="absolute inset-0 z-[28] touch-manipulation w-full h-full outline-none"
+                  aria-label="Soutenir A"
+                />
+              )}
+            </div>
             <div className="absolute inset-x-4 max-lg:top-[4.5rem] max-lg:bottom-auto bottom-6 z-[140] flex flex-row items-center justify-between gap-3 pointer-events-auto">
               <div className="flex flex-col items-start min-w-0 flex-1">
                 <button onClick={(e) => { e.stopPropagation(); void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null); }} className="text-white text-sm font-black tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight w-full truncate">
@@ -3443,39 +3468,49 @@ export function TikTokStyleArena({
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
 
           {/* DALLE DROITE */}
-          <div
-            className="relative flex-1 min-w-0 h-full bg-[#08080a] overflow-hidden rounded-[1.5rem] sm:rounded-[3.5rem] shadow-2xl border border-white/5 transition-all duration-700"
+          <motion.div
+            className="relative flex-1 min-w-0 h-full bg-[#08080a] rounded-[1.5rem] sm:rounded-[3.5rem] transition-all duration-700"
+            animate={{
+              boxShadow:
+                auraB > 0
+                  ? `0 0 ${20 + Math.min(auraB, 100) * 0.5}px rgba(16,185,129,${Math.min(0.8, 0.4 + auraB / 200)}), 0 0 0 ${auraB > 80 ? 2 : 1}px rgba(16,185,129,${Math.min(1, 0.3 + auraB / 100)})`
+                  : '0 0 0 1px rgba(255,255,255,0.05)',
+            }}
             style={{
               opacity: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 0.3 : 1,
               transform: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 'scale(1.02)' : 'scale(1)',
               filter: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 'grayscale(0.6) blur(3px)' : 'none',
             }}
           >
-            <motion.div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 z-10 rounded-[inherit]"
-              animate={{
-                boxShadow:
-                  auraB > 0
-                    ? `0 0 ${20 + auraB * 0.5}px rgba(16,185,129,${Math.min(0.8, 0.4 + auraB / 200)}), 0 0 0 ${auraB > 80 ? 2 : 1}px rgba(16,185,129,${Math.min(1, 0.3 + auraB / 100)})`
-                    : '0 0 0 1px rgba(255,255,255,0.05)',
-              }}
-              transition={{ type: 'tween', duration: 0.35 }}
-            />
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={rightPanel?.sessionId || 'empty'}
-                className="absolute inset-0 rounded-[inherit] overflow-hidden"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                {rightPanel?.videoTrack ? <ParticipantVideo videoTrack={rightPanel.videoTrack} muted={rightPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
-              </motion.div>
-            </AnimatePresence>
-            {!rightPanelIsLocal && <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => { emitTapSupport('B'); preferSide('B'); }} className="absolute inset-0 z-[28] touch-manipulation w-full h-full" aria-label="Soutenir B" />}
+            <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={rightPanel?.sessionId || 'empty'}
+                  className="absolute inset-0"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  {rightPanel?.videoTrack ? <ParticipantVideo videoTrack={rightPanel.videoTrack} muted={rightPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
+                </motion.div>
+              </AnimatePresence>
+              {!rightPanelIsLocal && (
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    emitTapSupport('B');
+                    preferSide('B');
+                  }}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  className="absolute inset-0 z-[28] touch-manipulation w-full h-full outline-none"
+                  aria-label="Soutenir B"
+                />
+              )}
+            </div>
             <div className="absolute inset-x-4 max-lg:top-[4.5rem] max-lg:bottom-auto bottom-6 z-[140] flex flex-row items-center justify-between gap-3 pointer-events-auto">
               <div className="flex flex-col items-start min-w-0 flex-1">
                 <button onClick={(e) => { e.stopPropagation(); void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null); }} className="text-white text-sm font-black tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline text-left leading-tight w-full truncate">
@@ -3494,7 +3529,7 @@ export function TikTokStyleArena({
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
 
         {/* MÉDIATEUR AU CENTRE */}
@@ -3503,18 +3538,20 @@ export function TikTokStyleArena({
             animate={{
               boxShadow:
                 auraMed > 0
-                  ? `0 0 ${20 + auraMed * 0.5}px ${getMediatorDynamicColor(auraMed)}, 0 0 0 ${auraMed > 150 ? 4 : 2}px ${getMediatorDynamicColor(auraMed)}`
+                  ? `0 0 ${20 + Math.min(auraMed, 100) * 0.5}px ${getMediatorDynamicColor(auraMed)}, 0 0 0 ${auraMed > 150 ? 4 : 2}px ${getMediatorDynamicColor(auraMed)}`
                   : '0 0 0 2px rgba(255,255,255,0.3)',
             }}
-            className="rounded-full pointer-events-auto"
+            className="rounded-full pointer-events-auto transition-shadow duration-300"
           >
             <button
               type="button"
-              onClick={() => {
+              onPointerDown={(e) => {
+                e.stopPropagation();
                 emitTapSupport('M');
                 preferSide('M' as any);
               }}
-              className="flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full bg-black overflow-hidden active:scale-95 border border-transparent"
+              onDoubleClick={(e) => e.stopPropagation()}
+              className="flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full bg-black overflow-hidden active:scale-95 border border-transparent outline-none touch-manipulation"
             >
               {mediatorParticipant?.videoTrack ? <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="w-full h-full object-cover" /> : <span className="text-5xl text-white/30 m-auto">👤</span>}
             </button>
