@@ -89,7 +89,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 40, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
-                className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl backdrop-blur-xl shadow-modal ${variant}`}
+                className={`pointer-events-auto flex items-center gap-3 px-5 py-4 rounded-[2rem] backdrop-blur-2xl shadow-2xl border border-white/5 ${variant}`}
               >
                 <span>{icons[t.type]}</span>
                 <div className="flex-1 min-w-0 flex flex-col gap-2">
