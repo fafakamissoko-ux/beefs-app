@@ -3132,23 +3132,17 @@ export function TikTokStyleArena({
     >
       {!isCinematicMode && arenaHasAnnouncement && (
         <div
-          className="pointer-events-none fixed left-0 right-0 top-0 z-[500] hidden h-6 min-h-6 flex flex-col justify-center overflow-hidden border-b border-white/5 bg-black/20 backdrop-blur-md lg:block"
+          className="pointer-events-none fixed left-0 right-0 top-0 z-[500] hidden h-6 min-h-6 flex-col justify-center overflow-hidden border-b border-white/10 bg-black/40 backdrop-blur-md lg:flex lg:flex-col"
           role="status"
           aria-live="polite"
         >
-          <div
-            className="whitespace-nowrap pl-[100%] flex h-full min-h-0 items-center"
-            style={{
-              animation: `marquee ${Math.max(25, announcementTicker.length * 0.35)}s linear infinite`,
-            }}
-          >
-            <p className="inline-block text-[8px] font-medium uppercase tracking-[0.25em] text-white/40 sm:text-[9px]">
-              {announcementTicker}
-              <span className="mx-8 inline opacity-40">·</span>
-              {announcementTicker}
-              <span className="mx-8 inline opacity-40">·</span>
-              {announcementTicker}
-            </p>
+          <div className="flex w-max min-w-full animate-marquee-continuous whitespace-nowrap">
+            <span className="mx-4 text-[10px] font-black uppercase tracking-widest text-white/90">
+              {announcementTicker} • {announcementTicker} • {announcementTicker} • {announcementTicker}
+            </span>
+            <span className="mx-4 text-[10px] font-black uppercase tracking-widest text-white/90">
+              {announcementTicker} • {announcementTicker} • {announcementTicker} • {announcementTicker}
+            </span>
           </div>
         </div>
       )}
@@ -3367,19 +3361,6 @@ export function TikTokStyleArena({
         </div>
       )}
 
-      {/* ── MEDIATOR GRACE PERIOD BANNER ── */}
-      {mediatorGraceActive && !beefEnded && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute left-1/2 top-28 z-[100] flex -translate-x-1/2 items-center gap-3 rounded-full bg-prestige-gold/90 px-4 py-2 text-black shadow-prestige-ring backdrop-blur-sm"
-        >
-          <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-          <div className="text-sm font-semibold text-center max-w-[min(100vw-2rem,20rem)]">
-            Médiateur déconnecté — {mediatorGraceSeconds}s (le direct continue)
-          </div>
-        </motion.div>
-      )}
       {/* ── NETWORK RECONNECTION OVERLAY ── */}
       {isOffline && !beefEnded && (
         <motion.div
@@ -3442,11 +3423,25 @@ export function TikTokStyleArena({
       {/* === ZONE 2 : LA VIDÉO (AVEC OVERLAY CHAT MOBILE) === */}
       <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-black z-10">
 
+        {/* TICKER MOBILE */}
+        {!isCinematicMode && arenaHasAnnouncement && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-[190] flex h-7 items-center overflow-hidden border-b border-white/10 bg-black/60 backdrop-blur-md lg:hidden">
+            <div className="flex w-max min-w-full animate-marquee-continuous-fast whitespace-nowrap">
+              <span className="mx-4 text-[9px] font-bold uppercase tracking-widest text-white/90">
+                {announcementTicker} • {announcementTicker} • {announcementTicker} • {announcementTicker}
+              </span>
+              <span className="mx-4 text-[9px] font-bold uppercase tracking-widest text-white/90">
+                {announcementTicker} • {announcementTicker} • {announcementTicker} • {announcementTicker}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* HEADER GLOBAL FLOTTANT */}
         {!isCinematicMode && (
           <div
             data-cinema-stay
-            className={`absolute inset-x-0 z-[200] p-4 flex justify-between items-start pointer-events-none ${arenaHasAnnouncement ? 'top-0 lg:top-6' : 'top-0'}`}
+            className={`absolute inset-x-0 z-[200] flex justify-between items-start p-4 pointer-events-none ${arenaHasAnnouncement ? 'top-7 lg:top-6' : 'top-0'}`}
           >
           {!beefEnded && !isLeaving && (
             <button
@@ -3462,31 +3457,7 @@ export function TikTokStyleArena({
             </button>
           )}
           
-          <AnimatePresence>
-            {arenaHasAnnouncement && (
-              <motion.div
-                initial={{ y: -50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -50, opacity: 0 }}
-                className="flex-1 mx-2 sm:mx-4 overflow-hidden pointer-events-none flex items-center h-8 min-h-8 lg:hidden"
-              >
-                <div className="h-6 w-full overflow-hidden border-b border-white/5 bg-black/20 backdrop-blur-md">
-                  <div
-                    className="whitespace-nowrap flex h-full min-h-0 items-center pl-[100%]"
-                    style={{
-                      animation: `marquee ${Math.max(25, announcementTicker.length * 0.35)}s linear infinite`,
-                    }}
-                  >
-                    <p className="text-[8px] font-medium uppercase inline-block tracking-wide text-white/40 sm:text-[9px]">
-                      {announcementTicker} <span className="mx-6 opacity-40">·</span> {announcementTicker} <span className="mx-6 opacity-40">·</span> {announcementTicker}
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div className="flex flex-col items-end gap-2 pointer-events-auto ml-auto shrink-0">
+          <div className="pointer-events-auto ml-auto flex shrink-0 flex-col items-end gap-2 bg-transparent">
             <div className="flex items-center gap-2">
               <div className={`flex items-center rounded-full bg-black/40 backdrop-blur-sm px-2 py-1`}>
                 <div className={`mr-1.5 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}`} />
@@ -3739,20 +3710,31 @@ export function TikTokStyleArena({
               className="flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full bg-black overflow-hidden active:scale-95 border border-transparent outline-none touch-manipulation"
             >
               {isWaitingForMediator ? (
-                <span className="m-auto flex h-full w-full items-center justify-center bg-black/40">
-                  <span
-                    className="h-5 w-5 shrink-0 rounded-full border-2 border-white/10 border-t-white/45 animate-spin"
-                    aria-hidden
-                  />
-                </span>
+                <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/40 p-4">
+                  <div className="h-8 w-8 shrink-0 animate-spin rounded-full border-[3px] border-brand-400 border-t-transparent opacity-80" />
+                  <span className="mt-2 text-center text-[10px] font-black uppercase leading-none tracking-tighter text-white">
+                    Attente
+                    <br />
+                    Médiateur
+                  </span>
+                </div>
               ) : mediatorParticipant?.videoTrack ? (
                 <ParticipantVideo
                   videoTrack={mediatorParticipant.videoTrack}
                   muted={mediatorIsLocal}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                 />
+              ) : mediatorGraceActive ? (
+                <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/60 p-4">
+                  <div className="mb-2 h-10 w-10 animate-pulse rounded-full border-[3px] border-red-500 border-t-transparent" />
+                  <span className="text-center text-[12px] font-black leading-none text-red-500">
+                    DÉCONNECTÉ
+                    <br />
+                    {mediatorGraceSeconds}s
+                  </span>
+                </div>
               ) : (
-                <span className="text-5xl text-white/30 m-auto">👤</span>
+                <span className="m-auto text-5xl text-white/30">👤</span>
               )}
             </button>
           </motion.div>
@@ -4390,9 +4372,15 @@ export function TikTokStyleArena({
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
-        @keyframes marquee {
+        @keyframes marquee-continuous {
           0% { transform: translateX(0); }
-          100% { transform: translateX(-100%); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee-continuous {
+          animation: marquee-continuous 20s linear infinite;
+        }
+        .animate-marquee-continuous-fast {
+          animation: marquee-continuous 10s linear infinite;
         }
       `}</style>
       {typeof document !== 'undefined' &&
