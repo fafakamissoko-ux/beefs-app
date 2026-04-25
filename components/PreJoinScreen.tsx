@@ -133,21 +133,31 @@ export function PreJoinScreen({
     onJoin(acquired);
   };
 
+  const ambientLayer = (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      <div className="absolute -left-[20%] -top-[25%] h-[min(70vh,32rem)] w-[min(85vw,36rem)] rounded-full bg-violet-600/[0.22] blur-[100px] sm:blur-[120px]" />
+      <div className="absolute -right-[18%] -bottom-[20%] h-[min(65vh,30rem)] w-[min(80vw,34rem)] rounded-full bg-emerald-500/[0.16] blur-[95px] sm:blur-[115px]" />
+      <div className="absolute right-0 top-1/3 h-40 w-40 -translate-y-1/2 translate-x-1/4 rounded-full bg-violet-500/10 blur-3xl" />
+      <div className="absolute bottom-0 left-1/4 h-32 w-32 rounded-full bg-emerald-400/10 blur-3xl" />
+    </div>
+  );
+
   if (viewerMode) {
     return (
-      <div className="flex h-full w-full touch-manipulation items-center justify-center bg-gray-950 p-4">
-        <div className="w-full max-w-md space-y-6 text-center">
-          <div className="w-24 h-24 bg-gradient-to-br from-brand-500/30 to-brand-600/20 rounded-full flex items-center justify-center mx-auto">
+      <div className="relative flex h-full w-full touch-manipulation items-center justify-center overflow-hidden bg-obsidian p-4">
+        {ambientLayer}
+        <div className="relative z-10 w-full max-w-md space-y-6 text-center">
+          <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-violet-500/25 to-emerald-500/20 ring-1 ring-white/10">
             <span className="text-5xl font-black text-white">{userName?.[0]?.toUpperCase() || '?'}</span>
           </div>
           <div>
             <h2 className="text-2xl font-black text-white">Rejoindre en tant que spectateur</h2>
-            <p className="text-gray-400 text-sm mt-2">Tu pourras regarder le beef, commenter, voter et envoyer des reactions</p>
+            <p className="mt-2 text-sm text-white/50">Tu pourras regarder le beef, commenter, voter et envoyer des reactions</p>
           </div>
           <button
             type="button"
             onClick={() => onJoin(null)}
-            className="w-full touch-manipulation py-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-black text-lg rounded-2xl transition-all shadow-lg shadow-orange-500/30 active:scale-95"
+            className="w-full touch-manipulation rounded-2xl bg-gradient-to-r from-purple-600 to-emerald-600 py-4 text-lg font-black text-white shadow-[0_0_42px_-6px_rgba(147,51,234,0.45),0_18px_48px_-8px_rgba(5,150,105,0.35)] transition-[transform,filter] duration-150 hover:brightness-110 active:scale-[0.97]"
           >
             👁️ Regarder le Beef
           </button>
@@ -157,16 +167,17 @@ export function PreJoinScreen({
   }
 
   return (
-    <div className="flex h-full w-full touch-manipulation items-center justify-center bg-gray-950 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-      <div className="w-full max-w-2xl space-y-4">
+    <div className="relative flex h-full w-full touch-manipulation items-center justify-center overflow-hidden bg-obsidian p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      {ambientLayer}
+      <div className="relative z-10 w-full max-w-2xl space-y-4">
         {/* Title */}
         <div className="text-center">
-          <h2 className="text-2xl font-black text-white">Prêt à rejoindre ?</h2>
-          <p className="text-gray-400 text-sm mt-1">Teste ta caméra et ton micro avant d'entrer dans le beef</p>
+          <h2 className="text-2xl font-black tracking-tight text-white">Prêt à rejoindre ?</h2>
+          <p className="mt-1 text-sm text-white/50">Teste ta caméra et ton micro avant d'entrer dans le beef</p>
         </div>
 
         {/* Camera preview */}
-        <div className="relative aspect-video overflow-hidden rounded-2xl bg-gray-900">
+        <div className="relative aspect-video overflow-hidden rounded-[2rem] border border-white/[0.06] bg-obsidian-900/80 shadow-2xl shadow-black/40">
           {camEnabled ? (
             <video
               ref={videoRef}
@@ -211,41 +222,46 @@ export function PreJoinScreen({
           )}
         </div>
 
-        {/* Controls row */}
-        <div className="flex items-center justify-between gap-3">
-          {/* Cam toggle */}
-          <button
-            type="button"
-            onClick={toggleCam}
-            className={`flex touch-manipulation items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
-              camEnabled
-                ? 'bg-gray-800 text-white hover:bg-gray-700'
-                : 'bg-red-500/20 text-red-400 border border-red-500/50'
-            }`}
-          >
-            {camEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
-            {camEnabled ? 'Caméra ON' : 'Caméra OFF'}
-          </button>
+        {/* Controls — cartes glass */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+          <div className="rounded-[2rem] border border-white/[0.07] bg-white/[0.03] p-4 backdrop-blur-xl">
+            <p className="mb-2.5 text-center font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">
+              Caméra
+            </p>
+            <button
+              type="button"
+              onClick={toggleCam}
+              className={`flex w-full touch-manipulation items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${
+                camEnabled
+                  ? 'bg-white/[0.06] text-white ring-1 ring-violet-500/25 hover:bg-white/[0.1]'
+                  : 'border border-red-500/40 bg-red-500/15 text-red-200 hover:bg-red-500/25'
+              }`}
+            >
+              {camEnabled ? <Video className="h-4 w-4 shrink-0" /> : <VideoOff className="h-4 w-4 shrink-0" />}
+              {camEnabled ? 'ON' : 'OFF'}
+            </button>
+          </div>
 
-          {/* Mic toggle + level meter */}
-          <div className="flex items-center gap-2">
+          <div className="rounded-[2rem] border border-white/[0.07] bg-white/[0.03] p-4 backdrop-blur-xl">
+            <p className="mb-2.5 text-center font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">
+              Micro
+            </p>
             <button
               type="button"
               onClick={toggleMic}
-              className={`flex touch-manipulation items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+              className={`mb-3 flex w-full touch-manipulation items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-all ${
                 micEnabled
-                  ? 'bg-gray-800 text-white hover:bg-gray-700'
-                  : 'bg-red-500/20 text-red-400 border border-red-500/50'
+                  ? 'bg-white/[0.06] text-white ring-1 ring-emerald-500/25 hover:bg-white/[0.1]'
+                  : 'border border-red-500/40 bg-red-500/15 text-red-200 hover:bg-red-500/25'
               }`}
             >
-              {micEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-              {micEnabled ? 'Micro ON' : 'Micro OFF'}
+              {micEnabled ? <Mic className="h-4 w-4 shrink-0" /> : <MicOff className="h-4 w-4 shrink-0" />}
+              {micEnabled ? 'ON' : 'OFF'}
             </button>
-            {/* Audio level bar */}
             {micEnabled && (
-              <div className="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
                 <div
-                  className="h-full bg-gradient-to-r from-green-500 to-orange-500 rounded-full transition-all duration-75"
+                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-500 transition-all duration-75"
                   style={{ width: `${audioLevel}%` }}
                 />
               </div>
@@ -255,33 +271,33 @@ export function PreJoinScreen({
 
         {/* Device selectors */}
         {(devices.cameras.length > 1 || devices.mics.length > 1) && (
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
             {devices.cameras.length > 1 && (
-              <div className="flex-1 relative">
+              <div className="relative flex-1 rounded-[2rem] border border-white/[0.07] bg-white/[0.03] p-1 backdrop-blur-xl">
                 <select
                   value={selectedCam}
                   onChange={e => { setSelectedCam(e.target.value); startPreview(e.target.value, selectedMic); }}
-                  className="w-full bg-gray-800 text-white text-sm rounded-lg px-3 py-2 border border-gray-700 appearance-none"
+                  className="w-full cursor-pointer appearance-none rounded-[1.75rem] bg-white/[0.04] px-4 py-3 pr-10 text-sm text-white ring-0 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
                 >
                   {devices.cameras.map(d => (
                     <option key={d.deviceId} value={d.deviceId}>{d.label || 'Caméra'}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
               </div>
             )}
             {devices.mics.length > 1 && (
-              <div className="flex-1 relative">
+              <div className="relative flex-1 rounded-[2rem] border border-white/[0.07] bg-white/[0.03] p-1 backdrop-blur-xl">
                 <select
                   value={selectedMic}
                   onChange={e => { setSelectedMic(e.target.value); startPreview(selectedCam, e.target.value); }}
-                  className="w-full bg-gray-800 text-white text-sm rounded-lg px-3 py-2 border border-gray-700 appearance-none"
+                  className="w-full cursor-pointer appearance-none rounded-[1.75rem] bg-white/[0.04] px-4 py-3 pr-10 text-sm text-white ring-0 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 >
                   {devices.mics.map(d => (
                     <option key={d.deviceId} value={d.deviceId}>{d.label || 'Micro'}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
               </div>
             )}
           </div>
@@ -289,7 +305,7 @@ export function PreJoinScreen({
 
         {/* Mutiny Protocol — challengers only, pre-live */}
         {mediatorName && currentUserSlot && onMutinyInitiate && onMutinyConfirm && onMutinyRefuse && (
-          <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
+          <div className="flex items-center justify-between gap-3 rounded-[2rem] border border-white/[0.08] bg-white/[0.03] px-4 py-3 backdrop-blur-xl">
             <div className="flex-1 min-w-0">
               <p className="font-sans text-xs text-white/40">
                 Médiateur : <span className="font-bold text-white/60">{mediatorName}</span>
@@ -306,13 +322,13 @@ export function PreJoinScreen({
           </div>
         )}
 
-        {/* Join button */}
+        {/* Join */}
         <button
           type="button"
           onClick={handleJoin}
-          className="w-full touch-manipulation rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 py-4 text-lg font-black text-white shadow-lg shadow-orange-500/30 transition-all hover:from-orange-600 hover:to-red-600 active:scale-95"
+          className="w-full touch-manipulation rounded-2xl bg-gradient-to-r from-purple-600 to-emerald-600 py-5 text-base font-black tracking-wide text-white shadow-[0_0_48px_-8px_rgba(124,58,237,0.5),0_24px_56px_-12px_rgba(5,150,105,0.4)] transition-[transform,filter,box-shadow] duration-200 hover:brightness-110 hover:shadow-[0_0_56px_-6px_rgba(124,58,237,0.55),0_28px_64px_-10px_rgba(5,150,105,0.45)] active:scale-[0.96] sm:py-6 sm:text-lg"
         >
-          🔥 Rejoindre le Beef
+          Entrer dans l&apos;Arène
         </button>
       </div>
     </div>
