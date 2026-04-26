@@ -317,7 +317,6 @@ export function BeefCard({
       {/* BARRE D'ENGAGEMENT VERTICALE (MOBILE) */}
       <div className="absolute bottom-32 right-3 z-[20] flex flex-col items-center gap-5 md:hidden">
         <div className="relative flex flex-col items-center gap-1 group">
-          {/* Particules flottantes (+1) */}
           <AnimatePresence>
             {floatingAuras.map((aura) => (
               <motion.div
@@ -325,27 +324,26 @@ export function BeefCard({
                 initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
                 animate={{ opacity: 0, y: -80, scale: 1.5 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
+                transition={{ duration: 0.8 }}
                 className="absolute top-0 z-50 pointer-events-none text-lg font-black text-prestige-gold drop-shadow-[0_0_12px_rgba(212,175,55,0.8)]"
               >
                 +1
               </motion.div>
             ))}
           </AnimatePresence>
-
           <motion.button
             type="button"
-            whileTap={{ scale: 0.85 }}
+            whileTap={{ scale: 0.8 }}
             onClick={(e) => {
               e.stopPropagation();
-              setFloatingAuras((prev) => [...prev, { id: Date.now(), x: Math.random() * 30 - 15 }]);
-              setTimeout(() => setFloatingAuras((prev) => prev.slice(1)), 1000);
+              const newId = Date.now() + Math.random();
+              setFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 30 - 15 }]);
+              setTimeout(() => setFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
               onAuraClick?.();
             }}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-prestige-gold/30 bg-black/60 text-prestige-gold shadow-[0_0_15px_rgba(212,175,55,0.15)] backdrop-blur-md transition-all group-hover:bg-black/80 group-hover:shadow-[0_0_25px_rgba(212,175,55,0.4)]"
-            aria-label="Donner de l'Aura"
+            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-prestige-gold/30 bg-black/60 text-prestige-gold shadow-[0_0_15px_rgba(212,175,55,0.2)] backdrop-blur-md"
           >
-            <Sparkles className="h-5 w-5 fill-current drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]" />
+            <Sparkles className="h-5 w-5 fill-current" />
           </motion.button>
           <span className="text-[10px] font-black uppercase tracking-widest text-white drop-shadow-md">Aura</span>
         </div>

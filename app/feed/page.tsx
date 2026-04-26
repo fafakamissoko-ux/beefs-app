@@ -502,22 +502,14 @@ export default function FeedPage() {
   };
 
   const handleAuraClick = async (beefId: string) => {
-    if (!user) {
-      toast("Entre dans l'Arène pour donner de l'Aura ✨", "error");
-      return;
-    }
+    if (!user) return;
 
     setBeefs((prev) =>
       prev.map((b) => (b.id === beefId ? { ...b, engagement_score: (b.engagement_score || 0) + 1 } : b)),
     );
 
-    toast("Aura transférée avec succès ✨", "success");
-
-    try {
-      // Exemple d'appel RPC silencieux : await supabase.rpc('increment_beef_aura', { target_beef_id: beefId });
-    } catch (err) {
-      console.error("Erreur Aura:", err);
-    }
+    // NOTE ARCHITECTURALE : Le futur backend (Supabase RPC) appliquera
+    // la règle de répartition : 50% Médiateur / 25% Ch. A / 25% Ch. B.
   };
 
   const handleBeefClick = (beef: Beef) => {
