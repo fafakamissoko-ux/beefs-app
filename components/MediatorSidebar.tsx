@@ -148,6 +148,9 @@ export function MediatorSidebar({
     setSpeakingTurnSec(parolePresetSec);
   }, [open, announcementText, parolePresetSec]);
 
+  const rowA = remoteRows.find((r) => r.slot === 'A');
+  const rowB = remoteRows.find((r) => r.slot === 'B');
+
   const deck =
     typeof document !== 'undefined'
       ? createPortal(
@@ -230,149 +233,17 @@ export function MediatorSidebar({
                 </TabsList>
               </div>
               <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-1 pb-4 overscroll-contain hide-scrollbar">
-                <TabsContent value="debate" className="flex min-h-0 flex-1 overflow-y-auto p-4 hide-scrollbar">
-
-                  {/* BLOC 1 : STATUT & LANCEMENT */}
-                  <section className="mb-4 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lg backdrop-blur-xl">
-                    {!timerActive ? (
-                      <div className="flex flex-col gap-4">
-                        <div className="flex items-center gap-2">
-                          <Play className="h-4 w-4 text-brand-400" />
-                          <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/60">
-                            Configuration du Match
-                          </h3>
-                        </div>
-                        <div className="flex flex-col items-center justify-center py-2">
-                          <span className="mb-2 text-center text-[10px] font-bold uppercase tracking-widest text-white/40">Durée (Minutes)</span>
-                          <TimeWheelPicker
-                            valueSec={matchDurationMin * 60}
-                            minSec={60}
-                            maxSec={maxBeefDurationSec}
-                            onChange={(sec) =>
-                              setMatchDurationMin(Math.max(1, Math.min(Math.floor(maxBeefDurationSec / 60), Math.floor(sec / 60))))
-                            }
-                            ariaLabel="Durée du match en minutes"
-                            className="rounded-3xl border border-white/[0.06] bg-white/[0.02] py-2 w-full max-w-[200px] mx-auto"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          disabled={startingBeef}
-                          onClick={() => {
-                            void onStartBeef(matchDurationMin * 60);
-                            onClose();
-                          }}
-                          className="w-full rounded-[1.5rem] bg-gradient-to-r from-purple-600 to-emerald-600 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50"
-                        >
-                          {startingBeef ? 'Lancement...' : 'DÉMARRER LE CLASH'}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-2">
-                        <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-white/40">
-                          Chronomètre Global
-                        </h3>
-                        <div
-                          className={`font-mono text-4xl font-black ${
-                            beefTimerPaused ? 'animate-pulse text-amber-500' : 'text-white'
-                          }`}
-                        >
-                          {Math.floor(beefRemainingSec / 60)}:{(beefRemainingSec % 60).toString().padStart(2, '0')}
-                        </div>
-                        <div className="mt-4 flex w-full gap-2">
-                          {beefTimerPaused ? (
-                            <button
-                              type="button"
-                              onClick={onResumeBeefTimer}
-                              className="flex-1 rounded-xl bg-emerald-500/20 py-2 text-[10px] font-bold uppercase text-emerald-400 hover:bg-emerald-500/30"
-                            >
-                              Reprendre
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={onPauseBeefTimer}
-                              className="flex-1 rounded-xl bg-amber-500/20 py-2 text-[10px] font-bold uppercase text-amber-400 hover:bg-amber-500/30"
-                            >
-                              Pause
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={onResetBeefTimer}
-                            className="flex-1 rounded-xl bg-white/5 py-2 text-[10px] font-bold uppercase text-white/60 hover:bg-white/10"
-                          >
-                            Reset
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </section>
-
-                  {/* BLOC 2 : HOT MIC (Tours de parole) */}
-                  <section className="mb-4 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lg backdrop-blur-xl">
-                    <div className="flex items-center gap-2">
-                      <Timer className="h-4 w-4 text-orange-400" />
-                      <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/60">
-                        Tours de Parole
-                      </h3>
-                    </div>
-
-                    <div className="flex flex-col gap-4">
-                      <div className="flex w-full gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onHotMic('A', speakingTurnSec);
-                            onClose();
-                          }}
-                          className="flex flex-1 flex-col items-center justify-center gap-1 rounded-[1.5rem] border border-red-500/30 bg-red-500/10 py-4 transition-all hover:bg-red-500/20 active:scale-95"
-                        >
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-red-400">Challenger 1</span>
-                          <span className="text-2xl" aria-hidden>
-                            🔴
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onHotMic('B', speakingTurnSec);
-                            onClose();
-                          }}
-                          className="flex flex-1 flex-col items-center justify-center gap-1 rounded-[1.5rem] border border-emerald-500/30 bg-emerald-500/10 py-4 transition-all hover:bg-emerald-500/20 active:scale-95"
-                        >
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Challenger 2</span>
-                          <span className="text-2xl" aria-hidden>
-                            🟢
-                          </span>
-                        </button>
-                      </div>
-
-                      {speakingTurnActive && (
-                        <button
-                          type="button"
-                          onClick={onStopSpeakingTurn}
-                          className="w-full rounded-xl bg-white/5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:bg-white/10"
-                        >
-                          Interrompre le tour
-                        </button>
-                      )}
-                    </div>
-                  </section>
-
-                  {/* BLOC 3 : CONTRÔLE DE LA SALLE */}
-                  <section className="mb-4 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lg backdrop-blur-xl">
+                <TabsContent value="debate" className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 hide-scrollbar">
+                  {/* SECT 1: CONTRÔLE VOCAL (Priorité Haute) */}
+                  <section className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lg backdrop-blur-xl">
                     <div className="mb-2 flex items-center gap-2">
                       <MicOff className="h-4 w-4 text-red-400" />
-                      <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/60">
-                        Contrôle Vocal
-                      </h3>
+                      <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/60">Contrôle Vocal</h3>
                     </div>
-
                     <button
                       type="button"
                       onClick={onMuteAll}
-                      className="flex w-full items-center justify-center gap-2 rounded-[1rem] border border-red-500/50 bg-red-500/15 py-3 text-xs font-black uppercase tracking-widest text-red-400 transition-colors hover:bg-red-500/30 active:scale-95"
+                      className="flex w-full items-center justify-center gap-2 rounded-[1rem] border border-red-500/50 bg-red-500/15 py-3 text-xs font-black uppercase tracking-widest text-red-400 transition-all hover:bg-red-500/30 active:scale-95"
                     >
                       <MicOff className="h-4 w-4" />
                       Silence Total
@@ -416,6 +287,146 @@ export function MediatorSidebar({
                       <div className="py-2 text-center font-mono text-[10px] uppercase tracking-widest text-white/30">
                         Aucun participant
                       </div>
+                    )}
+                  </section>
+
+                  {/* SECT 2: GESTION DU TEMPS */}
+                  <section className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lg backdrop-blur-xl">
+                    <div className="flex items-center gap-2">
+                      <Play className="h-4 w-4 text-brand-400" />
+                      <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/60">Gestion du Temps</h3>
+                    </div>
+                    {!timerActive ? (
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="flex w-full flex-col items-center gap-2 py-1">
+                          <span className="text-center text-[10px] font-bold uppercase tracking-widest text-white/40">Durée (Minutes)</span>
+                          <TimeWheelPicker
+                            valueSec={matchDurationMin * 60}
+                            minSec={60}
+                            maxSec={maxBeefDurationSec}
+                            onChange={(sec) =>
+                              setMatchDurationMin(
+                                Math.max(1, Math.min(Math.floor(maxBeefDurationSec / 60), Math.floor(sec / 60))),
+                              )
+                            }
+                            ariaLabel="Durée du match en minutes"
+                            className="w-full max-w-[200px] rounded-3xl border border-white/10 bg-white/5 py-2"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          disabled={startingBeef}
+                          onClick={() => {
+                            void onStartBeef(matchDurationMin * 60);
+                            onClose();
+                          }}
+                          className="w-full rounded-[1.5rem] bg-gradient-to-r from-purple-600 to-emerald-600 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50"
+                        >
+                          {startingBeef ? 'Lancement...' : 'DÉMARRER LE CLASH'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-2">
+                        <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-white/40">Chronomètre Global</h3>
+                        <div
+                          className={`font-mono text-4xl font-black ${
+                            beefTimerPaused ? 'animate-pulse text-amber-500' : 'text-white'
+                          }`}
+                        >
+                          {Math.floor(beefRemainingSec / 60)}:{(beefRemainingSec % 60).toString().padStart(2, '0')}
+                        </div>
+                        <div className="mt-4 flex w-full gap-2">
+                          {beefTimerPaused ? (
+                            <button
+                              type="button"
+                              onClick={onResumeBeefTimer}
+                              className="flex-1 rounded-xl bg-emerald-500/20 py-2 text-[10px] font-bold uppercase text-emerald-400 hover:bg-emerald-500/30"
+                            >
+                              Reprendre
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={onPauseBeefTimer}
+                              className="flex-1 rounded-xl bg-amber-500/20 py-2 text-[10px] font-bold uppercase text-amber-400 hover:bg-amber-500/30"
+                            >
+                              Pause
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={onResetBeefTimer}
+                            className="flex-1 rounded-xl bg-white/5 py-2 text-[10px] font-bold uppercase text-white/60 hover:bg-white/10"
+                          >
+                            Reset
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  {/* SECT 3: TOURS DE PAROLE (Pseudos & couleurs Arène) */}
+                  <section className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lg backdrop-blur-xl">
+                    <div className="flex items-center gap-2">
+                      <Timer className="h-4 w-4 text-orange-400" />
+                      <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/60">Tours de Parole</h3>
+                    </div>
+                    <div className="flex flex-col items-center justify-center rounded-2xl border border-white/5 bg-black/20 p-3">
+                      <span className="mb-2 text-center text-[10px] font-bold uppercase tracking-widest text-white/40">Durée allouée</span>
+                      <TimeWheelPicker
+                        valueSec={speakingTurnSec}
+                        minSec={15}
+                        maxSec={600}
+                        onChange={(sec) => {
+                          setSpeakingTurnSec(sec);
+                          onParolePresetSecChange(sec);
+                        }}
+                        ariaLabel="Durée allouée au tour de parole"
+                        className="w-full max-w-[200px] rounded-3xl border border-white/[0.06] bg-white/[0.02] py-2"
+                      />
+                    </div>
+                    <div className="flex w-full gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onHotMic('A', speakingTurnSec);
+                          onClose();
+                        }}
+                        className="flex flex-1 flex-col items-center gap-1 rounded-[1.5rem] border border-purple-500/30 bg-purple-500/10 py-4 transition-all hover:bg-purple-500/20 active:scale-95"
+                      >
+                        <span className="w-full truncate px-2 text-center text-[10px] font-bold uppercase tracking-widest text-purple-400">
+                          {rowA?.label ? `@${rowA.label}` : 'Challenger 1'}
+                        </span>
+                        <div
+                          className="h-2 w-8 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]"
+                          aria-hidden
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onHotMic('B', speakingTurnSec);
+                          onClose();
+                        }}
+                        className="flex flex-1 flex-col items-center gap-1 rounded-[1.5rem] border border-emerald-500/30 bg-emerald-500/10 py-4 transition-all hover:bg-emerald-500/20 active:scale-95"
+                      >
+                        <span className="w-full truncate px-2 text-center text-[10px] font-bold uppercase tracking-widest text-emerald-400">
+                          {rowB?.label ? `@${rowB.label}` : 'Challenger 2'}
+                        </span>
+                        <div
+                          className="h-2 w-8 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                          aria-hidden
+                        />
+                      </button>
+                    </div>
+                    {speakingTurnActive && (
+                      <button
+                        type="button"
+                        onClick={onStopSpeakingTurn}
+                        className="w-full rounded-xl bg-white/5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:bg-white/10"
+                      >
+                        Interrompre le tour
+                      </button>
                     )}
                   </section>
                 </TabsContent>
@@ -589,19 +600,6 @@ export function MediatorSidebar({
                         )}
                         <span className={`${TILE_LABEL} text-white/80`}>Ma cam</span>
                       </button>
-                    </div>
-                    <div className="mt-3 flex flex-col items-center justify-center space-y-2">
-                      <p className="text-center font-mono text-[9px] font-bold uppercase tracking-widest text-white/40">
-                        Prochain tour de parole
-                      </p>
-                      <TimeWheelPicker
-                        valueSec={parolePresetSec}
-                        minSec={15}
-                        maxSec={600}
-                        onChange={onParolePresetSecChange}
-                        ariaLabel="Durée limite du prochain tour de parole"
-                        className="rounded-3xl border border-white/[0.06] bg-white/[0.02] py-2 w-full max-w-[200px]"
-                      />
                     </div>
                   </div>
 
