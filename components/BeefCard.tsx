@@ -278,7 +278,7 @@ export function BeefCard({
 
         {/* Titre + description (sans vignette) — marge bas ~2.5rem : assez pour la ligne chrono/flamme, sans grand vide */}
         {!thumbnail && (
-          <div className="pointer-events-none absolute inset-0 z-[1] flex flex-col justify-end">
+          <div className="pointer-events-none absolute inset-0 z-[1] max-md:hidden flex flex-col justify-end">
             <div className="pointer-events-auto mx-5 mb-10 flex max-h-[calc(100%-2.75rem)] min-h-0 flex-col justify-end gap-1 overflow-hidden pt-2">
               <h4 className="line-clamp-2 shrink-0 font-sans text-base font-bold leading-snug text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
                 {title}
@@ -326,20 +326,27 @@ export function BeefCard({
       </div>
 
       {/* Contenu sous le visuel */}
-      <div className="max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-[10] max-md:px-4 max-md:pt-12 max-md:pb-[calc(env(safe-area-inset-bottom)+1.5rem)] flex flex-col md:px-5 md:py-4 max-md:bg-gradient-to-t max-md:from-black max-md:to-transparent pointer-events-auto">
-        {thumbnail && (
-          <>
-            <h3 className="font-sans text-[15px] font-bold text-white mb-1 line-clamp-2 leading-snug group-hover:text-brand-400 transition-colors duration-200">
-              {title}
-            </h3>
-            {collapsibleDescription ? (
-              <div className="mb-3 min-w-0">{collapsibleDescription}</div>
-            ) : null}
-          </>
-        )}
+      <div className="max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-[10] max-md:px-4 max-md:pt-24 max-md:pb-[calc(env(safe-area-inset-bottom)+1.5rem)] flex flex-col md:px-5 md:py-4 max-md:bg-gradient-to-t max-md:from-black max-md:via-black/90 max-md:to-transparent pointer-events-auto">
+        <div className={!thumbnail ? 'max-md:block md:hidden' : 'block'}>
+          <h3 className="font-sans text-[15px] font-bold text-white mb-1 line-clamp-2 leading-snug group-hover:text-brand-400 transition-colors duration-200">
+            {title}
+          </h3>
+          {/* INFO COMPACTE (MOBILE SEULEMENT) */}
+          <div className="md:hidden flex flex-wrap items-center gap-1.5 mb-2 mt-1">
+            <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-400">@{host_name || 'Médiateur'}</span>
+            {(challenger_a_name || challenger_b_name) && (
+              <span className="text-[10px] text-white/70 truncate max-w-[220px]">
+                avec {challenger_a_name || '?'} &amp; {challenger_b_name || '?'}
+              </span>
+            )}
+          </div>
+          {collapsibleDescription ? (
+            <div className="mb-3 min-w-0 max-md:mb-2">{collapsibleDescription}</div>
+          ) : null}
+        </div>
 
         {/* Médiateur — même pastille que les challengers (avatar + nom dans le pill) */}
-        <div className="mb-3">
+        <div className="mb-3 max-md:hidden">
           <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">
             {saisirTab && !mediator_name?.trim() ? 'Auteur' : 'Médiateur'}
           </p>
@@ -379,7 +386,7 @@ export function BeefCard({
 
         {/* Tags */}
         {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 max-md:hidden">
             {tags.slice(0, 3).map((tag, idx) => (
               <button
                 key={idx}
@@ -397,7 +404,7 @@ export function BeefCard({
 
         {/* Ring — challengers sur toutes les cartes (le médiateur est déjà la ligne « Hôte » ci-dessus) */}
         {!isManifesto && (challenger_a_name || challenger_b_name) && (
-          <div className="mt-3 pt-3 border-t border-white/[0.06]">
+          <div className="mt-3 pt-3 border-t border-white/[0.06] max-md:hidden">
             <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">
               Challengers
             </p>
@@ -428,7 +435,7 @@ export function BeefCard({
 
         {/* Mode Manifeste — slots dynamiques pour les beefs en préparation */}
         {isManifesto && (
-          <div className="mt-4 pt-3 border-t border-white/[0.06]">
+          <div className="mt-4 pt-3 border-t border-white/[0.06] max-md:hidden">
             <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2.5">Participants</p>
             <div className="flex items-center gap-2">
               {/* Challenger A — premier ring (pas le médiateur) */}
@@ -503,7 +510,7 @@ export function BeefCard({
 
         {/* Actions feed — bas de carte (ne pas confondre pending / scheduled / live) */}
         {(onSaisirAffaire || onPrepareAudience || onSeDesister || liveAudienceAction) && (
-          <div className="mt-4 space-y-2 border-t border-white/[0.06] pt-4">
+          <div className="mt-4 space-y-2 border-t border-white/[0.06] pt-4 max-md:mt-2 max-md:border-t-0 max-md:pt-0">
             {status === 'pending' && onSaisirAffaire && (
               <button
                 type="button"
