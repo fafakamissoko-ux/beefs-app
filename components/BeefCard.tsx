@@ -249,8 +249,8 @@ export function BeefCard({
             <div className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-cobalt-500/15 opacity-90 blur-3xl" />
             <div className="absolute bottom-6 -left-6 h-24 w-24 rounded-full bg-ember-500/12 opacity-80 blur-2xl" />
             {/* Watermark géant */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] md:hidden pointer-events-none">
-              <Flame className="h-48 w-48 text-white" strokeWidth={0.5} />
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.15] md:hidden pointer-events-none">
+              <Flame className="h-48 w-48 text-white/60" strokeWidth={1} />
             </div>
           </div>
         )}
@@ -261,10 +261,10 @@ export function BeefCard({
         <div className="absolute inset-0 hidden bg-gradient-to-t from-black/90 via-black/30 to-transparent md:block" />
 
         {/* Badge statut (unique, haut gauche) */}
-        <div className="absolute top-3.5 left-3.5 z-[2] max-md:top-40">{getPrimaryStatusBadge()}</div>
+        <div className="absolute top-3.5 left-3.5 z-[2] max-md:hidden">{getPrimaryStatusBadge()}</div>
 
         {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
-          <div className="absolute top-3.5 right-3.5 max-md:top-40">
+          <div className="absolute top-3.5 right-3.5 max-md:hidden">
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-cobalt-500/12 border border-cobalt-500/25 text-cobalt-200 backdrop-blur-md">
               <Flame className="w-3 h-3" />
               Entrée · {price} pts
@@ -272,7 +272,7 @@ export function BeefCard({
           </div>
         )}
         {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-          <div className="absolute top-3.5 right-3.5 max-md:top-40">
+          <div className="absolute top-3.5 right-3.5 max-md:hidden">
             <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
               <Flame className="h-3 w-3 text-orange-500" />
               Suite · {price} pts
@@ -332,6 +332,23 @@ export function BeefCard({
       {/* Contenu sous le visuel */}
       <div className="max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-[10] max-md:px-4 max-md:pt-32 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col md:px-5 md:py-4 max-md:bg-gradient-to-t max-md:from-black max-md:via-black/95 max-md:to-transparent pointer-events-auto">
         <div className={!thumbnail ? 'max-md:block md:hidden' : 'block'}>
+          {/* BADGES MOBILE : Déplacés en bas pour éviter la collision avec le Header dynamique */}
+          <div className="md:hidden flex flex-wrap items-center gap-2 mb-3">
+            {getPrimaryStatusBadge()}
+
+            {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
+              <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-cobalt-500/12 border border-cobalt-500/25 text-cobalt-200 backdrop-blur-md">
+                <Flame className="w-3 h-3" />
+                Entrée · {price} pts
+              </div>
+            )}
+            {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
+              <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
+                <Flame className="h-3 w-3 text-orange-500" />
+                Suite · {price} pts
+              </div>
+            )}
+          </div>
           {/* INFO COMPACTE (MOBILE SEULEMENT) REFONTE */}
           <div className="md:hidden flex items-center gap-2 mb-2">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 border border-white/20 text-[11px] font-bold text-white backdrop-blur-md">
