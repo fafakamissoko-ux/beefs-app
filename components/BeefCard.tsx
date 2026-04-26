@@ -548,7 +548,7 @@ export function BeefCard({
 
         {/* Actions feed — bas de carte (ne pas confondre pending / scheduled / live) */}
         {(onSaisirAffaire || onPrepareAudience || onSeDesister || liveAudienceAction) && (
-          <div className="mt-4 space-y-2 border-t border-white/[0.06] pt-4 max-md:mt-2 max-md:mb-2 max-md:border-t-0 max-md:pt-0 max-md:pr-16">
+          <div className="mt-4 space-y-2 border-t border-white/[0.06] pt-4 max-md:mt-2 max-md:mb-2 max-md:border-t-0 max-md:pt-0">
             {status === 'pending' && onSaisirAffaire && (
               <button
                 type="button"
