@@ -13,6 +13,7 @@ import {
   VideoOff,
   UserX,
 } from 'lucide-react';
+import { TimeWheelPicker } from '@/components/TimeWheelPicker';
 import { MediatorInviteInline } from '@/components/MediatorInviteInline';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/Tabs';
 
@@ -138,12 +139,6 @@ export function MediatorSidebar({
 
   const pendingInviteCount = pendingInvites.length;
 
-  const formatParole = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
   useEffect(() => {
     if (!open) {
       return;
@@ -246,24 +241,18 @@ export function MediatorSidebar({
                             Configuration du Match
                           </h3>
                         </div>
-                        <div className="flex flex-col gap-2 py-1">
-                          <span className="text-center text-[10px] font-bold uppercase tracking-widest text-white/40">Durée (Minutes)</span>
-                          <div className="flex w-full gap-2">
-                            {[15, 30, 45, 60].map((min) => (
-                              <button
-                                key={min}
-                                type="button"
-                                onClick={() => setMatchDurationMin(min)}
-                                className={`flex-1 rounded-xl border py-2.5 text-[12px] font-black transition-all active:scale-95 ${
-                                  matchDurationMin === min
-                                    ? 'border-purple-500/50 bg-purple-500/20 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
-                                    : 'border-white/10 bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
-                                }`}
-                              >
-                                {min}
-                              </button>
-                            ))}
-                          </div>
+                        <div className="flex flex-col items-center justify-center py-2">
+                          <span className="mb-2 text-center text-[10px] font-bold uppercase tracking-widest text-white/40">Durée (Minutes)</span>
+                          <TimeWheelPicker
+                            valueSec={matchDurationMin * 60}
+                            minSec={60}
+                            maxSec={maxBeefDurationSec}
+                            onChange={(sec) =>
+                              setMatchDurationMin(Math.max(1, Math.min(Math.floor(maxBeefDurationSec / 60), Math.floor(sec / 60))))
+                            }
+                            ariaLabel="Durée du match en minutes"
+                            className="rounded-3xl border border-white/[0.06] bg-white/[0.02] py-2 w-full max-w-[200px] mx-auto"
+                          />
                         </div>
                         <button
                           type="button"
@@ -329,29 +318,19 @@ export function MediatorSidebar({
                     </div>
 
                     <div className="flex flex-col gap-4">
-                      <div className="flex flex-col gap-2">
-                        <span className="text-center text-[10px] font-bold uppercase tracking-widest text-white/40">
-                          Durée allouée (Secondes)
-                        </span>
-                        <div className="flex w-full gap-2">
-                          {[30, 60, 90, 120].map((sec) => (
-                            <button
-                              key={sec}
-                              type="button"
-                              onClick={() => {
-                                setSpeakingTurnSec(sec);
-                                onParolePresetSecChange(sec);
-                              }}
-                              className={`flex-1 rounded-xl border py-2 text-[11px] font-bold transition-all active:scale-95 ${
-                                speakingTurnSec === sec
-                                  ? 'border-orange-500/50 bg-orange-500/20 text-orange-300 shadow-[0_0_15px_rgba(249,115,22,0.2)]'
-                                  : 'border-white/10 bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
-                              }`}
-                            >
-                              {sec}s
-                            </button>
-                          ))}
-                        </div>
+                      <div className="flex flex-col items-center justify-center rounded-2xl border border-white/5 bg-black/20 p-3">
+                        <span className="mb-2 text-center text-[10px] font-bold uppercase tracking-widest text-white/40">Durée allouée</span>
+                        <TimeWheelPicker
+                          valueSec={speakingTurnSec}
+                          minSec={15}
+                          maxSec={600}
+                          onChange={(sec) => {
+                            setSpeakingTurnSec(sec);
+                            onParolePresetSecChange(sec);
+                          }}
+                          ariaLabel="Durée allouée au tour de parole"
+                          className="rounded-3xl border border-white/[0.06] bg-white/[0.02] py-2 w-full max-w-[200px]"
+                        />
                       </div>
 
                       <div className="flex w-full gap-2">
@@ -602,26 +581,18 @@ export function MediatorSidebar({
                         <span className={`${TILE_LABEL} text-white/80`}>Ma cam</span>
                       </button>
                     </div>
-                    <div className="mt-2 space-y-2">
+                    <div className="mt-3 flex flex-col items-center justify-center space-y-2">
                       <p className="text-center font-mono text-[9px] font-bold uppercase tracking-widest text-white/40">
-                        Parole : {formatParole(parolePresetSec)}
+                        Prochain tour de parole
                       </p>
-                      <div className="flex w-full gap-2">
-                        {[30, 60, 90, 120].map((sec) => (
-                          <button
-                            key={sec}
-                            type="button"
-                            onClick={() => onParolePresetSecChange(sec)}
-                            className={`flex-1 rounded-xl border py-2 text-[10px] font-bold transition-all active:scale-95 ${
-                              parolePresetSec === sec
-                                ? 'border-white/40 bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]'
-                                : 'border-white/10 bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
-                            }`}
-                          >
-                            {sec}s
-                          </button>
-                        ))}
-                      </div>
+                      <TimeWheelPicker
+                        valueSec={parolePresetSec}
+                        minSec={15}
+                        maxSec={600}
+                        onChange={onParolePresetSecChange}
+                        ariaLabel="Durée limite du prochain tour de parole"
+                        className="rounded-3xl border border-white/[0.06] bg-white/[0.02] py-2 w-full max-w-[200px]"
+                      />
                     </div>
                   </div>
 
