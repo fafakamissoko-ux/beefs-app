@@ -248,6 +248,10 @@ export function BeefCard({
             />
             <div className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-cobalt-500/15 opacity-90 blur-3xl" />
             <div className="absolute bottom-6 -left-6 h-24 w-24 rounded-full bg-ember-500/12 opacity-80 blur-2xl" />
+            {/* Watermark géant */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] md:hidden pointer-events-none">
+              <Flame className="h-48 w-48 text-white" strokeWidth={0.5} />
+            </div>
           </div>
         )}
 
@@ -257,10 +261,10 @@ export function BeefCard({
         <div className="absolute inset-0 hidden bg-gradient-to-t from-black/90 via-black/30 to-transparent md:block" />
 
         {/* Badge statut (unique, haut gauche) */}
-        <div className="absolute top-3.5 left-3.5 z-[2] max-md:top-[9rem]">{getPrimaryStatusBadge()}</div>
+        <div className="absolute top-3.5 left-3.5 z-[2] max-md:top-40">{getPrimaryStatusBadge()}</div>
 
         {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
-          <div className="absolute top-3.5 right-3.5 max-md:top-[9rem]">
+          <div className="absolute top-3.5 right-3.5 max-md:top-40">
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-cobalt-500/12 border border-cobalt-500/25 text-cobalt-200 backdrop-blur-md">
               <Flame className="w-3 h-3" />
               Entrée · {price} pts
@@ -268,7 +272,7 @@ export function BeefCard({
           </div>
         )}
         {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-          <div className="absolute top-3.5 right-3.5 max-md:top-[9rem]">
+          <div className="absolute top-3.5 right-3.5 max-md:top-40">
             <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
               <Flame className="h-3 w-3 text-orange-500" />
               Suite · {price} pts

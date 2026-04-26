@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Flame, X, Plus, Hash, Radio, Coins, FileText } from 'lucide-react';
+import { TrendingUp, Users, Flame, X, Hash, Radio, Coins, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { BeefCard } from '@/components/BeefCard';
@@ -543,36 +543,39 @@ export default function FeedPage() {
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
       <div className="w-full max-w-full pb-8 pt-6 max-md:pt-0 max-md:pb-0 sm:pt-8">
-        {/* Active beef banner */}
-        {activeBeef && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-cobalt-500/12 to-ember-500/8 border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] max-md:fixed max-md:top-[6.5rem] max-md:left-4 max-md:right-4 max-md:z-[110] max-md:mb-0 md:relative"
-          >
-            <button
-              onClick={() => router.push(`/arena/${activeBeef.id}`)}
-              className="w-full flex items-center gap-4 px-5 py-4 text-left"
-            >
-              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-ember-500/30 bg-ember-500/15">
-                <Radio className="h-5 w-5 animate-pulse text-ember-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-sans text-sm font-bold text-white truncate">{activeBeef.title}</p>
-                <p className="font-sans text-xs text-white/50">
-                  Tu es <span className="text-brand-400 font-semibold">{activeBeef.role}</span> dans ce beef en cours
-                </p>
-              </div>
-              <div className="flex-shrink-0 px-4 py-1.5 rounded-full bg-red-500 text-white font-mono text-[10px] font-bold uppercase tracking-wider">
-                Rejoindre
-              </div>
-            </button>
-          </motion.div>
-        )}
+        {/* EN-TÊTE HYBRIDE (Empilement Bannière + Onglets) */}
+        <div className="max-md:fixed max-md:left-0 max-md:right-0 max-md:top-14 max-md:z-[100] max-md:flex max-md:flex-col pointer-events-none md:contents">
+          <div className="pointer-events-auto w-full shrink-0 max-md:bg-gradient-to-b max-md:from-black max-md:via-black/95 max-md:to-transparent max-md:px-4 max-md:pb-6 max-md:pt-3 md:relative md:mb-8 md:space-y-4">
 
-        {/* EN-TÊTE HYBRIDE — onglets flottants (mobile) + filtres (desktop) */}
-        <div className="max-md:fixed max-md:left-0 max-md:right-0 max-md:top-14 max-md:z-[100] max-md:bg-gradient-to-b max-md:from-black max-md:via-black/80 max-md:to-transparent max-md:px-4 max-md:pb-6 max-md:pt-2 md:relative md:mb-8 md:space-y-4">
-          <div className="mb-8 flex max-md:mb-0 max-md:justify-center flex-wrap items-center justify-between gap-4 gap-y-4">
+            {/* Active beef banner (Maintenant fluide au-dessus des onglets) */}
+            {activeBeef && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 overflow-hidden rounded-2xl bg-gradient-to-r from-cobalt-500/12 to-ember-500/8 border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:mb-6"
+              >
+                <button
+                  onClick={() => router.push(`/arena/${activeBeef.id}`)}
+                  className="w-full flex items-center gap-4 px-5 py-3 md:py-4 text-left"
+                >
+                  <div className="flex h-9 w-9 md:h-11 md:w-11 flex-shrink-0 items-center justify-center rounded-xl border border-ember-500/30 bg-ember-500/15">
+                    <Radio className="h-4 w-4 md:h-5 md:w-5 animate-pulse text-ember-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-sans text-sm font-bold text-white truncate">{activeBeef.title}</p>
+                    <p className="font-sans text-[11px] md:text-xs text-white/50">
+                      Tu es <span className="text-brand-400 font-semibold">{activeBeef.role}</span> dans ce beef
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0 px-3 md:px-4 py-1.5 rounded-full bg-red-500 text-white font-mono text-[9px] md:text-[10px] font-bold uppercase tracking-wider">
+                    Rejoindre
+                  </div>
+                </button>
+              </motion.div>
+            )}
+
+            {/* Les onglets */}
+            <div className="flex flex-wrap items-center justify-between gap-4 gap-y-4 max-md:mb-0 max-md:justify-center md:mb-8">
             <div className="flex max-w-full min-w-0 max-md:w-full max-md:justify-center max-md:gap-4 flex-wrap items-center justify-center gap-6 border-b border-white/[0.08] max-md:border-0 max-md:pb-0">
               {[
                 { id: 'pour-vous' as const, label: 'Pour toi', icon: TrendingUp },
@@ -675,6 +678,7 @@ export default function FeedPage() {
           </div>
         </div>
         </div>
+        </div>
 
         {/* Content */}
         {loading ? (
@@ -767,22 +771,6 @@ export default function FeedPage() {
       {/* Create modal */}
       {showCreateModal && <CreateBeefForm onSubmit={handleCreateBeef} onCancel={() => setShowCreateModal(false)} />}
 
-      {/* FAB — Repositionné en colonne droite (façon TikTok) */}
-      <div className="fixed bottom-[16rem] right-3 z-[60] lg:hidden pointer-events-none">
-        <div className="relative flex flex-col items-center gap-1 group pointer-events-auto">
-          <motion.button
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.94 }}
-            onClick={() => setShowCreateModal(true)}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-prestige-gold text-black shadow-[0_0_20px_rgba(212,175,55,0.4)] border border-white/20 transition-all active:scale-90"
-          >
-            <Plus className="w-6 h-6" strokeWidth={2.5} />
-          </motion.button>
-          <span className="text-[10px] font-black uppercase tracking-widest text-white drop-shadow-md">Créer</span>
-        </div>
-      </div>
     </div>
   );
 }

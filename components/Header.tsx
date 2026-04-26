@@ -437,7 +437,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   <Link
                     href="/create"
                     prefetch
-                    className={`brand-gradient flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-[2px] px-4 py-2 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97] ${
+                    className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-[2px] border border-prestige-gold/30 bg-prestige-gold/10 px-4 py-2 text-sm font-semibold text-prestige-gold shadow-[0_0_15px_rgba(212,175,55,0.2)] transition-all hover:bg-prestige-gold/20 hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] active:scale-[0.97] ${
                       shell === 'phone' ? 'lg:w-full lg:justify-center' : ''
                     }`}
                   >
@@ -465,7 +465,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: -4, scale: 0.97 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute right-0 mt-2 w-60 rounded-2xl shadow-modal overflow-hidden dropdown-menu lg:top-auto lg:bottom-full lg:mb-2 lg:mt-0 lg:left-0 lg:right-auto"
+                          className="absolute right-0 mt-2 w-60 rounded-2xl bg-black/80 backdrop-blur-2xl border border-white/10 shadow-modal overflow-hidden lg:top-auto lg:bottom-full lg:mb-2 lg:mt-0 lg:left-0 lg:right-auto"
                         >
                           <div className="px-4 py-3 dropdown-divider-bottom">
                             <p className="text-sm font-semibold text-white">{user.user_metadata?.username || 'Utilisateur'}</p>
@@ -554,7 +554,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               {user && (
                 <Link
                   href={hrefWithFrom('/create', pathname)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500/20 text-brand-400 backdrop-blur-md transition-colors border border-brand-500/30 hover:bg-brand-500/30"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-prestige-gold/15 text-prestige-gold backdrop-blur-md transition-colors border border-prestige-gold/30 hover:bg-prestige-gold/25 shadow-[0_0_10px_rgba(212,175,55,0.2)]"
                 >
                   <Swords className="h-4 w-4" strokeWidth={2} />
                 </Link>
@@ -578,7 +578,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="lg:hidden border-t border-white/[0.06] dropdown-menu"
+              className="lg:hidden border-b border-white/[0.06] bg-black/80 backdrop-blur-2xl overflow-y-auto max-h-[calc(100dvh-3.5rem)] shadow-2xl"
             >
               {/* Backdrop */}
               <motion.div
