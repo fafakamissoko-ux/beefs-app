@@ -319,21 +319,6 @@ export function MediatorSidebar({
                     </div>
 
                     <div className="flex flex-col gap-4">
-                      <div className="flex flex-col items-center justify-center rounded-2xl border border-white/5 bg-black/20 p-3">
-                        <span className="mb-2 text-center text-[10px] font-bold uppercase tracking-widest text-white/40">Durée allouée</span>
-                        <TimeWheelPicker
-                          valueSec={speakingTurnSec}
-                          minSec={15}
-                          maxSec={600}
-                          onChange={(sec) => {
-                            setSpeakingTurnSec(sec);
-                            onParolePresetSecChange(sec);
-                          }}
-                          ariaLabel="Durée allouée au tour de parole"
-                          className="rounded-3xl border border-white/[0.06] bg-white/[0.02] py-2 w-full max-w-[200px]"
-                        />
-                      </div>
-
                       <div className="flex w-full gap-2">
                         <button
                           type="button"
