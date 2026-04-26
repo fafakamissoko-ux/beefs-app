@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Users, Flame, Play, Calendar, User, Scissors, Zap } from 'lucide-react';
+import { Clock, Users, Flame, Play, Calendar, User, Sparkles } from 'lucide-react';
 import { hasBeefWatchStarted } from '@/lib/beef-view-local';
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
@@ -309,27 +309,19 @@ export function BeefCard({
 
       {/* BARRE D'ENGAGEMENT VERTICALE (MOBILE) */}
       <div className="absolute bottom-28 right-3 z-[20] flex flex-col items-center gap-5 md:hidden">
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex flex-col items-center gap-1 group">
           <button
             type="button"
-            onClick={(e) => e.stopPropagation()}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-brand-400 backdrop-blur-md"
-            aria-label="Aura"
+            onClick={(e) => {
+              e.stopPropagation();
+              // TODO: Brancher l'injection d'Aura
+            }}
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/40 text-prestige-gold backdrop-blur-md transition-all active:scale-90 group-hover:bg-black/60 group-hover:shadow-[0_0_15px_rgba(212,175,55,0.4)]"
+            aria-label="Donner de l'Aura"
           >
-            <Zap className="h-5 w-5 fill-current" />
+            <Sparkles className="h-5 w-5 fill-current" />
           </button>
-          <span className="text-[10px] font-bold text-white shadow-sm">Aura</span>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <button
-            type="button"
-            onClick={(e) => e.stopPropagation()}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white backdrop-blur-md"
-            aria-label="Clipper"
-          >
-            <Scissors className="h-5 w-5" />
-          </button>
-          <span className="text-[10px] font-bold text-white shadow-sm">Clipper</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-white drop-shadow-md">Aura</span>
         </div>
       </div>
 
