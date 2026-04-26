@@ -12,6 +12,7 @@ import {
   Video,
   VideoOff,
   UserX,
+  Scissors,
 } from 'lucide-react';
 import { TimeWheelPicker } from '@/components/TimeWheelPicker';
 import { MediatorInviteInline } from '@/components/MediatorInviteInline';
@@ -492,6 +493,29 @@ export function MediatorSidebar({
                   </div>
                 </TabsContent>
                 <TabsContent value="tools" className="mt-0">
+                  {/* BLOC CLIPPER (MACHINE À HIGHLIGHTS) */}
+                  <div className={TOOLS_GLASS_CARD}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Scissors className="h-4 w-4 text-brand-400" />
+                      <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/55">Machine à Highlights</h3>
+                    </div>
+                    <p className="text-[10px] text-white/40 mb-3 leading-relaxed">Capturez instantanément les 60 dernières secondes du clash pour alimenter le replay public.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Émission d'un event global pour déclencher un Toast de succès (en attendant le câblage Daily.co)
+                        if (typeof window !== 'undefined') {
+                          const ev = new CustomEvent('beefs:toast', { detail: { title: 'Highlight capturé ✂️', message: 'Les 60 dernières secondes ont été sauvegardées avec succès.', type: 'success' } });
+                          window.dispatchEvent(ev);
+                        }
+                        onClose();
+                      }}
+                      className="flex w-full items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-r from-brand-600 to-orange-500 py-3.5 text-[11px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(255,107,44,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(255,107,44,0.5)] active:scale-95"
+                    >
+                      <Scissors className="h-4 w-4" />
+                      Clipper ce moment (60s)
+                    </button>
+                  </div>
                   {/* BLOC ANNONCE */}
                   <div className={TOOLS_GLASS_CARD}>
                     <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/55">Bannière d&apos;annonce</h3>
