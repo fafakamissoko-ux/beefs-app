@@ -14,6 +14,7 @@ export interface SubmitBeefPayload {
   tags?: string[];
   scheduled_at?: string;
   participants?: { user_id: string; role?: string; is_main?: boolean }[];
+  teaser_file?: File | null;
 }
 
 /**
@@ -50,6 +51,21 @@ export async function submitNewBeef(
 
   const when = normalizeScheduledAtForInsert(beefData.scheduled_at);
   if (when) insertData.scheduled_at = when;
+
+  if (beefData.teaser_file) {
+    const fileExt = beefData.teaser_file.name.split('.').pop();
+    const fileName = `${userId}_${Date.now()}.${fileExt}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('teasers')
+      .upload(fileName, beefData.teaser_file);
+
+    if (!uploadError && uploadData) {
+      const { data: publicUrlData } = supabase.storage.from('teasers').getPublicUrl(fileName);
+      const isVideo = beefData.teaser_file.type.startsWith('video/');
+      if (isVideo) insertData.video_url = publicUrlData.publicUrl;
+      else insertData.thumbnail = publicUrlData.publicUrl;
+    }
+  }
 
   const { data: beef, error } = await supabase.from('beefs').insert(insertData).select().single();
   if (error) throw new Error(error.message);

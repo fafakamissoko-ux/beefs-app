@@ -55,6 +55,7 @@ interface Beef {
   mediator_name?: string | null;
   is_featured?: boolean;
   feed_position?: number;
+  video_url?: string | null;
   /** Feed : médiateur ou participant accepté — libellé « Retourner dans l'Arène » sur les cartes live */
   user_is_live_ring?: boolean;
 }
@@ -396,6 +397,7 @@ export default function FeedPage() {
           challenger_a_name: challengerANameByBeef[bid] ?? null,
           challenger_b_name: challengerBNameByBeef[bid] ?? null,
           user_is_live_ring: onRing,
+          video_url: (beef.video_url as string | null | undefined) ?? null,
         };
       }) as Beef[];
 
