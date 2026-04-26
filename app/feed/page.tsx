@@ -548,7 +548,7 @@ export default function FeedPage() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-cobalt-500/12 to-ember-500/8 border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+            className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-cobalt-500/12 to-ember-500/8 border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] max-md:fixed max-md:top-[6.5rem] max-md:left-4 max-md:right-4 max-md:z-[110] max-md:mb-0 md:relative"
           >
             <button
               onClick={() => router.push(`/arena/${activeBeef.id}`)}
@@ -768,7 +768,7 @@ export default function FeedPage() {
       {showCreateModal && <CreateBeefForm onSubmit={handleCreateBeef} onCancel={() => setShowCreateModal(false)} />}
 
       {/* FAB — Repositionné en colonne droite (façon TikTok) */}
-      <div className="fixed bottom-48 right-3 z-[60] lg:hidden pointer-events-none">
+      <div className="fixed bottom-[16rem] right-3 z-[60] lg:hidden pointer-events-none">
         <div className="relative flex flex-col items-center gap-1 group pointer-events-auto">
           <motion.button
             initial={{ scale: 0 }}

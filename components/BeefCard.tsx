@@ -257,10 +257,10 @@ export function BeefCard({
         <div className="absolute inset-0 hidden bg-gradient-to-t from-black/90 via-black/30 to-transparent md:block" />
 
         {/* Badge statut (unique, haut gauche) */}
-        <div className="absolute top-3.5 left-3.5 z-[2]">{getPrimaryStatusBadge()}</div>
+        <div className="absolute top-3.5 left-3.5 z-[2] max-md:top-[9rem]">{getPrimaryStatusBadge()}</div>
 
         {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
-          <div className="absolute top-3.5 right-3.5">
+          <div className="absolute top-3.5 right-3.5 max-md:top-[9rem]">
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-cobalt-500/12 border border-cobalt-500/25 text-cobalt-200 backdrop-blur-md">
               <Flame className="w-3 h-3" />
               Entrée · {price} pts
@@ -268,7 +268,7 @@ export function BeefCard({
           </div>
         )}
         {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-          <div className="absolute top-3.5 right-3.5">
+          <div className="absolute top-3.5 right-3.5 max-md:top-[9rem]">
             <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
               <Flame className="h-3 w-3 text-orange-500" />
               Suite · {price} pts
@@ -328,18 +328,35 @@ export function BeefCard({
       {/* Contenu sous le visuel */}
       <div className="max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-[10] max-md:px-4 max-md:pt-32 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col md:px-5 md:py-4 max-md:bg-gradient-to-t max-md:from-black max-md:via-black/95 max-md:to-transparent pointer-events-auto">
         <div className={!thumbnail ? 'max-md:block md:hidden' : 'block'}>
-          <h3 className="font-sans text-[15px] font-bold text-white mb-1 line-clamp-2 leading-snug md:group-hover:text-brand-400 transition-colors duration-200">
+          {/* INFO COMPACTE (MOBILE SEULEMENT) REFONTE */}
+          <div className="md:hidden flex items-center gap-2 mb-2">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 border border-white/20 text-[11px] font-bold text-white backdrop-blur-md">
+              {(host_name || '?')[0].toUpperCase()}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="truncate text-[12px] font-bold text-white drop-shadow-md">
+                @{host_name || 'Médiateur'}
+              </span>
+              {(challenger_a_name || challenger_b_name) && (
+                <span className="truncate text-[10px] font-medium text-white/70 drop-shadow-md">
+                  avec {challenger_a_name || '?'} &amp; {challenger_b_name || '?'}
+                </span>
+              )}
+            </div>
+          </div>
+          <h3 className="font-sans text-[15px] max-md:text-[17px] font-bold text-white mb-1 max-md:mb-2 line-clamp-2 leading-snug md:group-hover:text-brand-400 transition-colors duration-200 drop-shadow-lg pr-12">
             {title}
           </h3>
-          {/* INFO COMPACTE (MOBILE SEULEMENT) */}
-          <div className="md:hidden flex flex-wrap items-center gap-1.5 mb-2 mt-1">
-            <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-400">@{host_name || 'Médiateur'}</span>
-            {(challenger_a_name || challenger_b_name) && (
-              <span className="text-[10px] text-white/70 truncate max-w-[220px]">
-                avec {challenger_a_name || '?'} &amp; {challenger_b_name || '?'}
-              </span>
-            )}
-          </div>
+          {/* Tags on Mobile */}
+          {tags.length > 0 && (
+            <div className="md:hidden flex flex-wrap gap-1.5 mb-2 pr-12">
+              {tags.slice(0, 3).map((tag, idx) => (
+                <span key={idx} className="rounded-full bg-white/10 border border-white/10 px-2 py-0.5 text-[9px] font-bold tracking-wider text-white/80 backdrop-blur-sm">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
           {collapsibleDescription ? (
             <div className="mb-3 min-w-0 max-md:hidden">{collapsibleDescription}</div>
           ) : null}
@@ -510,7 +527,7 @@ export function BeefCard({
 
         {/* Actions feed — bas de carte (ne pas confondre pending / scheduled / live) */}
         {(onSaisirAffaire || onPrepareAudience || onSeDesister || liveAudienceAction) && (
-          <div className="mt-4 space-y-2 border-t border-white/[0.06] pt-4 max-md:mt-2 max-md:mb-2 max-md:border-t-0 max-md:pt-0">
+          <div className="mt-4 space-y-2 border-t border-white/[0.06] pt-4 max-md:mt-2 max-md:mb-2 max-md:border-t-0 max-md:pt-0 max-md:pr-16">
             {status === 'pending' && onSaisirAffaire && (
               <button
                 type="button"

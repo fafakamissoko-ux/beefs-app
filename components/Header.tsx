@@ -324,7 +324,11 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       <header
         className={
           shell === 'phone'
-            ? 'fixed left-1/2 top-0 z-header w-full max-w-md -translate-x-1/2 border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl lg:left-0 lg:top-0 lg:right-auto lg:h-dvh lg:w-64 lg:max-w-none lg:shrink-0 lg:translate-x-0 lg:border-b-0 lg:border-r lg:border-white/[0.08] lg:bg-transparent lg:backdrop-blur-none lg:flex lg:flex-col'
+            ? `fixed left-1/2 top-0 z-header w-full max-w-md -translate-x-1/2 lg:left-0 lg:top-0 lg:right-auto lg:h-dvh lg:w-64 lg:max-w-none lg:shrink-0 lg:translate-x-0 lg:border-b-0 lg:border-r lg:border-white/[0.08] lg:bg-transparent lg:backdrop-blur-none lg:flex lg:flex-col ${
+                isActive('/feed')
+                  ? 'bg-gradient-to-b from-black/90 via-black/40 to-transparent border-none'
+                  : 'border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl'
+              }`
             : 'fixed left-0 right-0 top-0 z-header border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl'
         }
       >
@@ -347,7 +351,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               href={user ? '/feed' : '/'}
               className={`relative z-[5] flex shrink-0 items-center gap-2.5 group ${shell === 'phone' ? 'lg:mb-10 lg:w-full' : ''}`}
             >
-              <BeefLogo size={32} className="transition-transform group-hover:scale-105" />
+              <BeefLogo size={32} className="transition-transform group-hover:scale-105 drop-shadow-[0_0_12px_rgba(255,107,44,0.6)]" />
               <span className="hidden sm:block text-xl font-extrabold text-gradient tracking-tight">
                 Beefs
               </span>
@@ -536,33 +540,31 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               )}
             </div>
 
-            {/* Mobile — recherche condensée + burger (viewport < lg) */}
-            <div className="flex min-w-0 flex-1 items-center gap-1.5 lg:hidden">
+            {/* Mobile — boutons d'action épurés */}
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-2 lg:hidden pointer-events-auto">
               {showGlobalSearch && (
                 <button
                   type="button"
-                  aria-label="Ouvrir la recherche"
                   onClick={() => openSearch()}
-                  className="glass-prestige flex min-h-[40px] min-w-0 flex-1 items-center gap-2 truncate rounded-[2px] px-3 py-2 text-left transition hover:bg-white/[0.06]"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-colors border border-white/10 hover:bg-white/20"
                 >
-                  <Search className="h-4 w-4 shrink-0 text-gray-500" strokeWidth={1.75} aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-sm text-gray-400">
-                    Rechercher un dossier, un médiateur…
-                  </span>
+                  <Search className="h-4 w-4" strokeWidth={2} />
                 </button>
               )}
               {user && (
                 <Link
                   href={hrefWithFrom('/create', pathname)}
-                  prefetch
-                  className="flex shrink-0 items-center justify-center rounded-[2px] p-2 text-brand-400 transition hover:bg-white/[0.06]"
-                  aria-label="Initier"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500/20 text-brand-400 backdrop-blur-md transition-colors border border-brand-500/30 hover:bg-brand-500/30"
                 >
-                  <Swords className="h-5 w-5" aria-hidden />
+                  <Swords className="h-4 w-4" strokeWidth={2} />
                 </Link>
               )}
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-gray-400 hover:text-white transition-colors">
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-colors border border-white/10 hover:bg-white/20"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" strokeWidth={2} /> : <Menu className="w-5 h-5" strokeWidth={2} />}
               </button>
             </div>
           </div>
