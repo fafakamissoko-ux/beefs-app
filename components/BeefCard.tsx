@@ -213,7 +213,7 @@ export function BeefCard({
   ) : null;
 
   return (
-    <div className="relative flex max-md:min-h-0 flex-col">
+    <div className="relative flex flex-col max-md:h-[100dvh] max-md:w-full max-md:shrink-0 max-md:snap-start max-md:snap-always">
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -221,7 +221,7 @@ export function BeefCard({
       onClick={onClick}
       onMouseEnter={() => isReplay && setReplayHover(true)}
       onMouseLeave={() => isReplay && setReplayHover(false)}
-      className={`group relative cursor-pointer overflow-hidden transition-all duration-300 max-md:h-[100dvh] max-md:w-full max-md:snap-start max-md:snap-always max-md:rounded-none max-md:border-none md:rounded-[2rem] md:border md:border-white/[0.08] md:bg-white/[0.04] md:backdrop-blur-2xl md:hover:scale-[0.98] md:hover:border-white/20 md:hover:bg-white/[0.06] ${
+      className={`group relative cursor-pointer overflow-hidden transition-all duration-300 max-md:absolute max-md:inset-0 max-md:h-full max-md:w-full max-md:rounded-none max-md:border-none md:rounded-[2rem] md:border md:border-white/[0.08] md:bg-white/[0.04] md:backdrop-blur-2xl md:hover:scale-[0.98] md:hover:border-white/20 md:hover:bg-white/[0.06] ${
         isManifesto
           ? 'md:border-dashed md:border-white/15 md:hover:border-prestige-gold/30'
           : ''
@@ -251,7 +251,7 @@ export function BeefCard({
           </div>
         )}
 
-        <div className="max-md:absolute max-md:inset-0 max-md:z-[1] max-md:bg-gradient-to-t max-md:from-black max-md:via-black/50 max-md:to-transparent md:hidden" />
+        <div className="max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:top-1/4 max-md:z-[1] max-md:bg-gradient-to-t max-md:from-black max-md:via-black/80 max-md:to-transparent md:hidden pointer-events-none" />
 
         {/* Gradient lisibilité (desktop carte) */}
         <div className="absolute inset-0 hidden bg-gradient-to-t from-black/90 via-black/30 to-transparent md:block" />
@@ -308,7 +308,7 @@ export function BeefCard({
       </div>
 
       {/* BARRE D'ENGAGEMENT VERTICALE (MOBILE) */}
-      <div className="absolute bottom-28 right-3 z-[20] flex flex-col items-center gap-5 md:hidden">
+      <div className="absolute bottom-[35%] right-3 z-[20] flex flex-col items-center gap-5 md:hidden">
         <div className="flex flex-col items-center gap-1 group">
           <button
             type="button"
@@ -326,7 +326,7 @@ export function BeefCard({
       </div>
 
       {/* Contenu sous le visuel */}
-      <div className="max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-[10] max-md:p-4 max-md:pb-24 flex flex-col md:px-5 md:py-4">
+      <div className="max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-[10] max-md:px-4 max-md:pt-12 max-md:pb-[calc(env(safe-area-inset-bottom)+1.5rem)] flex flex-col md:px-5 md:py-4 max-md:bg-gradient-to-t max-md:from-black max-md:to-transparent pointer-events-auto">
         {thumbnail && (
           <>
             <h3 className="font-sans text-[15px] font-bold text-white mb-1 line-clamp-2 leading-snug group-hover:text-brand-400 transition-colors duration-200">

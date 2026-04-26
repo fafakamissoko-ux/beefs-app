@@ -543,7 +543,7 @@ export default function FeedPage() {
       <Suspense fallback={null}>
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
-      <div className="w-full max-w-full pb-8 pt-6 max-md:pt-[4.5rem] sm:pt-8">
+      <div className="w-full max-w-full pb-8 pt-6 max-md:pt-0 max-md:pb-0 sm:pt-8">
         {/* Active beef banner */}
         {activeBeef && (
           <motion.div
