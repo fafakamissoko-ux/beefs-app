@@ -40,6 +40,7 @@ interface BeefCardProps {
   onTagClick?: (tag: string) => void;
   onNotifyClick?: () => void;
   onApply?: () => void;
+  onAuraClick?: () => void;
   /** Onglet feed « À Saisir » : badge ⚖️ EN ATTENTE + CTA médiateur */
   saisirTab?: boolean;
   onSaisirAffaire?: () => void;
@@ -75,6 +76,7 @@ export function BeefCard({
   onClick,
   onTagClick,
   onApply,
+  onAuraClick,
   saisirTab = false,
   onSaisirAffaire,
   onSeDesister,
@@ -84,6 +86,7 @@ export function BeefCard({
   index,
 }: BeefCardProps) {
   const [hasOpenedArena, setHasOpenedArena] = useState(false);
+  const [floatingAuras, setFloatingAuras] = useState<{ id: number; x: number }[]>([]);
   const [replayHover, setReplayHover] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [descNeedsToggle, setDescNeedsToggle] = useState(false);
@@ -313,18 +316,37 @@ export function BeefCard({
 
       {/* BARRE D'ENGAGEMENT VERTICALE (MOBILE) */}
       <div className="absolute bottom-32 right-3 z-[20] flex flex-col items-center gap-5 md:hidden">
-        <div className="flex flex-col items-center gap-1 group">
-          <button
+        <div className="relative flex flex-col items-center gap-1 group">
+          {/* Particules flottantes (+1) */}
+          <AnimatePresence>
+            {floatingAuras.map((aura) => (
+              <motion.div
+                key={aura.id}
+                initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
+                animate={{ opacity: 0, y: -80, scale: 1.5 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+                className="absolute top-0 z-50 pointer-events-none text-lg font-black text-prestige-gold drop-shadow-[0_0_12px_rgba(212,175,55,0.8)]"
+              >
+                +1
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.85 }}
             onClick={(e) => {
               e.stopPropagation();
-              // TODO: Brancher l'injection d'Aura
+              setFloatingAuras((prev) => [...prev, { id: Date.now(), x: Math.random() * 30 - 15 }]);
+              setTimeout(() => setFloatingAuras((prev) => prev.slice(1)), 1000);
+              onAuraClick?.();
             }}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/40 text-prestige-gold backdrop-blur-md transition-all active:scale-90 group-hover:bg-black/60 group-hover:shadow-[0_0_15px_rgba(212,175,55,0.4)]"
+            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-prestige-gold/30 bg-black/60 text-prestige-gold shadow-[0_0_15px_rgba(212,175,55,0.15)] backdrop-blur-md transition-all group-hover:bg-black/80 group-hover:shadow-[0_0_25px_rgba(212,175,55,0.4)]"
             aria-label="Donner de l'Aura"
           >
-            <Sparkles className="h-5 w-5 fill-current" />
-          </button>
+            <Sparkles className="h-5 w-5 fill-current drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]" />
+          </motion.button>
           <span className="text-[10px] font-black uppercase tracking-widest text-white drop-shadow-md">Aura</span>
         </div>
       </div>

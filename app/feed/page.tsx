@@ -501,6 +501,25 @@ export default function FeedPage() {
     setFetchLimit((n) => n + 20);
   };
 
+  const handleAuraClick = async (beefId: string) => {
+    if (!user) {
+      toast("Entre dans l'Arène pour donner de l'Aura ✨", "error");
+      return;
+    }
+
+    setBeefs((prev) =>
+      prev.map((b) => (b.id === beefId ? { ...b, engagement_score: (b.engagement_score || 0) + 1 } : b)),
+    );
+
+    toast("Aura transférée avec succès ✨", "success");
+
+    try {
+      // Exemple d'appel RPC silencieux : await supabase.rpc('increment_beef_aura', { target_beef_id: beefId });
+    } catch (err) {
+      console.error("Erreur Aura:", err);
+    }
+  };
+
   const handleBeefClick = (beef: Beef) => {
     if (
       beef.status === 'ended' ||
@@ -753,6 +772,7 @@ export default function FeedPage() {
                       : undefined
                   }
                   onClick={() => handleBeefClick(beef)}
+                  onAuraClick={() => handleAuraClick(beef.id)}
                   onTagClick={handleTagClick}
                   index={index}
                 />
