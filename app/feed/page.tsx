@@ -9,7 +9,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { BeefCard } from '@/components/BeefCard';
 import dynamic from 'next/dynamic';
-import { FeatureGuide } from '@/components/FeatureGuide';
 import { submitNewBeef } from '@/lib/submitNewBeef';
 import type { SubmitBeefPayload } from '@/lib/submitNewBeef';
 import { hrefWithFrom } from '@/lib/navigation-return';
@@ -572,7 +571,7 @@ export default function FeedPage() {
         )}
 
         {/* EN-TÊTE HYBRIDE — onglets flottants (mobile) + filtres (desktop) */}
-        <div className="max-md:fixed max-md:left-0 max-md:right-0 max-md:top-0 max-md:z-[100] max-md:bg-gradient-to-b max-md:from-black/90 max-md:via-black/50 max-md:to-transparent max-md:px-4 max-md:pb-4 max-md:pt-[max(0.75rem,env(safe-area-inset-top))] md:relative md:mb-8 md:space-y-4">
+        <div className="max-md:fixed max-md:left-0 max-md:right-0 max-md:top-14 max-md:z-[100] max-md:bg-gradient-to-b max-md:from-black max-md:via-black/80 max-md:to-transparent max-md:px-4 max-md:pb-6 max-md:pt-2 md:relative md:mb-8 md:space-y-4">
           <div className="mb-8 flex max-md:mb-0 max-md:justify-center flex-wrap items-center justify-between gap-4 gap-y-4">
             <div className="flex max-w-full min-w-0 max-md:w-full max-md:justify-center max-md:gap-4 flex-wrap items-center justify-center gap-6 border-b border-white/[0.08] max-md:border-0 max-md:pb-0">
               {[
@@ -768,26 +767,20 @@ export default function FeedPage() {
       {/* Create modal */}
       {showCreateModal && <CreateBeefForm onSubmit={handleCreateBeef} onCancel={() => setShowCreateModal(false)} />}
 
-      {/* FAB — prestige gold squircle */}
-      <div className="fixed bottom-8 right-8 z-40 lg:hidden">
-        <div className="relative">
+      {/* FAB — Repositionné en colonne droite (façon TikTok) */}
+      <div className="fixed bottom-48 right-3 z-[60] lg:hidden pointer-events-none">
+        <div className="relative flex flex-col items-center gap-1 group pointer-events-auto">
           <motion.button
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             whileHover={{ scale: 1.06 }}
             whileTap={{ scale: 0.94 }}
             onClick={() => setShowCreateModal(true)}
-            className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-prestige-gold text-black shadow-2xl shadow-prestige-gold/20 transition-shadow hover:shadow-[0_0_40px_rgba(212,175,55,0.35)]"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-prestige-gold text-black shadow-[0_0_20px_rgba(212,175,55,0.4)] border border-white/20 transition-all active:scale-90"
           >
-            <Plus className="w-7 h-7" strokeWidth={2.5} />
+            <Plus className="w-6 h-6" strokeWidth={2.5} />
           </motion.button>
-          <FeatureGuide
-            id="feed-create-beef"
-            title="Créer un Beef"
-            description="Lance un débat en live ! Choisis un sujet, invite des challengers et deviens médiateur."
-            position="top"
-            align="end"
-          />
+          <span className="text-[10px] font-black uppercase tracking-widest text-white drop-shadow-md">Créer</span>
         </div>
       </div>
     </div>

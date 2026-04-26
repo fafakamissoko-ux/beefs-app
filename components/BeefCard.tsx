@@ -308,7 +308,7 @@ export function BeefCard({
       </div>
 
       {/* BARRE D'ENGAGEMENT VERTICALE (MOBILE) */}
-      <div className="absolute bottom-[35%] right-3 z-[20] flex flex-col items-center gap-5 md:hidden">
+      <div className="absolute bottom-32 right-3 z-[20] flex flex-col items-center gap-5 md:hidden">
         <div className="flex flex-col items-center gap-1 group">
           <button
             type="button"
@@ -326,9 +326,9 @@ export function BeefCard({
       </div>
 
       {/* Contenu sous le visuel */}
-      <div className="max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-[10] max-md:px-4 max-md:pt-24 max-md:pb-[calc(env(safe-area-inset-bottom)+1.5rem)] flex flex-col md:px-5 md:py-4 max-md:bg-gradient-to-t max-md:from-black max-md:via-black/90 max-md:to-transparent pointer-events-auto">
+      <div className="max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-[10] max-md:px-4 max-md:pt-32 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col md:px-5 md:py-4 max-md:bg-gradient-to-t max-md:from-black max-md:via-black/95 max-md:to-transparent pointer-events-auto">
         <div className={!thumbnail ? 'max-md:block md:hidden' : 'block'}>
-          <h3 className="font-sans text-[15px] font-bold text-white mb-1 line-clamp-2 leading-snug group-hover:text-brand-400 transition-colors duration-200">
+          <h3 className="font-sans text-[15px] font-bold text-white mb-1 line-clamp-2 leading-snug md:group-hover:text-brand-400 transition-colors duration-200">
             {title}
           </h3>
           {/* INFO COMPACTE (MOBILE SEULEMENT) */}
@@ -341,7 +341,7 @@ export function BeefCard({
             )}
           </div>
           {collapsibleDescription ? (
-            <div className="mb-3 min-w-0 max-md:mb-2">{collapsibleDescription}</div>
+            <div className="mb-3 min-w-0 max-md:hidden">{collapsibleDescription}</div>
           ) : null}
         </div>
 
@@ -510,7 +510,7 @@ export function BeefCard({
 
         {/* Actions feed — bas de carte (ne pas confondre pending / scheduled / live) */}
         {(onSaisirAffaire || onPrepareAudience || onSeDesister || liveAudienceAction) && (
-          <div className="mt-4 space-y-2 border-t border-white/[0.06] pt-4 max-md:mt-2 max-md:border-t-0 max-md:pt-0">
+          <div className="mt-4 space-y-2 border-t border-white/[0.06] pt-4 max-md:mt-2 max-md:mb-2 max-md:border-t-0 max-md:pt-0">
             {status === 'pending' && onSaisirAffaire && (
               <button
                 type="button"
