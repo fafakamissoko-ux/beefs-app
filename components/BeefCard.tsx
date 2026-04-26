@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Users, Flame, Play, Calendar, User } from 'lucide-react';
+import { Clock, Users, Flame, Play, Calendar, User, Scissors, Zap } from 'lucide-react';
 import { hasBeefWatchStarted } from '@/lib/beef-view-local';
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
@@ -213,7 +213,7 @@ export function BeefCard({
   ) : null;
 
   return (
-    <div className="flex flex-col">
+    <div className="relative flex max-md:min-h-0 flex-col">
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -221,14 +221,14 @@ export function BeefCard({
       onClick={onClick}
       onMouseEnter={() => isReplay && setReplayHover(true)}
       onMouseLeave={() => isReplay && setReplayHover(false)}
-      className={`group relative cursor-pointer overflow-hidden rounded-[2rem] bg-white/[0.04] border backdrop-blur-2xl transition-all duration-300 hover:scale-[0.98] hover:bg-white/[0.06] ${
+      className={`group relative cursor-pointer overflow-hidden transition-all duration-300 max-md:h-[100dvh] max-md:w-full max-md:snap-start max-md:snap-always max-md:rounded-none max-md:border-none md:rounded-[2rem] md:border md:border-white/[0.08] md:bg-white/[0.04] md:backdrop-blur-2xl md:hover:scale-[0.98] md:hover:border-white/20 md:hover:bg-white/[0.06] ${
         isManifesto
-          ? 'border-dashed border-white/15 hover:border-prestige-gold/30'
-          : 'border-white/[0.08] hover:border-white/20'
+          ? 'md:border-dashed md:border-white/15 md:hover:border-prestige-gold/30'
+          : ''
       }`}
     >
       {/* Visual */}
-      <div className="relative h-48 overflow-hidden rounded-t-[2rem]">
+      <div className="max-md:absolute max-md:inset-0 max-md:z-0 md:relative md:h-48 md:overflow-hidden md:rounded-t-[2rem]">
         {thumbnail ? (
           <Image
             src={thumbnail}
@@ -238,7 +238,7 @@ export function BeefCard({
             sizes="(max-width: 768px) 100vw, 384px"
           />
         ) : (
-          <div className="absolute inset-0">
+          <div className="absolute inset-0 max-md:h-full">
             <div
               className={
                 hueBase % 2 === 0
@@ -246,13 +246,15 @@ export function BeefCard({
                   : 'absolute inset-0 bg-gradient-to-br from-ember-950/85 via-surface-1 to-black'
               }
             />
-            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-cobalt-500/15 blur-3xl opacity-90" />
-            <div className="absolute bottom-6 -left-6 w-24 h-24 rounded-full bg-ember-500/12 blur-2xl opacity-80" />
+            <div className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-cobalt-500/15 opacity-90 blur-3xl" />
+            <div className="absolute bottom-6 -left-6 h-24 w-24 rounded-full bg-ember-500/12 opacity-80 blur-2xl" />
           </div>
         )}
 
-        {/* Gradient lisibilité */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+        <div className="max-md:absolute max-md:inset-0 max-md:z-[1] max-md:bg-gradient-to-t max-md:from-black max-md:via-black/50 max-md:to-transparent md:hidden" />
+
+        {/* Gradient lisibilité (desktop carte) */}
+        <div className="absolute inset-0 hidden bg-gradient-to-t from-black/90 via-black/30 to-transparent md:block" />
 
         {/* Badge statut (unique, haut gauche) */}
         <div className="absolute top-3.5 left-3.5 z-[2]">{getPrimaryStatusBadge()}</div>
@@ -305,8 +307,34 @@ export function BeefCard({
         </div>
       </div>
 
+      {/* BARRE D'ENGAGEMENT VERTICALE (MOBILE) */}
+      <div className="absolute bottom-28 right-3 z-[20] flex flex-col items-center gap-5 md:hidden">
+        <div className="flex flex-col items-center gap-1">
+          <button
+            type="button"
+            onClick={(e) => e.stopPropagation()}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-brand-400 backdrop-blur-md"
+            aria-label="Aura"
+          >
+            <Zap className="h-5 w-5 fill-current" />
+          </button>
+          <span className="text-[10px] font-bold text-white shadow-sm">Aura</span>
+        </div>
+        <div className="flex flex-col items-center gap-1">
+          <button
+            type="button"
+            onClick={(e) => e.stopPropagation()}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white backdrop-blur-md"
+            aria-label="Clipper"
+          >
+            <Scissors className="h-5 w-5" />
+          </button>
+          <span className="text-[10px] font-bold text-white shadow-sm">Clipper</span>
+        </div>
+      </div>
+
       {/* Contenu sous le visuel */}
-      <div className="px-5 py-4">
+      <div className="max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-[10] max-md:p-4 max-md:pb-24 flex flex-col md:px-5 md:py-4">
         {thumbnail && (
           <>
             <h3 className="font-sans text-[15px] font-bold text-white mb-1 line-clamp-2 leading-snug group-hover:text-brand-400 transition-colors duration-200">
@@ -551,7 +579,7 @@ export function BeefCard({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="absolute inset-0 z-[3] rounded-[2rem] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              className="absolute inset-0 z-[3] flex items-center justify-center rounded-none bg-black/60 backdrop-blur-sm md:rounded-[2rem]"
             >
               <motion.div
                 initial={{ scale: 0.8 }}

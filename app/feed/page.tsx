@@ -539,11 +539,11 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh max-md:h-[100dvh] max-md:overflow-y-auto max-md:snap-y max-md:snap-mandatory max-md:hide-scrollbar bg-black">
       <Suspense fallback={null}>
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
-      <div className="w-full max-w-full pb-8 pt-6 sm:pt-8">
+      <div className="w-full max-w-full pb-8 pt-6 max-md:pt-[4.5rem] sm:pt-8">
         {/* Active beef banner */}
         {activeBeef && (
           <motion.div
@@ -571,42 +571,42 @@ export default function FeedPage() {
           </motion.div>
         )}
 
-        {/* Feed tabs + achat de points */}
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4 gap-y-4">
-          <div className="flex max-w-full min-w-0 flex-wrap items-center gap-6 border-b border-white/[0.08]">
-            {[
-              { id: 'pour-vous' as const, label: 'Pour toi', icon: TrendingUp },
-              { id: 'abonnements' as const, label: 'Abonnements', icon: Users },
-              { id: 'manifestes' as const, label: 'À Saisir', icon: FileText },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setFeedType(tab.id)}
-                className={`flex min-h-[44px] items-center gap-2 pb-1 text-sm transition-colors ${
-                  feedType === tab.id
-                    ? 'border-b-2 border-brand-500 font-bold text-white'
-                    : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-white/80'
-                }`}
-              >
-                <tab.icon className={`h-4 w-4 shrink-0 ${feedType === tab.id ? 'text-white' : 'text-white/40'}`} />
-                <span>{tab.label}</span>
-              </button>
-            ))}
+        {/* EN-TÊTE HYBRIDE — onglets flottants (mobile) + filtres (desktop) */}
+        <div className="max-md:fixed max-md:left-0 max-md:right-0 max-md:top-0 max-md:z-[100] max-md:bg-gradient-to-b max-md:from-black/90 max-md:via-black/50 max-md:to-transparent max-md:px-4 max-md:pb-4 max-md:pt-[max(0.75rem,env(safe-area-inset-top))] md:relative md:mb-8 md:space-y-4">
+          <div className="mb-8 flex max-md:mb-0 max-md:justify-center flex-wrap items-center justify-between gap-4 gap-y-4">
+            <div className="flex max-w-full min-w-0 max-md:w-full max-md:justify-center max-md:gap-4 flex-wrap items-center justify-center gap-6 border-b border-white/[0.08] max-md:border-0 max-md:pb-0">
+              {[
+                { id: 'pour-vous' as const, label: 'Pour toi', icon: TrendingUp },
+                { id: 'abonnements' as const, label: 'Abonnements', icon: Users },
+                { id: 'manifestes' as const, label: 'À Saisir', icon: FileText },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setFeedType(tab.id)}
+                  className={`flex min-h-[44px] items-center gap-2 pb-1 text-sm transition-colors ${
+                    feedType === tab.id
+                      ? 'border-b-2 border-brand-500 font-bold text-white'
+                      : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-white/80'
+                  }`}
+                >
+                  <tab.icon className={`h-4 w-4 shrink-0 ${feedType === tab.id ? 'text-white' : 'text-white/40'}`} />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+            <a
+              href={hrefWithFrom('/buy-points', pathname)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[44px] max-md:hidden shrink-0 items-center justify-center gap-2 rounded-full border border-ember-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-ember-400 transition-colors hover:bg-ember-500/10 hover:text-white lg:hidden"
+            >
+              <Coins className="w-4 h-4 flex-shrink-0" />
+              <span>Acquérir de l&apos;Aura</span>
+            </a>
           </div>
-          <a
-            href={hrefWithFrom('/buy-points', pathname)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-full border border-ember-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-ember-400 transition-colors hover:bg-ember-500/10 hover:text-white lg:hidden"
-          >
-            <Coins className="w-4 h-4 flex-shrink-0" />
-            <span>Acquérir de l&apos;Aura</span>
-          </a>
-        </div>
 
-        {/* Filters */}
-        <div className="mb-8 space-y-4">
+          <div className="mb-8 max-md:hidden space-y-4">
           {/* Status pills — ghost/glass */}
           <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
             {STATUS_FILTERS.map(s => (
@@ -675,10 +675,11 @@ export default function FeedPage() {
             ))}
           </div>
         </div>
+        </div>
 
         {/* Content */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+          <div className="max-md:flex max-md:flex-col max-md:gap-0 max-md:pb-[env(safe-area-inset-bottom)] md:grid md:grid-cols-2 md:gap-6 lg:grid-cols-3 lg:gap-8">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.06]">
                 <div className="skeleton h-48 rounded-none" />
@@ -707,7 +708,7 @@ export default function FeedPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+            <div className="max-md:flex max-md:flex-col max-md:gap-0 max-md:pb-[env(safe-area-inset-bottom)] md:grid md:grid-cols-2 md:gap-6 lg:grid-cols-3 lg:gap-8">
               {beefs.map((beef, index) => (
                 <BeefCard
                   key={beef.id}
