@@ -876,26 +876,42 @@ export function TikTokStyleArena({
 
   const [startingBeef, setStartingBeef] = useState(false);
 
-  const startBeefTimer = useCallback(async () => {
-    const r = await runBeefManage({
-      action: 'TOGGLE_STATUS',
-      beefId: roomId,
-      toggle: 'START_LIVE_SESSION',
-    });
-    if (!r.ok) return;
-
-    const startSec = DEFAULT_BEEF_DURATION;
-    beefWallClockStartedAtRef.current = Date.now();
-    beefEndsAtMsRef.current = Date.now() + startSec * 1000;
-    setBeefTimeRemaining(startSec);
-    beefTimeRemainingRef.current = startSec;
-    beefWarning5Shown.current = false;
-    beefWarning1Shown.current = false;
-    setTimerActive(true);
-    setTimerPaused(false);
-    toast('Le beef a commencé.', 'success');
-    queueMicrotask(() => broadcastBeefGlobalTimer());
-  }, [roomId, toast, broadcastBeefGlobalTimer, runBeefManage]);
+  const handleStartBeef = useCallback(
+    async (durationSec: number) => {
+      if (startingBeef) return;
+      setStartingBeef(true);
+      try {
+        const r = await runBeefManage({
+          action: 'TOGGLE_STATUS',
+          beefId: roomId,
+          toggle: 'START_LIVE_SESSION',
+        });
+        if (!r.ok) {
+          toast('Erreur au lancement du chrono', 'error');
+          return;
+        }
+        const sec = Math.max(60, Math.min(Math.floor(durationSec), MAX_BEEF_DURATION));
+        const now = Date.now();
+        const target = now + sec * 1000;
+        beefWallClockStartedAtRef.current = now;
+        beefEndsAtMsRef.current = target;
+        setBeefTimeRemaining(sec);
+        beefTimeRemainingRef.current = sec;
+        beefWarning5Shown.current = false;
+        beefWarning1Shown.current = false;
+        setTimerActive(true);
+        setTimerPaused(false);
+        toast('Le beef a commencé.', 'success');
+        queueMicrotask(() => broadcastBeefGlobalTimer());
+      } catch (err) {
+        console.error('Start beef error:', err);
+        toast('Erreur au lancement du chrono', 'error');
+      } finally {
+        setStartingBeef(false);
+      }
+    },
+    [roomId, startingBeef, broadcastBeefGlobalTimer, runBeefManage, toast],
+  );
 
   // Use refs for stats so endBeef captures the latest values without stale closures
   const statsRef = useRef({
@@ -1741,6 +1757,14 @@ export function TikTokStyleArena({
     },
     [setRemoteParticipantAudio],
   );
+
+  const handleMuteAll = useCallback(() => {
+    for (const p of remoteParticipants) {
+      if (p.isLocal) continue;
+      setRemoteParticipantAudio(p.sessionId, false);
+    }
+    toast('Silence imposé à tous', 'info');
+  }, [remoteParticipants, setRemoteParticipantAudio, toast]);
 
   // User profiles
   const [showProfile, setShowProfile] = useState(false);
@@ -3848,7 +3872,8 @@ export function TikTokStyleArena({
           onResumeBeefTimer={resumeBeefTimer}
           onResetBeefTimer={resetBeefTimerToFull}
           startingBeef={startingBeef}
-          onStartBeef={async () => { setStartingBeef(true); try { await startBeefTimer(); } finally { setStartingBeef(false); } }}
+          onStartBeef={handleStartBeef}
+          onMuteAll={handleMuteAll}
           onVerdict={handleMediatorVerdict}
           remoteRows={mediatorRemoteRows}
           speakingTurnActive={speakingTurnActive}

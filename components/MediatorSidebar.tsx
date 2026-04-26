@@ -8,13 +8,10 @@ import {
   MicOff,
   Mic,
   Timer,
-  Users,
   Play,
   Video,
   VideoOff,
   UserX,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import { TimeWheelPicker } from '@/components/TimeWheelPicker';
 import { MediatorInviteInline } from '@/components/MediatorInviteInline';
@@ -37,7 +34,8 @@ type MediatorSidebarProps = {
   onResumeBeefTimer: () => void;
   onResetBeefTimer: () => void;
   startingBeef: boolean;
-  onStartBeef: () => void | Promise<void>;
+  onStartBeef: (durationSec: number) => void | Promise<void>;
+  onMuteAll: () => void;
   onVerdict: (kind: 'resolved' | 'closed' | 'rematch') => void;
   remoteRows: MediatorRemoteRow[];
   speakingTurnActive: boolean;
@@ -101,6 +99,7 @@ export function MediatorSidebar({
   onResetBeefTimer,
   startingBeef,
   onStartBeef,
+  onMuteAll,
   onVerdict,
   remoteRows,
   speakingTurnActive,
@@ -135,9 +134,8 @@ export function MediatorSidebar({
 }: MediatorSidebarProps) {
   const [announceDraft, setAnnounceDraft] = useState('');
   const [announceDurationSec, setAnnounceDurationSec] = useState(120);
-  /** Chrono beef : réglage fin (+15/+30 + roulette) replié par défaut pour libérer le scroll */
-  const [beefTimerExpanded, setBeefTimerExpanded] = useState(false);
-  const [paroleWheelExpanded, setParoleWheelExpanded] = useState(false);
+  const [speakingTurnSec, setSpeakingTurnSec] = useState(60);
+  const [matchDurationMin, setMatchDurationMin] = useState(30);
 
   const pendingInviteCount = pendingInvites.length;
 
@@ -149,16 +147,11 @@ export function MediatorSidebar({
 
   useEffect(() => {
     if (!open) {
-      setBeefTimerExpanded(false);
-      setParoleWheelExpanded(false);
-    } else {
-      setAnnounceDraft(announcementText);
+      return;
     }
-  }, [open, announcementText]);
-
-  useEffect(() => {
-    if (!timerActive) setBeefTimerExpanded(false);
-  }, [timerActive]);
+    setAnnounceDraft(announcementText);
+    setSpeakingTurnSec(parolePresetSec);
+  }, [open, announcementText, parolePresetSec]);
 
   const deck =
     typeof document !== 'undefined'
@@ -242,269 +235,209 @@ export function MediatorSidebar({
                 </TabsList>
               </div>
               <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-1 pb-4 overscroll-contain hide-scrollbar">
-                <TabsContent value="debate" className="mt-0 space-y-3">
-                  {!timerActive && (
-                    <div className="shrink-0 pb-1">
-                      <motion.button
-                        type="button"
-                        disabled={startingBeef}
-                        onClick={async () => {
-                          if (startingBeef) return;
-                          try {
-                            await onStartBeef();
-                          } finally {
-                            onClose();
-                          }
-                        }}
-                        className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full border border-cobalt-500/80 bg-cobalt-500 py-3.5 font-mono text-[11px] font-black uppercase tracking-[0.18em] text-white shadow-[0_0_28px_rgba(59,130,246,0.55)] disabled:cursor-wait disabled:opacity-70"
-                        animate={
-                          startingBeef
-                            ? {}
-                            : {
-                                boxShadow: [
-                                  '0 0 18px rgba(59,130,246,0.45)',
-                                  '0 0 32px rgba(59,130,246,0.75)',
-                                  '0 0 18px rgba(59,130,246,0.45)',
-                                ],
-                              }
-                        }
-                        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-                      >
-                        <Play className="h-4 w-4 shrink-0 text-white" strokeWidth={1} aria-hidden />
-                        {startingBeef ? 'Ouverture…' : 'Ouvrir la séance'}
-                      </motion.button>
-                    </div>
-                  )}
-                  {timerActive && (
-                    <div className="mb-1 space-y-2 border-b border-white/[0.08] pb-3">
-                      <p className="font-mono text-[8px] font-bold uppercase tracking-widest text-white/40">
-                        Chrono beef
-                      </p>
-                      <div className="flex items-stretch gap-2">
-                        <button
-                          type="button"
-                          onClick={beefTimerPaused ? onResumeBeefTimer : onPauseBeefTimer}
-                          className={`flex min-h-[4.25rem] flex-1 flex-col items-center justify-center gap-1 rounded-3xl border px-2 py-2 backdrop-blur-3xl transition-all active:scale-[0.98] ${
-                            beefTimerPaused
-                              ? 'border-emerald-400/30 bg-emerald-500/10'
-                              : 'border-amber-400/30 bg-amber-500/10'
-                          }`}
-                        >
-                          <Timer
-                            className={`h-5 w-5 shrink-0 ${beefTimerPaused ? 'text-emerald-400' : 'text-amber-400'}`}
-                            strokeWidth={1.2}
+                <TabsContent value="debate" className="flex min-h-0 flex-1 overflow-y-auto p-4 hide-scrollbar">
+
+                  {/* BLOC 1 : STATUT & LANCEMENT */}
+                  <section className="mb-4 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lg backdrop-blur-xl">
+                    {!timerActive ? (
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-2">
+                          <Play className="h-4 w-4 text-brand-400" />
+                          <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/60">
+                            Configuration du Match
+                          </h3>
+                        </div>
+                        <div className="flex flex-col items-center justify-center py-2">
+                          <span className="mb-2 text-[10px] uppercase tracking-widest text-white/40">Durée (Minutes)</span>
+                          <TimeWheelPicker
+                            valueSec={matchDurationMin * 60}
+                            minSec={60}
+                            maxSec={maxBeefDurationSec}
+                            onChange={(sec) =>
+                              setMatchDurationMin(Math.max(1, Math.min(Math.floor(maxBeefDurationSec / 60), Math.floor(sec / 60))))
+                            }
+                            ariaLabel="Durée du match en minutes"
+                            className="rounded-3xl border border-white/[0.06] bg-white/[0.02] py-3"
                           />
-                          <span className="font-mono text-[8px] font-bold uppercase tracking-widest text-white">
-                            {beefTimerPaused ? 'Reprendre' : 'Pause'}
-                          </span>
-                        </button>
-                        <div className="flex min-h-[4.25rem] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-3xl border border-white/10 bg-white/[0.05] px-2 py-2 backdrop-blur-3xl">
-                          <span className="font-mono text-[7px] font-bold uppercase tracking-widest text-white/45">
-                            Restant
-                          </span>
-                          <span className="font-mono text-base font-black tabular-nums tracking-tight text-white sm:text-lg">
-                            {beefTimeFormatted}
-                          </span>
                         </div>
                         <button
                           type="button"
-                          onClick={() => setBeefTimerExpanded((v) => !v)}
-                          aria-expanded={beefTimerExpanded}
-                          aria-label={
-                            beefTimerExpanded
-                              ? 'Replier prolongations et roulette du chrono'
-                              : 'Déplier prolongations et roulette du chrono'
-                          }
-                          className="flex w-11 shrink-0 flex-col items-center justify-center rounded-3xl border border-white/15 bg-white/5 text-white/80 transition-colors hover:bg-white/10"
+                          disabled={startingBeef}
+                          onClick={() => {
+                            void onStartBeef(matchDurationMin * 60);
+                            onClose();
+                          }}
+                          className="w-full rounded-[1.5rem] bg-gradient-to-r from-purple-600 to-emerald-600 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50"
                         >
-                          {beefTimerExpanded ? (
-                            <ChevronUp className="h-5 w-5" strokeWidth={2} />
-                          ) : (
-                            <ChevronDown className="h-5 w-5" strokeWidth={2} />
-                          )}
+                          {startingBeef ? 'Lancement...' : 'DÉMARRER LE CLASH'}
                         </button>
                       </div>
-                      <AnimatePresence initial={false}>
-                        {beefTimerExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                            className="space-y-2 overflow-hidden"
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-2">
+                        <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-white/40">
+                          Chronomètre Global
+                        </h3>
+                        <div
+                          className={`font-mono text-4xl font-black ${
+                            beefTimerPaused ? 'animate-pulse text-amber-500' : 'text-white'
+                          }`}
+                        >
+                          {Math.floor(beefRemainingSec / 60)}:{(beefRemainingSec % 60).toString().padStart(2, '0')}
+                        </div>
+                        <div className="mt-4 flex w-full gap-2">
+                          {beefTimerPaused ? (
+                            <button
+                              type="button"
+                              onClick={onResumeBeefTimer}
+                              className="flex-1 rounded-xl bg-emerald-500/20 py-2 text-[10px] font-bold uppercase text-emerald-400 hover:bg-emerald-500/30"
+                            >
+                              Reprendre
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={onPauseBeefTimer}
+                              className="flex-1 rounded-xl bg-amber-500/20 py-2 text-[10px] font-bold uppercase text-amber-400 hover:bg-amber-500/30"
+                            >
+                              Pause
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={onResetBeefTimer}
+                            className="flex-1 rounded-xl bg-white/5 py-2 text-[10px] font-bold uppercase text-white/60 hover:bg-white/10"
                           >
-                            <div className="grid grid-cols-2 gap-2">
-                              <button type="button" onClick={() => onAdjustTime(15 * 60)} className={TILE}>
-                                <Timer className={`${TILE_ICON} text-cobalt-400`} strokeWidth={1.2} />
-                                <span className={`${TILE_LABEL} text-white/80`}>+15 min</span>
-                              </button>
-                              <button type="button" onClick={() => onAdjustTime(30 * 60)} className={TILE}>
-                                <Timer className={`${TILE_ICON} text-cobalt-400`} strokeWidth={1.2} />
-                                <span className={`${TILE_LABEL} text-white/80`}>+30 min</span>
-                              </button>
-                            </div>
-                            <TimeWheelPicker
-                              valueSec={beefRemainingSec}
-                              minSec={0}
-                              maxSec={maxBeefDurationSec}
-                              onChange={(sec) => onAdjustTime(sec - beefRemainingSec)}
-                              ariaLabel="Temps restant du débat"
-                              className="rounded-3xl border border-white/[0.06] bg-white/[0.02] py-3"
-                            />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                            Reset
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  {/* BLOC 2 : HOT MIC (Tours de parole) */}
+                  <section className="mb-4 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lg backdrop-blur-xl">
+                    <div className="flex items-center gap-2">
+                      <Timer className="h-4 w-4 text-orange-400" />
+                      <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/60">
+                        Tours de Parole
+                      </h3>
                     </div>
-                  )}
-                  <section className="space-y-2 border-t border-white/[0.06] pt-3">
+
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-black/20 p-2 px-4">
+                        <span className="text-[10px] font-bold uppercase text-white/40">Durée allouée</span>
+                        <TimeWheelPicker
+                          valueSec={speakingTurnSec}
+                          minSec={15}
+                          maxSec={600}
+                          onChange={(sec) => {
+                            setSpeakingTurnSec(sec);
+                            onParolePresetSecChange(sec);
+                          }}
+                          ariaLabel="Durée allouée au tour de parole"
+                          className="rounded-3xl border border-white/[0.06] bg-white/[0.02] py-2"
+                        />
+                      </div>
+
+                      <div className="flex w-full gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onHotMic('A', speakingTurnSec);
+                            onClose();
+                          }}
+                          className="flex flex-1 flex-col items-center justify-center gap-1 rounded-[1.5rem] border border-red-500/30 bg-red-500/10 py-4 transition-all hover:bg-red-500/20 active:scale-95"
+                        >
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-red-400">Challenger 1</span>
+                          <span className="text-2xl" aria-hidden>
+                            🔴
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onHotMic('B', speakingTurnSec);
+                            onClose();
+                          }}
+                          className="flex flex-1 flex-col items-center justify-center gap-1 rounded-[1.5rem] border border-emerald-500/30 bg-emerald-500/10 py-4 transition-all hover:bg-emerald-500/20 active:scale-95"
+                        >
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">Challenger 2</span>
+                          <span className="text-2xl" aria-hidden>
+                            🟢
+                          </span>
+                        </button>
+                      </div>
+
+                      {speakingTurnActive && (
+                        <button
+                          type="button"
+                          onClick={onStopSpeakingTurn}
+                          className="w-full rounded-xl bg-white/5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:bg-white/10"
+                        >
+                          Interrompre le tour
+                        </button>
+                      )}
+                    </div>
+                  </section>
+
+                  {/* BLOC 3 : CONTRÔLE DE LA SALLE */}
+                  <section className="mb-4 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lg backdrop-blur-xl">
+                    <div className="mb-2 flex items-center gap-2">
+                      <MicOff className="h-4 w-4 text-red-400" />
+                      <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/60">
+                        Contrôle Vocal
+                      </h3>
+                    </div>
+
                     <button
                       type="button"
-                      onClick={() => setParoleWheelExpanded((v) => !v)}
-                      aria-expanded={paroleWheelExpanded}
-                      className="flex w-full items-center justify-between gap-2 rounded-3xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.07]"
+                      onClick={onMuteAll}
+                      className="flex w-full items-center justify-center gap-2 rounded-[1rem] border border-red-500/50 bg-red-500/15 py-3 text-xs font-black uppercase tracking-widest text-red-400 transition-colors hover:bg-red-500/30 active:scale-95"
                     >
-                      <div className="min-w-0">
-                        <h3 className="font-mono text-[10px] font-semibold tracking-tight text-white/80">
-                          Tour de parole
-                        </h3>
-                        <p className="font-mono text-[9px] text-white/45">Durée : {formatParole(parolePresetSec)}</p>
-                      </div>
-                      {paroleWheelExpanded ? (
-                        <ChevronUp className="h-4 w-4 shrink-0 text-white/50" strokeWidth={2} />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 shrink-0 text-white/50" strokeWidth={2} />
-                      )}
+                      <MicOff className="h-4 w-4" />
+                      Silence Total
                     </button>
-                    <AnimatePresence initial={false}>
-                      {paroleWheelExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-                          className="overflow-hidden"
-                        >
-                          <TimeWheelPicker
-                            valueSec={parolePresetSec}
-                            minSec={15}
-                            maxSec={600}
-                            onChange={onParolePresetSecChange}
-                            ariaLabel="Durée du prochain tour de parole"
-                            className="rounded-3xl border border-white/[0.06] bg-white/[0.02] py-3"
-                          />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </section>
-                  {remoteRows.length > 0 && (
-                    <section className="space-y-3 border-t border-white/[0.06] pt-4">
-                      <div className="flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5 text-white/60" strokeWidth={1.2} />
-                        <h3 className="font-mono text-[10px] font-semibold tracking-tight text-white/75">Challengers</h3>
-                      </div>
-                      <ul className="space-y-2.5">
+
+                    {remoteRows.length > 0 ? (
+                      <ul className="mt-2 flex flex-col gap-2">
                         {remoteRows.map((row) => {
                           const muted = !row.audioOn;
-                          const lockedOut =
-                            speakingTurnActive && !!hotMicSpeakerSlot && hotMicSpeakerSlot !== row.slot;
                           return (
                             <li
                               key={row.sessionId}
-                              className="space-y-2 rounded-[2.5rem] border border-white/10 bg-white/5 p-3.5 backdrop-blur-3xl"
+                              className="flex items-center justify-between rounded-2xl border border-white/5 bg-black/20 p-3"
                             >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="min-w-0 font-mono text-[11px] font-bold text-white">
-                                  <span className="text-ember-400">{row.slot}</span>
-                                  <span className="text-white/40"> · </span>
-                                  <span className="truncate">{row.label}</span>
-                                </span>
-                              </div>
-                              {speakingTurnActive && hotMicSpeakerSlot === row.slot ? (
-                                <div className="space-y-1.5">
-                                  <div className="grid grid-cols-2 gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={onStopSpeakingTurn}
-                                      className="rounded-full border border-white/15 bg-white/8 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-white/15"
-                                    >
-                                      Arrêter
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={speakingTurnPaused ? onResumeSpeakingTurn : onPauseSpeakingTurn}
-                                      className="rounded-full border border-amber-500/40 bg-amber-500/12 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-amber-100 hover:bg-amber-500/25"
-                                    >
-                                      {speakingTurnPaused ? 'Reprendre' : 'Pause'}
-                                    </button>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={onRestartSpeakingTurn}
-                                    className="w-full rounded-full border border-cobalt-500/40 bg-cobalt-600/15 py-2 font-mono text-[9px] font-black uppercase tracking-wide text-white hover:bg-cobalt-500/30"
-                                  >
-                                    Relancer le tour
-                                  </button>
-                                </div>
-                              ) : (
+                              <span className="max-w-[100px] truncate font-mono text-[11px] font-bold text-white">@{row.label}</span>
+                              <div className="flex gap-2">
                                 <button
                                   type="button"
-                                  disabled={speakingTurnActive}
-                                  onClick={() => {
-                                    onHotMic(row.slot, parolePresetSec);
-                                    onClose();
-                                  }}
-                                  className="flex w-full items-center justify-center rounded-full border border-ember-500/40 bg-ember-500/12 py-2 font-mono text-[10px] font-black uppercase tracking-wide text-ember-50 hover:bg-ember-500/25 disabled:cursor-not-allowed disabled:opacity-35"
-                                >
-                                  Donner la parole · {formatParole(parolePresetSec)}
-                                </button>
-                              )}
-                              <div className="flex flex-wrap gap-1.5">
-                                <button
-                                  type="button"
-                                  disabled={lockedOut}
-                                  onClick={() =>
-                                    lockedOut ? undefined : onSetChallengerMuted(row.sessionId, row.debaterId, !muted)
-                                  }
-                                  className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border px-2 py-2 font-mono text-[10px] font-bold ${
-                                    lockedOut
-                                      ? 'cursor-not-allowed border-white/10 bg-black/50 text-white/45'
-                                      : muted
-                                        ? 'border-cobalt-500/40 bg-cobalt-600/15 text-white'
-                                        : 'border-white/15 bg-white/8 text-white'
+                                  onClick={() => void onSetChallengerMuted(row.sessionId, row.debaterId, row.audioOn)}
+                                  className={`flex w-[80px] items-center justify-center gap-1 rounded-xl border py-2 font-mono text-[9px] font-bold uppercase transition-colors ${
+                                    muted
+                                      ? 'border-brand-500/40 bg-brand-500/10 text-brand-400'
+                                      : 'border-white/10 bg-white/5 text-white/60'
                                   }`}
                                 >
-                                  {lockedOut ? (
-                                    <>
-                                      <MicOff className="h-3.5 w-3.5 shrink-0 opacity-60" strokeWidth={1} />
-                                      Attendez
-                                    </>
-                                  ) : muted ? (
-                                    <>
-                                      <Mic className="h-3.5 w-3.5 shrink-0" strokeWidth={1} />
-                                      Réactiver
-                                    </>
-                                  ) : (
-                                    <>
-                                      <MicOff className="h-3.5 w-3.5 shrink-0" strokeWidth={1} />
-                                      Couper
-                                    </>
-                                  )}
+                                  {muted ? 'Réactiver' : 'Couper'}
                                 </button>
                                 <button
                                   type="button"
-                                  title="Expulser"
                                   onClick={() => void onEjectParticipant(row.sessionId)}
-                                  className="flex shrink-0 items-center gap-1 rounded-full border border-ember-500/40 bg-ember-500/15 px-3 py-2 font-mono text-[10px] font-bold text-white hover:bg-ember-500/30"
+                                  className="flex items-center justify-center rounded-xl border border-ember-500/30 bg-ember-500/10 px-3 py-2 text-ember-400 hover:bg-ember-500/20"
                                 >
-                                  <UserX className="h-3.5 w-3.5" strokeWidth={1} />
+                                  <UserX className="h-3.5 w-3.5" />
                                 </button>
                               </div>
                             </li>
                           );
                         })}
                       </ul>
-                    </section>
-                  )}
+                    ) : (
+                      <div className="py-2 text-center font-mono text-[10px] uppercase tracking-widest text-white/30">
+                        Aucun participant
+                      </div>
+                    )}
+                  </section>
                 </TabsContent>
                 <TabsContent value="guests" className="mt-0 space-y-3">
                   <div className="flex max-h-[min(52vh,420px)] flex-col gap-3 overflow-y-auto overflow-x-hidden overscroll-contain rounded-[2.5rem] border border-white/12 bg-black/50 p-3 backdrop-blur-xl [-webkit-overflow-scrolling:touch] touch-pan-y">
