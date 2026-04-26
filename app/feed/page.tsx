@@ -698,7 +698,7 @@ export default function FeedPage() {
             ))}
           </div>
         ) : beefs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 max-md:min-h-[70dvh] max-md:pt-48 max-md:px-6 text-center">
+          <div className="flex flex-col items-center py-32 md:justify-center max-md:min-h-[100dvh] max-md:justify-start max-md:pt-[35dvh] max-md:px-6 text-center">
             <div className="relative mb-6 group">
               <div className="absolute inset-0 rounded-full bg-prestige-gold/20 blur-xl transition-all duration-700 group-hover:bg-prestige-gold/30 group-hover:blur-2xl" />
               <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_30px_rgba(212,175,55,0.15)]">
