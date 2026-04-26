@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Users, Flame, Play, Calendar, User, Sparkles } from 'lucide-react';
+import { Clock, Users, Flame, Play, Calendar, User, Sparkles, Volume2, VolumeX, Bell } from 'lucide-react';
 import { hasBeefWatchStarted } from '@/lib/beef-view-local';
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
@@ -36,6 +36,8 @@ interface BeefCardProps {
   participants_count?: number;
   challenger_a_name?: string | null;
   challenger_b_name?: string | null;
+  challenger_a_username?: string | null;
+  challenger_b_username?: string | null;
   mediator_name?: string | null;
   onClick: () => void;
   onTagClick?: (tag: string) => void;
@@ -74,9 +76,12 @@ export function BeefCard({
   participants_count,
   challenger_a_name,
   challenger_b_name,
+  challenger_a_username,
+  challenger_b_username,
   mediator_name,
   onClick,
   onTagClick,
+  onNotifyClick,
   onApply,
   onAuraClick,
   saisirTab = false,
@@ -87,12 +92,39 @@ export function BeefCard({
   intent,
   index,
 }: BeefCardProps) {
+  const [isMuted, setIsMuted] = useState(true);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaBlockRef = useRef<HTMLDivElement | null>(null);
+
   const [hasOpenedArena, setHasOpenedArena] = useState(false);
   const [floatingAuras, setFloatingAuras] = useState<{ id: number; x: number }[]>([]);
   const [replayHover, setReplayHover] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [descNeedsToggle, setDescNeedsToggle] = useState(false);
   const descMeasureRef = useRef<HTMLParagraphElement>(null);
+
+  useLayoutEffect(() => {
+    if (!video_url?.trim()) return;
+    const el = mediaBlockRef.current;
+    if (!el) return;
+    const v = videoRef.current;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting && e.intersectionRatio >= 0.5) {
+            void v?.play().catch(() => {
+              /* autoplay refusé */
+            });
+          } else {
+            v?.pause();
+          }
+        }
+      },
+      { threshold: [0, 0.25, 0.5, 0.75, 1] },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [video_url, id]);
 
   useEffect(() => {
     setHasOpenedArena(hasBeefWatchStarted(id));
@@ -119,7 +151,6 @@ export function BeefCard({
   }, [description, descExpanded, thumbnail, video_url]);
 
   const getPrimaryStatusBadge = () => {
-    const base = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider backdrop-blur-md';
     switch (status) {
       case 'pending':
         return (
@@ -128,12 +159,7 @@ export function BeefCard({
           </div>
         );
       case 'live':
-        return (
-          <div className={`${base} bg-ember-500/15 border border-ember-500/35 text-ember-400`}>
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember-500" aria-hidden />
-            LIVE
-          </div>
-        );
+        return null;
       case 'ended':
       case 'replay':
       case 'completed':
@@ -234,25 +260,40 @@ export function BeefCard({
           : ''
       }`}
     >
-      {/* Visual */}
-      <div className="max-md:absolute max-md:inset-0 max-md:z-0 md:relative md:h-48 md:overflow-hidden md:rounded-t-[2rem]">
-        {/* Média principal : vidéo prioritaire, sinon image, sinon fallback */}
-        <div className="absolute inset-0 z-0">
+      {/* Visual — média 16/10, lecture intelligente, badge Direct live */}
+      <div className="relative min-h-0 w-full max-md:absolute max-md:inset-0 max-md:z-0">
+        <div
+          ref={mediaBlockRef}
+          className="relative aspect-[16/10] w-full overflow-hidden max-md:rounded-none bg-black md:rounded-t-[2rem]"
+        >
           {video_url ? (
-            <video
-              src={video_url}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
+            <>
+              <video
+                ref={videoRef}
+                src={video_url}
+                loop
+                muted={isMuted}
+                playsInline
+                className="h-full w-full object-cover object-center"
+              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMuted((m) => !m);
+                }}
+                className="absolute bottom-3 right-3 z-10 rounded-full border border-white/10 bg-black/40 p-2 backdrop-blur-md transition-colors hover:bg-black/60"
+                aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
+              >
+                {isMuted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}
+              </button>
+            </>
           ) : thumbnail ? (
             <Image
               src={thumbnail}
               alt={title}
               fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, 384px"
             />
           ) : (
@@ -268,64 +309,69 @@ export function BeefCard({
               </div>
             </div>
           )}
-          {/* Overlay de protection pour la lisibilité du texte */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-        </div>
 
-        <div className="max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:top-1/4 max-md:z-[1] max-md:bg-gradient-to-t max-md:from-black max-md:via-black/80 max-md:to-transparent md:hidden pointer-events-none" />
-
-        {/* Gradient lisibilité (desktop carte) */}
-        <div className="absolute inset-0 hidden bg-gradient-to-t from-black/90 via-black/30 to-transparent md:block" />
-
-        {/* Badge statut (unique, haut gauche) */}
-        <div className="absolute top-3.5 left-3.5 z-[2] max-md:hidden">{getPrimaryStatusBadge()}</div>
-
-        {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
-          <div className="absolute top-3.5 right-3.5 max-md:hidden">
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-cobalt-500/12 border border-cobalt-500/25 text-cobalt-200 backdrop-blur-md">
-              <Flame className="w-3 h-3" />
-              Entrée · {price} pts
+          {status === 'live' && (
+            <div className="absolute left-4 top-4 z-10 flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-tighter text-white shadow-lg animate-pulse">
+              <div className="h-1.5 w-1.5 rounded-full bg-white" />
+              Direct
             </div>
-          </div>
-        )}
-        {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-          <div className="absolute top-3.5 right-3.5 max-md:hidden">
-            <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
-              <Flame className="h-3 w-3 text-orange-500" />
-              Suite · {price} pts
-            </div>
-          </div>
-        )}
-
-        {/* Titre + description (sans vignette) — marge bas ~2.5rem : assez pour la ligne chrono/flamme, sans grand vide */}
-        {!hasHeroMedia && (
-          <div className="pointer-events-none absolute inset-0 z-[1] max-md:hidden flex flex-col justify-end">
-            <div className="pointer-events-auto mx-5 mb-10 flex max-h-[calc(100%-2.75rem)] min-h-0 flex-col justify-end gap-1 overflow-hidden pt-2">
-              <h4 className="line-clamp-2 shrink-0 font-sans text-base font-bold leading-snug text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
-                {title}
-              </h4>
-              {collapsibleDescription}
-            </div>
-          </div>
-        )}
-
-        {/* Métriques bas — chrono / countdown + viewers */}
-        <div className="absolute bottom-3 left-4 right-4 z-[2] flex items-center justify-between">
-          {showCountdownTimer && scheduled_at ? (
-            <Countdown scheduledAt={scheduled_at} />
-          ) : status === 'live' && getTimeDisplay() ? (
-            <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/60">
-              <Clock className="w-3 h-3" />
-              <span>{getTimeDisplay()}</span>
-            </div>
-          ) : (
-            <div />
           )}
-          <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-orange-500">
-            <Flame className="h-3 w-3 shrink-0" strokeWidth={2.25} />
-            <span className="text-white/80">{viewer_count.toLocaleString()}</span>
+
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"
+            aria-hidden
+          />
+
+          {/* Badge statut (haut gauche) — live géré par « Direct » sur le média */}
+          <div className="absolute left-3.5 top-3.5 z-[2] max-md:hidden">{getPrimaryStatusBadge()}</div>
+
+          {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
+            <div className="absolute right-3.5 top-3.5 z-[2] max-md:hidden">
+              <div className="flex items-center gap-1 rounded-full border border-cobalt-500/25 bg-cobalt-500/12 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cobalt-200 backdrop-blur-md">
+                <Flame className="h-3 w-3" />
+                Entrée · {price} pts
+              </div>
+            </div>
+          )}
+          {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
+            <div className="absolute right-3.5 top-3.5 z-[2] max-md:hidden">
+              <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
+                <Flame className="h-3 w-3 text-orange-500" />
+                Suite · {price} pts
+              </div>
+            </div>
+          )}
+
+          {!hasHeroMedia && (
+            <div className="pointer-events-none absolute inset-0 z-[1] max-md:hidden flex flex-col justify-end">
+              <div className="pointer-events-auto mx-5 mb-10 flex max-h-[calc(100%-2.75rem)] min-h-0 flex-col justify-end gap-1 overflow-hidden pt-2">
+                <h4 className="line-clamp-2 shrink-0 font-sans text-base font-bold leading-snug text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+                  {title}
+                </h4>
+                {collapsibleDescription}
+              </div>
+            </div>
+          )}
+
+          <div className="absolute bottom-3 left-4 right-4 z-[2] flex items-center justify-between">
+            {showCountdownTimer && scheduled_at ? (
+              <Countdown scheduledAt={scheduled_at} />
+            ) : status === 'live' && getTimeDisplay() ? (
+              <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/60">
+                <Clock className="h-3 w-3" />
+                <span>{getTimeDisplay()}</span>
+              </div>
+            ) : (
+              <div />
+            )}
+            <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-orange-500">
+              <Flame className="h-3 w-3 shrink-0" strokeWidth={2.25} />
+              <span className="text-white/80">{viewer_count.toLocaleString()}</span>
+            </div>
           </div>
         </div>
+
+        <div className="max-md:pointer-events-none max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:top-1/4 max-md:z-[1] max-md:bg-gradient-to-t max-md:from-black max-md:via-black/80 max-md:to-transparent md:hidden" />
       </div>
 
       {/* BARRE D'ENGAGEMENT VERTICALE (MOBILE) */}
@@ -388,13 +434,38 @@ export function BeefCard({
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 border border-white/20 text-[11px] font-bold text-white backdrop-blur-md">
               {(host_name || '?')[0].toUpperCase()}
             </div>
-            <div className="flex flex-col min-w-0">
-              <span className="truncate text-[12px] font-bold text-white drop-shadow-md">
+            <div className="flex min-w-0 flex-col">
+              <ProfileUserLink
+                username={host_username}
+                className="inline truncate text-left text-[12px] font-bold text-white drop-shadow-md"
+                profileLabel={`Profil de ${host_name || 'Médiateur'}`}
+              >
                 @{host_name || 'Médiateur'}
-              </span>
+              </ProfileUserLink>
               {(challenger_a_name || challenger_b_name) && (
                 <span className="truncate text-[10px] font-medium text-white/70 drop-shadow-md">
-                  avec {challenger_a_name || '?'} &amp; {challenger_b_name || '?'}
+                  avec{' '}
+                  {challenger_a_name ? (
+                    <ProfileUserLink
+                      username={challenger_a_username}
+                      className="inline text-[10px] font-medium text-white/70"
+                    >
+                      {challenger_a_name}
+                    </ProfileUserLink>
+                  ) : (
+                    '?'
+                  )}{' '}
+                  &amp;{' '}
+                  {challenger_b_name ? (
+                    <ProfileUserLink
+                      username={challenger_b_username}
+                      className="inline text-[10px] font-medium text-white/70"
+                    >
+                      {challenger_b_name}
+                    </ProfileUserLink>
+                  ) : (
+                    '?'
+                  )}
                 </span>
               )}
             </div>
@@ -474,6 +545,22 @@ export function BeefCard({
           </div>
         )}
 
+        {status === 'scheduled' && onNotifyClick && (
+          <div className="mb-3 mt-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onNotifyClick();
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-500/45 bg-gradient-to-r from-amber-500/25 to-orange-600/20 py-3.5 font-sans text-sm font-black uppercase tracking-wide text-amber-50 shadow-[0_0_28px_rgba(245,158,11,0.3)] transition-all hover:from-amber-500/35 hover:to-orange-600/30"
+            >
+              <Bell className="h-5 w-5 shrink-0" strokeWidth={2.2} />
+              M&apos;alerter
+            </button>
+          </div>
+        )}
+
         {/* Ring — challengers sur toutes les cartes (le médiateur est déjà la ligne « Hôte » ci-dessus) */}
         {!isManifesto && (challenger_a_name || challenger_b_name) && (
           <div className="mt-3 pt-3 border-t border-white/[0.06] max-md:hidden">
@@ -482,23 +569,29 @@ export function BeefCard({
             </p>
             <div className="flex flex-wrap items-center gap-2">
               {challenger_a_name ? (
-                <div className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] px-2.5 py-1">
-                  <div className="w-5 h-5 rounded-full bg-cobalt-500/30 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                <div className="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.06] px-2.5 py-1">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cobalt-500/30 text-[9px] font-bold text-white">
                     {challenger_a_name[0].toUpperCase()}
                   </div>
-                  <span className="font-sans text-[11px] text-white/60 font-medium truncate max-w-[80px]">
+                  <ProfileUserLink
+                    username={challenger_a_username}
+                    className="font-sans text-[11px] font-medium text-white/60"
+                  >
                     {challenger_a_name}
-                  </span>
+                  </ProfileUserLink>
                 </div>
               ) : null}
               {challenger_b_name ? (
-                <div className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] px-2.5 py-1">
-                  <div className="w-5 h-5 rounded-full bg-ember-500/25 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                <div className="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.06] px-2.5 py-1">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ember-500/25 text-[9px] font-bold text-white">
                     {challenger_b_name[0].toUpperCase()}
                   </div>
-                  <span className="font-sans text-[11px] text-white/60 font-medium truncate max-w-[80px]">
+                  <ProfileUserLink
+                    username={challenger_b_username}
+                    className="font-sans text-[11px] font-medium text-white/60"
+                  >
                     {challenger_b_name}
-                  </span>
+                  </ProfileUserLink>
                 </div>
               ) : null}
             </div>
@@ -512,13 +605,16 @@ export function BeefCard({
             <div className="flex items-center gap-2">
               {/* Challenger A — premier ring (pas le médiateur) */}
               {challenger_a_name ? (
-                <div className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] px-2.5 py-1">
-                  <div className="w-5 h-5 rounded-full bg-cobalt-500/30 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                <div className="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.06] px-2.5 py-1">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cobalt-500/30 text-[9px] font-bold text-white">
                     {challenger_a_name[0].toUpperCase()}
                   </div>
-                  <span className="font-sans text-[11px] text-white/60 font-medium truncate max-w-[70px]">
+                  <ProfileUserLink
+                    username={challenger_a_username}
+                    className="font-sans text-[11px] font-medium text-white/60"
+                  >
                     {challenger_a_name}
-                  </span>
+                  </ProfileUserLink>
                 </div>
               ) : (
                 <button
@@ -536,11 +632,16 @@ export function BeefCard({
 
               {/* Challenger B — rempli ou pointillés */}
               {challenger_b_name ? (
-                <div className="flex items-center gap-1.5 rounded-full bg-white/[0.06] border border-white/[0.08] px-2.5 py-1">
-                  <div className="w-5 h-5 rounded-full bg-cobalt-500/30 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                <div className="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.06] px-2.5 py-1">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cobalt-500/30 text-[9px] font-bold text-white">
                     {challenger_b_name[0].toUpperCase()}
                   </div>
-                  <span className="font-sans text-[11px] text-white/60 font-medium truncate max-w-[70px]">{challenger_b_name}</span>
+                  <ProfileUserLink
+                    username={challenger_b_username}
+                    className="font-sans text-[11px] font-medium text-white/60"
+                  >
+                    {challenger_b_name}
+                  </ProfileUserLink>
                 </div>
               ) : (
                 <button

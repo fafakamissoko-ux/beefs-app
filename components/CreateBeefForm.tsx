@@ -481,15 +481,30 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                   >
                     {teaserPreview ? (
                       teaserFile?.type.startsWith('video/') ? (
-                        <video src={teaserPreview} className="h-full w-full object-cover" muted loop autoPlay playsInline />
+                        <div className="relative h-full w-full">
+                          <video
+                            src={teaserPreview}
+                            className="h-full w-full object-cover"
+                            muted
+                            loop
+                            autoPlay
+                            playsInline
+                          />
+                          <div className="absolute bottom-2 right-2 rounded-full bg-black/50 p-1.5 backdrop-blur-sm">
+                            <Film className="h-3.5 w-3.5 text-brand-400" aria-hidden />
+                          </div>
+                        </div>
                       ) : (
                         // eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob)
                         <img src={teaserPreview} className="h-full w-full object-cover" alt="Aperçu teaser" />
                       )
                     ) : (
-                      <div className="flex flex-col items-center gap-2 text-white/40">
-                        <ImagePlus className="h-6 w-6" aria-hidden />
-                        <span className="text-[10px] font-medium uppercase tracking-tighter">Ajouter un média</span>
+                      <div className="flex flex-col items-center gap-3 text-white/40">
+                        <div className="flex items-center gap-5">
+                          <ImagePlus className="h-6 w-6" aria-hidden />
+                          <Film className="h-6 w-6 text-brand-400" aria-hidden />
+                        </div>
+                        <span className="text-[10px] font-medium uppercase tracking-tighter">Photo ou vidéo</span>
                       </div>
                     )}
                     <input

@@ -52,6 +52,8 @@ interface Beef {
   participants_count?: number;
   challenger_a_name?: string | null;
   challenger_b_name?: string | null;
+  challenger_a_username?: string | null;
+  challenger_b_username?: string | null;
   mediator_name?: string | null;
   is_featured?: boolean;
   feed_position?: number;
@@ -265,6 +267,8 @@ export default function FeedPage() {
       const beefIds = beefList.map((b: { id: string }) => b.id);
       const challengerANameByBeef: Record<string, string> = {};
       const challengerBNameByBeef: Record<string, string> = {};
+      const challengerAUsernameByBeef: Record<string, string | null> = {};
+      const challengerBUsernameByBeef: Record<string, string | null> = {};
       let userOnLiveRingByBeef = new Map<string, boolean>();
 
       const publicIds = new Set<string>();
@@ -358,6 +362,9 @@ export default function FeedPage() {
             const second = packName(eligible[1]?.user_id ?? '');
             if (first) challengerANameByBeef[beef.id] = first;
             if (second) challengerBNameByBeef[beef.id] = second;
+            const w = (userId: string) => feedPublicMap.get(userId)?.username?.trim() || null;
+            if (eligible[0]) challengerAUsernameByBeef[beef.id] = w(eligible[0].user_id);
+            if (eligible[1]) challengerBUsernameByBeef[beef.id] = w(eligible[1].user_id);
           }
 
           const ringUid = user?.id;
@@ -396,6 +403,8 @@ export default function FeedPage() {
           participants_count: partAgg?.[0]?.count || 0,
           challenger_a_name: challengerANameByBeef[bid] ?? null,
           challenger_b_name: challengerBNameByBeef[bid] ?? null,
+          challenger_a_username: challengerAUsernameByBeef[bid] ?? null,
+          challenger_b_username: challengerBUsernameByBeef[bid] ?? null,
           user_is_live_ring: onRing,
           video_url: (beef.video_url as string | null | undefined) ?? null,
         };
@@ -768,6 +777,11 @@ export default function FeedPage() {
                   onClick={() => handleBeefClick(beef)}
                   onAuraClick={() => handleAuraClick(beef.id)}
                   onTagClick={handleTagClick}
+                  onNotifyClick={
+                    beef.status === 'scheduled'
+                      ? () => toast('Bientôt : rappel quand l’heure approche.', 'info')
+                      : undefined
+                  }
                   index={index}
                 />
               ))}
