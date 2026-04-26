@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Flame, X, Hash, Radio, Coins, FileText } from 'lucide-react';
+import { TrendingUp, Users, Flame, X, Hash, Radio, Coins, FileText, Swords } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { BeefCard } from '@/components/BeefCard';
@@ -698,15 +698,21 @@ export default function FeedPage() {
             ))}
           </div>
         ) : beefs.length === 0 ? (
-          <div className="text-center py-32">
-            <div className="w-20 h-20 mx-auto mb-5 rounded-[1.5rem] flex items-center justify-center bg-white/[0.03] border border-white/[0.06]">
-              <Flame className="w-9 h-9 text-white/20" />
+          <div className="flex flex-col items-center justify-center py-32 max-md:min-h-[70dvh] max-md:pt-48 max-md:px-6 text-center">
+            <div className="relative mb-6 group">
+              <div className="absolute inset-0 rounded-full bg-prestige-gold/20 blur-xl transition-all duration-700 group-hover:bg-prestige-gold/30 group-hover:blur-2xl" />
+              <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_30px_rgba(212,175,55,0.15)]">
+                <Flame className="h-10 w-10 text-prestige-gold opacity-80" strokeWidth={1.5} />
+              </div>
             </div>
-            <h3 className="font-sans text-xl font-bold text-white mb-2">Aucun beef en cours</h3>
-            <p className="font-sans text-sm text-white/40 mb-8">Soyez le premier à régler un beef en live !</p>
-            <button onClick={() => setShowCreateModal(true)} className="btn-primary inline-flex items-center gap-2 rounded-full px-8">
-              <Flame className="w-4 h-4" />
-              Régler un beef
+            <h3 className="font-sans text-xl md:text-2xl font-bold text-white mb-2 tracking-tight">Le calme avant la tempête</h3>
+            <p className="font-sans text-sm md:text-base text-white/40 mb-8 max-w-xs leading-relaxed">Aucune affaire en cours ici. Prenez l'initiative et ouvrez les hostilités.</p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2.5 rounded-full border border-prestige-gold/30 bg-prestige-gold/10 px-8 py-3.5 text-sm font-bold text-prestige-gold shadow-[0_0_20px_rgba(212,175,55,0.2)] transition-all hover:bg-prestige-gold/20 hover:shadow-[0_0_30px_rgba(212,175,55,0.4)] active:scale-[0.97]"
+            >
+              <Swords className="h-5 w-5" strokeWidth={2} />
+              Initier un Beef
             </button>
           </div>
         ) : (
