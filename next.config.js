@@ -4,7 +4,14 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'api.dicebear.com', pathname: '/**' },
       { protocol: 'https', hostname: 'flagcdn.com', pathname: '/**' },
-      { protocol: 'https', hostname: '**.supabase.co', pathname: '/storage/**' },
+      // Supabase Storage (getPublicUrl) — requis pour `next/image` sur les URLs /storage/...
+      // Les balises <video src={video_url}> ne passent pas par cette config ; voir aussi `media-src` dans headers CSP.
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        port: '',
+        pathname: '/storage/**',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
   },
@@ -59,7 +66,7 @@ const nextConfig = {
               "img-src 'self' data: blob: https: http:",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.daily.co wss://*.daily.co https://api.stripe.com https://fonts.googleapis.com https://flagcdn.com https://*.ingest.sentry.io https://*.ingest.de.sentry.io",
               "frame-src https://js.stripe.com https://checkout.stripe.com https://*.daily.co",
-              "media-src 'self' blob: https://*.daily.co",
+              "media-src 'self' blob: https://*.supabase.co https://*.daily.co",
               "worker-src 'self' blob:",
               "frame-ancestors 'self'",
             ].join('; '),

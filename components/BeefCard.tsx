@@ -31,6 +31,7 @@ interface BeefCardProps {
   is_premium?: boolean;
   price?: number;
   thumbnail?: string;
+  video_url?: string | null;
   duration?: number;
   participants_count?: number;
   challenger_a_name?: string | null;
@@ -68,6 +69,7 @@ export function BeefCard({
   tags = [],
   price = 0,
   thumbnail,
+  video_url,
   duration,
   participants_count,
   challenger_a_name,
@@ -114,7 +116,7 @@ export function BeefCard({
     const overflows = el.scrollHeight > el.clientHeight + 2;
     const longTextFallback = text.length > 90;
     setDescNeedsToggle(overflows || longTextFallback);
-  }, [description, descExpanded, thumbnail]);
+  }, [description, descExpanded, thumbnail, video_url]);
 
   const getPrimaryStatusBadge = () => {
     const base = 'flex items-center gap-1.5 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider backdrop-blur-md';
@@ -185,6 +187,8 @@ export function BeefCard({
   const mediatorSlotName = (mediator_name?.trim() || host_name?.trim() || '') || null;
   const isReplay = status === 'ended' || status === 'replay' || status === 'completed';
 
+  const hasHeroMedia = Boolean((video_url && String(video_url).trim()) || thumbnail);
+
   const descText = description?.trim() ?? '';
 
   const collapsibleDescription = descText ? (
@@ -232,31 +236,41 @@ export function BeefCard({
     >
       {/* Visual */}
       <div className="max-md:absolute max-md:inset-0 max-md:z-0 md:relative md:h-48 md:overflow-hidden md:rounded-t-[2rem]">
-        {thumbnail ? (
-          <Image
-            src={thumbnail}
-            alt={title}
-            fill
-            className="object-cover transition-transform duration-700 group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, 384px"
-          />
-        ) : (
-          <div className="absolute inset-0 max-md:h-full">
-            <div
-              className={
-                hueBase % 2 === 0
-                  ? 'absolute inset-0 bg-gradient-to-br from-cobalt-950/90 via-surface-1 to-black'
-                  : 'absolute inset-0 bg-gradient-to-br from-ember-950/85 via-surface-1 to-black'
-              }
+        {/* Média principal : vidéo prioritaire, sinon image, sinon fallback */}
+        <div className="absolute inset-0 z-0">
+          {video_url ? (
+            <video
+              src={video_url}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
-            <div className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-cobalt-500/15 opacity-90 blur-3xl" />
-            <div className="absolute bottom-6 -left-6 h-24 w-24 rounded-full bg-ember-500/12 opacity-80 blur-2xl" />
-            {/* Watermark géant */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.15] md:hidden pointer-events-none">
-              <Flame className="h-48 w-48 text-white/60" strokeWidth={1} />
+          ) : thumbnail ? (
+            <Image
+              src={thumbnail}
+              alt={title}
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, 384px"
+            />
+          ) : (
+            <div
+              className={`absolute inset-0 ${
+                hueBase % 2 === 0
+                  ? 'bg-gradient-to-br from-cobalt-950/90 via-surface-1 to-black'
+                  : 'bg-gradient-to-br from-ember-950/85 via-surface-1 to-black'
+              }`}
+            >
+              <div className="absolute inset-0 flex items-center justify-center opacity-[0.15] md:hidden">
+                <Flame className="h-48 w-48 text-white/60" strokeWidth={1} />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          {/* Overlay de protection pour la lisibilité du texte */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+        </div>
 
         <div className="max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:top-1/4 max-md:z-[1] max-md:bg-gradient-to-t max-md:from-black max-md:via-black/80 max-md:to-transparent md:hidden pointer-events-none" />
 
@@ -284,7 +298,7 @@ export function BeefCard({
         )}
 
         {/* Titre + description (sans vignette) — marge bas ~2.5rem : assez pour la ligne chrono/flamme, sans grand vide */}
-        {!thumbnail && (
+        {!hasHeroMedia && (
           <div className="pointer-events-none absolute inset-0 z-[1] max-md:hidden flex flex-col justify-end">
             <div className="pointer-events-auto mx-5 mb-10 flex max-h-[calc(100%-2.75rem)] min-h-0 flex-col justify-end gap-1 overflow-hidden pt-2">
               <h4 className="line-clamp-2 shrink-0 font-sans text-base font-bold leading-snug text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
@@ -351,7 +365,7 @@ export function BeefCard({
 
       {/* Contenu sous le visuel */}
       <div className="max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-[10] max-md:px-4 max-md:pt-32 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col md:px-5 md:py-4 max-md:bg-gradient-to-t max-md:from-black max-md:via-black/95 max-md:to-transparent pointer-events-auto">
-        <div className={!thumbnail ? 'max-md:block md:hidden' : 'block'}>
+        <div className={!hasHeroMedia ? 'max-md:block md:hidden' : 'block'}>
           {/* BADGES MOBILE : Déplacés en bas pour éviter la collision avec le Header dynamique */}
           <div className="md:hidden flex flex-wrap items-center gap-2 mb-3">
             {getPrimaryStatusBadge()}

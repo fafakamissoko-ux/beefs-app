@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Flame,
@@ -12,6 +12,8 @@ import {
   Search,
   UserPlus,
   Plus,
+  ImagePlus,
+  Film,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -69,6 +71,9 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
 
   const [beefData, setBeefData] = useState<BeefData>(initialBeefData);
+  const [teaserFile, setTeaserFile] = useState<File | null>(null);
+  const [teaserPreview, setTeaserPreview] = useState<string | null>(null);
+  const teaserPreviewUrlRef = useRef<string | null>(null);
 
   const [estimatedSuitePrice, setEstimatedSuitePrice] = useState<number | null>(null);
   useEffect(() => {
@@ -82,6 +87,35 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
       setEstimatedSuitePrice(continuationPriceFromResolvedCount(count ?? 0));
     })();
   }, [user?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (teaserPreviewUrlRef.current) {
+        URL.revokeObjectURL(teaserPreviewUrlRef.current);
+        teaserPreviewUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setTeaserFile(null);
+      if (teaserPreviewUrlRef.current) {
+        URL.revokeObjectURL(teaserPreviewUrlRef.current);
+        teaserPreviewUrlRef.current = null;
+      }
+      setTeaserPreview(null);
+      return;
+    }
+    setTeaserFile(file);
+    if (teaserPreviewUrlRef.current) {
+      URL.revokeObjectURL(teaserPreviewUrlRef.current);
+    }
+    const url = URL.createObjectURL(file);
+    teaserPreviewUrlRef.current = url;
+    setTeaserPreview(url);
+  };
 
   const updateData = (field: keyof BeefData, value: unknown) => {
     setBeefData((prev) => ({ ...prev, [field]: value }));
@@ -251,6 +285,12 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   const handleBackToChoice = () => {
     setIntent(null);
     setBeefData(initialBeefData());
+    setTeaserFile(null);
+    if (teaserPreviewUrlRef.current) {
+      URL.revokeObjectURL(teaserPreviewUrlRef.current);
+      teaserPreviewUrlRef.current = null;
+    }
+    setTeaserPreview(null);
     setFieldErrors({});
     setSearchQuery('');
     setSearchResults([]);
@@ -276,6 +316,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
           role: p.role,
           is_main: p.is_main,
         })),
+        teaser_file: teaserFile,
       };
       await onSubmit(payload);
     } catch (error: unknown) {
@@ -418,6 +459,46 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                         {ev === 'standard' ? 'Standard' : 'Prestige (Affiche)'}
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 px-1 text-[10px] font-bold uppercase tracking-widest text-white/40">
+                    <Film className="h-3.5 w-3.5 shrink-0 text-brand-400" aria-hidden />
+                    Teaser (Vidéo ou Image)
+                  </label>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => document.getElementById('teaser-upload')?.click()}
+                    onKeyDown={(ev) => {
+                      if (ev.key === 'Enter' || ev.key === ' ') {
+                        ev.preventDefault();
+                        document.getElementById('teaser-upload')?.click();
+                      }
+                    }}
+                    className="relative flex h-32 cursor-pointer items-center justify-center overflow-hidden rounded-[1.5rem] border-2 border-dashed border-white/10 bg-white/5 transition-all hover:border-brand-500/50 hover:bg-white/10"
+                  >
+                    {teaserPreview ? (
+                      teaserFile?.type.startsWith('video/') ? (
+                        <video src={teaserPreview} className="h-full w-full object-cover" muted loop autoPlay playsInline />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob)
+                        <img src={teaserPreview} className="h-full w-full object-cover" alt="Aperçu teaser" />
+                      )
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-white/40">
+                        <ImagePlus className="h-6 w-6" aria-hidden />
+                        <span className="text-[10px] font-medium uppercase tracking-tighter">Ajouter un média</span>
+                      </div>
+                    )}
+                    <input
+                      id="teaser-upload"
+                      type="file"
+                      accept="video/*,image/*"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
                   </div>
                 </div>
 
