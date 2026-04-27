@@ -654,7 +654,7 @@ export default function FeedPage() {
         {loading ? (
             <div
             id="feed-scroll-container"
-            className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-5 md:p-6 md:pt-4 max-md:pb-6 ${activeBeef ? 'max-md:pt-11' : ''} md:pb-32 md:snap-none md:items-start`}
+            className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 md:gap-5 md:p-6 md:pt-4 pb-28 md:pb-32 md:snap-none md:items-start`}
           >
             {[...Array(6)].map((_, i) => (
               <div key={i} className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.06]">
@@ -692,7 +692,7 @@ export default function FeedPage() {
           <>
             <div
               id="feed-scroll-container"
-              className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-5 md:p-6 md:pt-4 max-md:pb-6 ${activeBeef ? 'max-md:pt-11' : ''} md:pb-32 md:snap-none md:items-start`}
+              className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 md:gap-5 md:p-6 md:pt-4 pb-28 md:pb-32 md:snap-none md:items-start`}
             >
               {beefs.map((beef, index) => (
                 <div key={beef.id} className="snap-start snap-always relative w-full shrink-0 max-md:h-full">
@@ -759,27 +759,27 @@ export default function FeedPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed max-md:top-[110px] max-md:left-0 max-md:right-0 max-md:z-[45] max-md:flex max-md:items-center max-md:justify-between max-md:bg-brand-600/90 max-md:backdrop-blur-md max-md:py-2 max-md:px-4 max-md:rounded-none max-md:shadow-sm md:bottom-6 md:right-6 md:left-auto md:top-auto md:z-[500] md:w-[272px] md:overflow-hidden md:rounded-2xl md:border md:border-white/20 md:bg-gradient-to-br md:from-black/90 md:to-black/95 md:backdrop-blur-2xl md:shadow-[0_8px_32px_rgba(0,0,0,0.8)]"
+          className="fixed z-[500] max-md:bottom-[90px] max-md:left-1/2 max-md:-translate-x-1/2 max-md:w-[92%] md:bottom-8 md:right-8 md:w-[340px] md:translate-x-0 overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-black/90 to-black/95 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)]"
         >
           <button
             type="button"
             onClick={() => router.push(`/arena/${activeBeef.id}`)}
-            className="group flex w-full max-md:min-h-0 max-md:items-center max-md:justify-between max-md:gap-3 max-md:py-0 text-left md:items-center md:justify-between md:gap-2.5 md:p-2.5"
+            className="group flex w-full items-center justify-between gap-3 p-3 text-left md:gap-4 md:p-4"
           >
-            <div className="flex min-w-0 max-md:flex-1 max-md:items-center max-md:gap-2.5 md:min-w-0 md:flex-1 md:items-center md:gap-2.5">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-ember-500/30 bg-ember-500/20 md:h-7 md:w-7">
-                <Radio className="h-3.5 w-3.5 shrink-0 animate-pulse text-ember-200 md:h-3.5 md:w-3.5" />
+            <div className="flex min-w-0 flex-1 items-center gap-2.5 md:gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ember-500/30 bg-ember-500/15">
+                <Radio className="h-4 w-4 shrink-0 animate-pulse text-ember-400" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-sans text-xs font-bold text-white max-md:leading-tight md:text-sm">
+                <p className="truncate font-sans text-sm font-bold text-white">
                   {activeBeef.title}
                 </p>
-                <p className="mt-0.5 max-md:hidden font-sans text-[10px] text-white/50 md:text-[11px]">
-                  Tu es <span className="font-semibold text-white/90 max-md:text-white md:text-brand-400">{activeBeef.role}</span> dans ce beef
+                <p className="mt-0.5 font-sans text-[11px] text-white/50 md:text-xs">
+                  Tu es <span className="font-semibold text-brand-400">{activeBeef.role}</span> dans ce beef
                 </p>
               </div>
             </div>
-            <div className="shrink-0 rounded-md border border-white/20 bg-white/15 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-white transition-colors max-md:font-mono max-md:shadow-none group-hover:bg-white/25 md:rounded-full md:bg-gradient-to-r md:from-red-600 md:to-orange-500 md:px-3 md:py-1.5 md:font-mono md:text-[10px] md:tracking-widest md:shadow-[0_0_15px_rgba(239,68,68,0.5)] md:group-hover:shadow-[0_0_25px_rgba(239,68,68,0.7)] md:border-0">
+            <div className="shrink-0 rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-3 py-1.5 font-mono text-[10px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all group-hover:shadow-[0_0_25px_rgba(239,68,68,0.7)] md:px-4 md:text-[11px]">
               Rejoindre
             </div>
           </button>
