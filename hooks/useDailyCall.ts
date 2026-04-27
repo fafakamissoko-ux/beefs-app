@@ -209,7 +209,12 @@ export function useDailyCall(
       co.on('track-started', () => {
         refreshParticipants(co);
       });
-      co.on('track-stopped', () => refreshParticipants(co));
+      co.on('track-stopped', (evt: any) => {
+        refreshParticipants(co);
+        if (evt?.participant && evt.participant.local) {
+          setIsCameraInterrupted(true);
+        }
+      });
       co.on('left-meeting', () => {
         setIsJoined(false);
         setLocalParticipant(null);
@@ -411,32 +416,31 @@ export function useDailyCall(
     if (!callRef.current) return;
     try {
       setIsCameraInterrupted(false);
-
-      // 1. Forçage matériel (uniquement si on n'est pas un simple spectateur)
       const shouldEnable = !viewerModeRef.current;
-      await callRef.current.setLocalVideo(shouldEnable);
-      await callRef.current.setLocalAudio(shouldEnable);
-
-      // 2. Synchronisation parfaite de l'UI
       if (shouldEnable) {
+        // 1. Désactiver proprement les flux fantômes
+        await callRef.current.setLocalVideo(false);
+        await callRef.current.setLocalAudio(false);
+        // 2. Forcer la puce matérielle à se relancer
+        await callRef.current.startCamera({ videoSource: true, audioSource: true });
         setCamEnabled(true);
         setMicEnabled(true);
       }
     } catch (err) {
-      console.warn('Echec de la reprise des périphériques', err);
+      console.warn('Echec de la reprise matérielle', err);
       setIsCameraInterrupted(true);
     }
   }, []);
 
   useEffect(() => {
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isCameraInterrupted) {
+      if (document.visibilityState === 'visible' && isJoined && !viewerModeRef.current) {
         void recoverMediaDevices();
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, [isCameraInterrupted, recoverMediaDevices]);
+  }, [isJoined, recoverMediaDevices]);
 
   // ── AUTO-RECONNECT on network loss ──
   useEffect(() => {
@@ -480,7 +484,12 @@ export function useDailyCall(
         newCo.on('participant-updated', () => refreshParticipants(newCo));
         newCo.on('participant-left', () => refreshParticipants(newCo));
         newCo.on('track-started', () => refreshParticipants(newCo));
-        newCo.on('track-stopped', () => refreshParticipants(newCo));
+        newCo.on('track-stopped', (evt: any) => {
+          refreshParticipants(newCo);
+          if (evt?.participant && evt.participant.local) {
+            setIsCameraInterrupted(true);
+          }
+        });
         newCo.on('left-meeting', () => {
           setIsJoined(false);
           setLocalParticipant(null);
