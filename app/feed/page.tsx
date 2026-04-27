@@ -560,14 +560,12 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-black max-md:overflow-hidden">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       <Suspense fallback={null}>
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
-      <div className="w-full max-w-full pb-8 pt-6 max-md:pt-0 max-md:pb-0 sm:pt-8">
-        {/* EN-TÊTE HYBRIDE (Empilement Bannière + Onglets) */}
-        <div className="max-md:fixed max-md:left-0 max-md:right-0 max-md:top-14 max-md:z-[100] max-md:flex max-md:flex-col pointer-events-none md:contents">
-          <div className="pointer-events-auto w-full shrink-0 max-md:bg-gradient-to-b max-md:from-black max-md:via-black/95 max-md:to-transparent max-md:px-4 max-md:pb-6 max-md:pt-3 md:relative md:mb-8 md:space-y-4">
+        {/* Bannière + onglets + filtres (desktop) — dans le flux, repousse le scroll */}
+        <div className="z-[100] flex w-full shrink-0 flex-col bg-black/80 px-4 pb-3 pt-3 backdrop-blur-md md:mb-8 md:space-y-4 md:px-0 md:pt-0 lg:bg-transparent lg:backdrop-blur-none">
 
             {/* Active beef banner (Maintenant fluide au-dessus des onglets) */}
             {activeBeef && (
@@ -698,13 +696,15 @@ export default function FeedPage() {
               </button>
             ))}
           </div>
-        </div>
-        </div>
+          </div>
         </div>
 
         {/* Content */}
         {loading ? (
-          <div className="flex flex-col gap-4 snap-y snap-mandatory h-screen overflow-y-auto hide-scrollbar pb-24 pt-[110px] scroll-pt-[110px] md:grid md:min-h-0 md:h-auto md:max-h-none md:w-full md:grid-cols-2 md:gap-6 md:overflow-visible md:snap-none md:gap-y-6 md:py-0 md:pt-0 md:pb-8 md:scroll-pt-0 lg:grid-cols-3">
+          <div
+            id="feed-scroll-container"
+            className="flex min-h-0 flex-1 flex-col snap-y snap-mandatory overflow-y-auto hide-scrollbar md:grid md:min-h-0 md:h-auto md:max-h-none md:w-full md:grid-cols-2 md:gap-6 md:overflow-visible md:snap-none md:gap-y-6 md:py-0 md:pt-0 md:pb-8 md:scroll-pt-0 lg:grid-cols-3"
+          >
             {[...Array(6)].map((_, i) => (
               <div key={i} className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.06]">
                 <div className="skeleton h-48 rounded-none" />
@@ -720,7 +720,7 @@ export default function FeedPage() {
             ))}
           </div>
         ) : beefs.length === 0 ? (
-          <div className="flex flex-col items-center py-32 md:justify-center max-md:min-h-[100dvh] max-md:justify-start max-md:pt-[35dvh] max-md:px-6 text-center">
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 py-16 text-center md:justify-center">
             <div className="relative mb-6 group">
               <div className="absolute inset-0 rounded-full bg-prestige-gold/20 blur-xl transition-all duration-700 group-hover:bg-prestige-gold/30 group-hover:blur-2xl" />
               <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_30px_rgba(212,175,55,0.15)]">
@@ -739,9 +739,12 @@ export default function FeedPage() {
           </div>
         ) : (
           <>
-            <div className="flex flex-col gap-4 snap-y snap-mandatory h-screen overflow-y-auto hide-scrollbar pb-24 pt-[110px] scroll-pt-[110px] md:grid md:min-h-0 md:h-auto md:max-h-none md:w-full md:grid-cols-2 md:gap-6 md:overflow-visible md:snap-none md:gap-y-6 md:py-0 md:pt-0 md:pb-8 md:scroll-pt-0 lg:grid-cols-3">
+            <div
+              id="feed-scroll-container"
+              className="flex min-h-0 flex-1 flex-col snap-y snap-mandatory overflow-y-auto hide-scrollbar md:grid md:min-h-0 md:h-auto md:max-h-none md:w-full md:grid-cols-2 md:gap-6 md:overflow-visible md:snap-none md:gap-y-6 md:py-0 md:pt-0 md:pb-8 md:scroll-pt-0 lg:grid-cols-3"
+            >
               {beefs.map((beef, index) => (
-                <div key={beef.id} className="snap-start relative w-full mb-2 shrink-0">
+                <div key={beef.id} className="relative w-full shrink-0 snap-start snap-always max-md:h-full">
                   <BeefCard
                     {...beef}
                     onPrepareAudience={
@@ -801,9 +804,6 @@ export default function FeedPage() {
             )}
           </>
         )}
-      </div>
-
-      {/* Create modal */}
       {showCreateModal && <CreateBeefForm onSubmit={handleCreateBeef} onCancel={() => setShowCreateModal(false)} />}
 
     </div>
