@@ -211,8 +211,17 @@ export function useDailyCall(
       });
       co.on('track-stopped', (evt: any) => {
         refreshParticipants(co);
-        if (evt?.participant && evt.participant.local) {
-          setIsCameraInterrupted(true);
+
+        // Filtre de précision : on ne déclenche l'alerte d'interruption que pour
+        // les flux médias principaux (caméra/micro), pas pour les partages d'écran.
+        if (evt.participant && evt.participant.local && evt.track) {
+          const isScreenShare =
+            evt.track.label?.toLowerCase().includes('screen') ||
+            (evt.track.kind === 'video' && evt.participant.screen);
+
+          if (!isScreenShare) {
+            setIsCameraInterrupted(true);
+          }
         }
       });
       co.on('left-meeting', () => {
@@ -486,8 +495,17 @@ export function useDailyCall(
         newCo.on('track-started', () => refreshParticipants(newCo));
         newCo.on('track-stopped', (evt: any) => {
           refreshParticipants(newCo);
-          if (evt?.participant && evt.participant.local) {
-            setIsCameraInterrupted(true);
+
+          // Filtre de précision : on ne déclenche l'alerte d'interruption que pour
+          // les flux médias principaux (caméra/micro), pas pour les partages d'écran.
+          if (evt.participant && evt.participant.local && evt.track) {
+            const isScreenShare =
+              evt.track.label?.toLowerCase().includes('screen') ||
+              (evt.track.kind === 'video' && evt.participant.screen);
+
+            if (!isScreenShare) {
+              setIsCameraInterrupted(true);
+            }
           }
         });
         newCo.on('left-meeting', () => {
