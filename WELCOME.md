@@ -27,6 +27,7 @@
 ### 📂 Fichiers Créés (40+)
 
 #### Pages & Layouts
+
 - ✅ Page d'accueil moderne
 - ✅ Arena live (split-screen)
 - ✅ Browse des arenas actives
@@ -34,6 +35,7 @@
 - ✅ Layouts Next.js App Router
 
 #### Composants UI
+
 - ✅ TensionGauge (jauge interactive)
 - ✅ ChatPanel (temps réel)
 - ✅ ChallengerQueue (file d'attente)
@@ -44,12 +46,14 @@
 - ✅ ErrorBoundary
 
 #### Logique & Hooks
+
 - ✅ useTensionMeter (throttling + decay)
 - ✅ Client Supabase configuré
 - ✅ Utilitaires (formatters, validators)
 - ✅ Types TypeScript complets
 
 #### Documentation (9 fichiers)
+
 - ✅ README.md (Vue d'ensemble)
 - ✅ QUICKSTART.md (Démarrage 5min)
 - ✅ SETUP.md (Config détaillée)
@@ -66,7 +70,7 @@
 
 ### Option 1 : Script Automatique (Windows)
 
-Double-cliquez sur **`START.bat`** → Tout s'installe automatiquement !
+Double-cliquez sur `**START.bat`** → Tout s'installe automatiquement !
 
 ### Option 2 : Manuel (3 commandes)
 
@@ -83,31 +87,41 @@ npm run dev
 ## 🎯 Fonctionnalités Principales
 
 ### 1. 🔥 Tension Meter
+
 Jauge interactive alimentée par la foule en temps réel
+
 - Throttling intelligent (300ms)
 - Decay automatique (-2%/sec)
 - Mode CHAOS à 100%
 
 ### 2. 💬 Chat Temps Réel
+
 Messages instantanés avec source pinning
+
 - Messages texte
 - Liens sources (validation IA)
 - Fact-checks IA affichés
 
 ### 3. 👥 1 vs All System
+
 File d'attente pour challengers
+
 - Host immunity
 - FIFO queue
 - One challenger at a time
 
 ### 4. 🤖 AI Fact-Checker
+
 Vérification automatique par OpenAI
+
 - 4 types de verdicts
 - Explications courtes
 - Sources citées
 
 ### 5. 🎁 Virtual Gifts
+
 Système de gifts animés
+
 - 4 types (Flamme, Couronne, Éclair, Diamant)
 - Animations Framer Motion
 - Prêt pour monétisation
@@ -155,38 +169,43 @@ Deployment   : Vercel (recommandé)
 ## 🗺️ Roadmap
 
 ### ✅ Phase 1 (Actuelle) - MVP Fonctionnel
-- [x] Architecture complète
-- [x] Toutes les fonctionnalités de base
-- [x] Documentation exhaustive
-- [x] Ready for demo
+
+- Architecture complète
+- Toutes les fonctionnalités de base
+- Documentation exhaustive
+- Ready for demo
 
 ### 🔨 Phase 2 (Prochaine)
-- [ ] Authentification users
-- [ ] Audio/Vidéo (LiveKit/Agora)
-- [ ] Transcription Whisper
-- [ ] Tests automatisés
-- [ ] Analytics dashboard
+
+- Authentification users
+- Audio/Vidéo (LiveKit/Agora)
+- Transcription Whisper
+- Tests automatisés
+- Analytics dashboard
 
 ### 🌟 Phase 3 (Future)
-- [ ] Système de replay
-- [ ] Leagues & Rankings
-- [ ] Monétisation Stripe
-- [ ] Mobile apps (React Native)
-- [ ] API publique
+
+- Système de replay
+- Leagues & Rankings
+- Monétisation Stripe
+- Mobile apps (React Native)
+- API publique
 
 ---
 
 ## 📚 Documentation
 
-| Fichier | Description |
-|---------|-------------|
-| **QUICKSTART.md** | ⚡ Démarrage en 5 minutes |
-| **README.md** | 📖 Documentation principale |
-| **SETUP.md** | 🔧 Configuration détaillée |
-| **FEATURES.md** | 💻 Guide technique complet |
-| **DEPLOYMENT.md** | 🚀 Déploiement production |
-| **CONTRIBUTING.md** | 🤝 Guide de contribution |
-| **PROJECT_SUMMARY.md** | 📊 Synthèse du projet |
+
+| Fichier                | Description                 |
+| ---------------------- | --------------------------- |
+| **QUICKSTART.md**      | ⚡ Démarrage en 5 minutes    |
+| **README.md**          | 📖 Documentation principale |
+| **SETUP.md**           | 🔧 Configuration détaillée  |
+| **FEATURES.md**        | 💻 Guide technique complet  |
+| **DEPLOYMENT.md**      | 🚀 Déploiement production   |
+| **CONTRIBUTING.md**    | 🤝 Guide de contribution    |
+| **PROJECT_SUMMARY.md** | 📊 Synthèse du projet       |
+
 
 ---
 
@@ -201,12 +220,12 @@ Deployment   : Vercel (recommandé)
 
 ### Améliorations Suggérées
 
-- [ ] Ajouter des tests (Jest + Playwright)
-- [ ] Implémenter rate limiting
-- [ ] Optimiser les images
-- [ ] Ajouter PWA (offline mode)
-- [ ] Traduire en plusieurs langues
-- [ ] Créer un mode dark/light toggle
+- Ajouter des tests (Jest + Playwright)
+- Implémenter rate limiting
+- Optimiser les images
+- Ajouter PWA (offline mode)
+- Traduire en plusieurs langues
+- Créer un mode dark/light toggle
 
 ---
 
@@ -217,7 +236,7 @@ Deployment   : Vercel (recommandé)
 - 📖 **Documentation** : Lisez les 7 fichiers .md
 - 🐛 **Issues** : [GitHub Issues](https://github.com/votre-username/arena-vs/issues)
 - 💬 **Discord** : [Lien communauté] (à créer)
-- 📧 **Email** : team@arena-vs.com
+- 📧 **Email** : [team@arena-vs.com](mailto:team@arena-vs.com)
 
 ### FAQ Rapide
 

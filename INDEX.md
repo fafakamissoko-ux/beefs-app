@@ -78,7 +78,7 @@ Voici la structure complète de votre projet :
 ### **Méthode 1 : Double-clic** ⭐ (Recommandé)
 
 1. Dans l'Explorateur Windows, allez dans `C:\Users\famor\arena-vs`
-2. Double-cliquez sur **`OUVRIR_DANS_CURSOR.bat`**
+2. Double-cliquez sur `**OUVRIR_DANS_CURSOR.bat`**
 3. Le projet s'ouvre dans Cursor !
 
 ### **Méthode 2 : Via Cursor**
