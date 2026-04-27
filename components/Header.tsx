@@ -324,10 +324,10 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       <header
         className={
           shell === 'phone'
-            ? `z-[100] relative mx-auto flex w-full max-w-md shrink-0 flex-col rounded-none lg:mx-0 lg:h-full lg:min-h-0 lg:max-w-none lg:w-64 lg:self-stretch lg:border-b-0 lg:border-r lg:border-white/[0.08] lg:backdrop-blur-none ${
+            ? `z-[100] relative mx-auto flex w-full max-w-md shrink-0 flex-col rounded-none lg:mx-0 lg:h-full lg:min-h-0 lg:max-w-none lg:w-64 lg:self-stretch lg:border-b-0 lg:border-r lg:border-white/[0.08] lg:backdrop-blur-2xl ${
                 isActive('/feed')
-                  ? 'border-none bg-gradient-to-b from-black/90 via-black/40 to-transparent backdrop-blur-md max-lg:from-black/90 max-lg:via-black/40 max-lg:to-transparent lg:bg-transparent'
-                  : 'border-b border-white/[0.08] bg-black/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md lg:shadow-none lg:border-b-0 lg:bg-transparent'
+                  ? 'border-none bg-gradient-to-b from-black/90 via-black/40 to-transparent backdrop-blur-md max-lg:from-black/90 max-lg:via-black/40 max-lg:to-transparent lg:bg-[#050505]/60'
+                  : 'border-b border-white/[0.08] bg-black/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md lg:shadow-none lg:border-b-0 lg:bg-[#050505]/60'
               }`
             : 'fixed left-0 right-0 top-0 z-header border-b border-white/[0.08] bg-[#08080A]/92 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl'
         }
@@ -400,10 +400,10 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       key={item.href}
                       href={hrefWithFrom(item.href, pathname)}
                       prefetch={false}
-                      className={`relative flex items-center gap-2 rounded-[2px] px-3.5 py-2 text-sm font-medium transition-all duration-200 ${
+                      className={`relative flex items-center gap-2 border-l-[3px] border-transparent px-3.5 py-2 text-sm font-medium transition-all duration-200 ${
                         active
-                          ? 'text-white bg-white/[0.08]'
-                          : 'text-gray-500 hover:text-gray-200 hover:bg-white/[0.04]'
+                          ? 'text-white max-lg:rounded-[2px] max-lg:border-l-transparent max-lg:bg-white/[0.08] lg:rounded-none lg:border-brand-400 lg:bg-gradient-to-r lg:from-brand-500/15 lg:to-transparent'
+                          : 'text-gray-500 max-lg:rounded-[2px] max-lg:hover:bg-white/[0.04] max-lg:hover:text-gray-200 lg:rounded-none lg:text-gray-400 lg:hover:border-transparent lg:hover:bg-white/[0.04] lg:hover:text-white'
                       } ${shell === 'full' && navSecondaryHrefs.has(item.href) ? 'hidden xl:flex' : ''} ${
                         shell === 'phone' ? 'lg:w-full lg:justify-start lg:px-4' : ''
                       }`}
@@ -416,7 +416,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       {active && (
                         <motion.div
                           layoutId="nav-indicator"
-                          className="absolute -bottom-[13px] left-3 right-3 h-[2px] rounded-full lg:hidden"
+                          className="absolute -bottom-[13px] left-3 right-3 block h-[2px] rounded-full lg:hidden"
                           style={{ background: 'linear-gradient(90deg, #0052FF, #FF4D00)' }}
                           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                         />

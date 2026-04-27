@@ -263,7 +263,7 @@ export function BeefCard({
       {/* Média de fond (mobile) / en-tête (desktop) */}
       <div
         ref={mediaBlockRef}
-        className="relative w-full min-h-0 flex-1 overflow-hidden bg-black/20 max-md:absolute max-md:inset-0 max-md:z-0 max-md:max-h-[60vh] md:max-h-none md:bg-black md:aspect-[16/10] md:shrink-0 md:rounded-t-[2rem]"
+        className="relative w-full min-h-0 flex-1 overflow-hidden bg-black/20 max-md:absolute max-md:inset-0 max-md:z-0 max-md:max-h-[60vh] md:max-h-none md:bg-black md:aspect-video md:h-48 lg:h-52 md:shrink-0 md:rounded-t-[2rem]"
       >
         {video_url ? (
           <video
@@ -432,7 +432,7 @@ export function BeefCard({
       </div>
 
       {/* Contenu sous le visuel */}
-      <div className="pointer-events-auto relative z-30 flex max-w-none flex-col max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:px-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] max-md:pt-4 md:px-5 md:py-4 md:z-auto max-md:bg-gradient-to-t max-md:from-black max-md:via-black/80 max-md:to-black/5">
+      <div className="pointer-events-auto relative z-30 flex max-w-none flex-col max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:px-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] max-md:pt-4 md:px-5 md:py-3 md:z-auto max-md:bg-gradient-to-t max-md:from-black max-md:via-black/80 max-md:to-black/5">
         <div className={!hasHeroMedia ? 'max-md:block md:hidden' : 'block'}>
           {(showCountdownTimer && scheduled_at) || (status === 'live' && getTimeDisplay()) ? (
             <div className="mb-3 flex items-center gap-2 md:hidden">

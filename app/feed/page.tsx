@@ -572,13 +572,13 @@ export default function FeedPage() {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-4 overflow-hidden rounded-2xl bg-gradient-to-r from-cobalt-500/12 to-ember-500/8 border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:mb-6"
+                className="mb-4 max-w-2xl mx-auto overflow-hidden rounded-full bg-gradient-to-r from-cobalt-500/12 to-ember-500/8 border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:mb-6"
               >
                 <button
                   onClick={() => router.push(`/arena/${activeBeef.id}`)}
-                  className="w-full flex items-center gap-4 px-5 py-3 md:py-4 text-left"
+                  className="w-full flex items-center gap-4 rounded-full px-6 py-3 md:py-3.5 text-left"
                 >
-                  <div className="flex h-9 w-9 md:h-11 md:w-11 flex-shrink-0 items-center justify-center rounded-xl border border-ember-500/30 bg-ember-500/15">
+                  <div className="flex h-9 w-9 md:h-11 md:w-11 flex-shrink-0 items-center justify-center rounded-full border border-ember-500/30 bg-ember-500/15">
                     <Radio className="h-4 w-4 md:h-5 md:w-5 animate-pulse text-ember-400" />
                   </div>
                   <div className="flex-1 min-w-0">
