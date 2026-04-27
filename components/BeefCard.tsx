@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Users, Flame, Play, Calendar, User, Sparkles, Volume2, VolumeX, Bell } from 'lucide-react';
+import { Clock, Users, Flame, Play, Calendar, User, Sparkles, Volume2, VolumeX, Bell, Eye } from 'lucide-react';
 import { hasBeefWatchStarted } from '@/lib/beef-view-local';
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
@@ -246,7 +246,7 @@ export function BeefCard({
   ) : null;
 
   return (
-    <div className="relative flex min-h-0 w-full max-w-full flex-col max-md:mt-16 max-md:min-h-0 max-md:h-[calc(100dvh-120px)] max-md:w-full max-md:shrink-0 max-md:snap-start max-md:snap-always">
+    <div className="relative flex min-h-0 w-full max-w-full flex-col max-md:min-h-[calc(100dvh-64px)] max-md:w-full max-md:shrink-0 max-md:snap-start max-md:scroll-mt-16 max-md:snap-always">
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -263,7 +263,7 @@ export function BeefCard({
       {/* Média de fond (mobile) / en-tête (desktop) */}
       <div
         ref={mediaBlockRef}
-        className="relative w-full min-h-0 flex-1 overflow-hidden bg-black/20 max-md:absolute max-md:inset-0 max-md:z-0 md:bg-black md:aspect-[16/10] md:shrink-0 md:rounded-t-[2rem]"
+        className="relative w-full min-h-0 flex-1 overflow-hidden bg-black/20 max-md:absolute max-md:inset-0 max-md:z-0 max-md:max-h-[60vh] md:max-h-none md:bg-black md:aspect-[16/10] md:shrink-0 md:rounded-t-[2rem]"
       >
         {video_url ? (
           <video
@@ -296,27 +296,36 @@ export function BeefCard({
           aria-hidden
         />
 
-        {/* Bandeau statuts + prix — mobile (top-4, carte déjà décalée par mt-16) */}
-        <div className="absolute left-0 right-0 top-4 z-20 flex flex-wrap items-center gap-2 px-3 md:hidden">
-          {status === 'live' && (
-            <div className="flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-tighter text-white shadow-lg animate-pulse">
-              <div className="h-1.5 w-1.5 rounded-full bg-white" />
-              Direct
-            </div>
-          )}
-          {getPrimaryStatusBadge()}
-          {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
-            <div className="flex items-center gap-1 rounded-full border border-cobalt-500/25 bg-cobalt-500/12 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cobalt-200 backdrop-blur-md">
-              <Flame className="h-3 w-3" />
-              Entrée · {price} pts
-            </div>
-          )}
-          {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-            <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
-              <Flame className="h-3 w-3 text-orange-500" />
-              Suite · {price} pts
-            </div>
-          )}
+        {/* Bandeau mobile : badges + vues sur une ligne, sans chevauchement */}
+        <div className="absolute left-0 top-0 z-20 flex w-full flex-row items-start justify-between gap-2 px-4 pt-4 md:hidden">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            {status === 'live' && (
+              <div className="flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-tighter text-white shadow-lg animate-pulse">
+                <div className="h-1.5 w-1.5 rounded-full bg-white" />
+                Direct
+              </div>
+            )}
+            {getPrimaryStatusBadge()}
+            {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
+              <div className="flex items-center gap-1 rounded-full border border-cobalt-500/25 bg-cobalt-500/12 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cobalt-200 backdrop-blur-md">
+                <Flame className="h-3 w-3" />
+                Entrée · {price} pts
+              </div>
+            )}
+            {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
+              <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
+                <Flame className="h-3 w-3 text-orange-500" />
+                Suite · {price} pts
+              </div>
+            )}
+          </div>
+          <div
+            className="ml-1 flex shrink-0 items-center gap-0.5 font-mono text-[10px] font-bold tabular-nums tracking-wider text-orange-400 drop-shadow-sm"
+            aria-label={`${viewer_count.toLocaleString()} vues`}
+          >
+            <Eye className="h-3.5 w-3.5 shrink-0 text-white/90" strokeWidth={2.25} aria-hidden />
+            <span className="text-white/90">{viewer_count.toLocaleString()}</span>
+          </div>
         </div>
 
         {/* Desktop : badge statut + prix en coins */}
@@ -351,7 +360,7 @@ export function BeefCard({
               e.stopPropagation();
               setIsMuted((m) => !m);
             }}
-            className="absolute z-30 max-md:bottom-36 max-md:right-3 max-md:rounded-full max-md:border max-md:border-white/10 max-md:bg-black/50 max-md:p-2 max-md:backdrop-blur-md bottom-3 right-3 rounded-full border border-white/10 bg-black/40 p-2 backdrop-blur-md transition-colors hover:bg-black/60"
+            className="absolute z-30 max-md:bottom-36 max-md:right-3 max-md:rounded-full max-md:border max-md:border-white/15 max-md:bg-black/45 max-md:p-2 max-md:backdrop-blur-lg max-md:shadow-lg bottom-3 right-3 rounded-full border border-white/10 bg-black/40 p-2 backdrop-blur-lg transition-colors hover:bg-black/60"
             aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
           >
             {isMuted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}
@@ -414,7 +423,7 @@ export function BeefCard({
               setTimeout(() => setFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
               onAuraClick?.();
             }}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-prestige-gold/30 bg-black/60 text-prestige-gold shadow-[0_0_15px_rgba(212,175,55,0.2)] backdrop-blur-md"
+            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-prestige-gold/30 bg-black/45 text-prestige-gold shadow-[0_0_15px_rgba(212,175,55,0.2)] backdrop-blur-lg"
           >
             <Sparkles className="h-5 w-5 fill-current" />
           </motion.button>
@@ -425,22 +434,18 @@ export function BeefCard({
       {/* Contenu sous le visuel */}
       <div className="pointer-events-auto relative z-30 flex max-w-none flex-col max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:px-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] max-md:pt-4 md:px-5 md:py-4 md:z-auto max-md:bg-gradient-to-t max-md:from-black max-md:via-black/80 max-md:to-black/5">
         <div className={!hasHeroMedia ? 'max-md:block md:hidden' : 'block'}>
-          <div className="mb-3 flex items-center justify-between gap-2 md:hidden">
-            {showCountdownTimer && scheduled_at ? (
-              <Countdown scheduledAt={scheduled_at} />
-            ) : status === 'live' && getTimeDisplay() ? (
-              <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/80 drop-shadow-sm">
-                <Clock className="h-3 w-3" />
-                <span>{getTimeDisplay()}</span>
-              </div>
-            ) : (
-              <span className="text-[10px] text-white/30"> </span>
-            )}
-            <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-orange-400">
-              <Flame className="h-3 w-3 shrink-0" strokeWidth={2.25} />
-              <span className="text-white/90">{viewer_count.toLocaleString()}</span>
+          {(showCountdownTimer && scheduled_at) || (status === 'live' && getTimeDisplay()) ? (
+            <div className="mb-3 flex items-center gap-2 md:hidden">
+              {showCountdownTimer && scheduled_at ? (
+                <Countdown scheduledAt={scheduled_at} />
+              ) : (
+                <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/80 drop-shadow-sm">
+                  <Clock className="h-3 w-3" />
+                  <span>{getTimeDisplay()}</span>
+                </div>
+              )}
             </div>
-          </div>
+          ) : null}
           {/* INFO COMPACTE (MOBILE SEULEMENT) REFONTE */}
           <div className="relative z-20 md:hidden flex items-center gap-2 mb-2">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 border border-white/20 text-[11px] font-bold text-white backdrop-blur-md">
@@ -482,7 +487,7 @@ export function BeefCard({
               )}
             </div>
           </div>
-          <h3 className="mb-1 max-md:mb-2 line-clamp-2 pr-10 font-sans text-[15px] font-bold leading-snug text-white max-md:text-[17px] drop-shadow-2xl transition-colors duration-200 md:group-hover:text-brand-400">
+          <h3 className="mb-1 max-md:mb-2 line-clamp-2 pr-10 font-sans text-[15px] font-bold leading-snug text-white max-md:text-[17px] drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] transition-colors duration-200 md:group-hover:text-brand-400">
             {title}
           </h3>
           {/* Tags on Mobile */}

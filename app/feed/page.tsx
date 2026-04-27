@@ -560,7 +560,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-dvh max-md:h-[100dvh] max-md:overflow-y-auto max-md:snap-y max-md:snap-mandatory max-md:hide-scrollbar bg-black">
+    <div className="min-h-dvh bg-black max-md:overflow-hidden">
       <Suspense fallback={null}>
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
@@ -704,7 +704,7 @@ export default function FeedPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="max-md:flex max-md:flex-col max-md:gap-0 max-md:pb-[env(safe-area-inset-bottom)] md:grid md:grid-cols-2 md:gap-6 lg:grid-cols-3 lg:gap-8">
+          <div className="max-md:flex max-md:h-[calc(100dvh-64px)] max-md:max-w-full max-md:scroll-pt-16 max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:hide-scrollbar max-md:flex-col max-md:gap-0 max-md:pt-16 max-md:pb-[env(safe-area-inset-bottom)] md:grid md:grid-cols-2 md:gap-6 md:pt-0 lg:grid-cols-3 lg:gap-8">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.06]">
                 <div className="skeleton h-48 rounded-none" />
@@ -739,7 +739,7 @@ export default function FeedPage() {
           </div>
         ) : (
           <>
-            <div className="max-md:flex max-md:flex-col max-md:gap-0 max-md:pb-[env(safe-area-inset-bottom)] md:grid md:grid-cols-2 md:gap-6 lg:grid-cols-3 lg:gap-8">
+            <div className="max-md:flex max-md:h-[calc(100dvh-64px)] max-md:max-w-full max-md:scroll-pt-16 max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:hide-scrollbar max-md:flex-col max-md:gap-0 max-md:pt-16 max-md:pb-[env(safe-area-inset-bottom)] md:grid md:grid-cols-2 md:gap-6 md:pt-0 lg:grid-cols-3 lg:gap-8">
               {beefs.map((beef, index) => (
                 <BeefCard
                   key={beef.id}
