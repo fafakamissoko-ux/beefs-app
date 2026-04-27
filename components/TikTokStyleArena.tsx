@@ -1949,6 +1949,22 @@ export function TikTokStyleArena({
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
         addRemoteMessage(payload.user_name, payload.content, payload.initial, payload.id);
       })
+      .on('broadcast', { event: 'arena_big_gift' }, ({ payload }: any) => {
+        if (!payload) return;
+
+        setLocalArenaBigGift(payload);
+
+        const cost = Number(payload.cost) || 0;
+        if (cost > 0) {
+          const medBoost = Math.min(25, 4 + Math.floor(cost / 40));
+          setAuraMed((v) => Math.min(300, v + medBoost));
+
+          if (cost >= 50) {
+            setGiftPrestigeFlash((k) => k + 1);
+          }
+          setGlobalHeat((v) => Math.min(100, v + 20));
+        }
+      })
       .on('broadcast', { event: 'pulse_voice' }, ({ payload }: any) => {
         const dA = Math.max(0, Math.floor(Number(payload?.dA) || 0));
         const dB = Math.max(0, Math.floor(Number(payload?.dB) || 0));
