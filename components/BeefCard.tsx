@@ -148,7 +148,7 @@ export function BeefCard({
       case 'scheduled':
       case 'ready':
         return (
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-cobalt-500/10 border border-cobalt-500/20 text-cobalt-400 text-xs font-bold tracking-wider uppercase">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-cobalt-500/20 border border-cobalt-500/30 text-cobalt-300 text-xs font-bold tracking-wider uppercase">
             <Calendar className="h-3.5 w-3.5 shrink-0" />
             À VENIR
           </div>
@@ -197,7 +197,7 @@ export function BeefCard({
       onClick={onClick}
       onMouseEnter={() => isReplay && setReplayHover(true)}
       onMouseLeave={() => isReplay && setReplayHover(false)}
-      className={`group relative flex h-full w-full min-h-0 flex-1 flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border max-md:border-white/[0.06] md:rounded-[1.5rem] md:border md:border-white/[0.08] md:bg-[#08080A] md:hover:border-white/20 ${
+      className={`group relative flex min-h-0 flex-1 h-full w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border max-md:border-white/[0.06] md:rounded-[1.5rem] md:border md:border-white/[0.08] md:bg-[#08080A] md:hover:border-white/20 ${
         status === 'live' ? 'md:shadow-[0_0_0_1px_rgba(239,68,68,0.25)] md:group-hover:shadow-[0_0_24px_rgba(239,68,68,0.45)]' : ''
       } ${
         isManifesto
@@ -263,6 +263,12 @@ export function BeefCard({
             )}
         </div>
 
+        {status === 'scheduled' && scheduled_at ? (
+          <div className="absolute bottom-2 left-2 z-10 scale-90 origin-bottom-left">
+            <Countdown scheduledAt={scheduled_at} />
+          </div>
+        ) : null}
+
         {video_url && (
           <button
             type="button"
@@ -270,7 +276,9 @@ export function BeefCard({
               e.stopPropagation();
               setIsMuted((m) => !m);
             }}
-            className="absolute bottom-2 left-2 z-30 rounded-full border border-white/15 bg-black/50 p-1.5 backdrop-blur-md transition-colors hover:bg-black/70"
+            className={`absolute z-30 rounded-full border border-white/15 bg-black/50 p-1.5 backdrop-blur-md transition-colors hover:bg-black/70 ${
+              status === 'scheduled' && scheduled_at ? 'bottom-14 left-2' : 'bottom-2 left-2'
+            }`}
             aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
           >
             {isMuted ? <VolumeX className="h-3.5 w-3.5 text-white" /> : <Volume2 className="h-3.5 w-3.5 text-white" />}
@@ -281,7 +289,7 @@ export function BeefCard({
           className="absolute bottom-2 right-2 z-20 flex max-w-[min(92%,calc(100%-3rem))] flex-wrap items-center justify-end gap-1.5"
           aria-label={`${viewer_count.toLocaleString()} vues`}
         >
-          {showCountdownTimer && scheduled_at && (
+          {showCountdownTimer && scheduled_at && status !== 'scheduled' && (
             <span className="pointer-events-auto rounded border border-white/10 bg-black/60 px-1.5 py-0.5 backdrop-blur-sm [&_*]:!text-[9px]">
               <Countdown scheduledAt={scheduled_at} />
             </span>
@@ -331,27 +339,41 @@ export function BeefCard({
 
       </div>
 
-      <div className="p-3 md:p-4 flex gap-3 pointer-events-auto w-full bg-[#08080A] relative z-10">
+      <div className="relative z-10 flex flex-1 min-h-0 gap-3 bg-[#08080A] p-3 pointer-events-auto md:p-4">
         <div className="shrink-0 pt-0.5">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 border border-white/20 text-sm font-bold text-white backdrop-blur-md">
             {(host_name || '?')[0].toUpperCase()}
           </div>
         </div>
-        <div className="flex min-w-0 flex-col flex-1">
-          <h3 className="line-clamp-2 font-sans text-[15px] md:text-base font-bold leading-snug text-white md:group-hover:text-brand-400 transition-colors">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <h3 className="line-clamp-2 font-sans text-[15px] md:text-base font-bold leading-snug text-white transition-colors md:group-hover:text-brand-400">
             {title}
           </h3>
           <div className="mt-1 flex flex-col gap-0.5">
             <ProfileUserLink
               username={host_username}
-              className="truncate text-xs font-medium text-gray-400 hover:text-white transition-colors"
+              className="truncate text-xs font-medium text-gray-400 transition-colors hover:text-white"
               profileLabel={`Profil de ${host_name || 'Médiateur'}`}
             >
               {host_name || 'Médiateur'}
             </ProfileUserLink>
             {(challenger_a_name || challenger_b_name) && (
-              <span className="truncate text-[11px] font-medium text-gray-500">
-                {challenger_a_name || '?'} <span className="text-gray-600">vs</span> {challenger_b_name || '?'}
+              <span className="line-clamp-1 truncate text-[11px] font-medium">
+                {challenger_a_name ? (
+                  <ProfileUserLink username={challenger_a_username} className="text-cobalt-400 hover:text-cobalt-300">
+                    {challenger_a_name}
+                  </ProfileUserLink>
+                ) : (
+                  <span className="text-cobalt-400/90">?</span>
+                )}{' '}
+                <span className="text-white/30">vs</span>{' '}
+                {challenger_b_name ? (
+                  <ProfileUserLink username={challenger_b_username} className="text-ember-400 hover:text-ember-300">
+                    {challenger_b_name}
+                  </ProfileUserLink>
+                ) : (
+                  <span className="text-ember-400/90">?</span>
+                )}
               </span>
             )}
             {isManifesto && (mediator_name || host_name) && !challenger_a_name && !challenger_b_name && (
@@ -388,7 +410,7 @@ export function BeefCard({
         (status === 'scheduled' && (onPrepareAudience || onSeDesister)) ||
         (status === 'live' && liveAudienceAction) ||
         (isManifesto && onApply)) && (
-        <div className="px-3 pb-3 md:px-4 md:pb-4 pt-1 bg-[#08080A] space-y-2">
+        <div className="mt-auto space-y-2 bg-[#08080A] px-3 pb-3 pt-1 md:px-4 md:pb-4">
           {isManifesto && onApply && (
             <div className="flex flex-wrap gap-3 border-b border-white/[0.06] pb-2">
               <button
