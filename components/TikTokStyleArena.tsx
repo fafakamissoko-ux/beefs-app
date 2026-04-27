@@ -1617,6 +1617,28 @@ export function TikTokStyleArena({
       ? (challengerRemoteSlots[1]?.userName || 'Challenger 2')
       : (challengerRemoteSlots[0]?.userName || 'Challenger 2');
 
+  const sortedChallengerIds = useMemo(() => {
+    return Object.keys(participantRoles)
+      .filter((uid) => uid !== host.id)
+      .sort((a, b) => a.localeCompare(b));
+  }, [participantRoles, host.id]);
+
+  const getSlotForUser = useCallback(
+    (uid?: string | null): 'A' | 'B' => {
+      if (!uid) return 'A';
+      return sortedChallengerIds[1] === uid ? 'B' : 'A';
+    },
+    [sortedChallengerIds],
+  );
+
+  const leftSlot = getSlotForUser(leftPanel?.arenaUserId);
+  const rightSlot = getSlotForUser(rightPanel?.arenaUserId);
+
+  const leftAura = leftSlot === 'A' ? auraA : auraB;
+  const rightAura = rightSlot === 'A' ? auraA : auraB;
+  const leftColor = leftSlot === 'A' ? '168,85,247' : '16,185,129';
+  const rightColor = rightSlot === 'A' ? '168,85,247' : '16,185,129';
+
   const expectedChallengers = useMemo(
     () =>
       Object.values(participantRoles)
@@ -1677,7 +1699,7 @@ export function TikTokStyleArena({
       rows.push({
         sessionId: leftPanel.sessionId,
         label: leftPanelName,
-        slot: 'A',
+        slot: leftSlot,
         debaterId: leftPanel.arenaUserId ?? null,
         audioOn: leftPanel.audioOn,
       });
@@ -1686,13 +1708,13 @@ export function TikTokStyleArena({
       rows.push({
         sessionId: rightPanel.sessionId,
         label: rightPanelName,
-        slot: 'B',
+        slot: rightSlot,
         debaterId: rightPanel.arenaUserId ?? null,
         audioOn: rightPanel.audioOn,
       });
     }
     return rows;
-  }, [isHost, effectiveDailyRoomUrl, leftPanel, rightPanel, leftPanelName, rightPanelName]);
+  }, [isHost, effectiveDailyRoomUrl, leftPanel, rightPanel, leftPanelName, rightPanelName, leftSlot, rightSlot]);
 
   const leftPanelRef = useRef(leftPanel);
   const rightPanelRef = useRef(rightPanel);
@@ -1701,10 +1723,14 @@ export function TikTokStyleArena({
 
   const hotMicSpeakerSlot = useMemo((): 'A' | 'B' | null => {
     if (!speakingTurnActive || !speakingTurnTarget) return null;
-    if (leftPanel?.arenaUserId && speakingTurnTarget === leftPanel.arenaUserId) return 'A';
-    if (rightPanel?.arenaUserId && speakingTurnTarget === rightPanel.arenaUserId) return 'B';
+    if (leftPanel?.arenaUserId && speakingTurnTarget === leftPanel.arenaUserId) {
+      return getSlotForUser(leftPanel.arenaUserId);
+    }
+    if (rightPanel?.arenaUserId && speakingTurnTarget === rightPanel.arenaUserId) {
+      return getSlotForUser(rightPanel.arenaUserId);
+    }
     return null;
-  }, [speakingTurnActive, speakingTurnTarget, leftPanel, rightPanel]);
+  }, [speakingTurnActive, speakingTurnTarget, leftPanel, rightPanel, getSlotForUser]);
 
   /** Slot affiché sur les panneaux (spectateurs : parfois pas de match arenaUserId → fallback bannière). */
   const effectiveHotMicSpeakerSlot = useMemo((): 'A' | 'B' | null => {
@@ -2321,10 +2347,12 @@ export function TikTokStyleArena({
     );
 
     const slot: 'A' | 'B' | undefined =
-      debaterId === leftPanel?.arenaUserId ? 'A' : debaterId === rightPanel?.arenaUserId ? 'B' : undefined;
+      debaterId && (debaterId === leftPanel?.arenaUserId || debaterId === rightPanel?.arenaUserId)
+        ? getSlotForUser(debaterId)
+        : undefined;
     const speakerLabel =
       debaters.find((d) => d.id === debaterId)?.name ??
-      (slot === 'A' ? leftPanelName : slot === 'B' ? rightPanelName : 'Intervenant');
+      (slot ? (slot === leftSlot ? leftPanelName : rightPanelName) : 'Intervenant');
     if (slot) {
       setFloorAnnouncement({ name: speakerLabel, slot });
     }
@@ -2362,8 +2390,8 @@ export function TikTokStyleArena({
       }
       setSpeakingTurnPaused(false);
       const duration = Math.max(15, Math.min(600, Math.round(durationSec / 5) * 5));
-      const activePanel = slot === 'A' ? leftPanel : rightPanel;
-      const otherPanel = slot === 'A' ? rightPanel : leftPanel;
+      const activePanel = slot === leftSlot ? leftPanel : rightPanel;
+      const otherPanel = slot === leftSlot ? rightPanel : leftPanel;
       const debaterId = activePanel?.arenaUserId ?? null;
       if (!debaterId || !activePanel?.sessionId) {
         toast('Challenger non connecté pour ce slot.', 'info');
@@ -2408,7 +2436,7 @@ export function TikTokStyleArena({
       );
 
       const speakerLabel =
-        debaters.find((d) => d.id === debaterId)?.name ?? (slot === 'A' ? leftPanelName : rightPanelName);
+        debaters.find((d) => d.id === debaterId)?.name ?? (slot === leftSlot ? leftPanelName : rightPanelName);
       setFloorAnnouncement({ name: speakerLabel, slot });
 
       channelRef.current
@@ -2423,6 +2451,8 @@ export function TikTokStyleArena({
       speakingTurnActive,
       leftPanel,
       rightPanel,
+      leftSlot,
+      rightSlot,
       setRemoteParticipantAudio,
       toast,
       debaters,
@@ -2480,7 +2510,7 @@ export function TikTokStyleArena({
     if (!speakingTurnActive) return;
     setSpeakingTurnPaused(true);
     if (isHost && hotMicSpeakerSlot) {
-      const panel = hotMicSpeakerSlot === 'A' ? leftPanel : rightPanel;
+      const panel = hotMicSpeakerSlot === leftSlot ? leftPanel : rightPanel;
       const sid = panel?.sessionId;
       const uid = panel?.arenaUserId ?? null;
       if (sid && uid) {
@@ -2501,6 +2531,7 @@ export function TikTokStyleArena({
     speakingTurnActive,
     isHost,
     hotMicSpeakerSlot,
+    leftSlot,
     leftPanel,
     rightPanel,
     setRemoteParticipantAudio,
@@ -2510,7 +2541,7 @@ export function TikTokStyleArena({
     if (!speakingTurnActive) return;
     setSpeakingTurnPaused(false);
     if (isHost && hotMicSpeakerSlot) {
-      const panel = hotMicSpeakerSlot === 'A' ? leftPanel : rightPanel;
+      const panel = hotMicSpeakerSlot === leftSlot ? leftPanel : rightPanel;
       const sid = panel?.sessionId;
       const uid = panel?.arenaUserId ?? null;
       if (sid && uid) {
@@ -2531,6 +2562,7 @@ export function TikTokStyleArena({
     speakingTurnActive,
     isHost,
     hotMicSpeakerSlot,
+    leftSlot,
     leftPanel,
     rightPanel,
     setRemoteParticipantAudio,
@@ -3520,17 +3552,17 @@ export function TikTokStyleArena({
             className="relative flex-1 min-w-0 h-full bg-[#08080a] rounded-[1.5rem] sm:rounded-[3.5rem] transition-all duration-700"
             animate={{
               boxShadow:
-                auraA > 0
-                  ? `0 0 ${20 + Math.min(auraA, 100) * 0.5}px rgba(168,85,247,${Math.min(1, 0.4 + auraA / 100)}), 0 0 0 ${auraA > 80 ? 2 : 1}px rgba(168,85,247,${Math.min(1, 0.35 + auraA / 100)})`
+                leftAura > 0
+                  ? `0 0 ${20 + Math.min(leftAura, 100) * 0.5}px rgba(${leftColor},${Math.min(1, 0.4 + leftAura / 100)}), 0 0 0 ${leftAura > 80 ? 2 : 1}px rgba(${leftColor},${Math.min(1, 0.35 + leftAura / 100)})`
                   : '0 0 0 1px rgba(255,255,255,0.05)',
             }}
             style={{
-              opacity: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 0.3 : 1,
-              transform: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 'scale(1.02)' : 'scale(1)',
+              opacity: speakingTurnActive && effectiveHotMicSpeakerSlot && effectiveHotMicSpeakerSlot !== leftSlot ? 0.3 : 1,
+              transform: speakingTurnActive && effectiveHotMicSpeakerSlot === leftSlot ? 'scale(1.02)' : 'scale(1)',
               filter:
-                speakingTurnActive && effectiveHotMicSpeakerSlot === 'B'
+                speakingTurnActive && effectiveHotMicSpeakerSlot && effectiveHotMicSpeakerSlot !== leftSlot
                   ? 'grayscale(0.6) blur(3px)'
-                  : `brightness(${1 + (auraA / 300) * 0.8}) saturate(${1 + (auraA / 300) * 0.5})`,
+                  : `brightness(${1 + (leftAura / 300) * 0.8}) saturate(${1 + (leftAura / 300) * 0.5})`,
             }}
           >
             <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
@@ -3551,12 +3583,12 @@ export function TikTokStyleArena({
                   whileTap={{ scale: 0.96 }}
                   onPointerDown={(e) => {
                     e.stopPropagation();
-                    emitTapSupport('A');
-                    preferSide('A');
+                    emitTapSupport(leftSlot);
+                    preferSide(leftSlot);
                   }}
                   onDoubleClick={(e) => e.stopPropagation()}
                   className="absolute inset-0 z-[28] touch-manipulation w-full h-full outline-none"
-                  aria-label="Soutenir A"
+                  aria-label={`Soutenir ${leftSlot}`}
                 />
               )}
               {leftPanelIsLocal && isCameraInterrupted && !isViewer && (
@@ -3586,7 +3618,7 @@ export function TikTokStyleArena({
                 >
                   @{leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
                 </button>
-                {speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' && (
+                {speakingTurnActive && effectiveHotMicSpeakerSlot === leftSlot && (
                   <div className="text-[10px] font-black tabular-nums text-white/90">
                     {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
@@ -3627,17 +3659,17 @@ export function TikTokStyleArena({
             className="relative flex-1 min-w-0 h-full bg-[#08080a] rounded-[1.5rem] sm:rounded-[3.5rem] transition-all duration-700"
             animate={{
               boxShadow:
-                auraB > 0
-                  ? `0 0 ${20 + Math.min(auraB, 100) * 0.5}px rgba(16,185,129,${Math.min(1, 0.4 + auraB / 100)}), 0 0 0 ${auraB > 80 ? 2 : 1}px rgba(16,185,129,${Math.min(1, 0.35 + auraB / 100)})`
+                rightAura > 0
+                  ? `0 0 ${20 + Math.min(rightAura, 100) * 0.5}px rgba(${rightColor},${Math.min(1, 0.4 + rightAura / 100)}), 0 0 0 ${rightAura > 80 ? 2 : 1}px rgba(${rightColor},${Math.min(1, 0.35 + rightAura / 100)})`
                   : '0 0 0 1px rgba(255,255,255,0.05)',
             }}
             style={{
-              opacity: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 0.3 : 1,
-              transform: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 'scale(1.02)' : 'scale(1)',
+              opacity: speakingTurnActive && effectiveHotMicSpeakerSlot && effectiveHotMicSpeakerSlot !== rightSlot ? 0.3 : 1,
+              transform: speakingTurnActive && effectiveHotMicSpeakerSlot === rightSlot ? 'scale(1.02)' : 'scale(1)',
               filter:
-                speakingTurnActive && effectiveHotMicSpeakerSlot === 'A'
+                speakingTurnActive && effectiveHotMicSpeakerSlot && effectiveHotMicSpeakerSlot !== rightSlot
                   ? 'grayscale(0.6) blur(3px)'
-                  : `brightness(${1 + (auraB / 300) * 0.8}) saturate(${1 + (auraB / 300) * 0.5})`,
+                  : `brightness(${1 + (rightAura / 300) * 0.8}) saturate(${1 + (rightAura / 300) * 0.5})`,
             }}
           >
             <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
@@ -3658,12 +3690,12 @@ export function TikTokStyleArena({
                   whileTap={{ scale: 0.96 }}
                   onPointerDown={(e) => {
                     e.stopPropagation();
-                    emitTapSupport('B');
-                    preferSide('B');
+                    emitTapSupport(rightSlot);
+                    preferSide(rightSlot);
                   }}
                   onDoubleClick={(e) => e.stopPropagation()}
                   className="absolute inset-0 z-[28] touch-manipulation w-full h-full outline-none"
-                  aria-label="Soutenir B"
+                  aria-label={`Soutenir ${rightSlot}`}
                 />
               )}
               {rightPanelIsLocal && isCameraInterrupted && !isViewer && (
@@ -3693,7 +3725,7 @@ export function TikTokStyleArena({
                 >
                   @{rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
                 </button>
-                {speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' && (
+                {speakingTurnActive && effectiveHotMicSpeakerSlot === rightSlot && (
                   <div className="text-[10px] font-black tabular-nums text-emerald-200/95">
                     {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                   </div>
