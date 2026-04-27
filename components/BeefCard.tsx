@@ -254,17 +254,22 @@ export function BeefCard({
       onClick={onClick}
       onMouseEnter={() => isReplay && setReplayHover(true)}
       onMouseLeave={() => isReplay && setReplayHover(false)}
-      className={`group relative flex h-full w-full min-h-0 flex-1 flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:flex-1 max-md:rounded-none max-md:border-none md:rounded-[2rem] md:border md:border-white/[0.08] md:bg-white/[0.04] md:backdrop-blur-2xl md:hover:scale-[0.98] md:hover:border-white/20 md:hover:bg-white/[0.06] ${
+      className={`group relative flex h-full w-full min-h-0 flex-1 flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:flex-1 max-md:rounded-none max-md:border-none md:rounded-[2rem] md:border md:border-white/[0.08] md:bg-white/[0.04] md:backdrop-blur-2xl md:hover:border-white/20 md:hover:bg-white/[0.06] ${
+        status === 'live' ? 'md:shadow-[0_0_0_1px_rgba(239,68,68,0.25)] md:group-hover:shadow-[0_0_24px_rgba(239,68,68,0.45)]' : ''
+      } ${
         isManifesto
           ? 'md:border-dashed md:border-white/15 md:hover:border-prestige-gold/30'
           : ''
       }`}
     >
-      {/* Média de fond (mobile) / en-tête (desktop) */}
+      {/* Média 16:9 — overlays (LIVE, stats) */}
       <div
         ref={mediaBlockRef}
-        className="relative w-full min-h-0 flex-1 overflow-hidden bg-black/20 max-md:absolute max-md:inset-0 max-md:z-0 max-md:max-h-[60vh] md:max-h-none md:bg-black md:aspect-video md:h-48 lg:h-52 md:shrink-0 md:rounded-t-[2rem]"
+        className={`relative z-0 w-full shrink-0 overflow-hidden bg-black md:rounded-t-[2rem] aspect-video ${
+          status === 'live' ? 'ring-1 ring-inset ring-red-500/40 md:group-hover:ring-2 md:group-hover:ring-red-500/60' : ''
+        }`}
       >
+        <div className="absolute inset-0 overflow-hidden">
         {video_url ? (
           <video
             ref={videoRef}
@@ -272,86 +277,50 @@ export function BeefCard({
             loop
             muted={isMuted}
             playsInline
-            className="h-full w-full object-center object-contain md:object-cover"
+            className="h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
           />
         ) : thumbnail ? (
           <Image
             src={thumbnail}
             alt={title}
             fill
-            className="object-center object-contain transition-transform duration-700 group-hover:scale-105 md:object-cover"
+            className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, 384px"
           />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-b from-gray-900 to-black" />
         )}
+        </div>
 
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/90 md:hidden"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50"
           aria-hidden
         />
 
-        <div
-          className="pointer-events-none absolute inset-0 hidden bg-gradient-to-t from-black/50 via-black/20 to-transparent md:block"
-          aria-hidden
-        />
-
-        {/* Bandeau mobile : badges + vues sur une ligne, sans chevauchement */}
-        <div className="absolute left-0 top-0 z-20 flex w-full flex-row items-start justify-between gap-2 px-4 pt-4 md:hidden">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        {/* Badges statut (haut-gauche) + prix (haut-droite si planifié) */}
+        <div className="absolute left-3 top-3 z-20 flex max-w-[min(100%,14rem)] flex-col gap-1.5 sm:max-w-[70%]">
             {status === 'live' && (
-              <div className="flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-tighter text-white shadow-lg animate-pulse">
+              <div className="flex w-fit items-center gap-1.5 rounded-md bg-red-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter text-white shadow-lg animate-pulse">
                 <div className="h-1.5 w-1.5 rounded-full bg-white" />
-                Direct
+                Live
               </div>
             )}
             {getPrimaryStatusBadge()}
+        </div>
+        <div className="absolute right-3 top-3 z-20 flex max-w-[45%] flex-col items-end gap-1.5">
             {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
-              <div className="flex items-center gap-1 rounded-full border border-cobalt-500/25 bg-cobalt-500/12 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cobalt-200 backdrop-blur-md">
+              <div className="flex w-fit items-center gap-1 rounded-md border border-cobalt-500/30 bg-cobalt-500/20 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cobalt-100 backdrop-blur-md">
                 <Flame className="h-3 w-3" />
                 Entrée · {price} pts
               </div>
             )}
             {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-              <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
-                <Flame className="h-3 w-3 text-orange-500" />
+              <div className="flex w-fit items-center gap-1 rounded-md border border-white/20 bg-black/50 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-100 backdrop-blur-md">
+                <Flame className="h-3 w-3 text-orange-400" />
                 Suite · {price} pts
               </div>
             )}
-          </div>
-          <div
-            className="ml-1 flex shrink-0 items-center gap-0.5 font-mono text-[10px] font-bold tabular-nums tracking-wider text-orange-400 drop-shadow-sm"
-            aria-label={`${viewer_count.toLocaleString()} vues`}
-          >
-            <Eye className="h-3.5 w-3.5 shrink-0 text-white/90" strokeWidth={2.25} aria-hidden />
-            <span className="text-white/90">{viewer_count.toLocaleString()}</span>
-          </div>
         </div>
-
-        {/* Desktop : badge statut + prix en coins */}
-        <div className="absolute left-3.5 top-3.5 z-[2] hidden md:block">{getPrimaryStatusBadge()}</div>
-        {status === 'live' && (
-          <div className="absolute left-4 top-4 z-10 hidden items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-tighter text-white shadow-lg animate-pulse md:flex">
-            <div className="h-1.5 w-1.5 rounded-full bg-white" />
-            Direct
-          </div>
-        )}
-        {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
-          <div className="absolute right-3.5 top-3.5 z-[2] hidden md:block">
-            <div className="flex items-center gap-1 rounded-full border border-cobalt-500/25 bg-cobalt-500/12 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cobalt-200 backdrop-blur-md">
-              <Flame className="h-3 w-3" />
-              Entrée · {price} pts
-            </div>
-          </div>
-        )}
-        {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-          <div className="absolute right-3.5 top-3.5 z-[2] hidden md:block">
-            <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
-              <Flame className="h-3 w-3 text-orange-500" />
-              Suite · {price} pts
-            </div>
-          </div>
-        )}
 
         {video_url && (
           <button
@@ -360,17 +329,73 @@ export function BeefCard({
               e.stopPropagation();
               setIsMuted((m) => !m);
             }}
-            className="absolute z-30 max-md:bottom-[150px] max-md:right-3 max-md:rounded-full max-md:border max-md:border-white/15 max-md:bg-black/45 max-md:p-2 max-md:backdrop-blur-lg max-md:shadow-lg bottom-3 right-3 rounded-full border border-white/10 bg-black/40 p-2 backdrop-blur-lg transition-colors hover:bg-black/60"
+            className="absolute right-3 top-12 z-30 rounded-full border border-white/15 bg-black/50 p-2 backdrop-blur-md shadow-lg transition-colors hover:bg-black/70 md:top-14"
             aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
           >
             {isMuted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}
           </button>
         )}
 
+        {/* Compte à rebours / durée (bas-gauche) */}
+        <div className="pointer-events-none absolute bottom-3 left-3 z-20 max-w-[60%]">
+          {showCountdownTimer && scheduled_at ? (
+            <span className="pointer-events-auto inline-block">
+              <Countdown scheduledAt={scheduled_at} />
+            </span>
+          ) : status === 'live' && getTimeDisplay() ? (
+            <div className="flex items-center gap-1 rounded-md bg-black/55 px-2 py-1 font-mono text-[10px] font-bold tracking-wider text-white/90 backdrop-blur-md">
+              <Clock className="h-3 w-3" />
+              <span>{getTimeDisplay()}</span>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Vues + Aura (bas-droite) */}
+        <div
+          className="absolute bottom-3 right-3 z-20 flex max-w-[calc(100%-0.5rem)] items-center gap-1.5 rounded-md border border-white/10 bg-black/60 px-2 py-1.5 text-white/95 shadow-lg backdrop-blur-md"
+          aria-label={`${viewer_count.toLocaleString()} vues`}
+        >
+          <div className="flex shrink-0 items-center gap-1 font-mono text-[10px] font-bold tabular-nums tracking-wider">
+            <Eye className="h-3.5 w-3.5 text-white/90" strokeWidth={2.25} aria-hidden />
+            <span>{viewer_count.toLocaleString()}</span>
+          </div>
+          {onAuraClick && (
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.85 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                const newId = Date.now() + Math.random();
+                setFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 30 - 15 }]);
+                setTimeout(() => setFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
+                onAuraClick();
+              }}
+              className="relative -mr-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-prestige-gold/30 bg-black/30 text-prestige-gold transition-colors hover:bg-prestige-gold/15"
+              aria-label="Envoyer de l'Aura"
+            >
+              <AnimatePresence>
+                {floatingAuras.map((aura) => (
+                  <motion.span
+                    key={aura.id}
+                    initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
+                    animate={{ opacity: 0, y: -40, scale: 1.2 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.7 }}
+                    className="absolute -top-6 left-1/2 z-50 -translate-x-1/2 pointer-events-none text-xs font-black text-prestige-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.9)]"
+                  >
+                    +1
+                  </motion.span>
+                ))}
+              </AnimatePresence>
+              <Sparkles className="h-4 w-4 fill-current" />
+            </motion.button>
+          )}
+        </div>
+
         {!hasHeroMedia && (
           <div className="pointer-events-none absolute inset-0 z-[1] max-md:hidden flex flex-col justify-end">
-            <div className="pointer-events-auto mx-5 mb-10 flex max-h-[calc(100%-2.75rem)] min-h-0 flex-col justify-end gap-1 overflow-hidden pt-2">
-              <h4 className="line-clamp-2 shrink-0 font-sans text-base font-bold leading-snug text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+            <div className="pointer-events-auto mx-4 mb-8 flex max-h-[calc(100%-2.75rem)] min-h-0 flex-col justify-end gap-1 overflow-hidden pt-2">
+              <h4 className="line-clamp-2 font-black text-lg leading-tight uppercase text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
                 {title}
               </h4>
               {collapsibleDescription}
@@ -378,189 +403,137 @@ export function BeefCard({
           </div>
         )}
 
-        <div className="absolute bottom-3 left-4 right-4 z-[2] hidden items-center justify-between md:flex">
-          {showCountdownTimer && scheduled_at ? (
-            <Countdown scheduledAt={scheduled_at} />
-          ) : status === 'live' && getTimeDisplay() ? (
-            <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/60">
-              <Clock className="h-3 w-3" />
-              <span>{getTimeDisplay()}</span>
-            </div>
-          ) : (
-            <div />
-          )}
-          <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-orange-500">
-            <Flame className="h-3 w-3 shrink-0" strokeWidth={2.25} />
-            <span className="text-white/80">{viewer_count.toLocaleString()}</span>
-          </div>
-        </div>
       </div>
 
-      {/* BARRE AURA (mobile) — au-dessus de la zone Rejoindre / texte */}
-      <div className="absolute bottom-[100px] right-3 z-40 flex flex-col items-center gap-5 md:hidden">
-        <div className="relative flex flex-col items-center gap-1 group">
-          <AnimatePresence>
-            {floatingAuras.map((aura) => (
-              <motion.div
-                key={aura.id}
-                initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
-                animate={{ opacity: 0, y: -80, scale: 1.5 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
-                className="absolute top-0 z-50 pointer-events-none text-lg font-black text-prestige-gold drop-shadow-[0_0_12px_rgba(212,175,55,0.8)]"
-              >
-                +1
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.8 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              const newId = Date.now() + Math.random();
-              setFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 30 - 15 }]);
-              setTimeout(() => setFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
-              onAuraClick?.();
-            }}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-prestige-gold/30 bg-black/45 text-prestige-gold shadow-[0_0_15px_rgba(212,175,55,0.2)] backdrop-blur-lg"
-          >
-            <Sparkles className="h-5 w-5 fill-current" />
-          </motion.button>
-          <span className="text-[10px] font-black uppercase tracking-widest text-white drop-shadow-md">Aura</span>
-        </div>
-      </div>
-
-      {/* Contenu sous le visuel */}
-      <div className="pointer-events-auto relative z-30 flex max-w-none flex-col max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:px-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] max-md:pt-4 md:px-5 md:py-3 md:z-auto max-md:bg-gradient-to-t max-md:from-black max-md:via-black/80 max-md:to-black/5">
+      {/* Contenu compact sous le 16:9 */}
+      <div className="pointer-events-auto relative z-10 flex w-full min-w-0 flex-col bg-transparent px-3 py-2 md:px-4 md:py-2.5">
         <div className={!hasHeroMedia ? 'max-md:block md:hidden' : 'block'}>
           {(showCountdownTimer && scheduled_at) || (status === 'live' && getTimeDisplay()) ? (
-            <div className="mb-3 flex items-center gap-2 md:hidden">
+            <div className="mb-1.5 flex items-center gap-2 md:hidden">
               {showCountdownTimer && scheduled_at ? (
                 <Countdown scheduledAt={scheduled_at} />
               ) : (
-                <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/80 drop-shadow-sm">
+                <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/80">
                   <Clock className="h-3 w-3" />
                   <span>{getTimeDisplay()}</span>
                 </div>
               )}
             </div>
           ) : null}
-          {/* INFO COMPACTE (MOBILE SEULEMENT) REFONTE */}
-          <div className="relative z-20 md:hidden flex items-center gap-2 mb-2">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 border border-white/20 text-[11px] font-bold text-white backdrop-blur-md">
-              {(host_name || '?')[0].toUpperCase()}
-            </div>
-            <div className="flex min-w-0 flex-col">
-              <ProfileUserLink
-                username={host_username}
-                className="inline truncate text-left text-[12px] font-bold text-white drop-shadow-md"
-                profileLabel={`Profil de ${host_name || 'Médiateur'}`}
-              >
-                @{host_name || 'Médiateur'}
-              </ProfileUserLink>
-              {(challenger_a_name || challenger_b_name) && (
-                <span className="truncate text-[10px] font-medium text-white/70 drop-shadow-md">
-                  avec{' '}
-                  {challenger_a_name ? (
-                    <ProfileUserLink
-                      username={challenger_a_username}
-                      className="inline text-[10px] font-medium text-white/70"
-                    >
-                      {challenger_a_name}
-                    </ProfileUserLink>
-                  ) : (
-                    '?'
-                  )}{' '}
-                  &amp;{' '}
-                  {challenger_b_name ? (
-                    <ProfileUserLink
-                      username={challenger_b_username}
-                      className="inline text-[10px] font-medium text-white/70"
-                    >
-                      {challenger_b_name}
-                    </ProfileUserLink>
-                  ) : (
-                    '?'
-                  )}
-                </span>
-              )}
-            </div>
-          </div>
-          <h3 className="mb-1 max-md:mb-2 line-clamp-2 pr-10 font-sans text-[15px] font-bold leading-snug text-white max-md:text-[17px] drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] transition-colors duration-200 md:group-hover:text-brand-400">
+          <h3 className="line-clamp-2 pr-1 font-black text-lg leading-tight uppercase tracking-tight text-white transition-colors duration-200 md:group-hover:text-brand-300">
             {title}
           </h3>
-          {/* Tags on Mobile */}
-          {tags.length > 0 && (
-            <div className="md:hidden flex flex-wrap gap-1.5 mb-2 pr-12">
-              {tags.slice(0, 3).map((tag, idx) => (
-                <span key={idx} className="rounded-full bg-white/10 border border-white/10 px-2 py-0.5 text-[9px] font-bold tracking-wider text-white/80 backdrop-blur-sm">
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
-          {collapsibleDescription ? (
-            <div className="mb-3 min-w-0 max-md:hidden">{collapsibleDescription}</div>
-          ) : null}
-        </div>
 
-        {/* Médiateur — même pastille que les challengers (avatar + nom dans le pill) */}
-        <div className="mb-3 max-md:hidden">
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">
-            {saisirTab && !mediator_name?.trim() ? 'Auteur' : 'Médiateur'}
-          </p>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <div className="flex min-w-0 max-w-[min(100%,18rem)] items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.06] px-2.5 py-1">
-              <div
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white ${
-                  hueBase % 2 === 0 ? 'bg-cobalt-500/30' : 'bg-ember-500/25'
+          {/* Auteurs / ring — avatars + noms (style co-auteurs) */}
+          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] md:gap-x-2.5">
+            <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+              <span
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ring-1 ring-white/10 ${
+                  hueBase % 2 === 0 ? 'bg-cobalt-500/40' : 'bg-ember-500/30'
                 }`}
               >
                 {(host_name || '?')[0].toUpperCase()}
-              </div>
+              </span>
               <ProfileUserLink
                 username={host_username}
-                className="font-sans text-[11px] font-medium text-white/60 truncate max-w-[80px]"
+                className="truncate font-sans font-medium text-white/75 hover:text-white"
+                profileLabel={`Profil de ${host_name || 'Médiateur'}`}
               >
-                {host_name}
+                {host_name || 'Médiateur'}
               </ProfileUserLink>
-            </div>
-            <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
+            </span>
+            {(!isManifesto && (challenger_a_name || challenger_b_name)) && (
+              <>
+                <span className="text-white/25" aria-hidden>
+                  ·
+                </span>
+                {challenger_a_name ? (
+                  <span className="inline-flex min-w-0 max-w-[45%] items-center gap-1.5 sm:max-w-none">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cobalt-500/35 text-[10px] font-bold text-white ring-1 ring-white/10">
+                      {challenger_a_name[0].toUpperCase()}
+                    </span>
+                    <ProfileUserLink
+                      username={challenger_a_username}
+                      className="truncate font-sans font-medium text-white/60 hover:text-white/90"
+                    >
+                      {challenger_a_name}
+                    </ProfileUserLink>
+                  </span>
+                ) : null}
+                {challenger_a_name && challenger_b_name ? (
+                  <span className="text-white/25" aria-hidden>
+                    ·
+                  </span>
+                ) : null}
+                {challenger_b_name ? (
+                  <span className="inline-flex min-w-0 max-w-[45%] items-center gap-1.5 sm:max-w-none">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ember-500/30 text-[10px] font-bold text-white ring-1 ring-white/10">
+                      {challenger_b_name[0].toUpperCase()}
+                    </span>
+                    <ProfileUserLink
+                      username={challenger_b_username}
+                      className="truncate font-sans font-medium text-white/60 hover:text-white/90"
+                    >
+                      {challenger_b_name}
+                    </ProfileUserLink>
+                  </span>
+                ) : null}
+              </>
+            )}
+            {!isManifesto && mediator_name?.trim() && mediator_name !== host_name && (challenger_a_name || challenger_b_name) && (
+              <>
+                <span className="text-white/25" aria-hidden>
+                  ·
+                </span>
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-prestige-gold/25 text-[10px] font-bold text-prestige-gold ring-1 ring-prestige-gold/20">
+                    {mediator_name[0].toUpperCase()}
+                  </span>
+                  <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-white/30">Méd.</span>
+                  <ProfileUserLink
+                    username={host_username}
+                    className="truncate font-sans font-medium text-prestige-gold/80"
+                  >
+                    {mediator_name}
+                  </ProfileUserLink>
+                </span>
+              </>
+            )}
+            <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 text-white/35">
               {(participants_count ?? 0) > 0 && (
-                <div className="flex items-center gap-1 font-mono text-[10px] tracking-wider text-white/35">
+                <span className="inline-flex items-center gap-0.5 font-mono text-[9px] tracking-wide">
                   <Users className="h-3 w-3" />
                   {participants_count}
-                </div>
+                </span>
               )}
-              {(status === 'scheduled' || status === 'ready') &&
-                !liveAudienceAction &&
-                !((participants_count ?? 0) > 0) && (
-                  <div className="flex items-center gap-0.5 font-sans text-[10px] font-semibold text-cobalt-400">
-                    Bientôt <Calendar className="h-3 w-3" />
-                  </div>
-                )}
-            </div>
+              {(status === 'scheduled' || status === 'ready') && !liveAudienceAction && (participants_count ?? 0) === 0 && (
+                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-cobalt-400/90">
+                  Bientôt <Calendar className="h-3 w-3" />
+                </span>
+              )}
+            </span>
           </div>
-        </div>
 
-        {/* Tags */}
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 max-md:hidden">
-            {tags.slice(0, 3).map((tag, idx) => (
-              <button
-                key={idx}
-                onClick={(e) => { e.stopPropagation(); onTagClick?.(tag); }}
-                className="px-2.5 py-0.5 font-sans text-[11px] font-medium text-white/40 hover:text-brand-400 rounded-full bg-white/[0.04] border border-white/[0.06] transition-colors"
-              >
-                #{tag}
-              </button>
-            ))}
-            {tags.length > 3 && (
-              <span className="px-1 font-mono text-[10px] text-white/25 tracking-wider self-center">+{tags.length - 3}</span>
-            )}
-          </div>
-        )}
+          {tags.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {tags.slice(0, 3).map((tag, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTagClick?.(tag);
+                  }}
+                  className="rounded bg-white/[0.06] px-1.5 py-0.5 font-sans text-[9px] font-semibold text-white/45 transition-colors hover:text-brand-300 md:cursor-pointer"
+                >
+                  #{tag}
+                </button>
+              ))}
+              {tags.length > 3 && <span className="self-center font-mono text-[9px] text-white/20">+{tags.length - 3}</span>}
+            </div>
+          )}
+          {collapsibleDescription ? <div className="mt-1.5 min-w-0 max-md:hidden">{collapsibleDescription}</div> : null}
+        </div>
 
         {status === 'scheduled' && onNotifyClick && (
           <div className="mb-3 mt-1">
@@ -578,123 +551,84 @@ export function BeefCard({
           </div>
         )}
 
-        {/* Ring — challengers sur toutes les cartes (le médiateur est déjà la ligne « Hôte » ci-dessus) */}
-        {!isManifesto && (challenger_a_name || challenger_b_name) && (
-          <div className="mt-3 pt-3 border-t border-white/[0.06] max-md:hidden">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2">
-              Challengers
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              {challenger_a_name ? (
-                <div className="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.06] px-2.5 py-1">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cobalt-500/30 text-[9px] font-bold text-white">
-                    {challenger_a_name[0].toUpperCase()}
-                  </div>
-                  <ProfileUserLink
-                    username={challenger_a_username}
-                    className="font-sans text-[11px] font-medium text-white/60"
-                  >
-                    {challenger_a_name}
-                  </ProfileUserLink>
-                </div>
-              ) : null}
-              {challenger_b_name ? (
-                <div className="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.06] px-2.5 py-1">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ember-500/25 text-[9px] font-bold text-white">
-                    {challenger_b_name[0].toUpperCase()}
-                  </div>
-                  <ProfileUserLink
-                    username={challenger_b_username}
-                    className="font-sans text-[11px] font-medium text-white/60"
-                  >
-                    {challenger_b_name}
-                  </ProfileUserLink>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        )}
-
-        {/* Mode Manifeste — slots dynamiques pour les beefs en préparation */}
         {isManifesto && (
-          <div className="mt-4 pt-3 border-t border-white/[0.06] max-md:hidden">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-white/25 mb-2.5">Participants</p>
-            <div className="flex items-center gap-2">
-              {/* Challenger A — premier ring (pas le médiateur) */}
-              {challenger_a_name ? (
-                <div className="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.06] px-2.5 py-1">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cobalt-500/30 text-[9px] font-bold text-white">
-                    {challenger_a_name[0].toUpperCase()}
-                  </div>
-                  <ProfileUserLink
-                    username={challenger_a_username}
-                    className="font-sans text-[11px] font-medium text-white/60"
-                  >
-                    {challenger_a_name}
-                  </ProfileUserLink>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onApply?.();
-                  }}
-                  className="flex items-center gap-1.5 rounded-full border border-dashed border-white/20 px-2.5 py-1 hover:border-brand-400/40 hover:bg-brand-500/5 transition-colors"
+          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/[0.06] pt-1.5 text-[10px] md:gap-x-2.5">
+            <span className="font-mono text-[8px] font-bold uppercase tracking-[0.15em] text-white/30">Places</span>
+            {challenger_a_name ? (
+              <span className="inline-flex min-w-0 items-center gap-1.5 text-[11px] text-white/70">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cobalt-500/35 text-[9px] font-bold text-white">
+                  {challenger_a_name[0].toUpperCase()}
+                </span>
+                <ProfileUserLink username={challenger_a_username} className="truncate font-sans font-medium text-white/65">
+                  {challenger_a_name}
+                </ProfileUserLink>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onApply?.();
+                }}
+                className="inline-flex items-center gap-1 text-white/45 transition-colors hover:text-brand-300"
+              >
+                <User className="h-3.5 w-3.5 opacity-50" />
+                <span className="font-sans">Ch. A</span>
+              </button>
+            )}
+            <span className="text-white/20" aria-hidden>
+              ·
+            </span>
+            {challenger_b_name ? (
+              <span className="inline-flex min-w-0 items-center gap-1.5 text-[11px] text-white/70">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ember-500/30 text-[9px] font-bold text-white">
+                  {challenger_b_name[0].toUpperCase()}
+                </span>
+                <ProfileUserLink username={challenger_b_username} className="truncate font-sans font-medium text-white/65">
+                  {challenger_b_name}
+                </ProfileUserLink>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onApply?.();
+                }}
+                className="inline-flex items-center gap-1 text-white/45 transition-colors hover:text-brand-300"
+              >
+                <User className="h-3.5 w-3.5 opacity-50" />
+                <span className="font-sans">Ch. B</span>
+              </button>
+            )}
+            <span className="text-white/20" aria-hidden>
+              ·
+            </span>
+            {mediatorSlotName ? (
+              <span className="inline-flex min-w-0 items-center gap-1.5 text-[11px]">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-prestige-gold/30 text-[9px] font-bold text-prestige-gold">
+                  {mediatorSlotName[0].toUpperCase()}
+                </span>
+                <ProfileUserLink
+                  username={host_username}
+                  className="truncate font-sans font-medium text-prestige-gold/75"
                 >
-                  <User className="w-4 h-4 text-white/20" />
-                  <span className="font-sans text-[11px] text-white/30 italic">Challenger</span>
-                </button>
-              )}
-
-              {/* Challenger B — rempli ou pointillés */}
-              {challenger_b_name ? (
-                <div className="flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.06] px-2.5 py-1">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cobalt-500/30 text-[9px] font-bold text-white">
-                    {challenger_b_name[0].toUpperCase()}
-                  </div>
-                  <ProfileUserLink
-                    username={challenger_b_username}
-                    className="font-sans text-[11px] font-medium text-white/60"
-                  >
-                    {challenger_b_name}
-                  </ProfileUserLink>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onApply?.(); }}
-                  className="flex items-center gap-1.5 rounded-full border border-dashed border-white/20 px-2.5 py-1 hover:border-brand-400/40 hover:bg-brand-500/5 transition-colors"
-                >
-                  <User className="w-4 h-4 text-white/20" />
-                  <span className="font-sans text-[11px] text-white/30 italic">Challenger</span>
-                </button>
-              )}
-
-              {/* Médiateur — slot or (host = médiateur sur le feed si mediator_name absent) */}
-              {mediatorSlotName ? (
-                <div className="flex items-center gap-1.5 rounded-full bg-prestige-gold/8 border border-prestige-gold/20 px-2.5 py-1">
-                  <div className="w-5 h-5 rounded-full bg-prestige-gold/25 flex items-center justify-center text-[9px] font-bold text-prestige-gold shrink-0">
-                    {mediatorSlotName[0].toUpperCase()}
-                  </div>
-                  <ProfileUserLink
-                    username={host_username}
-                    className="font-sans text-[11px] text-prestige-gold/70 font-medium truncate max-w-[70px]"
-                  >
-                    {mediator_name?.trim() ? mediator_name : host_name}
-                  </ProfileUserLink>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onApply?.(); }}
-                  className="flex items-center gap-1.5 rounded-full border border-dashed border-prestige-gold/20 px-2.5 py-1 hover:border-prestige-gold/40 hover:bg-prestige-gold/5 transition-colors"
-                >
-                  <User className="w-4 h-4 text-prestige-gold/20" />
-                  <span className="font-sans text-[11px] text-prestige-gold/30 italic">Médiateur</span>
-                </button>
-              )}
-            </div>
+                  {mediator_name?.trim() ? mediator_name : host_name}
+                </ProfileUserLink>
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onApply?.();
+                }}
+                className="inline-flex items-center gap-1 text-prestige-gold/50 transition-colors hover:text-prestige-gold/90"
+              >
+                <User className="h-3.5 w-3.5 opacity-50" />
+                <span className="font-sans">Médiateur</span>
+              </button>
+            )}
           </div>
         )}
 
