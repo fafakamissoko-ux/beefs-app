@@ -246,7 +246,7 @@ export function BeefCard({
   ) : null;
 
   return (
-    <div className="relative flex flex-col max-md:h-[100dvh] max-md:w-full max-md:shrink-0 max-md:snap-start max-md:snap-always">
+    <div className="relative flex min-h-0 w-full max-w-full flex-col max-md:min-h-0 max-md:h-[100dvh] max-md:w-full max-md:shrink-0 max-md:snap-start max-md:snap-always">
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -254,128 +254,141 @@ export function BeefCard({
       onClick={onClick}
       onMouseEnter={() => isReplay && setReplayHover(true)}
       onMouseLeave={() => isReplay && setReplayHover(false)}
-      className={`group relative cursor-pointer overflow-hidden transition-all duration-300 max-md:absolute max-md:inset-0 max-md:h-full max-md:w-full max-md:rounded-none max-md:border-none md:rounded-[2rem] md:border md:border-white/[0.08] md:bg-white/[0.04] md:backdrop-blur-2xl md:hover:scale-[0.98] md:hover:border-white/20 md:hover:bg-white/[0.06] ${
+      className={`group relative flex h-full w-full min-h-0 flex-1 flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:flex-1 max-md:rounded-none max-md:border-none md:rounded-[2rem] md:border md:border-white/[0.08] md:bg-white/[0.04] md:backdrop-blur-2xl md:hover:scale-[0.98] md:hover:border-white/20 md:hover:bg-white/[0.06] ${
         isManifesto
           ? 'md:border-dashed md:border-white/15 md:hover:border-prestige-gold/30'
           : ''
       }`}
     >
-      {/* Visual — média 16/10, lecture intelligente, badge Direct live */}
-      <div className="relative min-h-0 w-full max-md:absolute max-md:inset-0 max-md:z-0">
-        <div
-          ref={mediaBlockRef}
-          className="relative aspect-[16/10] w-full overflow-hidden max-md:rounded-none bg-black md:rounded-t-[2rem]"
-        >
-          {video_url ? (
-            <>
-              <video
-                ref={videoRef}
-                src={video_url}
-                loop
-                muted={isMuted}
-                playsInline
-                className="h-full w-full object-cover object-center"
-              />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsMuted((m) => !m);
-                }}
-                className="absolute bottom-3 right-3 z-10 rounded-full border border-white/10 bg-black/40 p-2 backdrop-blur-md transition-colors hover:bg-black/60"
-                aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
-              >
-                {isMuted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}
-              </button>
-            </>
-          ) : thumbnail ? (
-            <Image
-              src={thumbnail}
-              alt={title}
-              fill
-              className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
-              sizes="(max-width: 768px) 100vw, 384px"
-            />
-          ) : (
-            <div
-              className={`absolute inset-0 ${
-                hueBase % 2 === 0
-                  ? 'bg-gradient-to-br from-cobalt-950/90 via-surface-1 to-black'
-                  : 'bg-gradient-to-br from-ember-950/85 via-surface-1 to-black'
-              }`}
-            >
-              <div className="absolute inset-0 flex items-center justify-center opacity-[0.15] md:hidden">
-                <Flame className="h-48 w-48 text-white/60" strokeWidth={1} />
-              </div>
-            </div>
-          )}
+      {/* Média de fond (mobile) / en-tête (desktop) */}
+      <div
+        ref={mediaBlockRef}
+        className="relative w-full min-h-0 flex-1 overflow-hidden bg-black max-md:absolute max-md:inset-0 max-md:z-0 md:aspect-[16/10] md:shrink-0 md:rounded-t-[2rem]"
+      >
+        {video_url ? (
+          <video
+            ref={videoRef}
+            src={video_url}
+            loop
+            muted={isMuted}
+            playsInline
+            className="h-full w-full object-cover object-center"
+          />
+        ) : thumbnail ? (
+          <Image
+            src={thumbnail}
+            alt={title}
+            fill
+            className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, 384px"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-900 to-black" />
+        )}
 
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/90 md:hidden"
+          aria-hidden
+        />
+
+        <div
+          className="pointer-events-none absolute inset-0 hidden bg-gradient-to-t from-black/50 via-black/20 to-transparent md:block"
+          aria-hidden
+        />
+
+        {/* Bandeau statuts + prix — mobile sous le header (top-20) */}
+        <div className="absolute left-0 right-0 top-20 z-20 flex flex-wrap items-center gap-2 px-3 md:hidden">
           {status === 'live' && (
-            <div className="absolute left-4 top-4 z-10 flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-tighter text-white shadow-lg animate-pulse">
+            <div className="flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-tighter text-white shadow-lg animate-pulse">
               <div className="h-1.5 w-1.5 rounded-full bg-white" />
               Direct
             </div>
           )}
-
-          <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"
-            aria-hidden
-          />
-
-          {/* Badge statut (haut gauche) — live géré par « Direct » sur le média */}
-          <div className="absolute left-3.5 top-3.5 z-[2] max-md:hidden">{getPrimaryStatusBadge()}</div>
-
+          {getPrimaryStatusBadge()}
           {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
-            <div className="absolute right-3.5 top-3.5 z-[2] max-md:hidden">
-              <div className="flex items-center gap-1 rounded-full border border-cobalt-500/25 bg-cobalt-500/12 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cobalt-200 backdrop-blur-md">
-                <Flame className="h-3 w-3" />
-                Entrée · {price} pts
-              </div>
+            <div className="flex items-center gap-1 rounded-full border border-cobalt-500/25 bg-cobalt-500/12 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cobalt-200 backdrop-blur-md">
+              <Flame className="h-3 w-3" />
+              Entrée · {price} pts
             </div>
           )}
           {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-            <div className="absolute right-3.5 top-3.5 z-[2] max-md:hidden">
-              <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
-                <Flame className="h-3 w-3 text-orange-500" />
-                Suite · {price} pts
-              </div>
+            <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
+              <Flame className="h-3 w-3 text-orange-500" />
+              Suite · {price} pts
             </div>
           )}
-
-          {!hasHeroMedia && (
-            <div className="pointer-events-none absolute inset-0 z-[1] max-md:hidden flex flex-col justify-end">
-              <div className="pointer-events-auto mx-5 mb-10 flex max-h-[calc(100%-2.75rem)] min-h-0 flex-col justify-end gap-1 overflow-hidden pt-2">
-                <h4 className="line-clamp-2 shrink-0 font-sans text-base font-bold leading-snug text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
-                  {title}
-                </h4>
-                {collapsibleDescription}
-              </div>
-            </div>
-          )}
-
-          <div className="absolute bottom-3 left-4 right-4 z-[2] flex items-center justify-between">
-            {showCountdownTimer && scheduled_at ? (
-              <Countdown scheduledAt={scheduled_at} />
-            ) : status === 'live' && getTimeDisplay() ? (
-              <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/60">
-                <Clock className="h-3 w-3" />
-                <span>{getTimeDisplay()}</span>
-              </div>
-            ) : (
-              <div />
-            )}
-            <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-orange-500">
-              <Flame className="h-3 w-3 shrink-0" strokeWidth={2.25} />
-              <span className="text-white/80">{viewer_count.toLocaleString()}</span>
-            </div>
-          </div>
         </div>
 
-        <div className="max-md:pointer-events-none max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:top-1/4 max-md:z-[1] max-md:bg-gradient-to-t max-md:from-black max-md:via-black/80 max-md:to-transparent md:hidden" />
+        {/* Desktop : badge statut + prix en coins */}
+        <div className="absolute left-3.5 top-3.5 z-[2] hidden md:block">{getPrimaryStatusBadge()}</div>
+        {status === 'live' && (
+          <div className="absolute left-4 top-4 z-10 hidden items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-tighter text-white shadow-lg animate-pulse md:flex">
+            <div className="h-1.5 w-1.5 rounded-full bg-white" />
+            Direct
+          </div>
+        )}
+        {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
+          <div className="absolute right-3.5 top-3.5 z-[2] hidden md:block">
+            <div className="flex items-center gap-1 rounded-full border border-cobalt-500/25 bg-cobalt-500/12 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cobalt-200 backdrop-blur-md">
+              <Flame className="h-3 w-3" />
+              Entrée · {price} pts
+            </div>
+          </div>
+        )}
+        {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
+          <div className="absolute right-3.5 top-3.5 z-[2] hidden md:block">
+            <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
+              <Flame className="h-3 w-3 text-orange-500" />
+              Suite · {price} pts
+            </div>
+          </div>
+        )}
+
+        {video_url && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsMuted((m) => !m);
+            }}
+            className="absolute z-30 max-md:bottom-36 max-md:right-3 max-md:rounded-full max-md:border max-md:border-white/10 max-md:bg-black/50 max-md:p-2 max-md:backdrop-blur-md bottom-3 right-3 rounded-full border border-white/10 bg-black/40 p-2 backdrop-blur-md transition-colors hover:bg-black/60"
+            aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
+          >
+            {isMuted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}
+          </button>
+        )}
+
+        {!hasHeroMedia && (
+          <div className="pointer-events-none absolute inset-0 z-[1] max-md:hidden flex flex-col justify-end">
+            <div className="pointer-events-auto mx-5 mb-10 flex max-h-[calc(100%-2.75rem)] min-h-0 flex-col justify-end gap-1 overflow-hidden pt-2">
+              <h4 className="line-clamp-2 shrink-0 font-sans text-base font-bold leading-snug text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+                {title}
+              </h4>
+              {collapsibleDescription}
+            </div>
+          </div>
+        )}
+
+        <div className="absolute bottom-3 left-4 right-4 z-[2] hidden items-center justify-between md:flex">
+          {showCountdownTimer && scheduled_at ? (
+            <Countdown scheduledAt={scheduled_at} />
+          ) : status === 'live' && getTimeDisplay() ? (
+            <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/60">
+              <Clock className="h-3 w-3" />
+              <span>{getTimeDisplay()}</span>
+            </div>
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-orange-500">
+            <Flame className="h-3 w-3 shrink-0" strokeWidth={2.25} />
+            <span className="text-white/80">{viewer_count.toLocaleString()}</span>
+          </div>
+        </div>
       </div>
 
-      {/* BARRE D'ENGAGEMENT VERTICALE (MOBILE) */}
-      <div className="absolute bottom-32 right-3 z-[20] flex flex-col items-center gap-5 md:hidden">
+      {/* BARRE AURA (mobile) — au-dessus de la zone Rejoindre / texte */}
+      <div className="absolute bottom-40 right-3 z-20 flex flex-col items-center gap-5 md:hidden">
         <div className="relative flex flex-col items-center gap-1 group">
           <AnimatePresence>
             {floatingAuras.map((aura) => (
@@ -410,24 +423,23 @@ export function BeefCard({
       </div>
 
       {/* Contenu sous le visuel */}
-      <div className="max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-[10] max-md:px-4 max-md:pt-32 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col md:px-5 md:py-4 max-md:bg-gradient-to-t max-md:from-black max-md:via-black/95 max-md:to-transparent pointer-events-auto">
+      <div className="pointer-events-auto relative z-10 flex max-w-none flex-col max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-10 max-md:px-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] max-md:pt-4 md:px-5 md:py-4 max-md:bg-gradient-to-t max-md:from-black max-md:via-black/80 max-md:to-black/5">
         <div className={!hasHeroMedia ? 'max-md:block md:hidden' : 'block'}>
-          {/* BADGES MOBILE : Déplacés en bas pour éviter la collision avec le Header dynamique */}
-          <div className="md:hidden flex flex-wrap items-center gap-2 mb-3">
-            {getPrimaryStatusBadge()}
-
-            {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
-              <div className="flex items-center gap-1 px-2.5 py-1 rounded-full font-mono text-[10px] font-bold uppercase tracking-wider bg-cobalt-500/12 border border-cobalt-500/25 text-cobalt-200 backdrop-blur-md">
-                <Flame className="w-3 h-3" />
-                Entrée · {price} pts
+          <div className="mb-3 flex items-center justify-between gap-2 md:hidden">
+            {showCountdownTimer && scheduled_at ? (
+              <Countdown scheduledAt={scheduled_at} />
+            ) : status === 'live' && getTimeDisplay() ? (
+              <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/80 drop-shadow-sm">
+                <Clock className="h-3 w-3" />
+                <span>{getTimeDisplay()}</span>
               </div>
+            ) : (
+              <span className="text-[10px] text-white/30"> </span>
             )}
-            {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-              <div className="flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-200 backdrop-blur-md">
-                <Flame className="h-3 w-3 text-orange-500" />
-                Suite · {price} pts
-              </div>
-            )}
+            <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-orange-400">
+              <Flame className="h-3 w-3 shrink-0" strokeWidth={2.25} />
+              <span className="text-white/90">{viewer_count.toLocaleString()}</span>
+            </div>
           </div>
           {/* INFO COMPACTE (MOBILE SEULEMENT) REFONTE */}
           <div className="md:hidden flex items-center gap-2 mb-2">
@@ -470,7 +482,7 @@ export function BeefCard({
               )}
             </div>
           </div>
-          <h3 className="font-sans text-[15px] max-md:text-[17px] font-bold text-white mb-1 max-md:mb-2 line-clamp-2 leading-snug md:group-hover:text-brand-400 transition-colors duration-200 drop-shadow-lg pr-12">
+          <h3 className="mb-1 max-md:mb-2 line-clamp-2 pr-10 font-sans text-[15px] font-bold leading-snug text-white max-md:text-[17px] drop-shadow-2xl transition-colors duration-200 md:group-hover:text-brand-400">
             {title}
           </h3>
           {/* Tags on Mobile */}
