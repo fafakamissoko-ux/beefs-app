@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Users, Flame, Play, Calendar, User, Sparkles, Volume2, VolumeX, Bell, Eye } from 'lucide-react';
+import { Clock, Flame, Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye } from 'lucide-react';
 import { hasBeefWatchStarted } from '@/lib/beef-view-local';
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
@@ -99,9 +99,6 @@ export function BeefCard({
   const [hasOpenedArena, setHasOpenedArena] = useState(false);
   const [floatingAuras, setFloatingAuras] = useState<{ id: number; x: number }[]>([]);
   const [replayHover, setReplayHover] = useState(false);
-  const [descExpanded, setDescExpanded] = useState(false);
-  const [descNeedsToggle, setDescNeedsToggle] = useState(false);
-  const descMeasureRef = useRef<HTMLParagraphElement>(null);
 
   useLayoutEffect(() => {
     if (!video_url?.trim()) return;
@@ -129,26 +126,6 @@ export function BeefCard({
   useEffect(() => {
     setHasOpenedArena(hasBeefWatchStarted(id));
   }, [id, status, price]);
-
-  useEffect(() => {
-    setDescExpanded(false);
-  }, [id, description]);
-
-  useLayoutEffect(() => {
-    const el = descMeasureRef.current;
-    const text = description?.trim();
-    if (!el || !text) {
-      setDescNeedsToggle(false);
-      return;
-    }
-    if (descExpanded) {
-      setDescNeedsToggle(true);
-      return;
-    }
-    const overflows = el.scrollHeight > el.clientHeight + 2;
-    const longTextFallback = text.length > 90;
-    setDescNeedsToggle(overflows || longTextFallback);
-  }, [description, descExpanded, thumbnail, video_url]);
 
   const getPrimaryStatusBadge = () => {
     switch (status) {
@@ -204,46 +181,12 @@ export function BeefCard({
     !!scheduled_at &&
     new Date(scheduled_at).getTime() > Date.now();
 
-  const charSum = title.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const hueBase = charSum % 360;
-
   const isManifesto =
     saisirTab ||
     (intent === 'manifesto' && (status === 'pending' || status === 'ready'));
-  const mediatorSlotName = (mediator_name?.trim() || host_name?.trim() || '') || null;
   const isReplay = status === 'ended' || status === 'replay' || status === 'completed';
 
-  const hasHeroMedia = Boolean((video_url && String(video_url).trim()) || thumbnail);
-
   const descText = description?.trim() ?? '';
-
-  const collapsibleDescription = descText ? (
-    <div className="min-w-0 space-y-0.5">
-      <p
-        ref={descMeasureRef}
-        style={{ overflowWrap: 'anywhere' }}
-        className={`font-sans text-[11px] leading-snug text-white/50 break-words ${
-          descExpanded
-            ? 'max-h-24 overflow-y-auto overscroll-contain pr-0.5 [scrollbar-width:thin]'
-            : 'line-clamp-2 overflow-hidden'
-        }`}
-      >
-        {descText}
-      </p>
-      {(descNeedsToggle || descText.length > 90) && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setDescExpanded((v) => !v);
-          }}
-          className="font-sans text-[10px] font-semibold text-brand-400 hover:text-brand-300"
-        >
-          {descExpanded ? 'Réduire' : 'Voir plus'}
-        </button>
-      )}
-    </div>
-  ) : null;
 
   return (
     <div className="relative flex h-full min-h-0 w-full max-w-full shrink-0 flex-col">
@@ -254,7 +197,7 @@ export function BeefCard({
       onClick={onClick}
       onMouseEnter={() => isReplay && setReplayHover(true)}
       onMouseLeave={() => isReplay && setReplayHover(false)}
-      className={`group relative flex h-full w-full min-h-0 flex-1 flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:flex-1 max-md:rounded-none max-md:border-none md:rounded-[2rem] md:border md:border-white/[0.08] md:bg-white/[0.04] md:backdrop-blur-2xl md:hover:border-white/20 md:hover:bg-white/[0.06] ${
+      className={`group relative flex h-full w-full min-h-0 flex-1 flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border max-md:border-white/[0.06] md:rounded-[1.5rem] md:border md:border-white/[0.08] md:bg-[#08080A] md:hover:border-white/20 ${
         status === 'live' ? 'md:shadow-[0_0_0_1px_rgba(239,68,68,0.25)] md:group-hover:shadow-[0_0_24px_rgba(239,68,68,0.45)]' : ''
       } ${
         isManifesto
@@ -262,10 +205,9 @@ export function BeefCard({
           : ''
       }`}
     >
-      {/* Média 16:9 — overlays (LIVE, stats) */}
       <div
         ref={mediaBlockRef}
-        className={`relative z-0 w-full shrink-0 overflow-hidden bg-black md:rounded-t-[2rem] aspect-video ${
+        className={`relative w-full aspect-video overflow-hidden bg-black/20 shrink-0 max-md:rounded-t-2xl md:rounded-t-[1.5rem] ${
           status === 'live' ? 'ring-1 ring-inset ring-red-500/40 md:group-hover:ring-2 md:group-hover:ring-red-500/60' : ''
         }`}
       >
@@ -293,30 +235,29 @@ export function BeefCard({
         </div>
 
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/40"
           aria-hidden
         />
 
-        {/* Badges statut (haut-gauche) + prix (haut-droite si planifié) */}
-        <div className="absolute left-3 top-3 z-20 flex max-w-[min(100%,14rem)] flex-col gap-1.5 sm:max-w-[70%]">
+        <div className="absolute top-2 left-2 z-20 flex max-w-[min(100%,70%)] flex-col items-start gap-1">
             {status === 'live' && (
-              <div className="flex w-fit items-center gap-1.5 rounded-md bg-red-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter text-white shadow-lg animate-pulse">
+              <div className="flex w-fit items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight text-white shadow-sm animate-pulse">
                 <div className="h-1.5 w-1.5 rounded-full bg-white" />
                 Live
               </div>
             )}
             {getPrimaryStatusBadge()}
         </div>
-        <div className="absolute right-3 top-3 z-20 flex max-w-[45%] flex-col items-end gap-1.5">
+        <div className="absolute top-2 right-2 z-20 flex max-w-[48%] flex-col items-end gap-1">
             {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
-              <div className="flex w-fit items-center gap-1 rounded-md border border-cobalt-500/30 bg-cobalt-500/20 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-cobalt-100 backdrop-blur-md">
-                <Flame className="h-3 w-3" />
+              <div className="flex w-fit items-center gap-0.5 rounded border border-cobalt-500/30 bg-cobalt-500/20 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-cobalt-100 backdrop-blur-sm">
+                <Flame className="h-2.5 w-2.5" />
                 Entrée · {price} pts
               </div>
             )}
             {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-              <div className="flex w-fit items-center gap-1 rounded-md border border-white/20 bg-black/50 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-brand-100 backdrop-blur-md">
-                <Flame className="h-3 w-3 text-orange-400" />
+              <div className="flex w-fit items-center gap-0.5 rounded border border-white/20 bg-black/55 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-brand-100 backdrop-blur-sm">
+                <Flame className="h-2.5 w-2.5 text-orange-400" />
                 Suite · {price} pts
               </div>
             )}
@@ -329,34 +270,30 @@ export function BeefCard({
               e.stopPropagation();
               setIsMuted((m) => !m);
             }}
-            className="absolute right-3 top-12 z-30 rounded-full border border-white/15 bg-black/50 p-2 backdrop-blur-md shadow-lg transition-colors hover:bg-black/70 md:top-14"
+            className="absolute bottom-2 left-2 z-30 rounded-full border border-white/15 bg-black/50 p-1.5 backdrop-blur-md transition-colors hover:bg-black/70"
             aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
           >
-            {isMuted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}
+            {isMuted ? <VolumeX className="h-3.5 w-3.5 text-white" /> : <Volume2 className="h-3.5 w-3.5 text-white" />}
           </button>
         )}
 
-        {/* Compte à rebours / durée (bas-gauche) */}
-        <div className="pointer-events-none absolute bottom-3 left-3 z-20 max-w-[60%]">
-          {showCountdownTimer && scheduled_at ? (
-            <span className="pointer-events-auto inline-block">
-              <Countdown scheduledAt={scheduled_at} />
-            </span>
-          ) : status === 'live' && getTimeDisplay() ? (
-            <div className="flex items-center gap-1 rounded-md bg-black/55 px-2 py-1 font-mono text-[10px] font-bold tracking-wider text-white/90 backdrop-blur-md">
-              <Clock className="h-3 w-3" />
-              <span>{getTimeDisplay()}</span>
-            </div>
-          ) : null}
-        </div>
-
-        {/* Vues + Aura (bas-droite) */}
         <div
-          className="absolute bottom-3 right-3 z-20 flex max-w-[calc(100%-0.5rem)] items-center gap-1.5 rounded-md border border-white/10 bg-black/60 px-2 py-1.5 text-white/95 shadow-lg backdrop-blur-md"
+          className="absolute bottom-2 right-2 z-20 flex max-w-[min(92%,calc(100%-3rem))] flex-wrap items-center justify-end gap-1.5"
           aria-label={`${viewer_count.toLocaleString()} vues`}
         >
-          <div className="flex shrink-0 items-center gap-1 font-mono text-[10px] font-bold tabular-nums tracking-wider">
-            <Eye className="h-3.5 w-3.5 text-white/90" strokeWidth={2.25} aria-hidden />
+          {showCountdownTimer && scheduled_at && (
+            <span className="pointer-events-auto rounded border border-white/10 bg-black/60 px-1.5 py-0.5 backdrop-blur-sm [&_*]:!text-[9px]">
+              <Countdown scheduledAt={scheduled_at} />
+            </span>
+          )}
+          {status === 'live' && getTimeDisplay() && (
+            <div className="flex items-center gap-0.5 rounded border border-white/10 bg-black/60 px-1.5 py-0.5 font-mono text-[9px] font-bold tabular-nums text-white/90 backdrop-blur-sm">
+              <Clock className="h-2.5 w-2.5" />
+              <span>{getTimeDisplay()}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-0.5 rounded border border-white/10 bg-black/60 px-1.5 py-0.5 font-mono text-[9px] font-bold tabular-nums text-white/95 backdrop-blur-sm">
+            <Eye className="h-2.5 w-2.5 text-white/90" strokeWidth={2.25} aria-hidden />
             <span>{viewer_count.toLocaleString()}</span>
           </div>
           {onAuraClick && (
@@ -370,7 +307,7 @@ export function BeefCard({
                 setTimeout(() => setFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
                 onAuraClick();
               }}
-              className="relative -mr-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-prestige-gold/30 bg-black/30 text-prestige-gold transition-colors hover:bg-prestige-gold/15"
+              className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded border border-prestige-gold/30 bg-black/50 text-prestige-gold"
               aria-label="Envoyer de l'Aura"
             >
               <AnimatePresence>
@@ -378,144 +315,56 @@ export function BeefCard({
                   <motion.span
                     key={aura.id}
                     initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
-                    animate={{ opacity: 0, y: -40, scale: 1.2 }}
+                    animate={{ opacity: 0, y: -28, scale: 1.1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.7 }}
-                    className="absolute -top-6 left-1/2 z-50 -translate-x-1/2 pointer-events-none text-xs font-black text-prestige-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.9)]"
+                    transition={{ duration: 0.65 }}
+                    className="absolute -top-5 left-1/2 z-50 -translate-x-1/2 pointer-events-none text-[10px] font-black text-prestige-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.9)]"
                   >
                     +1
                   </motion.span>
                 ))}
               </AnimatePresence>
-              <Sparkles className="h-4 w-4 fill-current" />
+              <Sparkles className="h-3 w-3 fill-current" />
             </motion.button>
           )}
         </div>
 
-        {!hasHeroMedia && (
-          <div className="pointer-events-none absolute inset-0 z-[1] max-md:hidden flex flex-col justify-end">
-            <div className="pointer-events-auto mx-4 mb-8 flex max-h-[calc(100%-2.75rem)] min-h-0 flex-col justify-end gap-1 overflow-hidden pt-2">
-              <h4 className="line-clamp-2 font-black text-lg leading-tight uppercase text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
-                {title}
-              </h4>
-              {collapsibleDescription}
-            </div>
-          </div>
-        )}
-
       </div>
 
-      {/* Contenu compact sous le 16:9 */}
-      <div className="pointer-events-auto relative z-10 flex w-full min-w-0 flex-col bg-transparent px-3 py-2 md:px-4 md:py-2.5">
-        <div className={!hasHeroMedia ? 'max-md:block md:hidden' : 'block'}>
-          {(showCountdownTimer && scheduled_at) || (status === 'live' && getTimeDisplay()) ? (
-            <div className="mb-1.5 flex items-center gap-2 md:hidden">
-              {showCountdownTimer && scheduled_at ? (
-                <Countdown scheduledAt={scheduled_at} />
-              ) : (
-                <div className="flex items-center gap-1 font-mono text-[10px] font-bold tracking-wider text-white/80">
-                  <Clock className="h-3 w-3" />
-                  <span>{getTimeDisplay()}</span>
-                </div>
-              )}
-            </div>
-          ) : null}
-          <h3 className="line-clamp-2 pr-1 font-black text-lg leading-tight uppercase tracking-tight text-white transition-colors duration-200 md:group-hover:text-brand-300">
+      <div className="p-3 md:p-4 flex gap-3 pointer-events-auto w-full bg-[#08080A] relative z-10">
+        <div className="shrink-0 pt-0.5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 border border-white/20 text-sm font-bold text-white backdrop-blur-md">
+            {(host_name || '?')[0].toUpperCase()}
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-col flex-1">
+          <h3 className="line-clamp-2 font-sans text-[15px] md:text-base font-bold leading-snug text-white md:group-hover:text-brand-400 transition-colors">
             {title}
           </h3>
-
-          {/* Auteurs / ring — avatars + noms (style co-auteurs) */}
-          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] md:gap-x-2.5">
-            <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
-              <span
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ring-1 ring-white/10 ${
-                  hueBase % 2 === 0 ? 'bg-cobalt-500/40' : 'bg-ember-500/30'
-                }`}
-              >
-                {(host_name || '?')[0].toUpperCase()}
+          <div className="mt-1 flex flex-col gap-0.5">
+            <ProfileUserLink
+              username={host_username}
+              className="truncate text-xs font-medium text-gray-400 hover:text-white transition-colors"
+              profileLabel={`Profil de ${host_name || 'Médiateur'}`}
+            >
+              {host_name || 'Médiateur'}
+            </ProfileUserLink>
+            {(challenger_a_name || challenger_b_name) && (
+              <span className="truncate text-[11px] font-medium text-gray-500">
+                {challenger_a_name || '?'} <span className="text-gray-600">vs</span> {challenger_b_name || '?'}
               </span>
-              <ProfileUserLink
-                username={host_username}
-                className="truncate font-sans font-medium text-white/75 hover:text-white"
-                profileLabel={`Profil de ${host_name || 'Médiateur'}`}
-              >
-                {host_name || 'Médiateur'}
-              </ProfileUserLink>
-            </span>
-            {(!isManifesto && (challenger_a_name || challenger_b_name)) && (
-              <>
-                <span className="text-white/25" aria-hidden>
-                  ·
-                </span>
-                {challenger_a_name ? (
-                  <span className="inline-flex min-w-0 max-w-[45%] items-center gap-1.5 sm:max-w-none">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cobalt-500/35 text-[10px] font-bold text-white ring-1 ring-white/10">
-                      {challenger_a_name[0].toUpperCase()}
-                    </span>
-                    <ProfileUserLink
-                      username={challenger_a_username}
-                      className="truncate font-sans font-medium text-white/60 hover:text-white/90"
-                    >
-                      {challenger_a_name}
-                    </ProfileUserLink>
-                  </span>
-                ) : null}
-                {challenger_a_name && challenger_b_name ? (
-                  <span className="text-white/25" aria-hidden>
-                    ·
-                  </span>
-                ) : null}
-                {challenger_b_name ? (
-                  <span className="inline-flex min-w-0 max-w-[45%] items-center gap-1.5 sm:max-w-none">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ember-500/30 text-[10px] font-bold text-white ring-1 ring-white/10">
-                      {challenger_b_name[0].toUpperCase()}
-                    </span>
-                    <ProfileUserLink
-                      username={challenger_b_username}
-                      className="truncate font-sans font-medium text-white/60 hover:text-white/90"
-                    >
-                      {challenger_b_name}
-                    </ProfileUserLink>
-                  </span>
-                ) : null}
-              </>
             )}
-            {!isManifesto && mediator_name?.trim() && mediator_name !== host_name && (challenger_a_name || challenger_b_name) && (
-              <>
-                <span className="text-white/25" aria-hidden>
-                  ·
-                </span>
-                <span className="inline-flex min-w-0 items-center gap-1.5">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-prestige-gold/25 text-[10px] font-bold text-prestige-gold ring-1 ring-prestige-gold/20">
-                    {mediator_name[0].toUpperCase()}
-                  </span>
-                  <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-white/30">Méd.</span>
-                  <ProfileUserLink
-                    username={host_username}
-                    className="truncate font-sans font-medium text-prestige-gold/80"
-                  >
-                    {mediator_name}
-                  </ProfileUserLink>
-                </span>
-              </>
+            {isManifesto && (mediator_name || host_name) && !challenger_a_name && !challenger_b_name && (
+              <span className="text-[10px] font-medium text-amber-500/80">Recherche de challengers &amp; médiateur</span>
             )}
-            <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 text-white/35">
-              {(participants_count ?? 0) > 0 && (
-                <span className="inline-flex items-center gap-0.5 font-mono text-[9px] tracking-wide">
-                  <Users className="h-3 w-3" />
-                  {participants_count}
-                </span>
-              )}
-              {(status === 'scheduled' || status === 'ready') && !liveAudienceAction && (participants_count ?? 0) === 0 && (
-                <span className="inline-flex items-center gap-0.5 text-[9px] font-semibold text-cobalt-400/90">
-                  Bientôt <Calendar className="h-3 w-3" />
-                </span>
-              )}
-            </span>
           </div>
-
+          {descText ? (
+            <p className="mt-1.5 line-clamp-1 text-[11px] text-gray-500 break-words">
+              {descText}
+            </p>
+          ) : null}
           {tags.length > 0 && (
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <div className="mt-1.5 flex flex-wrap gap-1">
               {tags.slice(0, 3).map((tag, idx) => (
                 <button
                   key={idx}
@@ -524,174 +373,105 @@ export function BeefCard({
                     e.stopPropagation();
                     onTagClick?.(tag);
                   }}
-                  className="rounded bg-white/[0.06] px-1.5 py-0.5 font-sans text-[9px] font-semibold text-white/45 transition-colors hover:text-brand-300 md:cursor-pointer"
+                  className="rounded px-1 text-[9px] font-medium text-gray-600 transition-colors hover:text-brand-400"
                 >
                   #{tag}
                 </button>
               ))}
-              {tags.length > 3 && <span className="self-center font-mono text-[9px] text-white/20">+{tags.length - 3}</span>}
             </div>
           )}
-          {collapsibleDescription ? <div className="mt-1.5 min-w-0 max-md:hidden">{collapsibleDescription}</div> : null}
         </div>
+      </div>
 
-        {status === 'scheduled' && onNotifyClick && (
-          <div className="mb-3 mt-1">
+      {((status === 'scheduled' && onNotifyClick) ||
+        (status === 'pending' && onSaisirAffaire) ||
+        (status === 'scheduled' && (onPrepareAudience || onSeDesister)) ||
+        (status === 'live' && liveAudienceAction) ||
+        (isManifesto && onApply)) && (
+        <div className="px-3 pb-3 md:px-4 md:pb-4 pt-1 bg-[#08080A] space-y-2">
+          {isManifesto && onApply && (
+            <div className="flex flex-wrap gap-3 border-b border-white/[0.06] pb-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onApply?.();
+                }}
+                className="text-[10px] font-medium text-amber-500/90 underline-offset-2 hover:underline"
+              >
+                + Rôle au ring
+              </button>
+            </div>
+          )}
+          {status === 'scheduled' && onNotifyClick && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onNotifyClick();
               }}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-500/45 bg-gradient-to-r from-amber-500/25 to-orange-600/20 py-3.5 font-sans text-sm font-black uppercase tracking-wide text-amber-50 shadow-[0_0_28px_rgba(245,158,11,0.3)] transition-all hover:from-amber-500/35 hover:to-orange-600/30"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 py-2.5 text-xs font-bold uppercase tracking-wide text-amber-100 transition-all hover:bg-amber-500/20"
             >
-              <Bell className="h-5 w-5 shrink-0" strokeWidth={2.2} />
+              <Bell className="h-4 w-4 shrink-0" strokeWidth={2.2} />
               M&apos;alerter
             </button>
-          </div>
-        )}
-
-        {isManifesto && (
-          <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/[0.06] pt-1.5 text-[10px] md:gap-x-2.5">
-            <span className="font-mono text-[8px] font-bold uppercase tracking-[0.15em] text-white/30">Places</span>
-            {challenger_a_name ? (
-              <span className="inline-flex min-w-0 items-center gap-1.5 text-[11px] text-white/70">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cobalt-500/35 text-[9px] font-bold text-white">
-                  {challenger_a_name[0].toUpperCase()}
-                </span>
-                <ProfileUserLink username={challenger_a_username} className="truncate font-sans font-medium text-white/65">
-                  {challenger_a_name}
-                </ProfileUserLink>
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onApply?.();
-                }}
-                className="inline-flex items-center gap-1 text-white/45 transition-colors hover:text-brand-300"
-              >
-                <User className="h-3.5 w-3.5 opacity-50" />
-                <span className="font-sans">Ch. A</span>
-              </button>
-            )}
-            <span className="text-white/20" aria-hidden>
-              ·
-            </span>
-            {challenger_b_name ? (
-              <span className="inline-flex min-w-0 items-center gap-1.5 text-[11px] text-white/70">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ember-500/30 text-[9px] font-bold text-white">
-                  {challenger_b_name[0].toUpperCase()}
-                </span>
-                <ProfileUserLink username={challenger_b_username} className="truncate font-sans font-medium text-white/65">
-                  {challenger_b_name}
-                </ProfileUserLink>
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onApply?.();
-                }}
-                className="inline-flex items-center gap-1 text-white/45 transition-colors hover:text-brand-300"
-              >
-                <User className="h-3.5 w-3.5 opacity-50" />
-                <span className="font-sans">Ch. B</span>
-              </button>
-            )}
-            <span className="text-white/20" aria-hidden>
-              ·
-            </span>
-            {mediatorSlotName ? (
-              <span className="inline-flex min-w-0 items-center gap-1.5 text-[11px]">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-prestige-gold/30 text-[9px] font-bold text-prestige-gold">
-                  {mediatorSlotName[0].toUpperCase()}
-                </span>
-                <ProfileUserLink
-                  username={host_username}
-                  className="truncate font-sans font-medium text-prestige-gold/75"
+          )}
+          {status === 'pending' && onSaisirAffaire && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSaisirAffaire();
+              }}
+              className="w-full rounded-xl bg-white/10 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-white/20"
+            >
+              Saisir l&apos;Affaire
+            </button>
+          )}
+          {status === 'scheduled' && (onPrepareAudience || onSeDesister) && (
+            <div className="flex flex-col gap-2">
+              {onPrepareAudience && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPrepareAudience();
+                  }}
+                  className="w-full rounded-xl border border-white/20 py-2.5 text-center text-sm font-semibold text-white transition-all hover:bg-white/10"
                 >
-                  {mediator_name?.trim() ? mediator_name : host_name}
-                </ProfileUserLink>
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onApply?.();
-                }}
-                className="inline-flex items-center gap-1 text-prestige-gold/50 transition-colors hover:text-prestige-gold/90"
-              >
-                <User className="h-3.5 w-3.5 opacity-50" />
-                <span className="font-sans">Médiateur</span>
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Actions feed — bas de carte (ne pas confondre pending / scheduled / live) */}
-        {(onSaisirAffaire || onPrepareAudience || onSeDesister || liveAudienceAction) && (
-          <div className="mt-4 space-y-2 border-t border-white/[0.06] pt-4 max-md:mt-2 max-md:mb-2 max-md:border-t-0 max-md:pt-0">
-            {status === 'pending' && onSaisirAffaire && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSaisirAffaire();
-                }}
-                className="w-full rounded-xl bg-white/10 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-white/20"
-              >
-                Saisir l&apos;Affaire
-              </button>
-            )}
-            {status === 'scheduled' && (onPrepareAudience || onSeDesister) && (
-              <div className="flex flex-col gap-2">
-                {onPrepareAudience && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onPrepareAudience();
-                    }}
-                    className="w-full rounded-xl border border-white/20 py-2.5 text-center text-sm font-semibold text-white transition-all hover:bg-white/10"
-                  >
-                    Préparer l&apos;Audience
-                  </button>
-                )}
-                {onSeDesister && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSeDesister();
-                    }}
-                    className="w-full py-1.5 text-center text-xs font-medium text-red-400/90 transition-colors hover:text-red-300"
-                  >
-                    Se désister
-                  </button>
-                )}
-              </div>
-            )}
-            {status === 'live' && liveAudienceAction && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  liveAudienceAction.onClick();
-                }}
-                className="w-full rounded-xl border border-brand-500/35 bg-brand-500/15 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-500/25"
-              >
-                {liveAudienceAction.variant === 'return'
-                  ? "Retourner dans l'Arène"
-                  : "Rejoindre l'Audience"}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+                  Préparer l&apos;Audience
+                </button>
+              )}
+              {onSeDesister && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSeDesister();
+                  }}
+                  className="w-full py-1.5 text-center text-xs font-medium text-red-400/90 transition-colors hover:text-red-300"
+                >
+                  Se désister
+                </button>
+              )}
+            </div>
+          )}
+          {status === 'live' && liveAudienceAction && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                liveAudienceAction.onClick();
+              }}
+              className="w-full rounded-xl border border-brand-500/35 bg-brand-500/15 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-500/25"
+            >
+              {liveAudienceAction.variant === 'return'
+                ? "Retourner dans l'Arène"
+                : "Rejoindre l'Audience"}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Overlay Replay — hover preview pour les beefs terminés */}
       {isReplay && (
@@ -702,7 +482,7 @@ export function BeefCard({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="absolute inset-0 z-[3] flex items-center justify-center rounded-none bg-black/60 backdrop-blur-sm md:rounded-[2rem]"
+              className="absolute inset-0 z-[3] flex items-center justify-center rounded-t-2xl bg-black/60 backdrop-blur-sm md:rounded-[1.5rem]"
             >
               <motion.div
                 initial={{ scale: 0.8 }}
