@@ -576,7 +576,7 @@ export default function FeedPage() {
               >
                 <button
                   onClick={() => router.push(`/arena/${activeBeef.id}`)}
-                  className="w-full flex items-center gap-4 rounded-full px-6 py-3 md:py-3.5 text-left"
+                  className="group w-full flex items-center gap-4 rounded-full px-6 py-3 md:py-3.5 text-left"
                 >
                   <div className="flex h-9 w-9 md:h-11 md:w-11 flex-shrink-0 items-center justify-center rounded-full border border-ember-500/30 bg-ember-500/15">
                     <Radio className="h-4 w-4 md:h-5 md:w-5 animate-pulse text-ember-400" />
@@ -587,7 +587,7 @@ export default function FeedPage() {
                       Tu es <span className="text-brand-400 font-semibold">{activeBeef.role}</span> dans ce beef
                     </p>
                   </div>
-                  <div className="flex-shrink-0 px-3 md:px-4 py-1.5 rounded-full bg-red-500 text-white font-mono text-[9px] md:text-[10px] font-bold uppercase tracking-wider">
+                  <div className="flex-shrink-0 rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-3 py-1.5 text-white font-mono text-[10px] font-black uppercase shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all group-hover:shadow-[0_0_25px_rgba(239,68,68,0.7)] tracking-widest md:px-4 md:text-[11px]">
                     Rejoindre
                   </div>
                 </button>
@@ -606,10 +606,10 @@ export default function FeedPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setFeedType(tab.id)}
-                  className={`flex min-h-[44px] items-center gap-2 pb-1 text-sm transition-colors ${
+                  className={`flex min-h-[44px] items-center gap-2 pb-1 transition-colors ${
                     feedType === tab.id
-                      ? 'border-b-2 border-brand-500 font-bold text-white'
-                      : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-white/80'
+                      ? 'border-b-2 border-brand-500 text-white font-black uppercase tracking-widest text-[11px] md:text-[12px]'
+                      : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-white/80 font-bold uppercase tracking-widest text-[11px] md:text-[12px]'
                   }`}
                 >
                   <tab.icon className={`h-4 w-4 shrink-0 ${feedType === tab.id ? 'text-white' : 'text-white/40'}`} />
@@ -635,9 +635,9 @@ export default function FeedPage() {
               <button
                 key={s.id}
                 onClick={() => setSelectedStatus(s.id)}
-                className={`inline-flex min-h-[44px] items-center px-4 py-1.5 rounded-full font-sans text-xs font-semibold whitespace-nowrap border transition-all duration-200 ${
+                className={`inline-flex min-h-[44px] items-center px-4 py-1.5 rounded-full font-sans whitespace-nowrap border transition-all duration-200 font-bold uppercase tracking-wider text-[10px] ${
                   selectedStatus === s.id
-                    ? 'text-white bg-white/10 border-white/30'
+                    ? 'text-white bg-white/10 border-white/40 shadow-[0_0_12px_rgba(255,255,255,0.15)]'
                     : 'text-gray-500 bg-transparent border-white/[0.08] hover:text-gray-300 hover:border-white/15'
                 }`}
               >
@@ -661,7 +661,7 @@ export default function FeedPage() {
                 }
               }}
               placeholder="Filtrer par tag..."
-              className="input-field pl-10 text-sm py-2.5 rounded-full"
+              className="w-full bg-white/[0.03] border border-white/[0.08] text-white text-sm py-2.5 pl-10 rounded-full focus:bg-white/[0.06] focus:border-brand-500/50 focus:outline-none transition-all placeholder:text-white/20"
             />
           </div>
 
