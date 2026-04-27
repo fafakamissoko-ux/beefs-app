@@ -704,7 +704,7 @@ export default function FeedPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="max-md:flex max-md:h-[calc(100dvh-64px)] max-md:max-w-full max-md:scroll-pt-16 max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:hide-scrollbar max-md:flex-col max-md:gap-0 max-md:pt-16 max-md:pb-[env(safe-area-inset-bottom)] md:grid md:grid-cols-2 md:gap-6 md:pt-0 lg:grid-cols-3 lg:gap-8">
+          <div className="flex flex-col gap-4 snap-y snap-mandatory h-screen overflow-y-auto hide-scrollbar pb-24 pt-[110px] scroll-pt-[110px] md:grid md:min-h-0 md:h-auto md:max-h-none md:w-full md:grid-cols-2 md:gap-6 md:overflow-visible md:snap-none md:gap-y-6 md:py-0 md:pt-0 md:pb-8 md:scroll-pt-0 lg:grid-cols-3">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.06]">
                 <div className="skeleton h-48 rounded-none" />
@@ -739,51 +739,52 @@ export default function FeedPage() {
           </div>
         ) : (
           <>
-            <div className="max-md:flex max-md:h-[calc(100dvh-64px)] max-md:max-w-full max-md:scroll-pt-16 max-md:snap-y max-md:snap-mandatory max-md:overflow-y-auto max-md:hide-scrollbar max-md:flex-col max-md:gap-0 max-md:pt-16 max-md:pb-[env(safe-area-inset-bottom)] md:grid md:grid-cols-2 md:gap-6 md:pt-0 lg:grid-cols-3 lg:gap-8">
+            <div className="flex flex-col gap-4 snap-y snap-mandatory h-screen overflow-y-auto hide-scrollbar pb-24 pt-[110px] scroll-pt-[110px] md:grid md:min-h-0 md:h-auto md:max-h-none md:w-full md:grid-cols-2 md:gap-6 md:overflow-visible md:snap-none md:gap-y-6 md:py-0 md:pt-0 md:pb-8 md:scroll-pt-0 lg:grid-cols-3">
               {beefs.map((beef, index) => (
-                <BeefCard
-                  key={beef.id}
-                  {...beef}
-                  onPrepareAudience={
-                    beef.status === 'scheduled' && user?.id === beef.mediator_id
-                      ? () => router.push(`/live/${beef.id}`)
-                      : undefined
-                  }
-                  saisirTab={feedType === 'manifestes'}
-                  onSaisirAffaire={
-                    beef.status === 'pending' &&
-                    beef.intent === 'manifesto' &&
-                    user?.id &&
-                    beef.created_by &&
-                    beef.created_by !== user.id
-                      ? () => void handleClaimManifesto(beef.id)
-                      : undefined
-                  }
-                  onSeDesister={
-                    beef.status === 'scheduled' &&
-                    user?.id === beef.mediator_id &&
-                    beef.intent === 'manifesto'
-                      ? () => void handleWithdrawManifesto(beef.id)
-                      : undefined
-                  }
-                  liveAudienceAction={
-                    beef.status === 'live'
-                      ? {
-                          variant: beef.user_is_live_ring ? 'return' : 'join',
-                          onClick: () => router.push(`/arena/${beef.id}`),
-                        }
-                      : undefined
-                  }
-                  onClick={() => handleBeefClick(beef)}
-                  onAuraClick={() => handleAuraClick(beef.id)}
-                  onTagClick={handleTagClick}
-                  onNotifyClick={
-                    beef.status === 'scheduled'
-                      ? () => toast('Bientôt : rappel quand l’heure approche.', 'info')
-                      : undefined
-                  }
-                  index={index}
-                />
+                <div key={beef.id} className="snap-start relative w-full mb-2 shrink-0">
+                  <BeefCard
+                    {...beef}
+                    onPrepareAudience={
+                      beef.status === 'scheduled' && user?.id === beef.mediator_id
+                        ? () => router.push(`/live/${beef.id}`)
+                        : undefined
+                    }
+                    saisirTab={feedType === 'manifestes'}
+                    onSaisirAffaire={
+                      beef.status === 'pending' &&
+                      beef.intent === 'manifesto' &&
+                      user?.id &&
+                      beef.created_by &&
+                      beef.created_by !== user.id
+                        ? () => void handleClaimManifesto(beef.id)
+                        : undefined
+                    }
+                    onSeDesister={
+                      beef.status === 'scheduled' &&
+                      user?.id === beef.mediator_id &&
+                      beef.intent === 'manifesto'
+                        ? () => void handleWithdrawManifesto(beef.id)
+                        : undefined
+                    }
+                    liveAudienceAction={
+                      beef.status === 'live'
+                        ? {
+                            variant: beef.user_is_live_ring ? 'return' : 'join',
+                            onClick: () => router.push(`/arena/${beef.id}`),
+                          }
+                        : undefined
+                    }
+                    onClick={() => handleBeefClick(beef)}
+                    onAuraClick={() => handleAuraClick(beef.id)}
+                    onTagClick={handleTagClick}
+                    onNotifyClick={
+                      beef.status === 'scheduled'
+                        ? () => toast('Bientôt : rappel quand l’heure approche.', 'info')
+                        : undefined
+                    }
+                    index={index}
+                  />
+                </div>
               ))}
             </div>
             {hasMore && (

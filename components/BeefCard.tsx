@@ -246,7 +246,7 @@ export function BeefCard({
   ) : null;
 
   return (
-    <div className="relative flex min-h-0 w-full max-w-full flex-col max-md:min-h-[calc(100dvh-64px)] max-md:w-full max-md:shrink-0 max-md:snap-start max-md:scroll-mt-16 max-md:snap-always">
+    <div className="relative flex min-h-0 w-full max-w-full shrink-0 flex-col max-md:h-[calc(100dvh-140px)] max-md:w-full">
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -360,7 +360,7 @@ export function BeefCard({
               e.stopPropagation();
               setIsMuted((m) => !m);
             }}
-            className="absolute z-30 max-md:bottom-36 max-md:right-3 max-md:rounded-full max-md:border max-md:border-white/15 max-md:bg-black/45 max-md:p-2 max-md:backdrop-blur-lg max-md:shadow-lg bottom-3 right-3 rounded-full border border-white/10 bg-black/40 p-2 backdrop-blur-lg transition-colors hover:bg-black/60"
+            className="absolute z-30 max-md:bottom-[180px] max-md:right-3 max-md:rounded-full max-md:border max-md:border-white/15 max-md:bg-black/45 max-md:p-2 max-md:backdrop-blur-lg max-md:shadow-lg bottom-3 right-3 rounded-full border border-white/10 bg-black/40 p-2 backdrop-blur-lg transition-colors hover:bg-black/60"
             aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
           >
             {isMuted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}
@@ -397,7 +397,7 @@ export function BeefCard({
       </div>
 
       {/* BARRE AURA (mobile) — au-dessus de la zone Rejoindre / texte */}
-      <div className="absolute bottom-32 right-3 z-40 flex flex-col items-center gap-5 md:hidden">
+      <div className="absolute bottom-[130px] right-3 z-40 flex flex-col items-center gap-5 md:hidden">
         <div className="relative flex flex-col items-center gap-1 group">
           <AnimatePresence>
             {floatingAuras.map((aura) => (
