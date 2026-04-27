@@ -1949,6 +1949,12 @@ export function TikTokStyleArena({
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
         addRemoteMessage(payload.user_name, payload.content, payload.initial, payload.id);
       })
+      .on('broadcast', { event: 'delete_message' }, ({ payload }: any) => {
+        const msgId = payload?.messageId;
+        if (msgId) {
+          setVisibleMessages((prev) => prev.filter((m) => m.id !== msgId));
+        }
+      })
       .on('broadcast', { event: 'arena_big_gift' }, ({ payload }: any) => {
         if (!payload) return;
 
@@ -3103,6 +3109,15 @@ export function TikTokStyleArena({
       return;
     }
     setVisibleMessages((prev) => prev.filter((m) => m.id !== messageId));
+    if (channelRef.current) {
+      channelRef.current
+        .send({
+          type: 'broadcast',
+          event: 'delete_message',
+          payload: { messageId },
+        })
+        .catch(() => {});
+    }
   };
 
   useEffect(() => {
