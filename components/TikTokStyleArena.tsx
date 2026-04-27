@@ -1284,6 +1284,8 @@ export function TikTokStyleArena({
     remoteParticipants,
     activeSpeakerPeerId,
     error: callError,
+    isCameraInterrupted,
+    recoverMediaDevices,
   } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer, userId, roomId, meetingTokenForDaily);
 
   useEffect(() => {
@@ -3557,6 +3559,17 @@ export function TikTokStyleArena({
                   aria-label="Soutenir A"
                 />
               )}
+              {leftPanelIsLocal && isCameraInterrupted && !isViewer && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-auto p-2">
+                  <button
+                    type="button"
+                    onClick={() => { void recoverMediaDevices(); }}
+                    className="absolute z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white font-bold p-3 rounded-xl shadow-lg"
+                  >
+                    📡 Réactiver Caméra/Micro
+                  </button>
+                </div>
+              )}
             </div>
             <div
               data-cinema-stay
@@ -3653,6 +3666,17 @@ export function TikTokStyleArena({
                   aria-label="Soutenir B"
                 />
               )}
+              {rightPanelIsLocal && isCameraInterrupted && !isViewer && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-auto p-2">
+                  <button
+                    type="button"
+                    onClick={() => { void recoverMediaDevices(); }}
+                    className="absolute z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white font-bold p-3 rounded-xl shadow-lg"
+                  >
+                    📡 Réactiver Caméra/Micro
+                  </button>
+                </div>
+              )}
             </div>
             <div
               data-cinema-stay
@@ -3721,7 +3745,7 @@ export function TikTokStyleArena({
             style={{
               filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})`,
             }}
-            className="rounded-full pointer-events-auto transition-shadow duration-300"
+            className="relative h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full pointer-events-auto transition-shadow duration-300"
           >
             <button
               type="button"
@@ -3732,7 +3756,7 @@ export function TikTokStyleArena({
                 preferSide('M' as any);
               }}
               onDoubleClick={(e) => e.stopPropagation()}
-              className="flex h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full bg-black overflow-hidden active:scale-95 border border-transparent outline-none touch-manipulation"
+              className="flex h-full w-full rounded-full bg-black overflow-hidden active:scale-95 border border-transparent outline-none touch-manipulation"
             >
               {isWaitingForMediator ? (
                 <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/40 p-4">
@@ -3762,6 +3786,20 @@ export function TikTokStyleArena({
                 <span className="m-auto text-5xl text-white/30">👤</span>
               )}
             </button>
+            {mediatorIsLocal && isCameraInterrupted && !isViewer && !isWaitingForMediator && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-auto rounded-full bg-black/45 p-1">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void recoverMediaDevices();
+                  }}
+                  className="absolute z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white font-bold p-3 rounded-xl shadow-lg"
+                >
+                  📡 Réactiver Caméra/Micro
+                </button>
+              </div>
+            )}
           </motion.div>
           <button
             type="button"

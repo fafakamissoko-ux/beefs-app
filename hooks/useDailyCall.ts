@@ -17,7 +17,7 @@ export interface CallParticipant {
   audioOn: boolean;
 }
 
-interface UseDailyCallReturn {
+export interface UseDailyCallReturn {
   join: (preAcquiredStream?: MediaStream | null) => Promise<void>;
   leave: () => Promise<void>;
   stopCamera: () => void;
@@ -25,9 +25,9 @@ interface UseDailyCallReturn {
   toggleCam: () => void;
   /** Force le micro local (hors mode viewer) — ex. tours de parole imposés par le médiateur */
   setLocalAudioEnabled: (enabled: boolean) => void;
-  /** Médiateur / owner Daily : coupe ou réactive le micro d’un participant distant. */
+  /** Médiateur / owner Daily : coupe ou réactive le micro d'un participant distant. */
   setRemoteParticipantAudio: (sessionId: string, enabled: boolean) => void;
-  /** Expulsion de la salle (`is_owner` sur le token Daily). Résout `true` si l’appel a été émis. */
+  /** Expulsion de la salle (`is_owner` sur le token Daily). Résout `true` si l'appel a été émis. */
   ejectRemoteParticipant: (sessionId: string) => Promise<boolean>;
   isJoined: boolean;
   isJoining: boolean;
@@ -38,6 +38,10 @@ interface UseDailyCallReturn {
   /** `session_id` Daily du participant actuellement détecté comme parlant (active-speaker-change). */
   activeSpeakerPeerId: string | null;
   error: string | null;
+  /** Caméra / micro interrompus par l'OS (ex. appel entrant) — reprise via `recoverMediaDevices`. */
+  isCameraInterrupted: boolean;
+  /** Réacquisition caméra + micro sur la salle courante (sans recharger). */
+  recoverMediaDevices: () => Promise<void>;
 }
 
 /** Clé utilisée par `participants()` — alignée sur `session_id` pour `updateParticipant`. */
@@ -98,6 +102,7 @@ export function useDailyCall(
   /** Incrémenté à chaque `joined-meeting` pour rattacher les listeners au bon `DailyCall`. */
   const [dailyAttachKey, setDailyAttachKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [isCameraInterrupted, setIsCameraInterrupted] = useState(false);
   const reconnectingRef = useRef(false);
   const joinWatchdogRef = useRef<number | null>(null);
   const roomUrlRef = useRef(roomUrl);
@@ -193,6 +198,7 @@ export function useDailyCall(
         clearJoinWatchdog();
         setIsJoined(true);
         setIsJoining(false);
+        setIsCameraInterrupted(false);
         refreshParticipants(co);
         setDailyAttachKey((k) => k + 1);
       });
@@ -209,6 +215,7 @@ export function useDailyCall(
         setLocalParticipant(null);
         setRemoteParticipants([]);
         setActiveSpeakerPeerId(null);
+        setIsCameraInterrupted(false);
         setDailyAttachKey(0);
       });
       co.on('error', (e: any) => {
@@ -224,9 +231,8 @@ export function useDailyCall(
         setIsJoining(false);
       });
       co.on('camera-error', (e: any) => {
-        clearJoinWatchdog();
-        setError(`Caméra inaccessible: ${e?.errorMsg || 'vérifiez les permissions'}`);
-        setIsJoining(false);
+        console.warn('Daily camera-error (interruption possible)', e?.errorMsg);
+        setIsCameraInterrupted(true);
       });
 
       const userData = buildDailyJoinUserData(arenaUserId);
@@ -314,6 +320,7 @@ export function useDailyCall(
     setLocalParticipant(null);
     setRemoteParticipants([]);
     setActiveSpeakerPeerId(null);
+    setIsCameraInterrupted(false);
     setDailyAttachKey(0);
   }, []);
 
@@ -400,6 +407,28 @@ export function useDailyCall(
     }
   }, []);
 
+  const recoverMediaDevices = useCallback(async () => {
+    if (!callRef.current) return;
+    try {
+      setIsCameraInterrupted(false);
+      await callRef.current.setLocalVideo(true);
+      await callRef.current.setLocalAudio(true);
+    } catch (err) {
+      console.warn('Echec de la reprise des périphériques', err);
+      setIsCameraInterrupted(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isCameraInterrupted) {
+        void recoverMediaDevices();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+  }, [isCameraInterrupted, recoverMediaDevices]);
+
   // ── AUTO-RECONNECT on network loss ──
   useEffect(() => {
     if (!isJoined) return;
@@ -433,6 +462,7 @@ export function useDailyCall(
         newCo.on('joined-meeting', () => {
           setIsJoined(true);
           setIsJoining(false);
+          setIsCameraInterrupted(false);
           reconnectingRef.current = false;
           refreshParticipants(newCo);
           setDailyAttachKey((k) => k + 1);
@@ -447,7 +477,12 @@ export function useDailyCall(
           setLocalParticipant(null);
           setRemoteParticipants([]);
           setActiveSpeakerPeerId(null);
+          setIsCameraInterrupted(false);
           setDailyAttachKey(0);
+        });
+        newCo.on('camera-error', (e: any) => {
+          console.warn('Daily camera-error (interruption possible)', e?.errorMsg);
+          setIsCameraInterrupted(true);
         });
         newCo.on('error', (e: any) => {
           setError(e?.errorMsg || 'Erreur de reconnexion');
@@ -560,5 +595,7 @@ export function useDailyCall(
     remoteParticipants,
     activeSpeakerPeerId,
     error,
+    isCameraInterrupted,
+    recoverMediaDevices,
   };
 }
