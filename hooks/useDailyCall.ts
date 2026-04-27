@@ -411,8 +411,17 @@ export function useDailyCall(
     if (!callRef.current) return;
     try {
       setIsCameraInterrupted(false);
-      await callRef.current.setLocalVideo(true);
-      await callRef.current.setLocalAudio(true);
+
+      // 1. Forçage matériel (uniquement si on n'est pas un simple spectateur)
+      const shouldEnable = !viewerModeRef.current;
+      await callRef.current.setLocalVideo(shouldEnable);
+      await callRef.current.setLocalAudio(shouldEnable);
+
+      // 2. Synchronisation parfaite de l'UI
+      if (shouldEnable) {
+        setCamEnabled(true);
+        setMicEnabled(true);
+      }
     } catch (err) {
       console.warn('Echec de la reprise des périphériques', err);
       setIsCameraInterrupted(true);
