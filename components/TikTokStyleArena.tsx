@@ -352,6 +352,8 @@ export function TikTokStyleArena({
   const chatMessagesScrollRef = useRef<HTMLDivElement>(null);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
   const announcementClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** File d'attente batchée pour particules (évite de marteler le state sur les pics de broadcast) */
+  const reactionBufferRef = useRef<FlyingReactionEntry[]>([]);
   useEffect(() => {
     setDockPickersMounted(true);
   }, []);
@@ -1866,7 +1868,7 @@ export function TikTokStyleArena({
     };
     setVisibleMessages((prev) => {
       if (dbId && prev.some((m) => m.id === dbId)) return prev;
-      return [...prev, newMsg].slice(-80);
+      return [...prev, newMsg].slice(-40);
     });
     setGlobalHeat((v) => Math.min(100, v + 4));
   }, []);
@@ -1882,7 +1884,24 @@ export function TikTokStyleArena({
       return;
     }
     const entry = createFlyingReactionEntry(emoji);
-    setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
+    reactionBufferRef.current.push(entry);
+  }, []);
+
+  useEffect(() => {
+    const flushInterval = setInterval(() => {
+      if (reactionBufferRef.current.length > 0) {
+        const newReactions = [...reactionBufferRef.current];
+        reactionBufferRef.current = [];
+        setFlyingReactions((prev) => {
+          let next = prev;
+          newReactions.forEach((r) => {
+            next = pushFlyingReaction(next, r);
+          });
+          return next.slice(-30);
+        });
+      }
+    }, 250);
+    return () => clearInterval(flushInterval);
   }, []);
 
   /** Boost par tap / réaction soutenue : fixe 15 (équitable, généreux vs decay −3 / 500 ms). */
@@ -2250,14 +2269,14 @@ export function TikTokStyleArena({
         opacityMul: 0.5,
         scaleMul: 0.82,
       });
-      setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
+      setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
     } else if (integrated) {
       setSupportBurst((prev) => ({ ...prev, [slotAB]: prev[slotAB] + 1 }));
       const entry = createFlyingReactionEntry(emoji);
-      setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
+      setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
     } else {
       const entry = createFlyingReactionEntry(emoji);
-      setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
+      setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
     }
 
     if (channelRef.current) {
@@ -2971,7 +2990,7 @@ export function TikTokStyleArena({
       timestamp: Date.now(),
       initial: senderInitial,
     };
-    setVisibleMessages((prev) => [...prev, optimistic].slice(-80));
+    setVisibleMessages((prev) => [...prev, optimistic].slice(-40));
     setChatInput('');
     setGlobalHeat((v) => Math.min(100, v + 5));
 
