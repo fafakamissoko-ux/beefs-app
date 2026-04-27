@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Flame, X, Hash, Radio, Coins, FileText, Swords } from 'lucide-react';
+import { TrendingUp, Users, Flame, X, Radio, Coins, FileText, Swords } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { BeefCard } from '@/components/BeefCard';
@@ -111,7 +111,6 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [feedType, setFeedType] = useState<'pour-vous' | 'abonnements' | 'manifestes'>('pour-vous');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [tagSearchQuery, setTagSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [trendingTags, setTrendingTags] = useState<string[]>([]);
@@ -565,38 +564,10 @@ export default function FeedPage() {
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
         {/* Bannière + onglets + filtres (desktop) — dans le flux, repousse le scroll */}
-        <div className="z-[100] flex w-full shrink-0 flex-col bg-black/80 px-4 pb-3 pt-3 backdrop-blur-md md:mb-2 md:space-y-2 md:px-0 md:pt-0 lg:bg-transparent lg:backdrop-blur-none">
-
-            {/* Active beef banner (Maintenant fluide au-dessus des onglets) */}
-            {activeBeef && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-4 max-w-2xl mx-auto overflow-hidden rounded-full bg-gradient-to-r from-cobalt-500/12 to-ember-500/8 border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:mb-2"
-              >
-                <button
-                  onClick={() => router.push(`/arena/${activeBeef.id}`)}
-                  className="group w-full flex items-center gap-4 rounded-full px-6 py-3 md:py-3.5 text-left"
-                >
-                  <div className="flex h-9 w-9 md:h-11 md:w-11 flex-shrink-0 items-center justify-center rounded-full border border-ember-500/30 bg-ember-500/15">
-                    <Radio className="h-4 w-4 md:h-5 md:w-5 animate-pulse text-ember-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-sans text-sm font-bold text-white truncate">{activeBeef.title}</p>
-                    <p className="font-sans text-[11px] md:text-xs text-white/50">
-                      Tu es <span className="text-brand-400 font-semibold">{activeBeef.role}</span> dans ce beef
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0 rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-3 py-1.5 text-white font-mono text-[10px] font-black uppercase shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all group-hover:shadow-[0_0_25px_rgba(239,68,68,0.7)] tracking-widest md:px-4 md:text-[11px]">
-                    Rejoindre
-                  </div>
-                </button>
-              </motion.div>
-            )}
-
-            {/* Les onglets */}
-            <div className="flex w-full max-md:mb-0 max-md:justify-center flex-wrap items-center justify-between gap-4 gap-y-4 px-4 pb-2 pt-2 md:mb-2 md:items-center md:justify-start md:px-8 md:pb-2 md:pt-2">
-            <div className="flex max-w-full min-w-0 max-md:w-full max-md:justify-center max-md:gap-4 flex-wrap items-center justify-center gap-6 border-b border-white/[0.08] max-md:border-0 max-md:pb-0">
+        <div className="z-[100] flex w-full shrink-0 flex-col bg-black/80 px-4 pb-3 pt-3 backdrop-blur-md md:px-0 md:pt-0 lg:bg-transparent lg:backdrop-blur-none">
+          <div className="flex w-full flex-col gap-3 border-b border-white/[0.08] pb-3">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
+              <div className="flex items-center gap-4 max-md:flex-nowrap max-md:overflow-x-auto hide-scrollbar max-md:pb-1">
               {[
                 { id: 'pour-vous' as const, label: 'Pour toi', icon: TrendingUp },
                 { id: 'abonnements' as const, label: 'Abonnements', icon: Users },
@@ -616,7 +587,7 @@ export default function FeedPage() {
                   <span>{tab.label}</span>
                 </button>
               ))}
-            </div>
+              </div>
             <a
               href={hrefWithFrom('/buy-points', pathname)}
               target="_blank"
@@ -626,11 +597,8 @@ export default function FeedPage() {
               <Coins className="w-4 h-4 flex-shrink-0" />
               <span>Acquérir de l&apos;Aura</span>
             </a>
-          </div>
-
-          <div className="mb-3 max-md:hidden space-y-3">
-          {/* Status pills — ghost/glass */}
-          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+            </div>
+            <div className="flex items-center gap-4 max-md:flex-nowrap max-md:overflow-x-auto hide-scrollbar max-md:pb-1">
             {STATUS_FILTERS.map(s => (
               <button
                 key={s.id}
@@ -644,27 +612,10 @@ export default function FeedPage() {
                 {s.label}
               </button>
             ))}
+            </div>
           </div>
 
-          {/* Tag search */}
-          <div className="relative">
-            <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
-            <input
-              type="text"
-              value={tagSearchQuery}
-              onChange={(e) => setTagSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && tagSearchQuery.trim()) {
-                  const clean = tagSearchQuery.replace(/^[#$]/, '').trim().toLowerCase();
-                  if (clean && !selectedTags.includes(clean)) setSelectedTags(prev => [...prev, clean]);
-                  setTagSearchQuery('');
-                }
-              }}
-              placeholder="Filtrer par tag..."
-              className="w-full bg-white/[0.03] border border-white/[0.08] text-white text-sm py-2.5 pl-10 rounded-full focus:bg-white/[0.06] focus:border-brand-500/50 focus:outline-none transition-all placeholder:text-white/20"
-            />
-          </div>
-
+          <div className="mt-2 flex flex-col gap-2 md:px-8">
           {/* Selected tags */}
           {selectedTags.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -703,7 +654,7 @@ export default function FeedPage() {
         {loading ? (
             <div
             id="feed-scroll-container"
-            className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory max-md:pb-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-5 md:p-4 md:pt-0 md:snap-none md:items-start"
+            className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-5 md:p-6 md:pt-4 pb-28 md:pb-32 md:snap-none md:items-start"
           >
             {[...Array(6)].map((_, i) => (
               <div key={i} className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.06]">
@@ -741,7 +692,7 @@ export default function FeedPage() {
           <>
             <div
               id="feed-scroll-container"
-              className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory max-md:pb-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-5 md:p-4 md:pt-0 md:snap-none md:items-start"
+              className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 md:gap-5 md:p-6 md:pt-4 pb-28 md:pb-32 md:snap-none md:items-start"
             >
               {beefs.map((beef, index) => (
                 <div key={beef.id} className="snap-start snap-always relative w-full shrink-0 max-md:h-full">
@@ -804,6 +755,32 @@ export default function FeedPage() {
             )}
           </>
         )}
+      {activeBeef && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="fixed z-[500] max-md:bottom-[80px] max-md:left-4 max-md:right-4 max-md:w-auto md:bottom-6 md:right-6 md:w-[340px] overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-black/90 to-black/95 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)]"
+        >
+          <button
+            type="button"
+            onClick={() => router.push(`/arena/${activeBeef.id}`)}
+            className="group flex w-full items-center gap-3 p-3 text-left md:gap-4 md:p-4"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ember-500/30 bg-ember-500/15 md:h-10 md:w-10">
+              <Radio className="h-4 w-4 shrink-0 animate-pulse text-ember-400 md:h-5 md:w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-sans text-sm font-bold text-white">{activeBeef.title}</p>
+              <p className="font-sans text-[11px] text-white/50 md:text-xs">
+                Tu es <span className="font-semibold text-brand-400">{activeBeef.role}</span> dans ce beef
+              </p>
+            </div>
+            <div className="shrink-0 rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-3 py-1.5 font-mono text-[10px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all group-hover:shadow-[0_0_25px_rgba(239,68,68,0.7)] md:px-4 md:text-[11px]">
+              Rejoindre
+            </div>
+          </button>
+        </motion.div>
+      )}
       {showCreateModal && <CreateBeefForm onSubmit={handleCreateBeef} onCancel={() => setShowCreateModal(false)} />}
 
     </div>
