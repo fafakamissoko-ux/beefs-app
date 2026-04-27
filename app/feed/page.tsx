@@ -595,7 +595,7 @@ export default function FeedPage() {
             )}
 
             {/* Les onglets */}
-            <div className="flex w-full max-md:mb-0 max-md:justify-center flex-wrap items-center justify-between gap-4 gap-y-4 px-4 pb-2 pt-2 md:mb-8 md:max-w-[1400px] md:mx-auto md:items-center md:justify-start md:px-8 md:pb-6 md:pt-4">
+            <div className="flex w-full max-md:mb-0 max-md:justify-center flex-wrap items-center justify-between gap-4 gap-y-4 px-4 pb-2 pt-2 md:mb-8 md:items-center md:justify-start md:px-8 md:pb-6 md:pt-4">
             <div className="flex max-w-full min-w-0 max-md:w-full max-md:justify-center max-md:gap-4 flex-wrap items-center justify-center gap-6 border-b border-white/[0.08] max-md:border-0 max-md:pb-0">
               {[
                 { id: 'pour-vous' as const, label: 'Pour toi', icon: TrendingUp },
@@ -703,7 +703,7 @@ export default function FeedPage() {
         {loading ? (
             <div
             id="feed-scroll-container"
-            className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory max-md:pb-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 md:p-8 md:snap-none md:items-start md:mx-auto md:max-w-[1400px]"
+            className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory max-md:pb-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 md:p-8 md:snap-none md:items-start"
           >
             {[...Array(6)].map((_, i) => (
               <div key={i} className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.06]">
@@ -741,7 +741,7 @@ export default function FeedPage() {
           <>
             <div
               id="feed-scroll-container"
-              className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory max-md:pb-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 md:p-8 md:snap-none md:items-start md:mx-auto md:max-w-[1400px]"
+              className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory max-md:pb-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 md:p-8 md:snap-none md:items-start"
             >
               {beefs.map((beef, index) => (
                 <div key={beef.id} className="snap-start snap-always relative w-full shrink-0 max-md:h-full">
