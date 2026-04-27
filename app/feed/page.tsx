@@ -565,14 +565,14 @@ export default function FeedPage() {
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
         {/* Bannière + onglets + filtres (desktop) — dans le flux, repousse le scroll */}
-        <div className="z-[100] flex w-full shrink-0 flex-col bg-black/80 px-4 pb-3 pt-3 backdrop-blur-md md:mb-8 md:space-y-4 md:px-0 md:pt-0 lg:bg-transparent lg:backdrop-blur-none">
+        <div className="z-[100] flex w-full shrink-0 flex-col bg-black/80 px-4 pb-3 pt-3 backdrop-blur-md md:mb-2 md:space-y-2 md:px-0 md:pt-0 lg:bg-transparent lg:backdrop-blur-none">
 
             {/* Active beef banner (Maintenant fluide au-dessus des onglets) */}
             {activeBeef && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-4 max-w-2xl mx-auto overflow-hidden rounded-full bg-gradient-to-r from-cobalt-500/12 to-ember-500/8 border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:mb-6"
+                className="mb-4 max-w-2xl mx-auto overflow-hidden rounded-full bg-gradient-to-r from-cobalt-500/12 to-ember-500/8 border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:mb-2"
               >
                 <button
                   onClick={() => router.push(`/arena/${activeBeef.id}`)}
@@ -595,7 +595,7 @@ export default function FeedPage() {
             )}
 
             {/* Les onglets */}
-            <div className="flex w-full max-md:mb-0 max-md:justify-center flex-wrap items-center justify-between gap-4 gap-y-4 px-4 pb-2 pt-2 md:mb-8 md:items-center md:justify-start md:px-8 md:pb-6 md:pt-4">
+            <div className="flex w-full max-md:mb-0 max-md:justify-center flex-wrap items-center justify-between gap-4 gap-y-4 px-4 pb-2 pt-2 md:mb-2 md:items-center md:justify-start md:px-8 md:pb-2 md:pt-2">
             <div className="flex max-w-full min-w-0 max-md:w-full max-md:justify-center max-md:gap-4 flex-wrap items-center justify-center gap-6 border-b border-white/[0.08] max-md:border-0 max-md:pb-0">
               {[
                 { id: 'pour-vous' as const, label: 'Pour toi', icon: TrendingUp },
@@ -628,7 +628,7 @@ export default function FeedPage() {
             </a>
           </div>
 
-          <div className="mb-8 max-md:hidden space-y-4">
+          <div className="mb-3 max-md:hidden space-y-3">
           {/* Status pills — ghost/glass */}
           <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
             {STATUS_FILTERS.map(s => (
@@ -703,7 +703,7 @@ export default function FeedPage() {
         {loading ? (
             <div
             id="feed-scroll-container"
-            className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory max-md:pb-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 md:p-8 md:snap-none md:items-start"
+            className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory max-md:pb-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-5 md:p-4 md:pt-0 md:snap-none md:items-start"
           >
             {[...Array(6)].map((_, i) => (
               <div key={i} className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.06]">
@@ -741,7 +741,7 @@ export default function FeedPage() {
           <>
             <div
               id="feed-scroll-container"
-              className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory max-md:pb-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-8 md:p-8 md:snap-none md:items-start"
+              className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory max-md:pb-6 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-5 md:p-4 md:pt-0 md:snap-none md:items-start"
             >
               {beefs.map((beef, index) => (
                 <div key={beef.id} className="snap-start snap-always relative w-full shrink-0 max-md:h-full">
