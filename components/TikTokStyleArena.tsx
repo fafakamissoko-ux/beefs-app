@@ -1045,16 +1045,16 @@ export function TikTokStyleArena({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // ── Aura decay (−1 toutes les 500ms) ──
+  // ── Aura decay (−3 toutes les 500ms) ──
   const auraFeverRef = useRef(false);
   useEffect(() => { auraFeverRef.current = auraFeverMed; }, [auraFeverMed]);
 
   useEffect(() => {
     const iv = setInterval(() => {
-      setAuraA((v) => Math.max(0, v - 1));
-      setAuraB((v) => Math.max(0, v - 1));
+      setAuraA((v) => Math.max(0, v - 3));
+      setAuraB((v) => Math.max(0, v - 3));
       if (!auraFeverRef.current) {
-        setAuraMed((v) => Math.max(0, v - 1));
+        setAuraMed((v) => Math.max(0, v - 3));
       }
     }, 500);
     return () => clearInterval(iv);
@@ -1857,8 +1857,8 @@ export function TikTokStyleArena({
     setFlyingReactions((prev) => pushFlyingReaction(prev, entry));
   }, []);
 
-  /** Boost par tap / réaction soutenue : assez fort pour contrebalancer le decay aura (−1 / 500 ms). */
-  const getAuraBoost = () => (liveViewerCountRef.current > 50 ? 4 : 12);
+  /** Boost par tap / réaction soutenue : fixe 15 (équitable, généreux vs decay −3 / 500 ms). */
+  const getAuraBoost = () => 15;
 
   const emitTapSupport = useCallback((target: 'A' | 'B' | 'M') => {
     const boost = getAuraBoost();
@@ -1892,7 +1892,7 @@ export function TikTokStyleArena({
       })
       .on('broadcast', { event: 'reaction' }, ({ payload }: any) => {
         addRemoteReaction(payload.emoji, payload.supportSlot);
-        const boost = liveViewerCountRef.current > 50 ? 4 : 12;
+        const boost = getAuraBoost();
         const slot = payload?.supportSlot as 'A' | 'B' | 'M' | undefined;
         if (slot === 'A') setAuraA((v) => Math.min(300, v + boost));
         if (slot === 'B') setAuraB((v) => Math.min(300, v + boost));
@@ -3519,13 +3519,16 @@ export function TikTokStyleArena({
             animate={{
               boxShadow:
                 auraA > 0
-                  ? `0 0 ${20 + Math.min(auraA, 100) * 0.5}px rgba(168,85,247,${Math.min(0.8, 0.4 + auraA / 200)}), 0 0 0 ${auraA > 80 ? 2 : 1}px rgba(168,85,247,${Math.min(1, 0.3 + auraA / 100)})`
+                  ? `0 0 ${20 + Math.min(auraA, 100) * 0.5}px rgba(168,85,247,${Math.min(1, 0.4 + auraA / 100)}), 0 0 0 ${auraA > 80 ? 2 : 1}px rgba(168,85,247,${Math.min(1, 0.35 + auraA / 100)})`
                   : '0 0 0 1px rgba(255,255,255,0.05)',
             }}
             style={{
               opacity: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 0.3 : 1,
               transform: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 'scale(1.02)' : 'scale(1)',
-              filter: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 'grayscale(0.6) blur(3px)' : 'none',
+              filter:
+                speakingTurnActive && effectiveHotMicSpeakerSlot === 'B'
+                  ? 'grayscale(0.6) blur(3px)'
+                  : `brightness(${1 + (auraA / 300) * 0.8}) saturate(${1 + (auraA / 300) * 0.5})`,
             }}
           >
             <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
@@ -3612,13 +3615,16 @@ export function TikTokStyleArena({
             animate={{
               boxShadow:
                 auraB > 0
-                  ? `0 0 ${20 + Math.min(auraB, 100) * 0.5}px rgba(16,185,129,${Math.min(0.8, 0.4 + auraB / 200)}), 0 0 0 ${auraB > 80 ? 2 : 1}px rgba(16,185,129,${Math.min(1, 0.3 + auraB / 100)})`
+                  ? `0 0 ${20 + Math.min(auraB, 100) * 0.5}px rgba(16,185,129,${Math.min(1, 0.4 + auraB / 100)}), 0 0 0 ${auraB > 80 ? 2 : 1}px rgba(16,185,129,${Math.min(1, 0.35 + auraB / 100)})`
                   : '0 0 0 1px rgba(255,255,255,0.05)',
             }}
             style={{
               opacity: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 0.3 : 1,
               transform: speakingTurnActive && effectiveHotMicSpeakerSlot === 'B' ? 'scale(1.02)' : 'scale(1)',
-              filter: speakingTurnActive && effectiveHotMicSpeakerSlot === 'A' ? 'grayscale(0.6) blur(3px)' : 'none',
+              filter:
+                speakingTurnActive && effectiveHotMicSpeakerSlot === 'A'
+                  ? 'grayscale(0.6) blur(3px)'
+                  : `brightness(${1 + (auraB / 300) * 0.8}) saturate(${1 + (auraB / 300) * 0.5})`,
             }}
           >
             <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
@@ -3711,6 +3717,9 @@ export function TikTokStyleArena({
                 auraMed > 0
                   ? `0 0 ${20 + Math.min(auraMed, 100) * 0.5}px ${getMediatorDynamicColor(auraMed)}, 0 0 0 ${auraMed > 150 ? 4 : 2}px ${getMediatorDynamicColor(auraMed)}`
                   : '0 0 0 2px rgba(255,255,255,0.3)',
+            }}
+            style={{
+              filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})`,
             }}
             className="rounded-full pointer-events-auto transition-shadow duration-300"
           >
