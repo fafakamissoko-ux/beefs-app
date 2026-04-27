@@ -246,7 +246,7 @@ export function BeefCard({
   ) : null;
 
   return (
-    <div className="relative flex min-h-0 w-full max-w-full flex-col max-md:min-h-0 max-md:h-[100dvh] max-md:w-full max-md:shrink-0 max-md:snap-start max-md:snap-always">
+    <div className="relative flex min-h-0 w-full max-w-full flex-col max-md:mt-16 max-md:min-h-0 max-md:h-[calc(100dvh-120px)] max-md:w-full max-md:shrink-0 max-md:snap-start max-md:snap-always">
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -263,7 +263,7 @@ export function BeefCard({
       {/* Média de fond (mobile) / en-tête (desktop) */}
       <div
         ref={mediaBlockRef}
-        className="relative w-full min-h-0 flex-1 overflow-hidden bg-black max-md:absolute max-md:inset-0 max-md:z-0 md:aspect-[16/10] md:shrink-0 md:rounded-t-[2rem]"
+        className="relative w-full min-h-0 flex-1 overflow-hidden bg-black/20 max-md:absolute max-md:inset-0 max-md:z-0 md:bg-black md:aspect-[16/10] md:shrink-0 md:rounded-t-[2rem]"
       >
         {video_url ? (
           <video
@@ -272,14 +272,14 @@ export function BeefCard({
             loop
             muted={isMuted}
             playsInline
-            className="h-full w-full object-cover object-center"
+            className="h-full w-full object-center object-contain md:object-cover"
           />
         ) : thumbnail ? (
           <Image
             src={thumbnail}
             alt={title}
             fill
-            className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
+            className="object-center object-contain transition-transform duration-700 group-hover:scale-105 md:object-cover"
             sizes="(max-width: 768px) 100vw, 384px"
           />
         ) : (
@@ -296,8 +296,8 @@ export function BeefCard({
           aria-hidden
         />
 
-        {/* Bandeau statuts + prix — mobile sous le header (top-20) */}
-        <div className="absolute left-0 right-0 top-20 z-20 flex flex-wrap items-center gap-2 px-3 md:hidden">
+        {/* Bandeau statuts + prix — mobile (top-4, carte déjà décalée par mt-16) */}
+        <div className="absolute left-0 right-0 top-4 z-20 flex flex-wrap items-center gap-2 px-3 md:hidden">
           {status === 'live' && (
             <div className="flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-tighter text-white shadow-lg animate-pulse">
               <div className="h-1.5 w-1.5 rounded-full bg-white" />
@@ -388,7 +388,7 @@ export function BeefCard({
       </div>
 
       {/* BARRE AURA (mobile) — au-dessus de la zone Rejoindre / texte */}
-      <div className="absolute bottom-40 right-3 z-20 flex flex-col items-center gap-5 md:hidden">
+      <div className="absolute bottom-32 right-3 z-40 flex flex-col items-center gap-5 md:hidden">
         <div className="relative flex flex-col items-center gap-1 group">
           <AnimatePresence>
             {floatingAuras.map((aura) => (
@@ -423,7 +423,7 @@ export function BeefCard({
       </div>
 
       {/* Contenu sous le visuel */}
-      <div className="pointer-events-auto relative z-10 flex max-w-none flex-col max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-10 max-md:px-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] max-md:pt-4 md:px-5 md:py-4 max-md:bg-gradient-to-t max-md:from-black max-md:via-black/80 max-md:to-black/5">
+      <div className="pointer-events-auto relative z-30 flex max-w-none flex-col max-md:absolute max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:px-4 max-md:pb-[max(1rem,env(safe-area-inset-bottom))] max-md:pt-4 md:px-5 md:py-4 md:z-auto max-md:bg-gradient-to-t max-md:from-black max-md:via-black/80 max-md:to-black/5">
         <div className={!hasHeroMedia ? 'max-md:block md:hidden' : 'block'}>
           <div className="mb-3 flex items-center justify-between gap-2 md:hidden">
             {showCountdownTimer && scheduled_at ? (
@@ -442,7 +442,7 @@ export function BeefCard({
             </div>
           </div>
           {/* INFO COMPACTE (MOBILE SEULEMENT) REFONTE */}
-          <div className="md:hidden flex items-center gap-2 mb-2">
+          <div className="relative z-20 md:hidden flex items-center gap-2 mb-2">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 border border-white/20 text-[11px] font-bold text-white backdrop-blur-md">
               {(host_name || '?')[0].toUpperCase()}
             </div>
