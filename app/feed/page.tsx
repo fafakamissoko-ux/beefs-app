@@ -654,7 +654,7 @@ export default function FeedPage() {
         {loading ? (
             <div
             id="feed-scroll-container"
-            className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 md:gap-5 md:p-6 md:pt-4 pb-28 md:pb-32 md:snap-none md:items-start`}
+            className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 md:gap-5 md:p-6 md:pt-4 pb-28 md:pb-32 md:snap-none items-stretch`}
           >
             {[...Array(6)].map((_, i) => (
               <div key={i} className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.06]">
@@ -692,7 +692,7 @@ export default function FeedPage() {
           <>
             <div
               id="feed-scroll-container"
-              className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 md:gap-5 md:p-6 md:pt-4 pb-28 md:pb-32 md:snap-none md:items-start`}
+              className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 md:gap-5 md:p-6 md:pt-4 pb-28 md:pb-32 md:snap-none items-stretch`}
             >
               {beefs.map((beef, index) => (
                 <div key={beef.id} className="snap-start snap-always relative w-full shrink-0 max-md:h-full">
@@ -759,7 +759,7 @@ export default function FeedPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed z-[500] max-md:bottom-[90px] max-md:left-1/2 max-md:-translate-x-1/2 max-md:w-[92%] md:bottom-8 md:right-8 md:w-[340px] md:translate-x-0 overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-black/90 to-black/95 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)]"
+          className="fixed z-[500] max-md:bottom-[90px] max-md:left-1/2 max-md:-translate-x-1/2 max-md:w-[92%] md:bottom-8 md:right-8 md:w-[340px] md:translate-x-0 overflow-hidden rounded-2xl border border-ember-500/30 bg-gradient-to-br from-black/95 to-[#0A0505] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)]"
         >
           <button
             type="button"
@@ -774,12 +774,12 @@ export default function FeedPage() {
                 <p className="truncate font-sans text-sm font-bold text-white">
                   {activeBeef.title}
                 </p>
-                <p className="mt-0.5 font-sans text-[11px] text-white/50 md:text-xs">
+                <p className="mt-0.5 max-md:hidden font-sans text-[11px] text-white/50 md:text-xs">
                   Tu es <span className="font-semibold text-brand-400">{activeBeef.role}</span> dans ce beef
                 </p>
               </div>
             </div>
-            <div className="shrink-0 rounded-full bg-gradient-to-r from-red-600 to-orange-500 px-3 py-1.5 font-mono text-[10px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-all group-hover:shadow-[0_0_25px_rgba(239,68,68,0.7)] md:px-4 md:text-[11px]">
+            <div className="px-4 py-2 shrink-0 rounded-full bg-gradient-to-r from-ember-600 to-brand-500 text-[10px] md:text-[11px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(255,69,0,0.4)]">
               Rejoindre
             </div>
           </button>
