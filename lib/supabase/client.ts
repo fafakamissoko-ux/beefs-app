@@ -1,40 +1,10 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Singleton via globalThis to survive Next.js Hot Module Replacement
-// without this, each HMR reload creates a new GoTrueClient instance
-declare global {
-  // eslint-disable-next-line no-var
-  var _supabaseInstance: SupabaseClient | undefined;
-}
-
-function getClient(): SupabaseClient {
-  if (globalThis._supabaseInstance) {
-    return globalThis._supabaseInstance;
-  }
-
-  const client = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-    realtime: {
-      params: {
-        eventsPerSecond: 10,
-      },
-    },
-  });
-
-  // Cache the instance globally to prevent duplicate connections
-  globalThis._supabaseInstance = client;
-
-  return client;
-}
-
-export const supabase = getClient();
+// createBrowserClient gère automatiquement la synchronisation des cookies pour le Middleware
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 export type Database = {
   public: {
