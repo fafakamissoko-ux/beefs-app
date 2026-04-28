@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Flame, Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, ChevronDown } from 'lucide-react';
-import { hasBeefWatchStarted } from '@/lib/beef-view-local';
+import { Clock, Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, ChevronDown } from 'lucide-react';
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 
@@ -28,8 +27,6 @@ interface BeefCardProps {
   scheduled_at?: string;
   viewer_count?: number;
   tags?: string[];
-  is_premium?: boolean;
-  price?: number;
   thumbnail?: string;
   video_url?: string | null;
   duration?: number;
@@ -71,7 +68,6 @@ export function BeefCard({
   scheduled_at,
   viewer_count = 0,
   tags = [],
-  price = 0,
   thumbnail,
   video_url,
   duration,
@@ -100,7 +96,6 @@ export function BeefCard({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaBlockRef = useRef<HTMLDivElement | null>(null);
 
-  const [hasOpenedArena, setHasOpenedArena] = useState(false);
   const [floatingAuras, setFloatingAuras] = useState<{ id: number; x: number }[]>([]);
   const [replayHover, setReplayHover] = useState(false);
   const [isTeaserOpen, setIsTeaserOpen] = useState(false);
@@ -128,11 +123,6 @@ export function BeefCard({
     return () => obs.disconnect();
   }, [video_url, id]);
 
-  useEffect(() => {
-    setHasOpenedArena(hasBeefWatchStarted(id));
-  }, [id, status, price]);
-
-  const getPrimaryStatusBadge = () => {
     switch (status) {
       case 'pending':
         return (
@@ -276,20 +266,6 @@ export function BeefCard({
               </div>
             )}
             {getPrimaryStatusBadge()}
-        </div>
-        <div className="absolute top-2 right-2 z-20 flex max-w-[48%] flex-col items-end gap-1">
-            {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
-              <div className="flex w-fit items-center gap-0.5 rounded border border-cyan-500/30 bg-cyan-500/20 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-cyan-400 backdrop-blur-sm">
-                <Flame className="h-2.5 w-2.5" />
-                Entrée · {price} pts
-              </div>
-            )}
-            {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-              <div className="flex w-fit items-center gap-0.5 rounded border border-white/20 bg-black/55 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-plasma-400 backdrop-blur-sm">
-                <Flame className="h-2.5 w-2.5 text-plasma-400" />
-                Suite · {price} pts
-              </div>
-            )}
         </div>
 
         {status === 'scheduled' && scheduled_at ? (

@@ -843,8 +843,6 @@ export default function ProfileContent() {
                       viewer_count={beef.viewer_count || 0}
                       tags={beef.tags}
                       scheduled_at={beef.scheduled_at}
-                      is_premium={beef.is_premium}
-                      price={beef.price}
                       onClick={() => router.push(`/arena/${beef.id}`)}
                     />
                   ))}
@@ -1018,8 +1016,6 @@ export default function ProfileContent() {
                           viewer_count={beef.viewer_count || 0}
                           tags={beef.tags}
                           scheduled_at={beef.scheduled_at}
-                          is_premium={beef.is_premium}
-                          price={beef.price}
                           onClick={() => router.push(`/arena/${beef.id}`)}
                         />
                       ))}
@@ -1092,8 +1088,6 @@ export default function ProfileContent() {
                         viewer_count={beef.viewer_count || 0}
                         tags={beef.tags}
                         scheduled_at={beef.scheduled_at}
-                        is_premium={beef.is_premium}
-                        price={beef.price}
                         onClick={() => router.push(`/arena/${beef.id}`)}
                       />
                       {user && beef.mediator_id === user.id && (

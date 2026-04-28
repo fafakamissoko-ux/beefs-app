@@ -44,8 +44,6 @@ interface Beef {
   scheduled_at?: string;
   viewer_count?: number;
   tags?: string[];
-  is_premium?: boolean;
-  price?: number;
   thumbnail?: string;
   duration?: number;
   engagement_score?: number;
@@ -399,6 +397,8 @@ export default function FeedPage() {
           Array.isArray(userLikes) && userLikes.some((like) => like.user_id === uid);
         const beefFields = { ...beef } as Record<string, unknown>;
         delete beefFields.beef_likes;
+        delete beefFields.price;
+        delete beefFields.is_premium;
         return {
           ...beefFields,
           host_name: hostN,

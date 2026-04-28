@@ -757,8 +757,6 @@ export default function PublicProfilePage() {
                   viewer_count={beef.viewer_count || 0}
                   tags={beef.tags}
                   scheduled_at={beef.scheduled_at}
-                  is_premium={beef.is_premium}
-                  price={beef.price}
                   onClick={() => router.push(`/arena/${beef.id}`)}
                 />
               ))}
@@ -791,8 +789,6 @@ export default function PublicProfilePage() {
                     viewer_count={beef.viewer_count || 0}
                     tags={beef.tags}
                     scheduled_at={beef.scheduled_at}
-                    is_premium={beef.is_premium}
-                    price={beef.price}
                     onClick={() => router.push(`/arena/${beef.id}`)}
                   />
                   {(beef.resolution_status && beef.resolution_status !== 'in_progress') || beef.mediation_summary?.trim() ? (
