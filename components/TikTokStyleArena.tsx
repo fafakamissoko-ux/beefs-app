@@ -3222,6 +3222,7 @@ export function TikTokStyleArena({
           }
           router.push(`/beef/${roomId}/summary`);
         }}
+      />
       {beefEnded && endSummary && (
         <div
           className="absolute inset-0 z-[1000] bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col items-center justify-center p-6"

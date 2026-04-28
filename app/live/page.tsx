@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Clock, Plus, TrendingUp, Flame, Eye } from 'lucide-react';
+import { Users, Clock, Plus, TrendingUp, Flame, Eye, Lock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { CreateBeefForm } from '@/components/CreateBeefForm';
 import { useToast } from '@/components/Toast';
