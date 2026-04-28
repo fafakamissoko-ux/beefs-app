@@ -241,7 +241,16 @@ export function TikTokStyleArena({
   );
 
   const isViewer = userRole === 'viewer' || userRole === 'spectator';
-  const [hasJoined, setHasJoined] = useState(false);
+  const [hasJoined, setHasJoined] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return sessionStorage.getItem(`arena_joined_${roomId}`) === 'true';
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
   /** MediaStream du pré-joint (médiateur / challenger) — réutilisé par Daily pour éviter un 2ᵉ getUserMedia bloqué sur mobile. */
   const [preJoinMediaStream, setPreJoinMediaStream] = useState<MediaStream | null>(null);
   const [chatInput, setChatInput] = useState('');
@@ -927,6 +936,13 @@ export function TikTokStyleArena({
 
   const endBeef = useCallback(async (reason: string = 'Terminé par le médiateur') => {
     if (beefEndedRef.current) return;
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.removeItem(`arena_joined_${roomId}`);
+      } catch {
+        /* ignore */
+      }
+    }
 
     const r = await runBeefManage({
       action: 'TOGGLE_STATUS',
@@ -2101,6 +2117,13 @@ export function TikTokStyleArena({
         }
       })
       .on('broadcast', { event: 'beef_ended' }, ({ payload }: any) => {
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.removeItem(`arena_joined_${roomId}`);
+          } catch {
+            /* ignore */
+          }
+        }
         if (beefEndedRef.current) return;
         beefEndedRef.current = true;
         beefEndsAtMsRef.current = null;
@@ -3135,12 +3158,26 @@ export function TikTokStyleArena({
   const handleJoin = (preAcquired: MediaStream | null) => {
     setPreJoinMediaStream(preAcquired);
     setHasJoined(true);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(`arena_joined_${roomId}`, 'true');
+      } catch {
+        /* ignore */
+      }
+    }
   };
 
   const [isLeaving, setIsLeaving] = useState(false);
 
   // Leave: for mediators, triggers endBeef. For others, just leave.
   const handleLeave = useCallback(async () => {
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.removeItem(`arena_joined_${roomId}`);
+      } catch {
+        /* ignore */
+      }
+    }
     if (beefEndedRef.current) {
       router.replace('/feed');
       return;
@@ -3158,7 +3195,7 @@ export function TikTokStyleArena({
       await leave();
       router.replace('/feed');
     }
-  }, [leave, router, isHost, endBeef]);
+  }, [leave, router, isHost, endBeef, roomId]);
 
   // Show pre-join screen before entering
   if (!hasJoined) {
