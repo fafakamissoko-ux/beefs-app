@@ -104,6 +104,7 @@ export function useDailyCall(
   const [error, setError] = useState<string | null>(null);
   const [isCameraInterrupted, setIsCameraInterrupted] = useState(false);
   const reconnectingRef = useRef(false);
+  const intentionalActionRef = useRef(false);
   const joinWatchdogRef = useRef<number | null>(null);
   const roomUrlRef = useRef(roomUrl);
   const userNameRef = useRef(userName);
@@ -206,20 +207,18 @@ export function useDailyCall(
       co.on('participant-updated', () => refreshParticipants(co));
       co.on('participant-left', () => refreshParticipants(co));
       // Fired when a track becomes active — crucial to detect when camera is ready
-      co.on('track-started', () => {
+      co.on('track-started', (evt: any) => {
         refreshParticipants(co);
+        if (evt.participant?.local) setIsCameraInterrupted(false);
       });
       co.on('track-stopped', (evt: any) => {
         refreshParticipants(co);
-
-        // Filtre de précision : on ne déclenche l'alerte d'interruption que pour
-        // les flux médias principaux (caméra/micro), pas pour les partages d'écran.
         if (evt.participant && evt.participant.local && evt.track) {
           const isScreenShare =
             evt.track.label?.toLowerCase().includes('screen') ||
             (evt.track.kind === 'video' && evt.participant.screen);
 
-          if (!isScreenShare) {
+          if (!isScreenShare && !intentionalActionRef.current) {
             setIsCameraInterrupted(true);
           }
         }
@@ -353,16 +352,20 @@ export function useDailyCall(
 
   const toggleMic = useCallback(() => {
     if (!callRef.current || viewerMode) return;
+    intentionalActionRef.current = true;
     const next = !micEnabled;
     callRef.current.setLocalAudio(next);
     setMicEnabled(next);
+    setTimeout(() => { intentionalActionRef.current = false; }, 1000);
   }, [micEnabled, viewerMode]);
 
   const toggleCam = useCallback(() => {
     if (!callRef.current || viewerMode) return;
+    intentionalActionRef.current = true;
     const next = !camEnabled;
     callRef.current.setLocalVideo(next);
     setCamEnabled(next);
+    setTimeout(() => { intentionalActionRef.current = false; }, 1000);
   }, [camEnabled, viewerMode]);
 
   const setLocalAudioEnabled = useCallback((enabled: boolean) => {
@@ -424,21 +427,22 @@ export function useDailyCall(
   const recoverMediaDevices = useCallback(async () => {
     if (!callRef.current) return;
     try {
+      intentionalActionRef.current = true;
       setIsCameraInterrupted(false);
       const shouldEnable = !viewerModeRef.current;
       if (shouldEnable) {
-        // 1. Désactiver proprement (Reset)
         await callRef.current.setLocalVideo(false);
         await callRef.current.setLocalAudio(false);
-        // 2. Relancer les flux via les setters autorisés in-call
         await callRef.current.setLocalVideo(true);
         await callRef.current.setLocalAudio(true);
         setCamEnabled(true);
         setMicEnabled(true);
       }
+      setTimeout(() => { intentionalActionRef.current = false; }, 1500);
     } catch (err) {
       console.warn('Echec de la reprise matérielle', err);
       setIsCameraInterrupted(true);
+      intentionalActionRef.current = false;
     }
   }, []);
 
@@ -493,18 +497,18 @@ export function useDailyCall(
         newCo.on('participant-joined', () => refreshParticipants(newCo));
         newCo.on('participant-updated', () => refreshParticipants(newCo));
         newCo.on('participant-left', () => refreshParticipants(newCo));
-        newCo.on('track-started', () => refreshParticipants(newCo));
+        newCo.on('track-started', (evt: any) => {
+          refreshParticipants(newCo);
+          if (evt.participant?.local) setIsCameraInterrupted(false);
+        });
         newCo.on('track-stopped', (evt: any) => {
           refreshParticipants(newCo);
-
-          // Filtre de précision : on ne déclenche l'alerte d'interruption que pour
-          // les flux médias principaux (caméra/micro), pas pour les partages d'écran.
           if (evt.participant && evt.participant.local && evt.track) {
             const isScreenShare =
               evt.track.label?.toLowerCase().includes('screen') ||
               (evt.track.kind === 'video' && evt.participant.screen);
 
-            if (!isScreenShare) {
+            if (!isScreenShare && !intentionalActionRef.current) {
               setIsCameraInterrupted(true);
             }
           }
