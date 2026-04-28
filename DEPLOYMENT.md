@@ -16,7 +16,7 @@ git add .
 git commit -m "Initial commit: Arena VS"
 ```
 
-2. **Pusher sur GitHub**
+1. **Pusher sur GitHub**
 
 ```bash
 # Créez un repo sur github.com puis :
@@ -24,14 +24,12 @@ git remote add origin https://github.com/votre-username/arena-vs.git
 git push -u origin main
 ```
 
-3. **Déployer sur Vercel**
-
-   - Allez sur [vercel.com](https://vercel.com)
-   - Cliquez sur "New Project"
-   - Importez votre repo GitHub
-   - Vercel détecte automatiquement Next.js
-
-4. **Configurer les Variables d'Environnement**
+1. **Déployer sur Vercel**
+  - Allez sur [vercel.com](https://vercel.com)
+  - Cliquez sur "New Project"
+  - Importez votre repo GitHub
+  - Vercel détecte automatiquement Next.js
+2. **Configurer les Variables d'Environnement**
 
 Dans Vercel Dashboard > Settings > Environment Variables :
 
@@ -42,9 +40,10 @@ OPENAI_API_KEY=sk-votre-clé
 NEXT_PUBLIC_APP_URL=https://votre-app.vercel.app
 ```
 
-5. **Déployer**
+1. **Déployer**
 
 Cliquez sur "Deploy". Vercel va :
+
 - Installer les dépendances
 - Build le projet
 - Déployer sur CDN global
@@ -301,16 +300,16 @@ module.exports = {
 
 ## Checklist Pré-Déploiement
 
-- [ ] Tests manuels de toutes les fonctionnalités
-- [ ] Variables d'environnement configurées
-- [ ] RLS activé sur Supabase
-- [ ] Rate limiting implémenté
-- [ ] Error tracking configuré (Sentry)
-- [ ] Analytics installé
-- [ ] Domaine personnalisé configuré (optionnel)
-- [ ] SSL/HTTPS activé
-- [ ] Backups Supabase configurés
-- [ ] Monitoring uptime configuré (UptimeRobot)
+- Tests manuels de toutes les fonctionnalités
+- Variables d'environnement configurées
+- RLS activé sur Supabase
+- Rate limiting implémenté
+- Error tracking configuré (Sentry)
+- Analytics installé
+- Domaine personnalisé configuré (optionnel)
+- SSL/HTTPS activé
+- Backups Supabase configurés
+- Monitoring uptime configuré (UptimeRobot)
 
 ---
 
