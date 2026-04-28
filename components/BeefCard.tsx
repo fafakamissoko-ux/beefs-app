@@ -264,7 +264,10 @@ export function BeefCard({
         </div>
 
         {status === 'scheduled' && scheduled_at ? (
-          <div className="absolute bottom-2 left-2 z-10 scale-90 origin-bottom-left">
+          <div
+            className="pointer-events-none absolute bottom-2 left-2 z-10 origin-bottom-left scale-90 rounded-md border border-cobalt-500/40 bg-black/70 px-2 py-1 shadow-lg backdrop-blur-md [&_.text-blue-400]:text-cobalt-400 [&_svg]:text-cobalt-300 [&_span.text-white]:text-white [&_span.text-white]:drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+            aria-live="polite"
+          >
             <Countdown scheduledAt={scheduled_at} />
           </div>
         ) : null}
@@ -339,8 +342,8 @@ export function BeefCard({
 
       </div>
 
-      <div className="relative z-10 flex flex-1 min-h-0 gap-3 bg-[#08080A] p-3 pointer-events-auto md:p-4">
-        <div className="shrink-0 pt-0.5">
+      <div className="relative z-10 flex flex-1 min-h-0 items-stretch gap-3 bg-[#08080A] p-3 pointer-events-auto md:p-4">
+        <div className="flex shrink-0 flex-col pt-0.5">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 border border-white/20 text-sm font-bold text-white backdrop-blur-md">
             {(host_name || '?')[0].toUpperCase()}
           </div>
@@ -358,21 +361,21 @@ export function BeefCard({
               {host_name || 'Médiateur'}
             </ProfileUserLink>
             {(challenger_a_name || challenger_b_name) && (
-              <span className="line-clamp-1 truncate text-[11px] font-medium">
+              <span className="line-clamp-1 truncate text-[11px] font-semibold tracking-tight">
                 {challenger_a_name ? (
-                  <ProfileUserLink username={challenger_a_username} className="text-cobalt-400 hover:text-cobalt-300">
+                  <ProfileUserLink username={challenger_a_username} className="font-semibold text-cobalt-400 hover:text-cobalt-300">
                     {challenger_a_name}
                   </ProfileUserLink>
                 ) : (
-                  <span className="text-cobalt-400/90">?</span>
+                  <span className="font-semibold text-cobalt-400">?</span>
                 )}{' '}
-                <span className="text-white/30">vs</span>{' '}
+                <span className="font-medium text-white/30">vs</span>{' '}
                 {challenger_b_name ? (
-                  <ProfileUserLink username={challenger_b_username} className="text-ember-400 hover:text-ember-300">
+                  <ProfileUserLink username={challenger_b_username} className="font-semibold text-ember-400 hover:text-ember-300">
                     {challenger_b_name}
                   </ProfileUserLink>
                 ) : (
-                  <span className="text-ember-400/90">?</span>
+                  <span className="font-semibold text-ember-400">?</span>
                 )}
               </span>
             )}
