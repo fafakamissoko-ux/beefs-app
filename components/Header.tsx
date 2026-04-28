@@ -106,7 +106,7 @@ function hideGlobalSearchOnPath(pathname: string | null): boolean {
   return false;
 }
 
-/** Badge compteur nav (desktop + mobile menu) — ember + ping pour les convocations. */
+/** Badge compteur nav (desktop + mobile menu) — plasma + ping pour les convocations. */
 function NavUnreadBadge({
   href,
   count,
@@ -126,10 +126,10 @@ function NavUnreadBadge({
   return (
     <span className={outer}>
       {href === '/invitations' && (
-        <span className="absolute inset-0 animate-ping rounded-full bg-ember-400 opacity-75" aria-hidden />
+        <span className="absolute inset-0 animate-ping rounded-full bg-plasma-400 opacity-75" aria-hidden />
       )}
       <span
-        className={`relative z-[1] inline-flex items-center justify-center rounded-full bg-ember-500 font-bold text-white ${inner}`}
+        className={`relative z-[1] inline-flex items-center justify-center rounded-full bg-plasma-500 font-bold text-white ${inner}`}
       >
         {formatNavBadgeCount(count)}
       </span>
@@ -329,7 +329,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   ? 'border-none bg-gradient-to-b from-black/90 via-black/40 to-transparent backdrop-blur-md max-lg:from-black/90 max-lg:via-black/40 max-lg:to-transparent lg:bg-[#050505]/60'
                   : 'border-b border-white/[0.08] bg-black/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md lg:shadow-none lg:border-b-0 lg:bg-[#050505]/60'
               }`
-            : 'fixed left-0 right-0 top-0 z-header border-b border-white/10 bg-[#050505]/80 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
+            : 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-[#050505]/80 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
         }
       >
         <div
@@ -351,8 +351,8 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               href={user ? '/feed' : '/'}
               className={`relative z-[5] flex shrink-0 items-center gap-2.5 group ${shell === 'phone' ? 'lg:mb-10 lg:w-full' : ''}`}
             >
-              <BeefLogo size={32} className="transition-transform group-hover:scale-105 drop-shadow-[0_0_12px_rgba(255,77,0,0.55)]" />
-              <span className="hidden sm:block text-xl font-extrabold text-gradient tracking-tight">
+              <BeefLogo size={32} className="transition-transform group-hover:scale-105 drop-shadow-[0_0_12px_rgba(162,0,255,0.55)]" />
+              <span className="hidden sm:block text-xl font-extrabold text-white tracking-tighter drop-shadow-md">
                 Beefs
               </span>
             </Link>
@@ -402,7 +402,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       prefetch={false}
                       className={`relative flex items-center gap-2 border-l-[3px] border-transparent px-3.5 py-2 text-sm font-medium transition-all duration-200 ${
                         active
-                          ? 'text-white max-lg:rounded-xl max-lg:border-l-transparent max-lg:bg-white/10 max-lg:text-ember-400 lg:rounded-none lg:border-ember-400 lg:bg-gradient-to-r lg:from-ember-500/15 lg:to-transparent lg:text-white'
+                          ? 'text-white max-lg:rounded-xl max-lg:border-l-transparent max-lg:bg-white/10 max-lg:text-plasma-400 lg:rounded-none lg:border-plasma-400 lg:bg-gradient-to-r lg:from-plasma-500/15 lg:to-transparent lg:text-white'
                           : 'text-gray-500 max-lg:rounded-xl max-lg:hover:bg-white/[0.04] max-lg:hover:text-gray-200 lg:rounded-none lg:text-gray-400 lg:hover:border-transparent lg:hover:bg-white/[0.04] lg:hover:text-white'
                       } ${shell === 'full' && navSecondaryHrefs.has(item.href) ? 'hidden xl:flex' : ''} ${
                         shell === 'phone' ? 'lg:w-full lg:justify-start lg:px-4' : ''
@@ -412,8 +412,8 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         <Icon
                           className={`w-[18px] h-[18px] ${
                             active
-                              ? 'max-lg:text-ember-400 ' +
-                                (item.href === '/live' || item.href === '/points' ? 'lg:text-ember-400' : '')
+                              ? 'max-lg:text-plasma-400 ' +
+                                (item.href === '/live' || item.href === '/points' ? 'lg:text-plasma-400' : '')
                               : ''
                           }`}
                         />
@@ -424,7 +424,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         <motion.div
                           layoutId="nav-indicator"
                           className="absolute -bottom-[13px] left-3 right-3 block h-[2px] rounded-full lg:hidden"
-                          style={{ background: 'linear-gradient(90deg, #0052FF, #FF4D00)' }}
+                          style={{ background: 'linear-gradient(90deg, #00F0FF, #A200FF)' }}
                           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                         />
                       )}
@@ -444,12 +444,12 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   <Link
                     href="/create"
                     prefetch
-                    className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-[2px] border border-prestige-gold/30 bg-prestige-gold/10 px-4 py-2 text-sm font-semibold text-prestige-gold shadow-[0_0_15px_rgba(212,175,55,0.2)] transition-all hover:bg-prestige-gold/20 hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] active:scale-[0.97] ${
+                    className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border border-plasma-500/30 bg-plasma-600 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-white shadow-glow-plasma transition-all hover:bg-plasma-500 hover:shadow-glow-plasma active:scale-[0.97] ${
                       shell === 'phone' ? 'lg:w-full lg:justify-center' : ''
                     }`}
                   >
                     <Swords className="h-4 w-4 shrink-0" aria-hidden />
-                    <span className="md:hidden lg:inline">Initier</span>
+                    <span className="md:hidden lg:inline">Call Out</span>
                   </Link>
 
                   <div className="relative shrink-0" data-user-menu>
@@ -459,7 +459,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         shell === 'phone' ? 'lg:w-full lg:justify-between' : ''
                       }`}
                     >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-chaos-gradient text-xs font-bold text-white ring-2 ring-white/10">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.03] text-xs font-bold text-white shadow-[0_0_10px_rgba(255,255,255,0.1)]">
                         {user.user_metadata?.username?.[0]?.toUpperCase() || 'U'}
                       </div>
                       <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
@@ -472,7 +472,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: -4, scale: 0.97 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute right-0 mt-2 w-60 rounded-2xl bg-black/80 backdrop-blur-2xl border border-white/10 shadow-modal overflow-hidden lg:top-auto lg:bottom-full lg:mb-2 lg:mt-0 lg:left-0 lg:right-auto"
+                          className="absolute right-0 mt-2 w-60 rounded-2xl border border-white/10 bg-black/80 shadow-card backdrop-blur-2xl overflow-hidden lg:top-auto lg:bottom-full lg:mb-2 lg:mt-0 lg:left-0 lg:right-auto"
                         >
                           <div className="px-4 py-3 dropdown-divider-bottom">
                             <p className="text-sm font-semibold text-white">{user.user_metadata?.username || 'Utilisateur'}</p>
@@ -514,7 +514,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           <div className="py-1 dropdown-divider-top">
                             <button
                               onClick={async () => { await signOut(); setUserMenuOpen(false); }}
-                              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-ember-400 transition-colors hover:bg-ember-500/[0.08]"
+                              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-plasma-400 transition-colors hover:bg-plasma-500/[0.08]"
                             >
                               <LogOut className="w-4 h-4" />
                               <span>Déconnexion</span>
@@ -537,7 +537,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   </Link>
                   <Link
                     href="/signup"
-                    className={`inline-flex min-h-[44px] items-center justify-center rounded-[2px] bg-chaos-gradient px-5 py-2 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97] ${
+                    className={`inline-flex min-h-[44px] items-center justify-center rounded-[2px] bg-brand-gradient px-5 py-2 text-sm font-semibold text-white shadow-glow-plasma transition-all hover:shadow-glow-plasma active:scale-[0.97] ${
                       shell === 'phone' ? 'lg:w-full' : ''
                     }`}
                   >
@@ -561,7 +561,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               {user && (
                 <Link
                   href={hrefWithFrom('/create', pathname)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-prestige-gold/15 text-prestige-gold backdrop-blur-md transition-colors border border-prestige-gold/30 hover:bg-prestige-gold/25 shadow-[0_0_10px_rgba(212,175,55,0.2)]"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-plasma-500/40 bg-plasma-600 text-white shadow-glow-plasma backdrop-blur-md transition-colors hover:bg-plasma-500"
                 >
                   <Swords className="h-4 w-4" strokeWidth={2} />
                 </Link>
@@ -608,7 +608,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all ${
                           active
-                            ? 'max-lg:rounded-xl max-lg:bg-white/10 text-ember-400'
+                            ? 'max-lg:rounded-xl max-lg:bg-white/10 text-plasma-400'
                             : 'text-gray-400 hover:text-white hover:bg-white/[0.04] max-lg:rounded-xl'
                         }`}
                       >
@@ -618,7 +618,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         </div>
                         <span className="flex-1">{item.label}</span>
                         {item.badge > 0 && (
-                          <span className="rounded-full bg-ember-500/10 px-2 py-0.5 text-[10px] font-bold text-ember-400">
+                          <span className="rounded-full bg-plasma-500/10 px-2 py-0.5 text-[10px] font-bold text-plasma-400">
                             {item.badge} nouvelle{item.badge > 1 ? 's' : ''}
                           </span>
                         )}
@@ -630,7 +630,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   {user ? (
                     <>
                       <div className="flex items-center gap-3 px-4 py-3 mb-2">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chaos-gradient text-sm font-bold text-white ring-2 ring-white/10">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/[0.03] text-sm font-bold text-white shadow-[0_0_10px_rgba(255,255,255,0.1)]">
                           {user.user_metadata?.username?.[0]?.toUpperCase() || 'U'}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -660,7 +660,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         </Link>
                       ))}
                       <button onClick={() => { signOut(); setMobileMenuOpen(false); }}
-                        className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-ember-400 transition-colors hover:bg-ember-500/[0.08]">
+                        className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-plasma-400 transition-colors hover:bg-plasma-500/[0.08]">
                         <LogOut className="w-5 h-5" />
                         <span>Déconnexion</span>
                       </button>
@@ -677,7 +677,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       <Link
                         href="/signup"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex flex-1 items-center justify-center rounded-[2px] bg-chaos-gradient py-3 text-center text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97]"
+                        className="flex flex-1 items-center justify-center rounded-[2px] bg-brand-gradient py-3 text-center text-sm font-semibold text-white shadow-glow-plasma transition-all hover:shadow-glow-plasma active:scale-[0.97]"
                       >
                         Entrer dans l&apos;Arène
                       </Link>

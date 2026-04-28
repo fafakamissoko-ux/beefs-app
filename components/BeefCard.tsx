@@ -141,14 +141,14 @@ export function BeefCard({
       case 'replay':
       case 'completed':
         return (
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-cobalt-500/20 bg-cobalt-500/10 text-xs font-bold tracking-wider text-cobalt-400 uppercase">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/20 bg-cyan-500/10 text-xs font-bold tracking-wider text-cyan-400 uppercase">
             ▶ HIGHLIGHTS
           </div>
         );
       case 'scheduled':
       case 'ready':
         return (
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-cobalt-500/20 border border-cobalt-500/30 text-cobalt-300 text-xs font-bold tracking-wider uppercase">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-bold tracking-wider uppercase">
             <Calendar className="h-3.5 w-3.5 shrink-0" />
             À VENIR
           </div>
@@ -199,7 +199,7 @@ export function BeefCard({
       onMouseLeave={() => isReplay && setReplayHover(false)}
       className={`group relative flex min-h-0 flex-1 h-full w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border max-md:border-white/[0.06] md:rounded-[1.5rem] md:border md:border-white/[0.08] md:bg-[#08080A] md:hover:border-white/20 ${
         status === 'live'
-          ? 'md:shadow-[0_0_0_1px_rgba(255,77,0,0.28)] md:group-hover:shadow-[0_0_24px_rgba(255,77,0,0.5)]'
+          ? 'md:shadow-[0_0_0_1px_rgba(162,0,255,0.35)] md:group-hover:shadow-[0_0_24px_rgba(162,0,255,0.55)]'
           : ''
       } ${
         isManifesto
@@ -211,7 +211,7 @@ export function BeefCard({
         ref={mediaBlockRef}
         className={`relative w-full aspect-video overflow-hidden bg-black/20 shrink-0 max-md:rounded-t-2xl md:rounded-t-[1.5rem] ${
           status === 'live'
-            ? 'ring-1 ring-inset ring-ember-500/40 md:group-hover:ring-2 md:group-hover:ring-ember-500/60'
+            ? 'ring-1 ring-inset ring-plasma-500/40 md:group-hover:ring-2 md:group-hover:ring-plasma-500/60'
             : ''
         }`}
       >
@@ -245,7 +245,7 @@ export function BeefCard({
 
         <div className="absolute top-2 left-2 z-20 flex max-w-[min(100%,70%)] flex-col items-start gap-1">
             {status === 'live' && (
-              <div className="flex w-fit items-center gap-1 rounded bg-ember-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight text-white shadow-sm animate-pulse">
+              <div className="flex w-fit items-center gap-1 rounded bg-plasma-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight text-white shadow-sm animate-pulse">
                 <div className="h-1.5 w-1.5 rounded-full bg-white" />
                 Live
               </div>
@@ -254,14 +254,14 @@ export function BeefCard({
         </div>
         <div className="absolute top-2 right-2 z-20 flex max-w-[48%] flex-col items-end gap-1">
             {(status === 'scheduled' || status === 'ready' || (status === 'pending' && scheduled_at)) && (price ?? 0) > 0 && (
-              <div className="flex w-fit items-center gap-0.5 rounded border border-cobalt-500/30 bg-cobalt-500/20 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-cobalt-100 backdrop-blur-sm">
+              <div className="flex w-fit items-center gap-0.5 rounded border border-cyan-500/30 bg-cyan-500/20 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-cyan-400 backdrop-blur-sm">
                 <Flame className="h-2.5 w-2.5" />
                 Entrée · {price} pts
               </div>
             )}
             {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-              <div className="flex w-fit items-center gap-0.5 rounded border border-white/20 bg-black/55 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-ember-100 backdrop-blur-sm">
-                <Flame className="h-2.5 w-2.5 text-ember-400" />
+              <div className="flex w-fit items-center gap-0.5 rounded border border-white/20 bg-black/55 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-plasma-400 backdrop-blur-sm">
+                <Flame className="h-2.5 w-2.5 text-plasma-400" />
                 Suite · {price} pts
               </div>
             )}
@@ -269,7 +269,7 @@ export function BeefCard({
 
         {status === 'scheduled' && scheduled_at ? (
           <div
-            className="pointer-events-none absolute bottom-2 left-2 z-10 origin-bottom-left scale-90 rounded-md border border-cobalt-500/40 bg-black/70 px-2 py-1 shadow-lg backdrop-blur-md [&_.text-blue-400]:text-cobalt-400 [&_svg]:text-cobalt-300 [&_span.text-white]:text-white [&_span.text-white]:drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+            className="pointer-events-none absolute bottom-2 left-2 z-10 origin-bottom-left scale-90 rounded-md border border-cyan-500/40 bg-black/70 px-2 py-1 shadow-lg backdrop-blur-md [&_.text-blue-400]:text-cyan-400 [&_svg]:text-cyan-400 [&_span.text-white]:text-white [&_span.text-white]:drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
             aria-live="polite"
           >
             <Countdown scheduledAt={scheduled_at} />
@@ -353,7 +353,7 @@ export function BeefCard({
           </div>
         </div>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <h3 className="line-clamp-2 font-sans text-[15px] md:text-base font-bold leading-snug text-white transition-colors md:group-hover:text-ember-400">
+          <h3 className="line-clamp-2 font-sans text-[15px] md:text-base font-bold leading-snug text-white transition-colors md:group-hover:text-plasma-400">
             {title}
           </h3>
           <div className="mt-1 flex flex-col gap-0.5">
@@ -367,19 +367,19 @@ export function BeefCard({
             {(challenger_a_name || challenger_b_name) && (
               <span className="line-clamp-1 truncate text-[11px] font-semibold tracking-tight">
                 {challenger_a_name ? (
-                  <ProfileUserLink username={challenger_a_username} className="font-semibold text-cobalt-400 hover:text-cobalt-300">
+                  <ProfileUserLink username={challenger_a_username} className="font-semibold text-cyan-400 hover:text-cyan-600">
                     {challenger_a_name}
                   </ProfileUserLink>
                 ) : (
-                  <span className="font-semibold text-cobalt-400">?</span>
+                  <span className="font-semibold text-cyan-400">?</span>
                 )}{' '}
                 <span className="font-medium text-white/30">vs</span>{' '}
                 {challenger_b_name ? (
-                  <ProfileUserLink username={challenger_b_username} className="font-semibold text-ember-400 hover:text-ember-300">
+                  <ProfileUserLink username={challenger_b_username} className="font-semibold text-plasma-400 hover:text-plasma-500">
                     {challenger_b_name}
                   </ProfileUserLink>
                 ) : (
-                  <span className="font-semibold text-ember-400">?</span>
+                  <span className="font-semibold text-plasma-400">?</span>
                 )}
               </span>
             )}
@@ -402,7 +402,7 @@ export function BeefCard({
                     e.stopPropagation();
                     onTagClick?.(tag);
                   }}
-                  className="rounded px-1 text-[9px] font-medium text-gray-600 transition-colors hover:text-ember-400"
+                  className="rounded px-1 text-[9px] font-medium text-gray-600 transition-colors hover:text-plasma-400"
                 >
                   #{tag}
                 </button>
@@ -478,7 +478,7 @@ export function BeefCard({
                     e.stopPropagation();
                     onSeDesister();
                   }}
-                  className="w-full py-1.5 text-center text-xs font-medium text-ember-400/90 transition-colors hover:text-ember-300"
+                  className="w-full py-1.5 text-center text-xs font-medium text-plasma-400/90 transition-colors hover:text-plasma-500"
                 >
                   Se désister
                 </button>
@@ -492,7 +492,7 @@ export function BeefCard({
                 e.stopPropagation();
                 liveAudienceAction.onClick();
               }}
-              className="w-full rounded-xl border border-ember-500/35 bg-ember-500/15 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-ember-500/25"
+              className="w-full rounded-xl border border-plasma-500/35 bg-plasma-500/15 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-plasma-500/25"
             >
               {liveAudienceAction.variant === 'return'
                 ? "Retourner dans l'Arène"

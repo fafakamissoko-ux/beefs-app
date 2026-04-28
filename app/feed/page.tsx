@@ -15,7 +15,7 @@ import { hrefWithFrom } from '@/lib/navigation-return';
 import { useClientArenaOnboardingGuard } from '@/lib/client-arena-onboarding-guard';
 
 const CreateBeefForm = dynamic(() => import('@/components/CreateBeefForm').then(m => m.CreateBeefForm), {
-  loading: () => <div className="flex items-center justify-center p-8"><div className="w-6 h-6 border-2 border-ember-500 border-t-transparent rounded-full animate-spin" /></div>,
+  loading: () => <div className="flex items-center justify-center p-8"><div className="w-6 h-6 border-2 border-plasma-500 border-t-transparent rounded-full animate-spin" /></div>,
 });
 
 /** Ouvre la modale création quand on arrive depuis le header (ex. /feed?create=1). */
@@ -553,7 +553,7 @@ export default function FeedPage() {
   if (!user) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
-        <div className="w-8 h-8 border-2 border-ember-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-plasma-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -579,11 +579,11 @@ export default function FeedPage() {
                   onClick={() => setFeedType(tab.id)}
                   className={`group flex min-h-[44px] items-center gap-2 pb-1 transition-colors ${
                     feedType === tab.id
-                      ? 'border-b-2 border-ember-500 text-white font-black uppercase tracking-widest text-[11px] md:text-[12px]'
-                      : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-ember-400 font-bold uppercase tracking-widest text-[11px] md:text-[12px]'
+                      ? 'border-b-2 border-plasma-500 text-white font-black uppercase tracking-widest text-[11px] md:text-[12px]'
+                      : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-plasma-400 font-bold uppercase tracking-widest text-[11px] md:text-[12px]'
                   }`}
                 >
-                  <tab.icon className={`h-4 w-4 shrink-0 ${feedType === tab.id ? 'text-white' : 'text-white/40 group-hover:text-ember-400'}`} />
+                  <tab.icon className={`h-4 w-4 shrink-0 ${feedType === tab.id ? 'text-white' : 'text-white/40 group-hover:text-plasma-400'}`} />
                   <span>{tab.label}</span>
                 </button>
               ))}
@@ -592,7 +592,7 @@ export default function FeedPage() {
               href={hrefWithFrom('/buy-points', pathname)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-[44px] max-md:hidden shrink-0 items-center justify-center gap-2 rounded-full border border-ember-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-ember-400 transition-colors hover:bg-ember-500/10 hover:text-white lg:hidden"
+              className="inline-flex min-h-[44px] max-md:hidden shrink-0 items-center justify-center gap-2 rounded-full border border-plasma-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-plasma-400 transition-colors hover:bg-plasma-500/10 hover:text-white lg:hidden"
             >
               <Coins className="w-4 h-4 flex-shrink-0" />
               <span>Acquérir de l&apos;Aura</span>
@@ -621,7 +621,7 @@ export default function FeedPage() {
             <div className="flex flex-wrap gap-2">
               {selectedTags.map(tag => (
                 <motion.div key={tag} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                  className="flex items-center gap-1.5 rounded-full bg-chaos-gradient px-3 py-1 text-xs font-semibold text-white">
+                  className="flex items-center gap-1.5 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white">
                   <span>#{tag}</span>
                   <button onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))} className="hover:bg-white/20 rounded-full p-0.5">
                     <X className="w-3 h-3" />
@@ -641,7 +641,7 @@ export default function FeedPage() {
               <button
                 key={tag}
                 onClick={() => handleTagClick(tag)}
-                className="inline-flex min-h-[44px] flex-shrink-0 items-center rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1 font-sans text-xs font-medium text-white/40 whitespace-nowrap transition-colors hover:text-ember-400"
+                className="inline-flex min-h-[44px] flex-shrink-0 items-center rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1 font-sans text-xs font-medium text-white/40 whitespace-nowrap transition-colors hover:text-plasma-400"
               >
                 #{tag}
               </button>
@@ -759,7 +759,7 @@ export default function FeedPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed z-[500] max-md:bottom-6 max-md:left-1/2 max-md:w-max max-md:max-w-[95vw] max-md:-translate-x-1/2 md:bottom-8 md:right-8 md:left-auto md:w-[340px] md:translate-x-0 overflow-hidden max-md:rounded-full md:rounded-2xl border border-ember-500/30 bg-gradient-to-br from-black/95 to-obsidian-950 shadow-[0_8px_32px_rgba(0,0,0,0.8)]"
+          className="fixed z-[500] max-md:bottom-6 max-md:left-1/2 max-md:w-max max-md:max-w-[95vw] max-md:-translate-x-1/2 md:bottom-8 md:right-8 md:left-auto md:w-[340px] md:translate-x-0 overflow-hidden max-md:rounded-full md:rounded-2xl border border-plasma-500/30 bg-gradient-to-br from-black/95 to-obsidian-950 shadow-[0_8px_32px_rgba(0,0,0,0.8)]"
         >
           <button
             type="button"
@@ -767,19 +767,19 @@ export default function FeedPage() {
             className="group flex w-full items-center md:justify-between max-md:justify-center gap-3 px-3 py-2.5 text-left md:gap-4 md:p-4"
           >
             <div className="flex min-w-0 max-md:flex-initial md:flex-1 items-center gap-2.5 md:gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ember-500/30 bg-ember-500/15">
-                <Radio className="h-4 w-4 shrink-0 animate-pulse text-ember-400" />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-plasma-500/30 bg-plasma-500/15">
+                <Radio className="h-4 w-4 shrink-0 animate-pulse text-plasma-400" />
               </div>
               <div className="min-w-0 max-md:flex-initial max-md:pr-2 md:flex-1">
                 <p className="truncate font-sans text-sm font-bold text-white">
                   {activeBeef.title}
                 </p>
                 <p className="mt-0.5 max-md:hidden font-sans text-[11px] text-white/50 md:text-xs">
-                  Tu es <span className="font-semibold text-ember-400">{activeBeef.role}</span> dans ce beef
+                  Tu es <span className="font-semibold text-plasma-400">{activeBeef.role}</span> dans ce beef
                 </p>
               </div>
             </div>
-            <div className="px-4 py-2 shrink-0 rounded-full bg-gradient-to-r from-ember-600 to-ember-500 text-[10px] md:text-[11px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(255,77,0,0.5)]">
+            <div className="px-4 py-2 shrink-0 rounded-full bg-gradient-to-r from-plasma-600 to-plasma-500 text-[10px] md:text-[11px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(162,0,255,0.5)]">
               Rejoindre
             </div>
           </button>
