@@ -20,6 +20,8 @@ const config: Config = {
         },
         plasma: {
           DEFAULT: "#A200FF",
+          200: "#EEC6FF",
+          300: "#D580FF",
           400: "#C44DFF",
           500: "#A200FF",
           600: "#7A00CC",
@@ -27,6 +29,8 @@ const config: Config = {
         },
         cyan: {
           DEFAULT: "#00F0FF",
+          200: "#B9FFFF",
+          300: "#7DFFFF",
           400: "#4DFFFF",
           500: "#00F0FF",
           600: "#00B3CC",

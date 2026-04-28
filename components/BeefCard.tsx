@@ -353,13 +353,13 @@ export function BeefCard({
           </div>
         </div>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <h3 className="line-clamp-2 font-sans text-[15px] md:text-base font-bold leading-snug text-white transition-colors md:group-hover:text-plasma-400">
+          <h3 className="line-clamp-2 font-sans text-[15px] md:text-base font-bold leading-snug text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-colors md:group-hover:text-plasma-400">
             {title}
           </h3>
           <div className="mt-1 flex flex-col gap-0.5">
             <ProfileUserLink
               username={host_username}
-              className="truncate text-xs font-medium text-gray-400 transition-colors hover:text-white"
+              className="truncate text-xs font-medium text-gray-300 transition-colors hover:text-white"
               profileLabel={`Profil de ${host_name || 'Médiateur'}`}
             >
               {host_name || 'Médiateur'}
@@ -367,19 +367,25 @@ export function BeefCard({
             {(challenger_a_name || challenger_b_name) && (
               <span className="line-clamp-1 truncate text-[11px] font-semibold tracking-tight">
                 {challenger_a_name ? (
-                  <ProfileUserLink username={challenger_a_username} className="font-semibold text-cyan-400 hover:text-cyan-600">
+                  <ProfileUserLink
+                    username={challenger_a_username}
+                    className="font-semibold text-plasma-300 drop-shadow-[0_0_8px_rgba(162,0,255,0.8)] hover:text-plasma-200"
+                  >
                     {challenger_a_name}
                   </ProfileUserLink>
                 ) : (
-                  <span className="font-semibold text-cyan-400">?</span>
+                  <span className="font-semibold text-plasma-300 drop-shadow-[0_0_8px_rgba(162,0,255,0.8)]">?</span>
                 )}{' '}
-                <span className="font-medium text-white/30">vs</span>{' '}
+                <span className="font-medium text-gray-300 drop-shadow-[0_0_6px_rgba(0,240,255,0.35)]">vs</span>{' '}
                 {challenger_b_name ? (
-                  <ProfileUserLink username={challenger_b_username} className="font-semibold text-plasma-400 hover:text-plasma-500">
+                  <ProfileUserLink
+                    username={challenger_b_username}
+                    className="font-semibold text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.8)] hover:text-cyan-200"
+                  >
                     {challenger_b_name}
                   </ProfileUserLink>
                 ) : (
-                  <span className="font-semibold text-plasma-400">?</span>
+                  <span className="font-semibold text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.8)]">?</span>
                 )}
               </span>
             )}
@@ -388,8 +394,10 @@ export function BeefCard({
             )}
           </div>
           {descText ? (
-            <p className="mt-1.5 line-clamp-1 text-[11px] text-gray-500 break-words">
+            <p className="mt-1.5 line-clamp-1 break-words text-[11px] text-cyan-300/70">
               {descText}
+            </p>
+            </p>
             </p>
           ) : null}
           {tags.length > 0 && (
@@ -402,7 +410,7 @@ export function BeefCard({
                     e.stopPropagation();
                     onTagClick?.(tag);
                   }}
-                  className="rounded px-1 text-[9px] font-medium text-gray-600 transition-colors hover:text-plasma-400"
+                  className="rounded px-1 text-[9px] font-medium text-gray-300 transition-colors hover:text-plasma-400"
                 >
                   #{tag}
                 </button>

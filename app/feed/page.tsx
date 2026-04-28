@@ -579,12 +579,26 @@ export default function FeedPage() {
                   onClick={() => setFeedType(tab.id)}
                   className={`group flex min-h-[44px] items-center gap-2 pb-1 transition-colors ${
                     feedType === tab.id
-                      ? 'border-b-2 border-plasma-500 text-white font-black uppercase tracking-widest text-[11px] md:text-[12px]'
+                      ? 'border-b-2 border-plasma-500 font-black uppercase tracking-widest text-[11px] text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] md:text-[12px]'
                       : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-plasma-400 font-bold uppercase tracking-widest text-[11px] md:text-[12px]'
                   }`}
                 >
-                  <tab.icon className={`h-4 w-4 shrink-0 ${feedType === tab.id ? 'text-white' : 'text-white/40 group-hover:text-plasma-400'}`} />
-                  <span>{tab.label}</span>
+                  <tab.icon
+                    className={`h-4 w-4 shrink-0 ${
+                      feedType === tab.id
+                        ? 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]'
+                        : 'text-white/40 group-hover:text-plasma-400'
+                    }`}
+                  />
+                  <span
+                    className={
+                      feedType === tab.id
+                        ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]'
+                        : undefined
+                    }
+                  >
+                    {tab.label}
+                  </span>
                 </button>
               ))}
               </div>

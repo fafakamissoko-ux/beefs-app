@@ -455,14 +455,19 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   <div className="relative shrink-0" data-user-menu>
                     <button
                       onClick={() => setUserMenuOpen(!userMenuOpen)}
-                      className={`flex shrink-0 items-center gap-2 px-2.5 py-1.5 hover:bg-white/[0.06] rounded-xl transition-all ${
+                      className={`flex shrink-0 items-center gap-3 px-2.5 py-1.5 hover:bg-white/[0.06] rounded-xl transition-all ${
                         shell === 'phone' ? 'lg:w-full lg:justify-between' : ''
                       }`}
                     >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.03] text-xs font-bold text-white shadow-[0_0_10px_rgba(255,255,255,0.1)]">
-                        {user.user_metadata?.username?.[0]?.toUpperCase() || 'U'}
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.03] text-xs font-bold text-white shadow-[0_0_10px_rgba(255,255,255,0.1)]">
+                          {user.user_metadata?.username?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                        <span className="hidden lg:block truncate font-sans text-sm font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
+                          {user.user_metadata?.username || 'Challenger'}
+                        </span>
                       </div>
-                      <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
                     </button>
 
                     <AnimatePresence>
