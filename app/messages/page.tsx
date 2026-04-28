@@ -50,7 +50,7 @@ type UserSearchRow = {
 function MessagesPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -67,11 +67,12 @@ function MessagesPageInner() {
   const dmDeepLinkLockRef = useRef(false);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (authLoading) return;
+    if (!user) {
       const dest = `/messages${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
       router.push(`/login?redirect=${encodeURIComponent(dest)}`);
     }
-  }, [user, loading, router, searchParams]);
+  }, [user, authLoading, router, searchParams]);
 
   const loadConversations = useCallback(async (): Promise<Conversation[]> => {
     if (!user) return [];
@@ -121,13 +122,14 @@ function MessagesPageInner() {
   }, [user]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       setConversations([]);
       setLoadingConvs(false);
       return;
     }
     void loadConversations();
-  }, [user, loadConversations]);
+  }, [user, authLoading, loadConversations]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -312,7 +314,7 @@ function MessagesPageInner() {
   };
 
   useEffect(() => {
-    if (loading || !user || loadingConvs) return;
+    if (authLoading || !user || loadingConvs) return;
     if (dmDeepLinkLockRef.current) return;
 
     let raw = searchParams.get('with');
@@ -380,7 +382,7 @@ function MessagesPageInner() {
         router.replace('/messages', { scroll: false });
       }
     })();
-  }, [loading, user, loadingConvs, searchParams, router, toast, loadMessages, loadConversations]);
+  }, [authLoading, user, loadingConvs, searchParams, router, toast, loadMessages, loadConversations]);
 
   const activateRow = (fn: () => void) => (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -401,15 +403,13 @@ function MessagesPageInner() {
     return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   };
 
-  if (loading) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
-
-  if (!user) return null;
 
   return (
     <div className="h-[calc(100vh-3.5rem)] overflow-hidden">

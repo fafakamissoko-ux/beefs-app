@@ -31,7 +31,7 @@ interface Invitation {
 
 export default function InvitationsPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,12 +119,13 @@ export default function InvitationsPage() {
   }, [user]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push('/login');
       return;
     }
     void loadInvitations();
-  }, [user, router, loadInvitations]);
+  }, [user, authLoading, router, loadInvitations]);
 
   const handleResponse = async (invitationId: string, beefId: string, accept: boolean) => {
     setRespondingTo(invitationId);
@@ -192,6 +193,17 @@ export default function InvitationsPage() {
       default: return 'bg-gray-500/20 text-gray-400';
     }
   };
+
+  if (authLoading || !user) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+          <p className="font-semibold text-white">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

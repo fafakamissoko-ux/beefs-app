@@ -85,7 +85,8 @@ export default function NotificationsPage() {
   const [markingAll, setMarkingAll] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (authLoading) return;
+    if (!user) {
       router.push('/login?redirect=/notifications');
     }
   }, [user, authLoading, router]);

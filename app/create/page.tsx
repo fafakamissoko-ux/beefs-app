@@ -22,9 +22,10 @@ const CreateBeefForm = dynamic(
 
 export default function CreateBeefPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
       if (hasSeenOnboarding !== 'true') {
@@ -33,7 +34,7 @@ export default function CreateBeefPage() {
       }
       router.push('/login');
     }
-  }, [user, router]);
+  }, [user, authLoading, router]);
 
   const handleSubmit = async (beefData: SubmitBeefPayload) => {
     if (!user) {
@@ -44,7 +45,7 @@ export default function CreateBeefPage() {
     router.push('/feed');
   };
 
-  if (!user) {
+  if (authLoading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />

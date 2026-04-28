@@ -10,7 +10,8 @@ export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (authLoading) return;
+    if (!user) {
       router.push('/login?redirect=/profile');
     }
   }, [user, authLoading, router]);

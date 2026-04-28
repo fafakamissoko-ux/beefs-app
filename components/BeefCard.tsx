@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Flame, Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye } from 'lucide-react';
+import { Clock, Flame, Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, ChevronDown } from 'lucide-react';
 import { hasBeefWatchStarted } from '@/lib/beef-view-local';
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
@@ -582,22 +582,35 @@ export function BeefCard({
               )}
             </div>
 
-            <div className="flex flex-1 flex-col overflow-y-auto bg-obsidian-900 p-6 md:p-8">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-obsidian-900 p-6 md:p-8">
               <h2 className="mb-4 text-xl font-black text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)] md:text-2xl">
                 {title}
               </h2>
               <div className="mb-6 flex items-center rounded-xl border border-white/10 bg-white/5 p-3 text-sm font-bold">
-                <span className="flex-1 truncate text-center text-plasma-300 drop-shadow-[0_0_8px_rgba(162,0,255,0.8)]">
+                <ProfileUserLink
+                  username={challenger_a_username}
+                  className="flex-1 truncate text-center text-plasma-300 drop-shadow-[0_0_8px_rgba(162,0,255,0.8)] transition-colors hover:text-plasma-200"
+                >
                   {challenger_a_name || 'Challenger A'}
-                </span>
+                </ProfileUserLink>
                 <span className="mx-3 font-black italic text-white/30">VS</span>
-                <span className="flex-1 truncate text-center text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.8)]">
+                <ProfileUserLink
+                  username={challenger_b_username}
+                  className="flex-1 truncate text-center text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.8)] transition-colors hover:text-cyan-200"
+                >
                   {challenger_b_name || 'Challenger B'}
-                </span>
+                </ProfileUserLink>
               </div>
-              <div className="mb-8 flex-1 whitespace-pre-wrap text-sm font-medium leading-relaxed text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
-                {description?.trim() ||
-                  "Aucune description fournie. Rejoignez l&apos;Arène pour découvrir l&apos;enjeu de ce choc."}
+              <div className="relative mb-6 flex min-h-0 flex-1 flex-col">
+                <div className="hide-scrollbar flex-1 overflow-y-auto pr-2 text-sm font-medium leading-relaxed text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] whitespace-pre-wrap">
+                  {description?.trim() ||
+                    "Aucune description fournie. Rejoignez l'Arène pour découvrir l'enjeu de ce choc."}
+                </div>
+                {description && description.length > 150 && (
+                  <div className="pointer-events-none absolute bottom-0 left-0 right-0 flex h-12 items-end justify-center bg-gradient-to-t from-obsidian-900 to-transparent pb-1">
+                    <ChevronDown className="h-5 w-5 animate-bounce text-plasma-400 drop-shadow-[0_0_8px_rgba(162,0,255,0.8)]" />
+                  </div>
+                )}
               </div>
               <div className="mt-auto pt-4">
                 <button

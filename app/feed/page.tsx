@@ -104,7 +104,7 @@ function compareArenaOrder(a: Beef, b: Beef) {
 export default function FeedPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   useClientArenaOnboardingGuard(user?.id);
   const { toast } = useToast();
   const [beefs, setBeefs] = useState<Beef[]>([]);
@@ -488,14 +488,18 @@ export default function FeedPage() {
   );
 
   useEffect(() => {
+    if (authLoading) return; // FIX: On attend que Supabase confirme l'état
     if (!user) {
       const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-      if (hasSeenOnboarding !== 'true') { router.push('/welcome'); return; }
+      if (hasSeenOnboarding !== 'true') {
+        router.push('/welcome');
+        return;
+      }
       router.push('/login');
       return;
     }
     void loadBeefs();
-  }, [user, router, loadBeefs]);
+  }, [user, authLoading, router, loadBeefs]);
 
   useEffect(() => {
     if (user) {
@@ -550,10 +554,10 @@ export default function FeedPage() {
     }
   };
 
-  if (!user) {
+  if (authLoading || !user) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
-        <div className="w-8 h-8 border-2 border-plasma-500 border-t-transparent rounded-full animate-spin" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-plasma-500 border-t-transparent" />
       </div>
     );
   }

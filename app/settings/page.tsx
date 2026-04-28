@@ -50,7 +50,7 @@ function PasswordInlineError({ id, message }: { id: string; message: string | un
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const { preferences, updatePreferences } = useTheme();
   
   const [profile, setProfile] = useState({
@@ -131,6 +131,7 @@ export default function SettingsPage() {
   }, [user]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push('/login?redirect=/settings');
       return;
@@ -145,7 +146,7 @@ export default function SettingsPage() {
     } catch {
       setMediationAccess(false);
     }
-  }, [user, router, loadProfile]);
+  }, [user, authLoading, router, loadProfile]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -410,6 +411,17 @@ export default function SettingsPage() {
       setMessage({ type: 'error', text: error.message || 'Erreur lors de la suppression du compte' });
     }
   };
+
+  if (authLoading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+          <p className="font-semibold text-white">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
