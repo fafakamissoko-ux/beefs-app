@@ -351,7 +351,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               href={user ? '/feed' : '/'}
               className={`relative z-[5] flex shrink-0 items-center gap-2.5 group ${shell === 'phone' ? 'lg:mb-10 lg:w-full' : ''}`}
             >
-              <BeefLogo size={32} className="transition-transform group-hover:scale-105 drop-shadow-[0_0_12px_rgba(255,107,44,0.6)]" />
+              <BeefLogo size={32} className="transition-transform group-hover:scale-105 drop-shadow-[0_0_12px_rgba(255,77,0,0.55)]" />
               <span className="hidden sm:block text-xl font-extrabold text-gradient tracking-tight">
                 Beefs
               </span>
@@ -402,7 +402,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       prefetch={false}
                       className={`relative flex items-center gap-2 border-l-[3px] border-transparent px-3.5 py-2 text-sm font-medium transition-all duration-200 ${
                         active
-                          ? 'text-white max-lg:rounded-xl max-lg:border-l-transparent max-lg:bg-white/10 max-lg:text-brand-400 lg:rounded-none lg:border-brand-400 lg:bg-gradient-to-r lg:from-brand-500/15 lg:to-transparent lg:text-white'
+                          ? 'text-white max-lg:rounded-xl max-lg:border-l-transparent max-lg:bg-white/10 max-lg:text-ember-400 lg:rounded-none lg:border-ember-400 lg:bg-gradient-to-r lg:from-ember-500/15 lg:to-transparent lg:text-white'
                           : 'text-gray-500 max-lg:rounded-xl max-lg:hover:bg-white/[0.04] max-lg:hover:text-gray-200 lg:rounded-none lg:text-gray-400 lg:hover:border-transparent lg:hover:bg-white/[0.04] lg:hover:text-white'
                       } ${shell === 'full' && navSecondaryHrefs.has(item.href) ? 'hidden xl:flex' : ''} ${
                         shell === 'phone' ? 'lg:w-full lg:justify-start lg:px-4' : ''
@@ -412,8 +412,8 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         <Icon
                           className={`w-[18px] h-[18px] ${
                             active
-                              ? 'max-lg:text-brand-400 ' +
-                                (item.href === '/live' || item.href === '/points' ? 'lg:text-brand-400' : '')
+                              ? 'max-lg:text-ember-400 ' +
+                                (item.href === '/live' || item.href === '/points' ? 'lg:text-ember-400' : '')
                               : ''
                           }`}
                         />
@@ -459,7 +459,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         shell === 'phone' ? 'lg:w-full lg:justify-between' : ''
                       }`}
                     >
-                      <div className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-white font-bold text-xs ring-2 ring-white/10 brand-gradient">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-chaos-gradient text-xs font-bold text-white ring-2 ring-white/10">
                         {user.user_metadata?.username?.[0]?.toUpperCase() || 'U'}
                       </div>
                       <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
@@ -514,7 +514,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           <div className="py-1 dropdown-divider-top">
                             <button
                               onClick={async () => { await signOut(); setUserMenuOpen(false); }}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/[0.08] transition-colors"
+                              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-ember-400 transition-colors hover:bg-ember-500/[0.08]"
                             >
                               <LogOut className="w-4 h-4" />
                               <span>Déconnexion</span>
@@ -537,7 +537,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   </Link>
                   <Link
                     href="/signup"
-                    className={`brand-gradient inline-flex min-h-[44px] items-center justify-center rounded-[2px] px-5 py-2 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97] ${
+                    className={`inline-flex min-h-[44px] items-center justify-center rounded-[2px] bg-chaos-gradient px-5 py-2 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97] ${
                       shell === 'phone' ? 'lg:w-full' : ''
                     }`}
                   >
@@ -608,7 +608,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all ${
                           active
-                            ? 'max-lg:rounded-xl max-lg:bg-white/10 text-brand-400'
+                            ? 'max-lg:rounded-xl max-lg:bg-white/10 text-ember-400'
                             : 'text-gray-400 hover:text-white hover:bg-white/[0.04] max-lg:rounded-xl'
                         }`}
                       >
@@ -630,7 +630,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   {user ? (
                     <>
                       <div className="flex items-center gap-3 px-4 py-3 mb-2">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ring-2 ring-white/10 brand-gradient">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chaos-gradient text-sm font-bold text-white ring-2 ring-white/10">
                           {user.user_metadata?.username?.[0]?.toUpperCase() || 'U'}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -660,7 +660,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         </Link>
                       ))}
                       <button onClick={() => { signOut(); setMobileMenuOpen(false); }}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/[0.08] rounded-xl transition-colors">
+                        className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-ember-400 transition-colors hover:bg-ember-500/[0.08]">
                         <LogOut className="w-5 h-5" />
                         <span>Déconnexion</span>
                       </button>
@@ -677,7 +677,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       <Link
                         href="/signup"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="brand-gradient flex flex-1 items-center justify-center rounded-[2px] py-3 text-center text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97]"
+                        className="flex flex-1 items-center justify-center rounded-[2px] bg-chaos-gradient py-3 text-center text-sm font-semibold text-white shadow-glow transition-all hover:shadow-glow active:scale-[0.97]"
                       >
                         Entrer dans l&apos;Arène
                       </Link>

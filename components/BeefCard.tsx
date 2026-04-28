@@ -141,7 +141,7 @@ export function BeefCard({
       case 'replay':
       case 'completed':
         return (
-          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold tracking-wider uppercase">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-cobalt-500/20 bg-cobalt-500/10 text-xs font-bold tracking-wider text-cobalt-400 uppercase">
             ▶ HIGHLIGHTS
           </div>
         );
@@ -198,7 +198,9 @@ export function BeefCard({
       onMouseEnter={() => isReplay && setReplayHover(true)}
       onMouseLeave={() => isReplay && setReplayHover(false)}
       className={`group relative flex min-h-0 flex-1 h-full w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border max-md:border-white/[0.06] md:rounded-[1.5rem] md:border md:border-white/[0.08] md:bg-[#08080A] md:hover:border-white/20 ${
-        status === 'live' ? 'md:shadow-[0_0_0_1px_rgba(239,68,68,0.25)] md:group-hover:shadow-[0_0_24px_rgba(239,68,68,0.45)]' : ''
+        status === 'live'
+          ? 'md:shadow-[0_0_0_1px_rgba(255,77,0,0.28)] md:group-hover:shadow-[0_0_24px_rgba(255,77,0,0.5)]'
+          : ''
       } ${
         isManifesto
           ? 'md:border-dashed md:border-white/15 md:hover:border-prestige-gold/30'
@@ -208,7 +210,9 @@ export function BeefCard({
       <div
         ref={mediaBlockRef}
         className={`relative w-full aspect-video overflow-hidden bg-black/20 shrink-0 max-md:rounded-t-2xl md:rounded-t-[1.5rem] ${
-          status === 'live' ? 'ring-1 ring-inset ring-red-500/40 md:group-hover:ring-2 md:group-hover:ring-red-500/60' : ''
+          status === 'live'
+            ? 'ring-1 ring-inset ring-ember-500/40 md:group-hover:ring-2 md:group-hover:ring-ember-500/60'
+            : ''
         }`}
       >
         <div className="absolute inset-0 overflow-hidden">
@@ -230,7 +234,7 @@ export function BeefCard({
             sizes="(max-width: 768px) 100vw, 384px"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-900 to-black" />
+          <div className="absolute inset-0 bg-gradient-to-b from-obsidian-900 to-black" />
         )}
         </div>
 
@@ -241,7 +245,7 @@ export function BeefCard({
 
         <div className="absolute top-2 left-2 z-20 flex max-w-[min(100%,70%)] flex-col items-start gap-1">
             {status === 'live' && (
-              <div className="flex w-fit items-center gap-1 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight text-white shadow-sm animate-pulse">
+              <div className="flex w-fit items-center gap-1 rounded bg-ember-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight text-white shadow-sm animate-pulse">
                 <div className="h-1.5 w-1.5 rounded-full bg-white" />
                 Live
               </div>
@@ -256,8 +260,8 @@ export function BeefCard({
               </div>
             )}
             {status === 'live' && (price ?? 0) > 0 && hasOpenedArena && (
-              <div className="flex w-fit items-center gap-0.5 rounded border border-white/20 bg-black/55 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-brand-100 backdrop-blur-sm">
-                <Flame className="h-2.5 w-2.5 text-orange-400" />
+              <div className="flex w-fit items-center gap-0.5 rounded border border-white/20 bg-black/55 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-ember-100 backdrop-blur-sm">
+                <Flame className="h-2.5 w-2.5 text-ember-400" />
                 Suite · {price} pts
               </div>
             )}
@@ -349,7 +353,7 @@ export function BeefCard({
           </div>
         </div>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <h3 className="line-clamp-2 font-sans text-[15px] md:text-base font-bold leading-snug text-white transition-colors md:group-hover:text-brand-400">
+          <h3 className="line-clamp-2 font-sans text-[15px] md:text-base font-bold leading-snug text-white transition-colors md:group-hover:text-ember-400">
             {title}
           </h3>
           <div className="mt-1 flex flex-col gap-0.5">
@@ -380,7 +384,7 @@ export function BeefCard({
               </span>
             )}
             {isManifesto && (mediator_name || host_name) && !challenger_a_name && !challenger_b_name && (
-              <span className="text-[10px] font-medium text-amber-500/80">Recherche de challengers &amp; médiateur</span>
+              <span className="text-[10px] font-medium text-prestige-gold/80">Recherche de challengers &amp; médiateur</span>
             )}
           </div>
           {descText ? (
@@ -398,7 +402,7 @@ export function BeefCard({
                     e.stopPropagation();
                     onTagClick?.(tag);
                   }}
-                  className="rounded px-1 text-[9px] font-medium text-gray-600 transition-colors hover:text-brand-400"
+                  className="rounded px-1 text-[9px] font-medium text-gray-600 transition-colors hover:text-ember-400"
                 >
                   #{tag}
                 </button>
@@ -422,7 +426,7 @@ export function BeefCard({
                   e.stopPropagation();
                   onApply?.();
                 }}
-                className="text-[10px] font-medium text-amber-500/90 underline-offset-2 hover:underline"
+                className="text-[10px] font-medium text-prestige-gold/90 underline-offset-2 hover:underline"
               >
                 + Rôle au ring
               </button>
@@ -435,7 +439,7 @@ export function BeefCard({
                 e.stopPropagation();
                 onNotifyClick();
               }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 py-2.5 text-xs font-bold uppercase tracking-wide text-amber-100 transition-all hover:bg-amber-500/20"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-prestige-gold/40 bg-prestige-gold/10 py-2.5 text-xs font-bold uppercase tracking-wide text-prestige-gold/95 transition-all hover:bg-prestige-gold/20"
             >
               <Bell className="h-4 w-4 shrink-0" strokeWidth={2.2} />
               M&apos;alerter
@@ -474,7 +478,7 @@ export function BeefCard({
                     e.stopPropagation();
                     onSeDesister();
                   }}
-                  className="w-full py-1.5 text-center text-xs font-medium text-red-400/90 transition-colors hover:text-red-300"
+                  className="w-full py-1.5 text-center text-xs font-medium text-ember-400/90 transition-colors hover:text-ember-300"
                 >
                   Se désister
                 </button>
@@ -488,7 +492,7 @@ export function BeefCard({
                 e.stopPropagation();
                 liveAudienceAction.onClick();
               }}
-              className="w-full rounded-xl border border-brand-500/35 bg-brand-500/15 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-500/25"
+              className="w-full rounded-xl border border-ember-500/35 bg-ember-500/15 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-ember-500/25"
             >
               {liveAudienceAction.variant === 'return'
                 ? "Retourner dans l'Arène"
