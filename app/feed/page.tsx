@@ -242,7 +242,7 @@ export default function FeedPage() {
       setLoading(true);
       let query = supabase
         .from('beefs')
-        .select('*, beef_participants(count)')
+        .select('*, beef_participants(count), beef_likes!left(user_id)')
         .order('feed_position', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(fetchLimit);
@@ -260,6 +260,9 @@ export default function FeedPage() {
       }
       if (selectedStatus === 'scheduled') {
         query = query.in('status', ['scheduled', 'pending']);
+      }
+      if (user?.id) {
+        query = query.eq('beef_likes.user_id', user.id);
       }
       const { data, error } = await query;
       if (error) throw error;
@@ -394,8 +397,12 @@ export default function FeedPage() {
         const partAgg = beef.beef_participants as { count: number }[] | undefined;
         const bid = String(beef.id);
         const onRing = Boolean(uid && (mid === uid || userOnLiveRingByBeef.get(bid)));
+        const userLikes = beef.beef_likes as { user_id: string }[] | undefined;
+        const hasLiked = Array.isArray(userLikes) && userLikes.length > 0;
+        const beefFields = { ...beef } as Record<string, unknown>;
+        delete beefFields.beef_likes;
         return {
-          ...beef,
+          ...beefFields,
           host_name: hostN,
           host_username: hostSource?.username?.trim() || null,
           mediator_name: mid ? hostN : null,
@@ -408,6 +415,7 @@ export default function FeedPage() {
           challenger_b_username: challengerBUsernameByBeef[bid] ?? null,
           user_is_live_ring: onRing,
           video_url: (beef.video_url as string | null | undefined) ?? null,
+          has_liked_by_user: hasLiked,
         };
       }) as Beef[];
 
@@ -435,22 +443,6 @@ export default function FeedPage() {
         beefsWithData.sort(compareArenaOrder);
       } else {
         beefsWithData.sort(compareFeedOrder);
-      }
-
-      if (uid && beefsWithData.length > 0) {
-        const feedIds = beefsWithData.map((b) => b.id);
-        const { data: likeRows, error: likesErr } = await supabase
-          .from('beef_likes')
-          .select('beef_id')
-          .eq('user_id', uid)
-          .in('beef_id', feedIds);
-        const liked =
-          !likesErr && Array.isArray(likeRows)
-            ? new Set(likeRows.map((r: { beef_id: string }) => r.beef_id))
-            : new Set<string>();
-        beefsWithData = beefsWithData.map((b) => ({ ...b, has_liked_by_user: liked.has(b.id) }));
-      } else {
-        beefsWithData = beefsWithData.map((b) => ({ ...b, has_liked_by_user: false }));
       }
 
       setBeefs(beefsWithData);
@@ -534,21 +526,36 @@ export default function FeedPage() {
   };
 
   const handleAuraClick = async (beefId: string) => {
-    if (!user) return;
+    if (!user?.id) return;
+    const targetBeef = beefs.find((b) => b.id === beefId);
+    if (!targetBeef) return;
+    const isCurrentlyLiked = !!targetBeef.has_liked_by_user;
+
     setBeefs((prev) =>
       prev.map((b) => {
         if (b.id === beefId) {
-          const isCurrentlyLiked = !!b.has_liked_by_user;
+          const wasLiked = !!b.has_liked_by_user;
           return {
             ...b,
-            has_liked_by_user: !isCurrentlyLiked,
-            engagement_score: Math.max(0, (b.engagement_score || 0) + (isCurrentlyLiked ? -1 : 1)),
+            has_liked_by_user: !wasLiked,
+            engagement_score: Math.max(0, (b.engagement_score || 0) + (wasLiked ? -1 : 1)),
           };
         }
         return b;
       }),
     );
-    // TODO: Appel Supabase pour insérer/supprimer la ligne dans la table 'beef_likes'
+
+    try {
+      if (isCurrentlyLiked) {
+        const { error } = await supabase.from('beef_likes').delete().match({ beef_id: beefId, user_id: user.id });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('beef_likes').insert({ beef_id: beefId, user_id: user.id });
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Erreur lors du vote Aura:', error);
+    }
   };
 
   const handleBeefClick = (beef: Beef) => {
