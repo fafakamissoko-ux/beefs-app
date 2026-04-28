@@ -9,7 +9,6 @@ import { motion } from 'framer-motion';
 import { Clock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { normalizeBeefId } from '@/lib/beef-id';
-import { useClientArenaOnboardingGuard } from '@/lib/client-arena-onboarding-guard';
 
 export default function ArenaPage() {
   const params = useParams();
@@ -20,6 +19,7 @@ export default function ArenaPage() {
 
   const [userId, setUserId] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
+  const [isAuthLoaded, setIsAuthLoaded] = useState(false);
   const [beefEndedInfo, setBeefEndedInfo] = useState<{
     title: string;
     host_name: string;
@@ -27,7 +27,7 @@ export default function ArenaPage() {
     ended_at?: string;
   } | null>(null);
   const [isHost, setIsHost] = useState(false);
-  const [userRole, setUserRole] = useState<'mediator' | 'challenger' | 'viewer'>('viewer');
+  const [userRole, setUserRole] = useState<'mediator' | 'challenger' | 'viewer' | 'spectator'>('spectator');
 
   const [host, setHost] = useState({
     id: 'host_1',
@@ -46,8 +46,6 @@ export default function ArenaPage() {
   /** Évite de monter l’arène avec rôle « viewer » par défaut + mauvais host.id avant chargement du beef. */
   const [arenaReady, setArenaReady] = useState(false);
 
-  useClientArenaOnboardingGuard(userId || null);
-
   useEffect(() => {
     if (roomIdParam.trim() !== '' && !roomId) {
       router.replace('/feed');
@@ -56,7 +54,9 @@ export default function ArenaPage() {
 
   useEffect(() => {
     const loadUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         setUserId(user.id);
         const { data: userData } = await supabase
@@ -70,14 +70,17 @@ export default function ArenaPage() {
           setUserName('Utilisateur');
         }
       } else {
-        window.location.href = '/login';
+        // Mode Fantôme
+        setUserId('');
+        setUserName('Visiteur');
       }
+      setIsAuthLoaded(true);
     };
     loadUser();
   }, []);
 
   useEffect(() => {
-    if (!userId || !roomId) return;
+    if (!isAuthLoaded || !roomId) return;
     let cancelled = false;
     setArenaReady(false);
     setBeefEndedInfo(null);
@@ -124,14 +127,12 @@ export default function ArenaPage() {
 
       setBeefTitle(beef.title || '');
       setInitialViewerCount(beef.viewer_count || 0);
-      setIsHost(beef.mediator_id === userId);
+      setIsHost(Boolean(userId && beef.mediator_id === userId));
 
       // Determine user role
-      let resolvedRole: 'mediator' | 'challenger' | 'viewer' = 'viewer';
-      if (beef.mediator_id === userId) {
-        resolvedRole = 'mediator';
+      if (userId && beef.mediator_id === userId) {
         setUserRole('mediator');
-      } else {
+      } else if (userId) {
         const { data: participation } = await supabase
           .from('beef_participants')
           .select('role, invite_status, is_main')
@@ -140,12 +141,12 @@ export default function ArenaPage() {
           .maybeSingle();
 
         if (participation && participation.invite_status === 'accepted') {
-          resolvedRole = 'challenger';
           setUserRole('challenger');
         } else {
-          resolvedRole = 'viewer';
           setUserRole('viewer');
         }
+      } else {
+        setUserRole('spectator');
       }
 
       if (cancelled) return;
@@ -160,7 +161,7 @@ export default function ArenaPage() {
     return () => {
       cancelled = true;
     };
-  }, [roomId, userId]);
+  }, [roomId, userId, isAuthLoaded]);
 
   const syncVideoAccessFromApi = async (beefId: string) => {
     try {
@@ -278,7 +279,7 @@ export default function ArenaPage() {
     );
   }
 
-  if (!userId || !userName) {
+  if (!isAuthLoaded) {
     return (
       <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center">
         <div className="text-white text-center">

@@ -125,7 +125,7 @@ export default function FeedPage() {
   const FEED_FILTERS_KEY = 'beefs_feed_filters_v1';
 
   useEffect(() => {
-    if (!user || filtersHydrated) return;
+    if (filtersHydrated) return;
     try {
       const raw = localStorage.getItem(FEED_FILTERS_KEY);
       if (raw) {
@@ -138,7 +138,7 @@ export default function FeedPage() {
       /* ignore */
     }
     setFiltersHydrated(true);
-  }, [user, filtersHydrated]);
+  }, [filtersHydrated]);
 
   useEffect(() => {
     if (!filtersHydrated) return;
@@ -498,26 +498,25 @@ export default function FeedPage() {
   );
 
   useEffect(() => {
-    if (authLoading) return; // FIX: On attend que Supabase confirme l'état
-    if (!user) {
-      const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-      if (hasSeenOnboarding !== 'true') {
-        router.push('/welcome');
-        return;
-      }
-      router.push('/login');
-      return;
-    }
+    if (authLoading) return;
     void loadBeefs();
-  }, [user, authLoading, router, loadBeefs]);
-
-  useEffect(() => {
-    if (user) {
-      void loadBeefs();
-      const channel = supabase.channel('beefs_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'beefs' }, () => void loadBeefs(true)).subscribe();
-      return () => { channel.unsubscribe(); };
-    }
-  }, [user, feedType, selectedTags, selectedStatus, followingIds, fetchLimit, loadBeefs]);
+    const channel = supabase
+      .channel('beefs_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'beefs' }, () => void loadBeefs(true))
+      .subscribe();
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [
+    authLoading,
+    user?.id,
+    feedType,
+    selectedTags,
+    selectedStatus,
+    followingIds,
+    fetchLimit,
+    loadBeefs,
+  ]);
 
   const loadMore = () => {
     if (loadingMore || !hasMore) return;
@@ -586,7 +585,7 @@ export default function FeedPage() {
     }
   };
 
-  if (authLoading || !user) {
+  if (authLoading) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-plasma-500 border-t-transparent" />
