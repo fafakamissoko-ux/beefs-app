@@ -33,6 +33,8 @@ interface BeefCardProps {
   thumbnail?: string;
   video_url?: string | null;
   duration?: number;
+  engagement_score?: number;
+  has_liked_by_user?: boolean;
   participants_count?: number;
   challenger_a_name?: string | null;
   challenger_b_name?: string | null;
@@ -73,6 +75,8 @@ export function BeefCard({
   thumbnail,
   video_url,
   duration,
+  engagement_score = 0,
+  has_liked_by_user = false,
   participants_count,
   challenger_a_name,
   challenger_b_name,
@@ -189,6 +193,15 @@ export function BeefCard({
 
   const descText = description?.trim() ?? '';
 
+  const auraTier = engagement_score >= 500 ? 3 : engagement_score >= 50 ? 2 : 1;
+
+  const dynamicBorderClass =
+    auraTier === 3
+      ? 'border-volt-500/80 shadow-[0_0_20px_rgba(223,255,0,0.2)] md:border-volt-500/80'
+      : auraTier === 2
+        ? 'border-plasma-500/60 shadow-[0_0_15px_rgba(162,0,255,0.15)] md:border-plasma-500/60'
+        : 'border-white/[0.06] md:border-white/[0.08] md:hover:border-white/20';
+
   return (
     <div className="relative flex h-full min-h-0 w-full max-w-full shrink-0 flex-col">
     <motion.div
@@ -198,7 +211,7 @@ export function BeefCard({
       onClick={onClick}
       onMouseEnter={() => isReplay && setReplayHover(true)}
       onMouseLeave={() => isReplay && setReplayHover(false)}
-      className={`group relative flex min-h-0 flex-1 h-full w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border max-md:border-white/[0.06] md:rounded-[1.5rem] md:border md:border-white/[0.08] md:bg-[#08080A] md:hover:border-white/20 ${
+      className={`group relative flex min-h-0 flex-1 h-full w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border md:bg-[#08080A] ${dynamicBorderClass} ${
         status === 'live'
           ? 'md:shadow-[0_0_0_1px_rgba(162,0,255,0.35)] md:group-hover:shadow-[0_0_24px_rgba(162,0,255,0.55)]'
           : ''
@@ -254,6 +267,12 @@ export function BeefCard({
               <div className="flex w-fit items-center gap-1 rounded bg-blood-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight text-white shadow-glow-blood animate-pulse">
                 <div className="h-1.5 w-1.5 rounded-full bg-white" />
                 Live
+              </div>
+            )}
+            {auraTier === 3 && (
+              <div className="flex w-fit items-center gap-1 rounded border border-volt-500/40 bg-volt-500/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight text-volt-400 shadow-[0_0_10px_rgba(223,255,0,0.3)] backdrop-blur-md">
+                <Sparkles className="h-2.5 w-2.5" />
+                Trending
               </div>
             )}
             {getPrimaryStatusBadge()}
@@ -313,6 +332,18 @@ export function BeefCard({
               <span>{getTimeDisplay()}</span>
             </div>
           )}
+          <div
+            className={`flex items-center gap-0.5 rounded border bg-black/60 px-1.5 py-0.5 font-mono text-[9px] font-bold tabular-nums backdrop-blur-sm ${
+              auraTier === 3
+                ? 'border-volt-500/30 text-volt-400'
+                : auraTier === 2
+                  ? 'border-plasma-500/30 text-plasma-400'
+                  : 'border-white/10 text-white/90'
+            }`}
+          >
+            <Sparkles className="h-2.5 w-2.5" strokeWidth={2.25} />
+            <span>{engagement_score.toLocaleString()}</span>
+          </div>
           <div className="flex items-center gap-0.5 rounded border border-white/10 bg-black/60 px-1.5 py-0.5 font-mono text-[9px] font-bold tabular-nums text-white/95 backdrop-blur-sm">
             <Eye className="h-2.5 w-2.5 text-white/90" strokeWidth={2.25} aria-hidden />
             <span>{viewer_count.toLocaleString()}</span>
@@ -323,13 +354,19 @@ export function BeefCard({
               whileTap={{ scale: 0.85 }}
               onClick={(e) => {
                 e.stopPropagation();
-                const newId = Date.now() + Math.random();
-                setFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 30 - 15 }]);
-                setTimeout(() => setFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
+                if (!has_liked_by_user) {
+                  const newId = Date.now() + Math.random();
+                  setFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 30 - 15 }]);
+                  setTimeout(() => setFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
+                }
                 onAuraClick();
               }}
-              className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded border border-prestige-gold/30 bg-black/50 text-prestige-gold"
-              aria-label="Envoyer de l'Aura"
+              className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded border bg-black/50 transition-colors ${
+                has_liked_by_user
+                  ? 'border-volt-500/50 text-volt-400 shadow-[0_0_8px_rgba(223,255,0,0.3)]'
+                  : 'border-prestige-gold/30 text-prestige-gold hover:border-prestige-gold/60'
+              }`}
+              aria-label={has_liked_by_user ? "Retirer l'Aura" : "Envoyer de l'Aura"}
             >
               <AnimatePresence>
                 {floatingAuras.map((aura) => (
@@ -339,13 +376,13 @@ export function BeefCard({
                     animate={{ opacity: 0, y: -28, scale: 1.1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.65 }}
-                    className="absolute -top-5 left-1/2 z-50 -translate-x-1/2 pointer-events-none text-[10px] font-black text-prestige-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.9)]"
+                    className="pointer-events-none absolute -top-5 left-1/2 z-50 -translate-x-1/2 text-[10px] font-black text-volt-400 drop-shadow-[0_0_8px_rgba(223,255,0,0.8)]"
                   >
                     +1
                   </motion.span>
                 ))}
               </AnimatePresence>
-              <Sparkles className="h-3 w-3 fill-current" />
+              <Sparkles className={`h-3 w-3 ${has_liked_by_user ? 'fill-current' : ''}`} />
             </motion.button>
           )}
         </div>

@@ -49,6 +49,8 @@ interface Beef {
   thumbnail?: string;
   duration?: number;
   engagement_score?: number;
+  /** Like unique courant (table `beef_likes` côté serveur). */
+  has_liked_by_user?: boolean;
   participants_count?: number;
   challenger_a_name?: string | null;
   challenger_b_name?: string | null;
@@ -435,6 +437,22 @@ export default function FeedPage() {
         beefsWithData.sort(compareFeedOrder);
       }
 
+      if (uid && beefsWithData.length > 0) {
+        const feedIds = beefsWithData.map((b) => b.id);
+        const { data: likeRows, error: likesErr } = await supabase
+          .from('beef_likes')
+          .select('beef_id')
+          .eq('user_id', uid)
+          .in('beef_id', feedIds);
+        const liked =
+          !likesErr && Array.isArray(likeRows)
+            ? new Set(likeRows.map((r: { beef_id: string }) => r.beef_id))
+            : new Set<string>();
+        beefsWithData = beefsWithData.map((b) => ({ ...b, has_liked_by_user: liked.has(b.id) }));
+      } else {
+        beefsWithData = beefsWithData.map((b) => ({ ...b, has_liked_by_user: false }));
+      }
+
       setBeefs(beefsWithData);
       setHasMore(rawCount >= fetchLimit);
     } catch (error) {
@@ -517,13 +535,20 @@ export default function FeedPage() {
 
   const handleAuraClick = async (beefId: string) => {
     if (!user) return;
-
     setBeefs((prev) =>
-      prev.map((b) => (b.id === beefId ? { ...b, engagement_score: (b.engagement_score || 0) + 1 } : b)),
+      prev.map((b) => {
+        if (b.id === beefId) {
+          const isCurrentlyLiked = !!b.has_liked_by_user;
+          return {
+            ...b,
+            has_liked_by_user: !isCurrentlyLiked,
+            engagement_score: Math.max(0, (b.engagement_score || 0) + (isCurrentlyLiked ? -1 : 1)),
+          };
+        }
+        return b;
+      }),
     );
-
-    // NOTE ARCHITECTURALE : Le futur backend (Supabase RPC) appliquera
-    // la règle de répartition : 50% Médiateur / 25% Ch. A / 25% Ch. B.
+    // TODO: Appel Supabase pour insérer/supprimer la ligne dans la table 'beef_likes'
   };
 
   const handleBeefClick = (beef: Beef) => {
