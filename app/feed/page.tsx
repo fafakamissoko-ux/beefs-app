@@ -237,9 +237,9 @@ export default function FeedPage() {
     }
   }, [beefs]);
 
-  const loadBeefs = useCallback(async () => {
+  const loadBeefs = useCallback(async (isBackgroundRefresh = false) => {
     try {
-      setLoading(true);
+      if (!isBackgroundRefresh) setLoading(true);
       let query = supabase
         .from('beefs')
         .select('*, beef_participants(count), beef_likes!left(user_id)')
@@ -450,8 +450,10 @@ export default function FeedPage() {
       setBeefs([]);
       setHasMore(false);
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (!isBackgroundRefresh) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   }, [fetchLimit, selectedStatus, selectedTags, feedType, followingIds, user?.id]);
 
@@ -512,7 +514,7 @@ export default function FeedPage() {
   useEffect(() => {
     if (user) {
       void loadBeefs();
-      const channel = supabase.channel('beefs_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'beefs' }, () => void loadBeefs()).subscribe();
+      const channel = supabase.channel('beefs_changes').on('postgres_changes', { event: '*', schema: 'public', table: 'beefs' }, () => void loadBeefs(true)).subscribe();
       return () => { channel.unsubscribe(); };
     }
   }, [user, feedType, selectedTags, selectedStatus, followingIds, fetchLimit, loadBeefs]);

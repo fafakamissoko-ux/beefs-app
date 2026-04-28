@@ -332,23 +332,11 @@ export function BeefCard({
               <span>{getTimeDisplay()}</span>
             </div>
           )}
-          <div
-            className={`flex items-center gap-0.5 rounded border bg-black/60 px-1.5 py-0.5 font-mono text-[9px] font-bold tabular-nums backdrop-blur-sm ${
-              auraTier === 3
-                ? 'border-volt-500/30 text-volt-400'
-                : auraTier === 2
-                  ? 'border-plasma-500/30 text-plasma-400'
-                  : 'border-white/10 text-white/90'
-            }`}
-          >
-            <Sparkles className="h-2.5 w-2.5" strokeWidth={2.25} />
-            <span>{engagement_score.toLocaleString()}</span>
-          </div>
           <div className="flex items-center gap-0.5 rounded border border-white/10 bg-black/60 px-1.5 py-0.5 font-mono text-[9px] font-bold tabular-nums text-white/95 backdrop-blur-sm">
             <Eye className="h-2.5 w-2.5 text-white/90" strokeWidth={2.25} aria-hidden />
             <span>{viewer_count.toLocaleString()}</span>
           </div>
-          {onAuraClick && (
+          {onAuraClick ? (
             <motion.button
               type="button"
               whileTap={{ scale: 0.85 }}
@@ -361,10 +349,14 @@ export function BeefCard({
                 }
                 onAuraClick();
               }}
-              className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded border bg-black/50 transition-colors ${
+              className={`relative flex h-6 shrink-0 items-center justify-center gap-1.5 rounded border bg-black/60 px-2 font-mono text-[10px] font-bold tabular-nums backdrop-blur-sm transition-colors ${
                 has_liked_by_user
                   ? 'border-volt-500/50 text-volt-400 shadow-[0_0_8px_rgba(223,255,0,0.3)]'
-                  : 'border-prestige-gold/30 text-prestige-gold hover:border-prestige-gold/60'
+                  : auraTier === 3
+                    ? 'border-volt-500/30 text-volt-400 hover:border-volt-500/50'
+                    : auraTier === 2
+                      ? 'border-plasma-500/30 text-plasma-400 hover:border-plasma-500/50'
+                      : 'border-white/10 text-white/90 hover:border-prestige-gold/60 hover:text-prestige-gold'
               }`}
               aria-label={has_liked_by_user ? "Retirer l'Aura" : "Envoyer de l'Aura"}
             >
@@ -383,7 +375,21 @@ export function BeefCard({
                 ))}
               </AnimatePresence>
               <Sparkles className={`h-3 w-3 ${has_liked_by_user ? 'fill-current' : ''}`} />
+              <span>{engagement_score.toLocaleString()}</span>
             </motion.button>
+          ) : (
+            <div
+              className={`flex h-6 shrink-0 items-center justify-center gap-1.5 rounded border bg-black/60 px-2 font-mono text-[10px] font-bold tabular-nums backdrop-blur-sm ${
+                auraTier === 3
+                  ? 'border-volt-500/30 text-volt-400'
+                  : auraTier === 2
+                    ? 'border-plasma-500/30 text-plasma-400'
+                    : 'border-white/10 text-white/90'
+              }`}
+            >
+              <Sparkles className="h-3 w-3" />
+              <span>{engagement_score.toLocaleString()}</span>
+            </div>
           )}
         </div>
 

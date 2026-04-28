@@ -83,7 +83,7 @@ export default function LivePage() {
       });
   }, [user?.id]);
 
-  const loadLiveRooms = useCallback(async () => {
+  const loadLiveRooms = useCallback(async (isBackgroundRefresh = false) => {
     try {
       const { data, error } = await supabase.from('beefs').select('*').eq('status', 'live').limit(50);
 
@@ -125,7 +125,7 @@ export default function LivePage() {
       console.error('Error loading live beefs:', error);
       setLiveRooms([]);
     } finally {
-      setLoading(false);
+      if (!isBackgroundRefresh) setLoading(false);
     }
   }, [feedType, followingIds]);
 
@@ -142,7 +142,7 @@ export default function LivePage() {
       .channel('live_beefs_changes')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'beefs' },
-        () => { void loadLiveRooms(); }
+        () => { void loadLiveRooms(true); }
       )
       .subscribe();
 
