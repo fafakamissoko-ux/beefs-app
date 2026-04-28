@@ -635,7 +635,7 @@ export default function FeedPage() {
             <div className="flex flex-wrap gap-2">
               {selectedTags.map(tag => (
                 <motion.div key={tag} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                  className="flex items-center gap-1.5 rounded-full bg-brand-gradient px-3 py-1 text-xs font-semibold text-white">
+                  className="flex items-center gap-1.5 rounded-full bg-plasma-600 px-3 py-1 text-xs font-semibold text-white">
                   <span>#{tag}</span>
                   <button onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))} className="hover:bg-white/20 rounded-full p-0.5">
                     <X className="w-3 h-3" />

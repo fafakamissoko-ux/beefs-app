@@ -542,7 +542,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   </Link>
                   <Link
                     href="/signup"
-                    className={`inline-flex min-h-[44px] items-center justify-center rounded-[2px] bg-brand-gradient px-5 py-2 text-sm font-semibold text-white shadow-glow-plasma transition-all hover:shadow-glow-plasma active:scale-[0.97] ${
+                    className={`inline-flex min-h-[44px] items-center justify-center rounded-[2px] bg-plasma-600 px-5 py-2 text-sm font-semibold text-white shadow-glow-plasma transition-all hover:shadow-glow-plasma active:scale-[0.97] ${
                       shell === 'phone' ? 'lg:w-full' : ''
                     }`}
                   >
@@ -682,7 +682,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       <Link
                         href="/signup"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex flex-1 items-center justify-center rounded-[2px] bg-brand-gradient py-3 text-center text-sm font-semibold text-white shadow-glow-plasma transition-all hover:shadow-glow-plasma active:scale-[0.97]"
+                        className="flex flex-1 items-center justify-center rounded-[2px] bg-plasma-600 py-3 text-center text-sm font-semibold text-white shadow-glow-plasma transition-all hover:shadow-glow-plasma active:scale-[0.97]"
                       >
                         Entrer dans l&apos;Arène
                       </Link>

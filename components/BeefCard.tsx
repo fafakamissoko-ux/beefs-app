@@ -245,7 +245,7 @@ export function BeefCard({
 
         <div className="absolute top-2 left-2 z-20 flex max-w-[min(100%,70%)] flex-col items-start gap-1">
             {status === 'live' && (
-              <div className="flex w-fit items-center gap-1 rounded bg-plasma-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight text-white shadow-sm animate-pulse">
+              <div className="flex w-fit items-center gap-1 rounded bg-blood-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight text-white shadow-glow-blood animate-pulse">
                 <div className="h-1.5 w-1.5 rounded-full bg-white" />
                 Live
               </div>
@@ -396,8 +396,6 @@ export function BeefCard({
           {descText ? (
             <p className="mt-1.5 line-clamp-1 break-words text-[11px] text-cyan-300/70">
               {descText}
-            </p>
-            </p>
             </p>
           ) : null}
           {tags.length > 0 && (
