@@ -261,9 +261,6 @@ export default function FeedPage() {
       if (selectedStatus === 'scheduled') {
         query = query.in('status', ['scheduled', 'pending']);
       }
-      if (user?.id) {
-        query = query.eq('beef_likes.user_id', user.id);
-      }
       const { data, error } = await query;
       if (error) throw error;
 
@@ -398,7 +395,8 @@ export default function FeedPage() {
         const bid = String(beef.id);
         const onRing = Boolean(uid && (mid === uid || userOnLiveRingByBeef.get(bid)));
         const userLikes = beef.beef_likes as { user_id: string }[] | undefined;
-        const hasLiked = Array.isArray(userLikes) && userLikes.length > 0;
+        const hasLiked =
+          Array.isArray(userLikes) && userLikes.some((like) => like.user_id === uid);
         const beefFields = { ...beef } as Record<string, unknown>;
         delete beefFields.beef_likes;
         return {
