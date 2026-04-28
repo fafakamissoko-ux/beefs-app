@@ -3683,7 +3683,7 @@ export function TikTokStyleArena({
                   <button
                     type="button"
                     onClick={() => { void recoverMediaDevices(); }}
-                    className="absolute z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white font-bold p-3 rounded-xl shadow-lg"
+                    className="pointer-events-auto absolute z-[100] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 rounded-[1rem] border border-plasma-500/50 bg-black/80 px-5 py-3.5 text-sm font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl transition-all hover:scale-105 hover:bg-plasma-500/20 active:scale-95"
                   >
                     📡 Réactiver Caméra/Micro
                   </button>
@@ -3790,7 +3790,7 @@ export function TikTokStyleArena({
                   <button
                     type="button"
                     onClick={() => { void recoverMediaDevices(); }}
-                    className="absolute z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white font-bold p-3 rounded-xl shadow-lg"
+                    className="pointer-events-auto absolute z-[100] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 rounded-[1rem] border border-plasma-500/50 bg-black/80 px-5 py-3.5 text-sm font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl transition-all hover:scale-105 hover:bg-plasma-500/20 active:scale-95"
                   >
                     📡 Réactiver Caméra/Micro
                   </button>
@@ -3913,7 +3913,7 @@ export function TikTokStyleArena({
                     e.stopPropagation();
                     void recoverMediaDevices();
                   }}
-                  className="absolute z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white font-bold p-3 rounded-xl shadow-lg"
+                  className="pointer-events-auto absolute z-[100] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 rounded-[1rem] border border-plasma-500/50 bg-black/80 px-5 py-3.5 text-sm font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl transition-all hover:scale-105 hover:bg-plasma-500/20 active:scale-95"
                 >
                   📡 Réactiver Caméra/Micro
                 </button>

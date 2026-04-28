@@ -427,11 +427,12 @@ export function useDailyCall(
       setIsCameraInterrupted(false);
       const shouldEnable = !viewerModeRef.current;
       if (shouldEnable) {
-        // 1. Désactiver proprement les flux fantômes
+        // 1. Désactiver proprement (Reset)
         await callRef.current.setLocalVideo(false);
         await callRef.current.setLocalAudio(false);
-        // 2. Forcer la puce matérielle à se relancer
-        await callRef.current.startCamera({ videoSource: true, audioSource: true });
+        // 2. Relancer les flux via les setters autorisés in-call
+        await callRef.current.setLocalVideo(true);
+        await callRef.current.setLocalAudio(true);
         setCamEnabled(true);
         setMicEnabled(true);
       }
