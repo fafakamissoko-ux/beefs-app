@@ -123,6 +123,7 @@ export function BeefCard({
     return () => obs.disconnect();
   }, [video_url, id]);
 
+  const getPrimaryStatusBadge = () => {
     switch (status) {
       case 'pending':
         return (
