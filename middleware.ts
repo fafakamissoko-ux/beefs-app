@@ -128,6 +128,27 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const protectedPaths = ['/feed', '/profile', '/create', '/settings', '/invitations', '/messages', '/admin'];
+  const authPaths = ['/login', '/signup', '/welcome'];
+
+  const isProtectedPath = protectedPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const isAuthPath = authPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+  // 1. Bloquer les non-connectés hors des zones sécurisées
+  if (!user && isProtectedPath) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = '/login';
+    loginUrl.searchParams.set('next', pathname); // Mémorise la page voulue
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // 2. Bloquer les connectés hors des pages d'inscription/connexion
+  if (user && isAuthPath) {
+    const feedUrl = request.nextUrl.clone();
+    feedUrl.pathname = '/feed';
+    return NextResponse.redirect(feedUrl);
+  }
+
   if (pathname === '/onboarding') {
     if (!user) {
       const login = request.nextUrl.clone();
