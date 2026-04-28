@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { TikTokStyleArena } from '@/components/TikTokStyleArena';
 import { supabase } from '@/lib/supabase/client';
 import { beefDailyRoomName } from '@/lib/beef-daily-room';
-import { markBeefWatchStarted } from '@/lib/beef-view-local';
 import { motion } from 'framer-motion';
 import { Clock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -44,10 +43,6 @@ export default function ArenaPage() {
   const [dailyMeetingToken, setDailyMeetingToken] = useState<string | null | undefined>(undefined);
   const [initialViewerCount, setInitialViewerCount] = useState(0);
   const [beefTitle, setBeefTitle] = useState('');
-  const [previewStartedAt, setPreviewStartedAt] = useState<string | null>(null);
-  const [freePreviewMinutes, setFreePreviewMinutes] = useState(10);
-  const [continuationPricePoints, setContinuationPricePoints] = useState(0);
-  const [hasPaidContinuation, setHasPaidContinuation] = useState(false);
   /** Évite de monter l’arène avec rôle « viewer » par défaut + mauvais host.id avant chargement du beef. */
   const [arenaReady, setArenaReady] = useState(false);
 
@@ -98,19 +93,6 @@ export default function ArenaPage() {
         window.location.href = '/feed';
         return;
       }
-
-      const fp = (beef as any).free_preview_minutes;
-      setFreePreviewMinutes(typeof fp === 'number' ? fp : 10);
-      setContinuationPricePoints((beef as any).price ?? 0);
-      setPreviewStartedAt((beef as any).started_at ?? null);
-
-      const { data: accessRow } = await supabase
-        .from('beef_access')
-        .select('id')
-        .eq('beef_id', roomId)
-        .eq('user_id', userId)
-        .maybeSingle();
-      setHasPaidContinuation(!!accessRow);
 
       const { fetchUserPublicByIds, displayNameFromPublicRow } = await import('@/lib/fetch-user-public-profile');
       const medRow =
@@ -166,11 +148,6 @@ export default function ArenaPage() {
         }
       }
 
-      const pricePts = (beef as { price?: number }).price ?? 0;
-      if (beef.status === 'live' && pricePts > 0 && resolvedRole === 'viewer') {
-        markBeefWatchStarted(roomId);
-      }
-
       if (cancelled) return;
       await ensureDailyRoom(roomId);
       if (cancelled) return;
@@ -184,25 +161,6 @@ export default function ArenaPage() {
       cancelled = true;
     };
   }, [roomId, userId]);
-
-  useEffect(() => {
-    if (!roomId) return;
-    const ch = supabase
-      .channel(`arena_beef_sync_${roomId}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'beefs', filter: `id=eq.${roomId}` },
-        (payload: { new?: { price?: number; started_at?: string } }) => {
-          const n = payload.new;
-          if (typeof n?.price === 'number') setContinuationPricePoints(n.price);
-          if (n?.started_at) setPreviewStartedAt(n.started_at);
-        }
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
-  }, [roomId]);
 
   const syncVideoAccessFromApi = async (beefId: string) => {
     try {
@@ -356,11 +314,6 @@ export default function ArenaPage() {
         dailyMeetingToken={dailyMeetingToken}
         onReaction={() => {}}
         onShare={handleShare}
-        previewStartedAt={previewStartedAt}
-        freePreviewMinutes={freePreviewMinutes}
-        continuationPricePoints={continuationPricePoints}
-        hasPaidContinuation={hasPaidContinuation}
-        onContinuationPaid={() => setHasPaidContinuation(true)}
       />
     </div>
   );

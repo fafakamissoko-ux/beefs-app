@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
-import { updateUserBalance } from '@/lib/updateUserBalance';
 import { normalizeBeefId } from '@/lib/beef-id';
 import { beefDailyRoomName } from '@/lib/beef-daily-room';
 
@@ -152,320 +151,52 @@ async function videoCredentialsForUser(
   return { dailyRoomUrl, dailyToken };
 }
 
-/** Vérité serveur : anti-fraude (rechargement / onglet / manipulation client). */
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
-    if (!user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    }
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
     const rawId = beefIdFromSearchParams(new URL(request.url).searchParams);
     const beefId = rawId ? normalizeBeefId(rawId) : null;
-    if (!beefId) {
-      return NextResponse.json({ error: 'beefId invalide ou requis' }, { status: 400 });
-    }
+    if (!beefId) return NextResponse.json({ error: 'beefId invalide ou requis' }, { status: 400 });
 
     const { data: beef, error: beefErr } = await supabaseAdmin
       .from('beefs')
-      .select('id, mediator_id, created_by, price, status, started_at, free_preview_minutes')
+      .select('id, mediator_id, created_by, status')
       .eq('id', beefId)
       .single();
 
-    if (beefErr) {
-      if (beefErr.code === 'PGRST116') {
-        return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
-      }
-      return NextResponse.json({ error: 'Erreur lecture beef' }, { status: 500 });
-    }
-    if (!beef) {
-      return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
-    }
+    if (beefErr || !beef) return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
+
+    let role: DailyTokenRole = 'spectator';
+    let grantTokenRole: DailyTokenRole | null = 'spectator';
 
     if (beef.mediator_id === user.id) {
-      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, 'mediator');
-      return NextResponse.json({
-        role: 'mediator',
-        viewerAccess: 'full',
-        continuationPrice: beef.price ?? 0,
-        freePreviewMinutes: beef.free_preview_minutes ?? 10,
-        ...video,
-      });
-    }
-
-    const { data: part } = await supabaseAdmin
-      .from('beef_participants')
-      .select('id')
-      .eq('beef_id', beefId)
-      .eq('user_id', user.id)
-      .eq('invite_status', 'accepted')
-      .maybeSingle();
-
-    if (part) {
-      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, 'participant');
-      return NextResponse.json({
-        role: 'participant',
-        viewerAccess: 'full',
-        continuationPrice: beef.price ?? 0,
-        freePreviewMinutes: beef.free_preview_minutes ?? 10,
-        ...video,
-      });
-    }
-
-    const price = beef.price ?? 0;
-    const fpMin = beef.free_preview_minutes ?? 10;
-
-    if (beef.status !== 'live') {
-      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, null);
-      return NextResponse.json({
-        role: 'spectator',
-        viewerAccess: 'not_live',
-        continuationPrice: price,
-        freePreviewMinutes: fpMin,
-        ...video,
-      });
-    }
-
-    if (price <= 0) {
-      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, 'spectator');
-      return NextResponse.json({
-        role: 'spectator',
-        viewerAccess: 'free',
-        continuationPrice: 0,
-        freePreviewMinutes: fpMin,
-        ...video,
-      });
-    }
-
-    const { data: accessRow } = await supabaseAdmin
-      .from('beef_access')
-      .select('id')
-      .eq('beef_id', beefId)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (accessRow) {
-      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, 'spectator');
-      return NextResponse.json({
-        role: 'spectator',
-        viewerAccess: 'paid',
-        continuationPrice: price,
-        freePreviewMinutes: fpMin,
-        startedAt: beef.started_at,
-        ...video,
-      });
-    }
-
-    if (!beef.started_at) {
-      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, 'spectator');
-      return NextResponse.json({
-        role: 'spectator',
-        viewerAccess: 'waiting_start',
-        continuationPrice: price,
-        freePreviewMinutes: fpMin,
-        startedAt: null,
-        ...video,
-      });
-    }
-
-    const elapsedSec = Math.max(0, (Date.now() - new Date(beef.started_at).getTime()) / 1000);
-    const previewSec = fpMin * 60;
-
-    if (elapsedSec <= previewSec) {
-      const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, 'spectator');
-      return NextResponse.json({
-        role: 'spectator',
-        viewerAccess: 'preview',
-        continuationPrice: price,
-        freePreviewMinutes: fpMin,
-        startedAt: beef.started_at,
-        previewEndsInSeconds: Math.max(0, previewSec - elapsedSec),
-        ...video,
-      });
-    }
-
-    const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, null);
-    return NextResponse.json({
-      role: 'spectator',
-      viewerAccess: 'locked',
-      continuationPrice: price,
-      freePreviewMinutes: fpMin,
-      startedAt: beef.started_at,
-      ...video,
-    });
-  } catch {
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    }
-
-    const supabaseAuth = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-    const { data: { user } } = await supabaseAuth.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const rawPostId = typeof body?.beefId === 'string' ? body.beefId : '';
-    const beefId = normalizeBeefId(rawPostId);
-    if (!beefId) {
-      return NextResponse.json({ error: 'beefId invalide ou requis' }, { status: 400 });
-    }
-
-    const { data: beef, error: beefErr } = await supabaseAdmin
-      .from('beefs')
-      .select('id, mediator_id, created_by, price, status')
-      .eq('id', beefId)
-      .single();
-
-    if (beefErr) {
-      if (beefErr.code === 'PGRST116') {
-        return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
-      }
-      return NextResponse.json({ error: 'Erreur lecture beef' }, { status: 500 });
-    }
-    if (!beef) {
-      return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
-    }
-
-    if (beef.status !== 'live') {
-      return NextResponse.json({ error: 'Beef non disponible' }, { status: 400 });
-    }
-
-    if (beef.mediator_id === user.id) {
-      return NextResponse.json({ error: 'Le médiateur a déjà accès' }, { status: 400 });
-    }
-
-    const { data: part } = await supabaseAdmin
-      .from('beef_participants')
-      .select('id')
-      .eq('beef_id', beefId)
-      .eq('user_id', user.id)
-      .eq('invite_status', 'accepted')
-      .maybeSingle();
-
-    if (part) {
-      return NextResponse.json({ error: 'Les participants ont déjà accès' }, { status: 400 });
-    }
-
-    const price = beef.price || 0;
-    if (price <= 0) {
-      return NextResponse.json({ error: 'Aucun paiement requis pour ce beef' }, { status: 400 });
-    }
-
-    const { data: existing } = await supabaseAdmin
-      .from('beef_access')
-      .select('id')
-      .eq('beef_id', beefId)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (existing) {
-      return NextResponse.json({ success: true, already: true });
-    }
-
-    const { data: buyer } = await supabaseAdmin
-      .from('users')
-      .select('points')
-      .eq('id', user.id)
-      .single();
-
-    if (!buyer || (buyer.points ?? 0) < price) {
-      return NextResponse.json({ error: 'Points insuffisants' }, { status: 400 });
-    }
-
-    let newBalance: number;
-    let debited = false;
-    try {
-      await updateUserBalance(supabaseAdmin, {
-        userId: user.id,
-        amount: -price,
-        type: 'beef_access',
-        description: `Accès payant au direct (beef)`,
-        metadata: { beef_id: beefId },
-      });
-      debited = true;
-
-      // Répartition des gains : 60% Initiateur, 20% Opposant, 20% Médiateur (Garde-fou : le médiateur absorbe les parts vides)
-      const initiatorId = beef.created_by;
-      const { data: challengers } = await supabaseAdmin
+      role = 'mediator';
+      grantTokenRole = 'mediator';
+    } else {
+      const { data: part } = await supabaseAdmin
         .from('beef_participants')
-        .select('user_id')
+        .select('id')
         .eq('beef_id', beefId)
-        .eq('role', 'participant');
-
-      const opponent = challengers?.find((p) => p.user_id !== initiatorId);
-      const opponentId = opponent?.user_id;
-
-      const initShare = initiatorId ? Math.floor(price * 0.6) : 0;
-      const oppShare = opponentId ? Math.floor(price * 0.2) : 0;
-      const medShare = price - initShare - oppShare; // Absorbe le reste, garantissant que 100% du prix est distribué
-
-      if (initShare > 0 && initiatorId) {
-        await updateUserBalance(supabaseAdmin, {
-          userId: initiatorId,
-          amount: initShare,
-          type: 'beef_access_revenue',
-          description: 'Revenu spectateur (Initiateur 60%)',
-          metadata: { beef_id: beefId, payer_id: user.id },
-        });
+        .eq('user_id', user.id)
+        .eq('invite_status', 'accepted')
+        .maybeSingle();
+      if (part) {
+        role = 'participant';
+        grantTokenRole = 'participant';
       }
-      if (oppShare > 0 && opponentId) {
-        await updateUserBalance(supabaseAdmin, {
-          userId: opponentId,
-          amount: oppShare,
-          type: 'beef_access_revenue',
-          description: 'Revenu spectateur (Challenger 20%)',
-          metadata: { beef_id: beefId, payer_id: user.id },
-        });
-      }
-      if (medShare > 0 && beef.mediator_id) {
-        await updateUserBalance(supabaseAdmin, {
-          userId: beef.mediator_id,
-          amount: medShare,
-          type: 'beef_access_revenue',
-          description: 'Revenu spectateur (Médiateur)',
-          metadata: { beef_id: beefId, payer_id: user.id },
-        });
-      }
-      const { data: after } = await supabaseAdmin.from('users').select('points').eq('id', user.id).single();
-      newBalance = after?.points ?? (buyer.points ?? 0) - price;
-    } catch (e: unknown) {
-      if (debited) {
-        try {
-          await updateUserBalance(supabaseAdmin, {
-            userId: user.id,
-            amount: price,
-            type: 'refund',
-            description: 'Annulation — erreur répartition revenus (accès beef)',
-            metadata: { beef_id: beefId },
-          });
-        } catch {}
-      }
-      const msg = e instanceof Error ? e.message : 'Erreur solde';
-      return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    await supabaseAdmin.from('beef_access').insert({
-      beef_id: beefId,
-      user_id: user.id,
-      access_type: 'paid',
-      points_spent: price,
-    });
+    if (role === 'spectator' && beef.status !== 'live') {
+      grantTokenRole = null;
+    }
 
+    const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, grantTokenRole);
     return NextResponse.json({
-      success: true,
-      newBalance,
+      role,
+      viewerAccess: beef.status === 'live' ? 'full' : 'not_live',
+      ...video,
     });
   } catch {
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });

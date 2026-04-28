@@ -4,14 +4,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Clock, Plus, TrendingUp, Flame, Eye, Lock } from 'lucide-react';
+import { Users, Clock, Plus, TrendingUp, Flame, Eye } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { CreateBeefForm } from '@/components/CreateBeefForm';
 import { useToast } from '@/components/Toast';
 import { AppBackButton } from '@/components/AppBackButton';
 import { submitNewBeef } from '@/lib/submitNewBeef';
 import type { SubmitBeefPayload } from '@/lib/submitNewBeef';
-import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { fetchUserPublicByIds, displayNameFromPublicRow } from '@/lib/fetch-user-public-profile';
 
@@ -48,16 +47,6 @@ export default function LivePage() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [feedType, setFeedType] = useState<'pour-vous' | 'abonnements'>('pour-vous');
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
-  const [userPoints, setUserPoints] = useState(0);
-  const [purchaseLoading, setPurchaseLoading] = useState(false);
-  
-  useEffect(() => {
-    if (!user) return;
-    supabase.from('users').select('points').eq('id', user.id).single()
-      .then(({ data }) => { if (data) setUserPoints(data.points || 0); });
-  }, [user]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -171,59 +160,7 @@ export default function LivePage() {
   };
 
   const joinRoom = (room: Room) => {
-    if (room.price && room.price > 0) {
-      setSelectedRoom(room);
-      setShowPaymentModal(true);
-    } else {
-      router.push(`/arena/${room.id}`);
-    }
-  };
-
-  const purchaseAccess = async () => {
-    if (!selectedRoom || !selectedRoom.price || !user) return;
-    setPurchaseLoading(true);
-
-    if (userPoints < selectedRoom.price) {
-      const need = selectedRoom.price - userPoints;
-      toast(`Points insuffisants — il te manque ${need} pts (solde ${userPoints})`, 'error', {
-        action: {
-          label: 'Recharger des points',
-          onClick: () => openBuyPointsPage(router),
-        },
-      });
-      setPurchaseLoading(false);
-      return;
-    }
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/beef/access', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token || ''}`,
-        },
-        body: JSON.stringify({ beefId: selectedRoom.id }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast(data.error || 'Erreur lors du paiement', 'error');
-        return;
-      }
-      if (typeof data.newBalance === 'number') {
-        setUserPoints(data.newBalance);
-      } else {
-        const { data: u } = await supabase.from('users').select('points').eq('id', user.id).single();
-        if (u) setUserPoints(u.points || 0);
-      }
-      setShowPaymentModal(false);
-      toast('Accès débloqué !', 'success');
-      router.push(`/arena/${selectedRoom.id}`);
-    } catch {
-      toast('Erreur lors du paiement', 'error');
-    } finally {
-      setPurchaseLoading(false);
-    }
+    router.push(`/arena/${room.id}`);
   };
 
   if (authLoading || !user) {
@@ -423,120 +360,6 @@ export default function LivePage() {
       </div>
 
       {/* User Balance Display - REMOVED, moved to header */}
-
-      {/* Payment Modal for Premium Rooms */}
-      <AnimatePresence>
-        {showPaymentModal && selectedRoom && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setShowPaymentModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-gradient-to-b from-gray-900 to-black rounded-2xl p-8 max-w-md w-full border border-white/15 shadow-2xl"
-            >
-              <div className="flex justify-center mb-5">
-                <div className="w-14 h-14 rounded-2xl bg-brand-500/20 flex items-center justify-center border border-brand-500/30">
-                  <Lock className="w-7 h-7 text-brand-400" />
-                </div>
-              </div>
-
-              <h2 className="text-xl font-black text-white mb-1 text-center">
-                Accès au direct
-              </h2>
-              <p className="text-gray-400 text-sm text-center mb-6">
-                Ce beef demande des points pour la suite du visionnage (après la prévisualisation gratuite côté arène).
-              </p>
-
-              <div className="bg-black/50 rounded-[2px] p-4 mb-5 border border-white/10">
-                <h3 className="text-base font-bold text-white mb-2 line-clamp-2">{selectedRoom.title}</h3>
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span>
-                    Par{' '}
-                    <ProfileUserLink username={selectedRoom.host_username} className="text-xs text-gray-400">
-                      {selectedRoom.host_name}
-                    </ProfileUserLink>
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>{selectedRoom.viewer_count}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 mb-5 space-y-3">
-                <p className="text-center text-white text-sm font-semibold">
-                  Coût d&apos;entrée :{' '}
-                  <span className="text-brand-400 font-black tabular-nums">{selectedRoom.price}</span>
-                  <span className="text-gray-400 font-medium"> pts</span>
-                </p>
-                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-brand-500 to-amber-400 transition-all"
-                    style={{
-                      width: `${Math.min(100, Math.round((userPoints / Math.max(selectedRoom.price || 1, 1)) * 100))}%`,
-                    }}
-                  />
-                </div>
-                <p className="text-center text-xs text-gray-400">
-                  Ton solde :{' '}
-                  <span className={userPoints >= (selectedRoom.price || 0) ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>
-                    {userPoints} pts
-                  </span>
-                  {userPoints < (selectedRoom.price || 0) && (
-                    <span className="text-gray-500">
-                      {' '}
-                      — manque <span className="text-white font-semibold tabular-nums">{(selectedRoom.price || 0) - userPoints}</span> pts
-                    </span>
-                  )}
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPaymentModal(false)}
-                  className="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-[2px] transition-colors"
-                >
-                  Annuler
-                </button>
-                {userPoints >= (selectedRoom.price || 0) ? (
-                  <button
-                    type="button"
-                    onClick={purchaseAccess}
-                    disabled={purchaseLoading}
-                    className="w-full brand-gradient text-black font-bold py-3.5 rounded-[2px] disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {purchaseLoading ? (
-                      <span>Traitement…</span>
-                    ) : (
-                      <>
-                        <Lock className="w-5 h-5" />
-                        Débloquer · {selectedRoom.price} pts
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => openBuyPointsPage(router)}
-                    className="w-full brand-gradient text-black font-bold py-3.5 rounded-[2px] flex items-center justify-center gap-2"
-                  >
-                    <Flame className="w-5 h-5" />
-                    Recharger des points
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Create Beef Modal */}
       {showCreateModal && (

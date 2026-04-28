@@ -9,7 +9,6 @@ import {
   Eye,
   Gift,
   X,
-  Lock,
   PanelRight,
   Mic,
   MicOff,
@@ -38,7 +37,6 @@ import { useDailyCall } from '@/hooks/useDailyCall';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
-import { DEFAULT_FREE_PREVIEW_MINUTES, viewerNeedsContinuationPay } from '@/lib/beef-preview';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import { postBeefManage, type BeefManageAction } from '@/lib/beef-manage-client';
 import { escapeForIlikeExact } from '@/lib/ilike-exact';
@@ -121,13 +119,6 @@ interface TikTokStyleArenaProps {
   onReaction: (emoji: string) => void;
   onTap?: () => void;
   onShare: () => void;
-  /** Début officiel du beef (médiateur lance le chrono) — base du gratuit */
-  previewStartedAt?: string | null;
-  freePreviewMinutes?: number;
-  /** Points pour continuer après la prévisualisation (0 = pas de paywall) */
-  continuationPricePoints?: number;
-  hasPaidContinuation?: boolean;
-  onContinuationPaid?: () => void;
 }
 
 // 🔥 TOP 10 RÉACTIONS (affichées par défaut)
@@ -215,11 +206,6 @@ export function TikTokStyleArena({
   dailyMeetingToken,
   onReaction,
   onShare,
-  previewStartedAt = null,
-  freePreviewMinutes = DEFAULT_FREE_PREVIEW_MINUTES,
-  continuationPricePoints = 0,
-  hasPaidContinuation = false,
-  onContinuationPaid,
 }: TikTokStyleArenaProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -1169,27 +1155,15 @@ export function TikTokStyleArena({
     })();
   }, [userId]);
 
-  const [previewStartedAtLive, setPreviewStartedAtLive] = useState<string | null>(previewStartedAt ?? null);
-  const [liveContinuationPrice, setLiveContinuationPrice] = useState(continuationPricePoints);
-  useEffect(() => {
-    setPreviewStartedAtLive(previewStartedAt ?? null);
-    setLiveContinuationPrice(continuationPricePoints);
-  }, [previewStartedAt, continuationPricePoints]);
-
   type ServerAccessPayload = {
     role?: string;
     viewerAccess?: string;
-    continuationPrice?: number;
-    freePreviewMinutes?: number;
-    previewEndsInSeconds?: number;
     dailyRoomUrl?: string | null;
     dailyToken?: string | null;
   };
   const [serverAccess, setServerAccess] = useState<ServerAccessPayload | null>(null);
-  /** True après la 1ʳᵉ tentative GET /api/beef/access (évite paywall + leave avant réponse serveur). */
+  /** True après la 1ʳᵉ tentative GET /api/beef/access (jeton spectateur). */
   const [viewerAccessReady, setViewerAccessReady] = useState(false);
-  /** True si le GET a échoué — ne pas traiter comme « pas encore résolu » + clientLocked (sinon leave() et blocage room). */
-  const [viewerAccessFetchFailed, setViewerAccessFetchFailed] = useState(false);
 
   const fetchViewerAccess = useCallback(async () => {
     if (!isViewer) return;
@@ -1218,17 +1192,11 @@ export function TikTokStyleArena({
       const data = (await res.json()) as ServerAccessPayload & { error?: string };
       if (!res.ok) {
         setServerAccess(null);
-        setViewerAccessFetchFailed(true);
         return;
       }
-      setViewerAccessFetchFailed(false);
       setServerAccess(data);
-      if (typeof data.continuationPrice === 'number') {
-        setLiveContinuationPrice(data.continuationPrice);
-      }
     } catch {
       setServerAccess(null);
-      setViewerAccessFetchFailed(true);
     } finally {
       setViewerAccessReady(true);
     }
@@ -1236,7 +1204,6 @@ export function TikTokStyleArena({
 
   useEffect(() => {
     setViewerAccessReady(false);
-    setViewerAccessFetchFailed(false);
     setServerAccess(null);
   }, [roomId]);
 
@@ -1246,12 +1213,9 @@ export function TikTokStyleArena({
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'beefs', filter: `id=eq.${roomId}` },
-        (payload: { new?: { started_at?: string; price?: number } }) => {
-          const n = payload.new;
-          if (n?.started_at) setPreviewStartedAtLive(n.started_at);
-          if (typeof n?.price === 'number') setLiveContinuationPrice(n.price);
-          fetchViewerAccess();
-        }
+        () => {
+          void fetchViewerAccess();
+        },
       )
       .subscribe();
     return () => {
@@ -1415,7 +1379,7 @@ export function TikTokStyleArena({
       viewerAccessReady &&
       serverAccess &&
       serverAccess.dailyToken === null &&
-      (serverAccess.viewerAccess === 'locked' || serverAccess.viewerAccess === 'not_live')
+      serverAccess.viewerAccess === 'not_live'
     ) {
       return;
     }
@@ -1431,75 +1395,6 @@ export function TikTokStyleArena({
     viewerAccessReady,
     serverAccess,
   ]);
-
-  const accessResolved = serverAccess !== null;
-  const serverLocked =
-    isViewer &&
-    serverAccess?.role === 'spectator' &&
-    serverAccess.viewerAccess === 'locked';
-  const clientLocked =
-    isViewer &&
-    viewerNeedsContinuationPay(
-      previewStartedAtLive,
-      freePreviewMinutes,
-      liveContinuationPrice,
-      hasPaidContinuation
-    );
-  /**
-   * Si le GET access échoue, accessResolved reste false : l’ancienne formule
-   * (!accessResolved && clientLocked) forçait le paywall et leave() — room inaccessible.
-   * En cas d’échec API, on ne verrouille pas sur la seule logique client.
-   */
-  const previewPaywall =
-    viewerAccessReady &&
-    !viewerAccessFetchFailed &&
-    (serverLocked || (!accessResolved && clientLocked));
-
-  const paywallLeaveRef = useRef(false);
-  const [continuationLoading, setContinuationLoading] = useState(false);
-
-  useEffect(() => {
-    if (previewPaywall && isJoined && !paywallLeaveRef.current) {
-      paywallLeaveRef.current = true;
-      leave();
-    }
-    if (!previewPaywall) paywallLeaveRef.current = false;
-  }, [previewPaywall, isJoined, leave]);
-
-  const handlePayContinuation = async () => {
-    setContinuationLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/beef/access', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token || ''}`,
-        },
-        body: JSON.stringify({ beefId: roomId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erreur');
-      if (typeof data.newBalance === 'number') setUserPoints(data.newBalance);
-      await fetchViewerAccess();
-      onContinuationPaid?.();
-      toast('Accès débloqué — bon visionnage !', 'success');
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Erreur';
-      if (msg.toLowerCase().includes('insuffisant')) {
-        toast(msg, 'error', {
-          action: {
-            label: 'Recharger des points',
-            onClick: () => goBuyPoints(),
-          },
-        });
-      } else {
-        toast(msg, 'error');
-      }
-    } finally {
-      setContinuationLoading(false);
-    }
-  };
 
   const handleRaiseHand = useCallback(async () => {
     if (!userId || !roomId) return;
@@ -3327,92 +3222,6 @@ export function TikTokStyleArena({
           }
           router.push(`/beef/${roomId}/summary`);
         }}
-      />
-
-      {isViewer && previewPaywall && liveContinuationPrice > 0 && (
-        <div
-          className="absolute inset-0 z-[2500] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="paywall-preview-title"
-        >
-          <div className="max-w-md w-full text-center space-y-5">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-500/20">
-              <Lock className="w-8 h-8 text-brand-400" strokeWidth={1} aria-hidden />
-            </div>
-            <h2 id="paywall-preview-title" className="text-xl font-black text-white">Fin de la prévisualisation gratuite</h2>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Les {freePreviewMinutes} premières minutes sont offertes. Pour la suite du direct, utilise tes points.
-            </p>
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5 text-left space-y-3">
-              <p className="text-center text-white text-sm font-semibold">
-                Accès suite du direct :{' '}
-                <span className="text-brand-400 font-black tabular-nums">{liveContinuationPrice}</span>
-                <span className="text-gray-400 font-medium"> pts</span>
-              </p>
-              <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-ember-500 to-cobalt-500 transition-all duration-500"
-                  style={{
-                    width: `${Math.min(100, Math.round((userPoints / Math.max(liveContinuationPrice, 1)) * 100))}%`,
-                  }}
-                />
-              </div>
-              <p className="text-center text-xs text-gray-400">
-                Ton solde :{' '}
-                <span className={userPoints >= liveContinuationPrice ? 'text-cobalt-400 font-bold' : 'text-ember-400 font-bold'}>
-                  {userPoints} pts
-                </span>
-                {userPoints < liveContinuationPrice && (
-                  <span className="text-gray-500">
-                    {' '}
-                    — il manque <span className="text-white font-semibold tabular-nums">{liveContinuationPrice - userPoints}</span> pts
-                  </span>
-                )}
-              </p>
-            </div>
-            <div className="flex flex-col gap-2">
-              {userPoints >= liveContinuationPrice ? (
-                <button
-                  type="button"
-                  onClick={handlePayContinuation}
-                  disabled={continuationLoading}
-                  className="w-full rounded-full py-3.5 font-bold text-sm text-black brand-gradient disabled:opacity-50"
-                >
-                  {continuationLoading ? 'Traitement…' : `Débloquer · ${liveContinuationPrice} pts`}
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => goBuyPoints()}
-                    className="w-full rounded-full py-3.5 font-bold text-sm text-black brand-gradient"
-                  >
-                    Recharger des points
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handlePayContinuation}
-                    disabled={continuationLoading}
-                    className="w-full rounded-full bg-white/10 py-2.5 text-xs font-semibold text-gray-400 disabled:opacity-50"
-                  >
-                    Réessayer après achat
-                  </button>
-                </>
-              )}
-              <button
-                type="button"
-                onClick={() => router.replace('/feed')}
-                className="text-gray-500 text-sm pt-2"
-              >
-                Quitter le beef
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── END-OF-BEEF SUMMARY SCREEN ── */}
       {beefEnded && endSummary && (
         <div
           className="absolute inset-0 z-[1000] bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col items-center justify-center p-6"
@@ -4154,21 +3963,21 @@ export function TikTokStyleArena({
                       onClick={() => setGiftTarget('left')}
                       className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'left' ? 'bg-plasma-500 text-white' : 'text-white/50 hover:bg-white/10'}`}
                     >
-                      {leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
+                      @{leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
                     </button>
                     <button
                       type="button"
                       onClick={() => setGiftTarget('mediator')}
                       className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'mediator' ? 'bg-prestige-gold text-black' : 'text-white/50 hover:bg-white/10'}`}
                     >
-                      Médiateur
+                      @{mediatorName}
                     </button>
                     <button
                       type="button"
                       onClick={() => setGiftTarget('right')}
                       className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'right' ? 'bg-emerald-500 text-white' : 'text-white/50 hover:bg-white/10'}`}
                     >
-                      {rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
+                      @{rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
                     </button>
                   </div>
                 </div>
