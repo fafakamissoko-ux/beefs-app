@@ -577,13 +577,13 @@ export default function FeedPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setFeedType(tab.id)}
-                  className={`flex min-h-[44px] items-center gap-2 pb-1 transition-colors ${
+                  className={`group flex min-h-[44px] items-center gap-2 pb-1 transition-colors ${
                     feedType === tab.id
-                      ? 'border-b-2 border-brand-500 text-white font-black uppercase tracking-widest text-[11px] md:text-[12px]'
-                      : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-white/80 font-bold uppercase tracking-widest text-[11px] md:text-[12px]'
+                      ? 'border-b-2 border-ember-500 text-white font-black uppercase tracking-widest text-[11px] md:text-[12px]'
+                      : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-ember-400 font-bold uppercase tracking-widest text-[11px] md:text-[12px]'
                   }`}
                 >
-                  <tab.icon className={`h-4 w-4 shrink-0 ${feedType === tab.id ? 'text-white' : 'text-white/40'}`} />
+                  <tab.icon className={`h-4 w-4 shrink-0 ${feedType === tab.id ? 'text-white' : 'text-white/40 group-hover:text-ember-400'}`} />
                   <span>{tab.label}</span>
                 </button>
               ))}
@@ -759,12 +759,12 @@ export default function FeedPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed z-[500] max-md:bottom-[90px] max-md:left-1/2 max-md:-translate-x-1/2 max-md:w-[92%] md:bottom-8 md:right-8 md:w-[340px] md:translate-x-0 overflow-hidden rounded-2xl border border-ember-500/30 bg-gradient-to-br from-black/95 to-[#0A0505] backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)]"
+          className="fixed z-[500] max-md:bottom-6 max-md:left-4 max-md:right-4 md:bottom-8 md:right-8 md:left-auto md:w-[340px] overflow-hidden rounded-2xl border border-ember-500/30 bg-gradient-to-br from-black/95 to-[#0A0505] shadow-[0_8px_32px_rgba(0,0,0,0.8)]"
         >
           <button
             type="button"
             onClick={() => router.push(`/arena/${activeBeef.id}`)}
-            className="group flex w-full items-center justify-between gap-3 p-3 text-left md:gap-4 md:p-4"
+            className="group flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left md:gap-4 md:p-4"
           >
             <div className="flex min-w-0 flex-1 items-center gap-2.5 md:gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ember-500/30 bg-ember-500/15">
@@ -779,7 +779,7 @@ export default function FeedPage() {
                 </p>
               </div>
             </div>
-            <div className="px-4 py-2 shrink-0 rounded-full bg-gradient-to-r from-ember-600 to-brand-500 text-[10px] md:text-[11px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(255,69,0,0.4)]">
+            <div className="px-4 py-2 shrink-0 rounded-full bg-gradient-to-r from-ember-600 to-ember-500 text-[10px] md:text-[11px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(255,77,0,0.4)]">
               Rejoindre
             </div>
           </button>
