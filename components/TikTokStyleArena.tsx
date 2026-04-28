@@ -257,7 +257,7 @@ export function TikTokStyleArena({
   /** Chat en overlay bas-gauche (pas de sidebar) */
   const [mediatorSidebarOpen, setMediatorSidebarOpen] = useState(false);
   const [showGiftPicker, setShowGiftPicker] = useState(false);
-  const [giftTarget, setGiftTarget] = useState<'mediator' | 'left' | 'right'>('mediator');
+  const [giftTarget, setGiftTarget] = useState<'mediator' | 'left' | 'right'>('left');
   const [showViewerList, setShowViewerList] = useState(false);
   const [showArenaMenu, setShowArenaMenu] = useState(false);
   const [isCinematicMode, setIsCinematicMode] = useState(false);
@@ -4137,7 +4137,7 @@ export function TikTokStyleArena({
                 className="pointer-events-auto max-h-[min(60dvh,380px)] w-[min(calc(100vw-1rem),340px)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-black/70 p-3 pt-2 backdrop-blur-3xl hide-scrollbar"
               >
                 <div className="mb-3">
-                  <div className="mb-2 flex items-center justify-between">
+                  <div className="mb-2 flex justify-between items-center">
                     <span className="text-[11px] font-semibold text-white/75">Soutenir un participant :</span>
                     <button
                       type="button"

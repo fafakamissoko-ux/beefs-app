@@ -396,7 +396,7 @@ export async function POST(request: NextRequest) {
       });
       debited = true;
 
-      // Répartition des gains : 60% Initiateur, 20% Opposant, 20% Médiateur
+      // Répartition des gains : 60% Initiateur, 20% Opposant, 20% Médiateur (Garde-fou : le médiateur absorbe les parts vides)
       const initiatorId = beef.created_by;
       const { data: challengers } = await supabaseAdmin
         .from('beef_participants')
@@ -407,9 +407,9 @@ export async function POST(request: NextRequest) {
       const opponent = challengers?.find((p) => p.user_id !== initiatorId);
       const opponentId = opponent?.user_id;
 
-      const initShare = Math.floor(price * 0.6);
+      const initShare = initiatorId ? Math.floor(price * 0.6) : 0;
       const oppShare = opponentId ? Math.floor(price * 0.2) : 0;
-      const medShare = price - initShare - oppShare; // Le médiateur récupère le reste (évite les pertes d'arrondis)
+      const medShare = price - initShare - oppShare; // Absorbe le reste, garantissant que 100% du prix est distribué
 
       if (initShare > 0 && initiatorId) {
         await updateUserBalance(supabaseAdmin, {
@@ -434,7 +434,7 @@ export async function POST(request: NextRequest) {
           userId: beef.mediator_id,
           amount: medShare,
           type: 'beef_access_revenue',
-          description: 'Revenu spectateur (Médiateur 20%)',
+          description: 'Revenu spectateur (Médiateur)',
           metadata: { beef_id: beefId, payer_id: user.id },
         });
       }
