@@ -99,6 +99,7 @@ export function BeefCard({
   const [hasOpenedArena, setHasOpenedArena] = useState(false);
   const [floatingAuras, setFloatingAuras] = useState<{ id: number; x: number }[]>([]);
   const [replayHover, setReplayHover] = useState(false);
+  const [isTeaserOpen, setIsTeaserOpen] = useState(false);
 
   useLayoutEffect(() => {
     if (!video_url?.trim()) return;
@@ -209,7 +210,12 @@ export function BeefCard({
     >
       <div
         ref={mediaBlockRef}
-        className={`relative w-full aspect-video overflow-hidden bg-black/20 shrink-0 max-md:rounded-t-2xl md:rounded-t-[1.5rem] ${
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsTeaserOpen(true);
+        }}
+        className={`relative w-full cursor-zoom-in aspect-video overflow-hidden bg-black/20 shrink-0 max-md:rounded-t-2xl md:rounded-t-[1.5rem] ${
           status === 'live'
             ? 'ring-1 ring-inset ring-plasma-500/40 md:group-hover:ring-2 md:group-hover:ring-plasma-500/60'
             : ''
@@ -394,7 +400,7 @@ export function BeefCard({
             )}
           </div>
           {descText ? (
-            <p className="mt-1.5 line-clamp-1 break-words text-[11px] text-cyan-300/70">
+            <p className="mt-1.5 line-clamp-1 break-words text-[11px] font-medium text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
               {descText}
             </p>
           ) : null}
@@ -408,7 +414,7 @@ export function BeefCard({
                     e.stopPropagation();
                     onTagClick?.(tag);
                   }}
-                  className="rounded px-1 text-[9px] font-medium text-gray-300 transition-colors hover:text-plasma-400"
+                  className="rounded px-1 text-[9px] font-bold text-white/90 transition-all hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
                 >
                   #{tag}
                 </button>
@@ -532,6 +538,83 @@ export function BeefCard({
         </AnimatePresence>
       )}
     </motion.div>
+
+      {isTeaserOpen && (
+        <div
+          className="fixed inset-0 z-[9999] flex flex-col md:flex-row md:items-center md:justify-center bg-obsidian-950 md:bg-obsidian-950/95 md:p-8"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsTeaserOpen(false);
+          }}
+        >
+          <div
+            className="relative flex h-full w-full flex-col overflow-hidden shadow-2xl md:h-auto md:max-h-[90vh] md:max-w-5xl md:flex-row md:rounded-3xl md:border md:border-white/10 md:shadow-glow-plasma bg-obsidian-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setIsTeaserOpen(false)}
+              className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white backdrop-blur-md transition-colors hover:bg-blood-500"
+              aria-label="Fermer l&apos;aperçu"
+            >
+              ✕
+            </button>
+
+            <div className="relative flex min-h-[40vh] flex-[1.5] items-center justify-center bg-black md:aspect-auto">
+              {video_url ? (
+                <video src={video_url} controls autoPlay muted playsInline className="h-full w-full object-contain" />
+              ) : thumbnail ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- lightbox teaser, URL dynamiques */}
+                  <img
+                    src={thumbnail}
+                    alt={title}
+                    className="max-h-[50vh] w-full object-contain md:max-h-none md:h-full"
+                  />
+                </>
+              ) : (
+                <div className="text-white/30">Aucun média</div>
+              )}
+              {status === 'live' && (
+                <div className="absolute left-4 top-4 z-20 flex items-center gap-1.5 rounded bg-blood-500 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-white shadow-glow-blood animate-pulse">
+                  Live
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-1 flex-col overflow-y-auto bg-obsidian-900 p-6 md:p-8">
+              <h2 className="mb-4 text-xl font-black text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)] md:text-2xl">
+                {title}
+              </h2>
+              <div className="mb-6 flex items-center rounded-xl border border-white/10 bg-white/5 p-3 text-sm font-bold">
+                <span className="flex-1 truncate text-center text-plasma-300 drop-shadow-[0_0_8px_rgba(162,0,255,0.8)]">
+                  {challenger_a_name || 'Challenger A'}
+                </span>
+                <span className="mx-3 font-black italic text-white/30">VS</span>
+                <span className="flex-1 truncate text-center text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.8)]">
+                  {challenger_b_name || 'Challenger B'}
+                </span>
+              </div>
+              <div className="mb-8 flex-1 whitespace-pre-wrap text-sm font-medium leading-relaxed text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
+                {description?.trim() ||
+                  "Aucune description fournie. Rejoignez l&apos;Arène pour découvrir l&apos;enjeu de ce choc."}
+              </div>
+              <div className="mt-auto pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsTeaserOpen(false);
+                    onClick();
+                  }}
+                  className="flex w-full items-center justify-center rounded-xl bg-plasma-600 py-4 text-sm font-black uppercase tracking-widest text-white shadow-glow-plasma transition-transform hover:scale-[1.02] hover:bg-plasma-500"
+                >
+                  Entrer dans l&apos;Arène
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
