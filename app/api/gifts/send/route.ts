@@ -26,9 +26,6 @@ function mapRpcError(message: string): { status: number; body: string } {
   if (m.includes('type de cadeau invalide')) {
     return { status: 400, body: 'Type de cadeau invalide' };
   }
-  if (m.includes('beef') && m.includes('médiateur')) {
-    return { status: 400, body: 'Les cadeaux sont envoyés au médiateur de ce beef uniquement' };
-  }
   if (m.includes('direct') || m.includes('live')) {
     return { status: 400, body: 'Les cadeaux ne sont possibles que pendant un direct' };
   }

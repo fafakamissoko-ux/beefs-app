@@ -257,6 +257,7 @@ export function TikTokStyleArena({
   /** Chat en overlay bas-gauche (pas de sidebar) */
   const [mediatorSidebarOpen, setMediatorSidebarOpen] = useState(false);
   const [showGiftPicker, setShowGiftPicker] = useState(false);
+  const [giftTarget, setGiftTarget] = useState<'mediator' | 'left' | 'right'>('mediator');
   const [showViewerList, setShowViewerList] = useState(false);
   const [showArenaMenu, setShowArenaMenu] = useState(false);
   const [isCinematicMode, setIsCinematicMode] = useState(false);
@@ -4135,18 +4136,41 @@ export function TikTokStyleArena({
                 transition={{ duration: 0.15, ease: 'easeOut' }}
                 className="pointer-events-auto max-h-[min(60dvh,380px)] w-[min(calc(100vw-1rem),340px)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-black/70 p-3 pt-2 backdrop-blur-3xl hide-scrollbar"
               >
-                <div className="mb-2 flex items-start justify-between gap-2 border-b border-white/[0.08] pb-2">
-                  <p className="min-w-0 flex-1 pl-0.5 text-[11px] font-semibold leading-snug text-white/75">
-                    Envoyer au médiateur
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowGiftPicker(false)}
-                    aria-label="Fermer les cadeaux"
-                    className="flex h-9 min-h-9 min-w-9 shrink-0 touch-manipulation items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                  >
-                    <X className="h-4 w-4" strokeWidth={1.5} aria-hidden />
-                  </button>
+                <div className="mb-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-white/75">Soutenir un participant :</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowGiftPicker(false)}
+                      className="text-white/70 hover:text-white"
+                      aria-label="Fermer les cadeaux"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="flex w-full items-center gap-1 rounded-xl bg-black/40 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setGiftTarget('left')}
+                      className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'left' ? 'bg-plasma-500 text-white' : 'text-white/50 hover:bg-white/10'}`}
+                    >
+                      {leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGiftTarget('mediator')}
+                      className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'mediator' ? 'bg-prestige-gold text-black' : 'text-white/50 hover:bg-white/10'}`}
+                    >
+                      Médiateur
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGiftTarget('right')}
+                      className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'right' ? 'bg-emerald-500 text-white' : 'text-white/50 hover:bg-white/10'}`}
+                    >
+                      {rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
                   {[
@@ -4174,6 +4198,24 @@ export function TikTokStyleArena({
                           return;
                         }
                         try {
+                          const targetUserId =
+                            giftTarget === 'left'
+                              ? leftPanel?.arenaUserId
+                              : giftTarget === 'right'
+                                ? rightPanel?.arenaUserId
+                                : host.id;
+                          if (!targetUserId) {
+                            toast('Participant non connecté', 'error');
+                            return;
+                          }
+
+                          const targetName =
+                            giftTarget === 'left'
+                              ? leftPanelName
+                              : giftTarget === 'right'
+                                ? rightPanelName
+                                : host.name;
+
                           const { data: { session } } = await supabase.auth.getSession();
                           const res = await fetch('/api/gifts/send', {
                             method: 'POST',
@@ -4183,7 +4225,7 @@ export function TikTokStyleArena({
                             },
                             body: JSON.stringify({
                               beef_id: roomId,
-                              recipient_id: host.id,
+                              recipient_id: targetUserId,
                               gift_type_id: gift.id,
                               points_amount: gift.cost,
                             }),
@@ -4198,7 +4240,7 @@ export function TikTokStyleArena({
                           }
                           const giftKey =
                             data.giftId != null ? String(data.giftId) : `gift_${Date.now()}`;
-                          const msgContent = `a offert ${gift.emoji} ${gift.label} (${gift.cost} pts) au médiateur`;
+                          const msgContent = `a offert ${gift.emoji} ${gift.label} (${gift.cost} pts) à ${targetName}`;
                           const initial = userName?.[0]?.toUpperCase() || '?';
                           addRemoteMessage(userName, msgContent, initial, giftKey);
                           void channelRef.current

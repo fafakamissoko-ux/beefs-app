@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
 
     const { data: beef, error: beefErr } = await supabaseAdmin
       .from('beefs')
-      .select('id, mediator_id, price, status, started_at, free_preview_minutes')
+      .select('id, mediator_id, created_by, price, status, started_at, free_preview_minutes')
       .eq('id', beefId)
       .single();
 
@@ -324,7 +324,7 @@ export async function POST(request: NextRequest) {
 
     const { data: beef, error: beefErr } = await supabaseAdmin
       .from('beefs')
-      .select('id, mediator_id, price, status')
+      .select('id, mediator_id, created_by, price, status')
       .eq('id', beefId)
       .single();
 
@@ -395,13 +395,49 @@ export async function POST(request: NextRequest) {
         metadata: { beef_id: beefId },
       });
       debited = true;
-      await updateUserBalance(supabaseAdmin, {
-        userId: beef.mediator_id,
-        amount: price,
-        type: 'beef_access_revenue',
-        description: `Revenu spectateur — accès au direct`,
-        metadata: { beef_id: beefId, payer_id: user.id },
-      });
+
+      // Répartition des gains : 60% Initiateur, 20% Opposant, 20% Médiateur
+      const initiatorId = beef.created_by;
+      const { data: challengers } = await supabaseAdmin
+        .from('beef_participants')
+        .select('user_id')
+        .eq('beef_id', beefId)
+        .eq('role', 'participant');
+
+      const opponent = challengers?.find((p) => p.user_id !== initiatorId);
+      const opponentId = opponent?.user_id;
+
+      const initShare = Math.floor(price * 0.6);
+      const oppShare = opponentId ? Math.floor(price * 0.2) : 0;
+      const medShare = price - initShare - oppShare; // Le médiateur récupère le reste (évite les pertes d'arrondis)
+
+      if (initShare > 0 && initiatorId) {
+        await updateUserBalance(supabaseAdmin, {
+          userId: initiatorId,
+          amount: initShare,
+          type: 'beef_access_revenue',
+          description: 'Revenu spectateur (Initiateur 60%)',
+          metadata: { beef_id: beefId, payer_id: user.id },
+        });
+      }
+      if (oppShare > 0 && opponentId) {
+        await updateUserBalance(supabaseAdmin, {
+          userId: opponentId,
+          amount: oppShare,
+          type: 'beef_access_revenue',
+          description: 'Revenu spectateur (Challenger 20%)',
+          metadata: { beef_id: beefId, payer_id: user.id },
+        });
+      }
+      if (medShare > 0 && beef.mediator_id) {
+        await updateUserBalance(supabaseAdmin, {
+          userId: beef.mediator_id,
+          amount: medShare,
+          type: 'beef_access_revenue',
+          description: 'Revenu spectateur (Médiateur 20%)',
+          metadata: { beef_id: beefId, payer_id: user.id },
+        });
+      }
       const { data: after } = await supabaseAdmin.from('users').select('points').eq('id', user.id).single();
       newBalance = after?.points ?? (buyer.points ?? 0) - price;
     } catch (e: unknown) {
@@ -411,7 +447,7 @@ export async function POST(request: NextRequest) {
             userId: user.id,
             amount: price,
             type: 'refund',
-            description: 'Annulation — erreur crédit médiateur (accès beef)',
+            description: 'Annulation — erreur répartition revenus (accès beef)',
             metadata: { beef_id: beefId },
           });
         } catch {}
