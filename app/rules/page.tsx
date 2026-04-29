@@ -28,7 +28,7 @@ export default function RulesPage() {
   ];
 
   return (
-    <div className="min-h-full w-full bg-[#050505] px-6 py-12 md:py-20">
+    <div className="min-h-[100dvh] w-full bg-[#050505] px-6 py-12 md:py-20 pb-32">
       <div className="mx-auto max-w-4xl">
         {/* Header */}
         <motion.div

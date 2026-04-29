@@ -10,140 +10,65 @@ export default function SplashScreen() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // Progress bar animation
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          return 100;
-        }
-        return prev + 2;
-      });
-    }, 20);
-
-    // Auto-redirect after animation
-    const redirectTimer = setTimeout(async () => {
-      // Check Supabase session
+    const interval = setInterval(() => setProgress((p) => (p >= 100 ? 100 : p + 2)), 20);
+    const timer = setTimeout(async () => {
       const { supabase } = await import('@/lib/supabase/client');
-      const { data: { session } } = await supabase.auth.getSession();
-
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session?.user) {
-        const { data: userData } = await supabase
+        const { data } = await supabase
           .from('users')
-          .select('created_at, needs_arena_username')
+          .select('needs_arena_username')
           .eq('id', session.user.id)
           .maybeSingle();
-
-        if (userData?.needs_arena_username === true) {
-          router.push('/onboarding');
-          return;
-        }
-        router.push('/feed');
+        if (data?.needs_arena_username) router.push('/onboarding');
+        else router.push('/feed');
       } else {
-        // Mode Fantôme : Accès public direct au Feed
         router.push('/feed');
       }
-    }, 2000);
-
+    }, 1500);
     return () => {
-      clearInterval(progressInterval);
-      clearTimeout(redirectTimer);
+      clearInterval(interval);
+      clearTimeout(timer);
     };
   }, [router]);
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center overflow-hidden">
-      {/* Background animated gradient */}
-      <div className="absolute inset-0 opacity-30">
-        <motion.div
-          className="absolute top-1/4 left-1/4 w-96 h-96 bg-brand-500 rounded-full filter blur-3xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
-        <motion.div
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-brand-400 rounded-full filter blur-3xl"
-          animate={{
-            scale: [1, 1.3, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: 0.5,
-          }}
-        />
-      </div>
-
-      {/* Main content */}
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-[#050505]">
+      <div className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_center,rgba(162,0,255,0.15)_0%,transparent_60%)]" />
       <div className="relative z-10 flex flex-col items-center">
-        {/* Logo with animation */}
         <motion.div
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{
-            type: 'spring',
-            stiffness: 260,
-            damping: 20,
-            duration: 0.8,
-          }}
-          className="mb-8"
-
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          className="relative mb-6"
         >
-          <BeefLogo size={120} />
+          <div className="absolute inset-0 animate-pulse rounded-full bg-plasma-500/20 blur-2xl" />
+          <BeefLogo size={100} className="drop-shadow-[0_0_30px_rgba(162,0,255,0.8)]" />
         </motion.div>
-
-        {/* App name */}
         <motion.h1
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="text-6xl font-black text-gradient mb-2"
+          className="mb-2 pr-2 text-5xl font-black uppercase italic tracking-tighter text-white drop-shadow-md md:text-7xl"
         >
           Beefs
         </motion.h1>
-
-        {/* Tagline */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.6, duration: 0.5 }}
-          className="text-gray-400 text-lg font-semibold"
+          className="text-plasma-400 text-[11px] md:text-sm font-black uppercase tracking-[0.2em] shadow-glow-plasma mb-12 text-center px-4"
         >
           L&apos;Agora du règlement de comptes
         </motion.p>
 
-        {/* Progress bar */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.9 }}
-          className="mt-12 h-2 w-64 overflow-hidden rounded-[2px] bg-white/10"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-1 w-48 overflow-hidden rounded-full bg-white/10">
           <motion.div
-            className="h-full brand-gradient"
+            className="h-full bg-gradient-to-r from-plasma-600 to-cyan-400"
             style={{ width: `${progress}%` }}
-            transition={{ duration: 0.1 }}
           />
         </motion.div>
       </div>
-
-      {/* Bottom decoration */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2 }}
-        className="absolute bottom-8 text-gray-600 text-sm"
-      >
-        Powered by Beefs Team
-      </motion.div>
     </div>
   );
 }
