@@ -36,7 +36,10 @@ export function GlobalSearchProvider({ children }: { children: ReactNode }) {
   return (
     <GlobalSearchContext.Provider value={{ openSearch, closeSearch }}>
       {children}
-      <GlobalSearchModal open={open} onOpenChange={setOpen} />
+      {/* === HOOK DE CONVERSION PREMIUM (RECHERCHE) === — priorité stacking absolue */}
+      <div className="relative z-[999999]">
+        <GlobalSearchModal open={open} onOpenChange={setOpen} />
+      </div>
     </GlobalSearchContext.Provider>
   );
 }

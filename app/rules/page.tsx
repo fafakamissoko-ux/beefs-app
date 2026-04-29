@@ -8,7 +8,7 @@ export default function RulesPage() {
     {
       icon: Heart,
       title: 'Respect Absolu',
-      desc: "L'arène est un lieu de confrontation d'idées, pas de haine. Les insultes personnelles et discriminations entraînent une expulsion immédiate.",
+      desc: "L'Agora est un lieu de confrontation d'idées, pas de haine. Les insultes personnelles et discriminations entraînent une expulsion immédiate.",
     },
     {
       icon: Sword,
@@ -22,8 +22,8 @@ export default function RulesPage() {
     },
     {
       icon: Gavel,
-      title: 'Parole du Médiateur',
-      desc: "Le médiateur est le maître du temps et de l'ordre. Ses décisions en live sont sans appel pour garantir la qualité du spectacle.",
+      title: "L'Autorité du Ref",
+      desc: "Il est le maître de l'Agora. S'il coupe ton micro, le silence est absolu. Ses décisions sont irrévocables.",
     },
   ];
 
@@ -40,10 +40,10 @@ export default function RulesPage() {
             <Shield className="h-10 w-10 text-white" />
           </div>
           <h1 className="mb-4 font-sans text-4xl font-black uppercase italic tracking-tighter text-white md:text-6xl">
-            Le Code de l'Arène
+            Les Lois de l&apos;Agora
           </h1>
           <p className="mx-auto max-w-xl font-medium text-gray-400">
-            Beefs est une terre de liberté, mais toute terre a ses lois. Voici les piliers sur lesquels repose notre communauté.
+            Beefs est une terre de liberté, mais toute terre a ses lois. Voici les piliers de l&apos;Agora sur lesquels repose notre communauté.
           </p>
         </motion.div>
 

@@ -117,7 +117,7 @@ export default function SplashScreen() {
           transition={{ delay: 0.6, duration: 0.5 }}
           className="text-gray-400 text-lg font-semibold"
         >
-          Règle tes beefs en live
+          L&apos;Agora du règlement de comptes
         </motion.p>
 
         {/* Progress bar */}

@@ -194,7 +194,7 @@ export function BeefCard({
         : 'border-white/[0.06] md:border-white/[0.08] md:hover:border-white/20';
 
   return (
-    <div className="relative flex h-full min-h-0 w-full max-w-full shrink-0 flex-col">
+    <div className="relative flex h-auto min-h-0 w-full max-w-full shrink-0 flex-col">
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -202,7 +202,7 @@ export function BeefCard({
       onClick={onClick}
       onMouseEnter={() => isReplay && setReplayHover(true)}
       onMouseLeave={() => isReplay && setReplayHover(false)}
-      className={`group relative flex min-h-0 flex-1 h-full w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border md:bg-[#08080A] ${dynamicBorderClass} ${
+      className={`group relative flex min-h-0 h-auto w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border md:bg-[#08080A] ${dynamicBorderClass} ${
         status === 'live'
           ? 'md:shadow-[0_0_0_1px_rgba(162,0,255,0.35)] md:group-hover:shadow-[0_0_24px_rgba(162,0,255,0.55)]'
           : ''
@@ -372,13 +372,13 @@ export function BeefCard({
 
       </div>
 
-      <div className="relative z-10 flex flex-1 min-h-0 items-stretch gap-3 bg-[#08080A] p-3 pointer-events-auto md:p-4">
+      <div className="relative z-10 flex min-h-0 items-stretch gap-3 bg-[#08080A] p-3 pointer-events-auto md:p-4">
         <div className="flex shrink-0 flex-col pt-0.5">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 border border-white/20 text-sm font-bold text-white backdrop-blur-md">
             {(host_name || '?')[0].toUpperCase()}
           </div>
         </div>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-col">
           <h3 className="line-clamp-2 font-sans text-[15px] md:text-base font-bold leading-snug text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-colors md:group-hover:text-plasma-400">
             {title}
           </h3>
