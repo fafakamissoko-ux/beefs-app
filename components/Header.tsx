@@ -439,6 +439,18 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 })}
             </nav>
 
+            {/* Dossiers de l'Agora (Desktop Sidebar) */}
+            <div className={`hidden shrink-0 ${shell === 'full' ? 'lg:hidden' : 'lg:flex lg:flex-col lg:gap-3 lg:px-6 lg:mt-4 lg:mb-auto'}`}>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Dossiers de l&apos;Agora</h3>
+              <div className="flex flex-col gap-2.5">
+                {['#UFC300', '#ClashRap', '#Politique', '#DramaTwitch'].map((tag) => (
+                  <Link key={tag} href={`/feed?tag=${tag.replace('#', '')}`} className="text-[13px] font-bold text-gray-400 transition-colors hover:text-plasma-400">
+                    {tag}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
             {/* Right — bas de sidebar (lg+) */}
             <div
               className={`relative z-[5] hidden shrink-0 ${
@@ -538,22 +550,20 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 </>
               ) : (
                 <div className={`flex items-center gap-2 ${shell === 'phone' ? 'lg:w-full lg:flex-col lg:gap-3' : ''}`}>
-                  <Link
-                    href="/login"
-                    className={`btn-ghost min-h-[44px] px-4 text-sm font-medium text-gray-400 hover:text-white ${
-                      shell === 'phone' ? 'lg:w-full lg:justify-center' : ''
-                    }`}
-                  >
-                    Connexion
-                  </Link>
-                  <Link
-                    href="/signup"
-                    className={`inline-flex min-h-[44px] items-center justify-center rounded-[2px] bg-plasma-600 px-5 py-2 text-sm font-semibold text-white shadow-glow-plasma transition-all hover:shadow-glow-plasma active:scale-[0.97] ${
-                      shell === 'phone' ? 'lg:w-full' : ''
-                    }`}
-                  >
-                    Rejoindre l&apos;Agora
-                  </Link>
+                  <div className="flex flex-col w-full gap-3">
+                    <Link
+                      href="/signup"
+                      className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-plasma-600 px-5 py-2 text-sm font-black uppercase tracking-widest text-white shadow-glow-plasma transition-transform hover:scale-105 active:scale-95"
+                    >
+                      Rejoindre l&apos;Agora
+                    </Link>
+                    <Link
+                      href="/login"
+                      className="text-center text-[11px] font-medium text-gray-400 hover:text-white underline-offset-2 hover:underline"
+                    >
+                      Déjà membre ? Se connecter
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -676,20 +686,20 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       </button>
                     </>
                   ) : (
-                    <div className="flex flex-col gap-2 px-2 sm:flex-row">
-                      <Link
-                        href="/login"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="btn-ghost flex flex-1 items-center justify-center py-3 text-center text-sm font-medium text-gray-400 hover:text-white"
-                      >
-                        Connexion
-                      </Link>
+                    <div className="flex flex-col gap-3 px-2">
                       <Link
                         href="/signup"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex flex-1 items-center justify-center rounded-[2px] bg-plasma-600 py-3 text-center text-sm font-semibold text-white shadow-glow-plasma transition-all hover:shadow-glow-plasma active:scale-[0.97]"
+                        className="flex w-full items-center justify-center rounded-xl bg-plasma-600 py-3.5 text-center text-sm font-black uppercase tracking-widest text-white shadow-glow-plasma transition-transform hover:scale-[0.98] active:scale-95"
                       >
                         Rejoindre l&apos;Agora
+                      </Link>
+                      <Link
+                        href="/login"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="text-center text-[11px] font-medium text-gray-400 hover:text-white underline-offset-2 hover:underline"
+                      >
+                        Déjà membre ? Se connecter
                       </Link>
                     </div>
                   )}

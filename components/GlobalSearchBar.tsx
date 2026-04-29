@@ -151,13 +151,13 @@ export function GlobalSearchModal({ open, onOpenChange }: GlobalSearchModalProps
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-modal-backdrop bg-[#050508]/85 backdrop-blur-md"
+            className="fixed inset-0 z-[99998] bg-[#050508]/85 backdrop-blur-md"
             onClick={() => onOpenChange(false)}
             aria-hidden
           />
 
           {/* Centrage viewport : plus de top fixe qui colle la modale en haut */}
-          <div className="fixed inset-0 z-modal flex min-h-0 items-center justify-center p-4 sm:p-6 pointer-events-none">
+          <div className="fixed inset-0 z-[99999] flex min-h-0 items-center justify-center p-4 sm:p-6 pointer-events-none">
             <motion.div
               ref={panelRef}
               role="dialog"
