@@ -227,6 +227,19 @@ export function TikTokStyleArena({
   );
 
   const isViewer = userRole === 'viewer' || userRole === 'spectator';
+
+  /** Mode spectateur anonyme → modale Arena VIP avant actions interactives */
+  type AuthArenaVip = { title: string; subtitle: string };
+  const [authHook, setAuthHook] = useState<AuthArenaVip | null>(null);
+  const requireAuth = useCallback(
+    (title: string, subtitle: string): boolean => {
+      if (userRole !== 'spectator' && userId.trim() !== '') return true;
+      setAuthHook({ title, subtitle });
+      return false;
+    },
+    [userId, userRole],
+  );
+
   const [hasJoined, setHasJoined] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -1819,25 +1832,35 @@ export function TikTokStyleArena({
   /** Boost par tap / réaction soutenue : fixe 15 (équitable, généreux vs decay −3 / 500 ms). */
   const getAuraBoost = () => 15;
 
-  const emitTapSupport = useCallback((target: 'A' | 'B' | 'M') => {
-    const boost = getAuraBoost();
-    setGlobalHeat((v) => Math.min(100, v + 2));
-    if (target === 'M') {
-      setSupportBurst((p) => ({ ...p, M: p.M + 1 }));
-      setAuraMed((v) => Math.min(300, v + boost));
-    } else {
-      setSupportBurst((p) => ({ ...p, [target]: p[target] + 1 }));
-      if (target === 'A') setAuraA((v) => Math.min(300, v + boost));
-      else setAuraB((v) => Math.min(300, v + boost));
-    }
-    channelRef.current
-      ?.send({
-        type: 'broadcast',
-        event: 'reaction',
-        payload: { emoji: '❤️', supportSlot: target },
-      })
-      .catch(() => {});
-  }, []);
+  const emitTapSupport = useCallback(
+    (target: 'A' | 'B' | 'M') => {
+      if (
+        !requireAuth(
+          'Décuple ton soutien',
+          'Tape pour les challengers : enregistre-toi pour que ton Aura compte officiellement dans l’Arène.',
+        )
+      )
+        return;
+      const boost = getAuraBoost();
+      setGlobalHeat((v) => Math.min(100, v + 2));
+      if (target === 'M') {
+        setSupportBurst((p) => ({ ...p, M: p.M + 1 }));
+        setAuraMed((v) => Math.min(300, v + boost));
+      } else {
+        setSupportBurst((p) => ({ ...p, [target]: p[target] + 1 }));
+        if (target === 'A') setAuraA((v) => Math.min(300, v + boost));
+        else setAuraB((v) => Math.min(300, v + boost));
+      }
+      channelRef.current
+        ?.send({
+          type: 'broadcast',
+          event: 'reaction',
+          payload: { emoji: '❤️', supportSlot: target },
+        })
+        .catch(() => {});
+    },
+    [requireAuth],
+  );
 
   // 1) Broadcast channel — instant P2P delivery
   useEffect(() => {
@@ -2177,6 +2200,13 @@ export function TikTokStyleArena({
   }, [roomId, userId, addRemoteReaction]);
 
   const handleReaction = (emoji: string) => {
+    if (
+      !requireAuth(
+        'Réactions réservées au ring Beefs',
+        'Rejoins l’arena pour balancer des emoji et soutenir le débat comme les autres spectateurs.',
+      )
+    )
+      return;
     onReaction(emoji);
 
     const integrated = INTEGRATED_SUPPORT_REACTIONS.has(emoji);
@@ -2839,7 +2869,14 @@ export function TikTokStyleArena({
   };
 
   const toggleFollowProfileTarget = async () => {
-    if (!userId || !selectedProfile || selectedProfile.id === userId) return;
+    if (
+      !requireAuth(
+        'Arena VIP · Abonnements',
+        'Suis ce profil après connexion pour ne rien rater du ring.',
+      )
+    )
+      return;
+    if (!selectedProfile || selectedProfile.id === userId) return;
     try {
       if (profileFollowsTarget) {
         await supabase.from('followers').delete().eq('follower_id', userId).eq('following_id', selectedProfile.id);
@@ -2913,6 +2950,13 @@ export function TikTokStyleArena({
   );
 
   const handleSendMessage = () => {
+    if (
+      !requireAuth(
+        'Chat réservé aux membres',
+        'Crée ton compte gratuit pour rejoindre la conversation en direct.',
+      )
+    )
+      return;
     if (!chatInput.trim()) return;
 
     const cleanContent = sanitizeMessage(chatInput);
@@ -3369,7 +3413,23 @@ export function TikTokStyleArena({
           <div id="dock-desktop" className="mt-auto flex w-full shrink-0 items-center gap-2 p-3 border-t border-white/10 bg-black/40">
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full bg-white/10 px-4 py-2 text-[13px] text-white focus:outline-none" />
             <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg">😀</button>
-            <button onClick={() => { setShowAllReactions(false); setShowGiftPicker(!showGiftPicker); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400"><Gift className="h-4 w-4 text-white" /></button>
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  !requireAuth(
+                    'Arena VIP · Cadeaux Aura',
+                    'Offre des cadeaux et boost le ring après inscription.',
+                  )
+                )
+                  return;
+                setShowAllReactions(false);
+                setShowGiftPicker(!showGiftPicker);
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400"
+            >
+              <Gift className="h-4 w-4 text-white" />
+            </button>
             <button onClick={() => void handleSendMessage()} disabled={!chatInput.trim()} className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 disabled:opacity-35"><Send className="h-4 w-4 text-white" /></button>
           </div>
         </div>
@@ -3765,7 +3825,23 @@ export function TikTokStyleArena({
           <div id="dock-mobile" className="pointer-events-auto flex w-full items-center gap-2 px-3 pb-2 mt-auto shrink-0">
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} className="flex-1 min-w-0 rounded-full bg-white/15 px-4 py-2 text-[13px] text-white focus:outline-none" placeholder="Message..." />
             <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg">😀</button>
-            <button onClick={() => { setShowAllReactions(false); setShowGiftPicker(!showGiftPicker); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400"><Gift className="h-4 w-4 text-white" /></button>
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  !requireAuth(
+                    'Arena VIP · Cadeaux Aura',
+                    'Offre des cadeaux et boost le ring après inscription.',
+                  )
+                )
+                  return;
+                setShowAllReactions(false);
+                setShowGiftPicker(!showGiftPicker);
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400"
+            >
+              <Gift className="h-4 w-4 text-white" />
+            </button>
             <button onClick={() => void handleSendMessage()} disabled={!chatInput.trim()} className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 disabled:opacity-50"><Send className="h-4 w-4 text-white" /></button>
           </div>
         </div>
@@ -4392,6 +4468,68 @@ export function TikTokStyleArena({
                   className="rounded-xl px-4 py-3.5 text-left text-sm font-medium text-red-400 transition-colors hover:bg-white/10"
                 >
                   Quitter le direct
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* === HOOK DE CONVERSION PREMIUM — Arena VIP === */}
+      <AnimatePresence>
+        {authHook && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-2xl"
+            onClick={() => setAuthHook(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 30, rotateX: 15 }}
+              animate={{ scale: 1, y: 0, rotateX: 0 }}
+              exit={{ scale: 0.9, y: 30, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-[360px] overflow-hidden rounded-[2.5rem] border border-plasma-500/40 bg-[#08080A]/92 p-8 text-center shadow-[0_0_120px_rgba(162,0,255,0.28)] ring-1 ring-white/15 backdrop-blur-2xl"
+            >
+              <div className="absolute -top-28 -left-28 h-56 w-56 rounded-full bg-plasma-600/25 blur-[70px]" />
+              <div className="pointer-events-none absolute inset-0 rounded-[2.5rem] shadow-[inset_0_0_60px_rgba(162,0,255,0.08)]" />
+              <div className="relative z-10">
+                <div className="mx-auto mb-6 flex h-20 w-20 rotate-3 items-center justify-center rounded-3xl bg-gradient-to-br from-plasma-600 to-violet-700 shadow-glow-plasma">
+                  <Flame className="h-10 w-10 text-white" strokeWidth={1.85} aria-hidden />
+                </div>
+
+                <h2 className="mb-3 font-sans text-2xl font-black uppercase italic tracking-tighter text-white drop-shadow-md">
+                  {authHook.title}
+                </h2>
+
+                <p className="mb-8 text-sm font-medium leading-relaxed text-gray-400">{authHook.subtitle}</p>
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/signup?next=${encodeURIComponent(window.location.pathname)}`)}
+                    className="w-full rounded-2xl bg-plasma-600 py-4 text-xs font-black uppercase tracking-widest text-white shadow-[0_0_40px_rgba(162,0,255,0.45)] transition-all hover:scale-[1.02] hover:bg-plasma-500 hover:shadow-glow-plasma active:scale-95"
+                  >
+                    Créer mon profil
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`)}
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] py-4 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-white/10"
+                  >
+                    Déjà inscrit ?
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setAuthHook(null)}
+                  className="mt-6 text-[10px] font-bold uppercase tracking-widest text-white/30 transition-colors hover:text-white/65"
+                >
+                  Rester en mode spectateur
                 </button>
               </div>
             </motion.div>
