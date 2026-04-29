@@ -808,7 +808,7 @@ export default function FeedPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed z-[500] max-md:bottom-6 max-md:left-1/2 max-md:w-max max-md:max-w-[95vw] max-md:-translate-x-1/2 md:bottom-8 md:right-8 md:left-auto md:w-[340px] md:translate-x-0 overflow-hidden max-md:rounded-full md:rounded-2xl border border-plasma-500/30 bg-gradient-to-br from-black/95 to-obsidian-950 shadow-[0_8px_32px_rgba(0,0,0,0.8)]"
+          className="fixed z-[500] max-md:bottom-6 max-md:left-4 max-md:right-4 max-md:mx-auto max-md:w-auto md:bottom-8 md:right-8 md:left-auto md:w-[340px] md:translate-x-0 overflow-hidden max-md:rounded-[2rem] md:rounded-2xl border border-plasma-500/30 bg-gradient-to-br from-black/95 to-obsidian-950 shadow-[0_8px_32px_rgba(0,0,0,0.8)]"
         >
           <button
             type="button"

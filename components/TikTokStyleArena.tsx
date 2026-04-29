@@ -3177,6 +3177,12 @@ export function TikTokStyleArena({
   return (
     <div
       onClick={(e) => {
+        // FORCER LA LECTURE VIDÉO (Contournement Safari iOS)
+        if (typeof document !== 'undefined') {
+          document.querySelectorAll('video').forEach((v) => {
+            if (v.paused) void v.play().catch(() => {});
+          });
+        }
         if (!isCinematicMode) return;
         if ((e.target as Element).closest?.('[data-cinema-stay]')) return;
         setIsCinematicMode(false);
@@ -3494,7 +3500,7 @@ export function TikTokStyleArena({
             <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={leftPanel?.sessionId || 'empty'}
+                  key={leftPanel?.sessionId ? leftPanel.sessionId + (leftPanel.videoTrack?.id || '') : 'empty'}
                   className="absolute inset-0"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -3601,7 +3607,7 @@ export function TikTokStyleArena({
             <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={rightPanel?.sessionId || 'empty'}
+                  key={rightPanel?.sessionId ? rightPanel.sessionId + (rightPanel.videoTrack?.id || '') : 'empty'}
                   className="absolute inset-0"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}

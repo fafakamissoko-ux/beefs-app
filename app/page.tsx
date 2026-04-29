@@ -26,9 +26,6 @@ export default function SplashScreen() {
       // Check Supabase session
       const { supabase } = await import('@/lib/supabase/client');
       const { data: { session } } = await supabase.auth.getSession();
-      
-      // Check if user has already seen onboarding
-      const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
 
       if (session?.user) {
         const { data: userData } = await supabase
@@ -41,20 +38,10 @@ export default function SplashScreen() {
           router.push('/onboarding');
           return;
         }
-
-        const isNewUser = userData?.created_at
-          ? new Date().getTime() - new Date(userData.created_at).getTime() < 5 * 60 * 1000
-          : false;
-
-        if (isNewUser && hasSeenOnboarding !== 'true') {
-          router.push('/welcome');
-        } else {
-          router.push('/feed');
-        }
-      } else if (hasSeenOnboarding === 'true') {
-        router.push('/login');
+        router.push('/feed');
       } else {
-        router.push('/welcome');
+        // Mode Fantôme : Accès public direct au Feed
+        router.push('/feed');
       }
     }, 2000);
 
