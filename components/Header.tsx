@@ -552,7 +552,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       shell === 'phone' ? 'lg:w-full' : ''
                     }`}
                   >
-                    Entrer dans l&apos;Arène
+                    Rejoindre l&apos;Agora
                   </Link>
                 </div>
               )}
@@ -689,7 +689,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         onClick={() => setMobileMenuOpen(false)}
                         className="flex flex-1 items-center justify-center rounded-[2px] bg-plasma-600 py-3 text-center text-sm font-semibold text-white shadow-glow-plasma transition-all hover:shadow-glow-plasma active:scale-[0.97]"
                       >
-                        Entrer dans l&apos;Arène
+                        Rejoindre l&apos;Agora
                       </Link>
                     </div>
                   )}

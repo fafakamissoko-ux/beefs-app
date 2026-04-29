@@ -194,7 +194,7 @@ export function BeefCard({
         : 'border-white/[0.06] md:border-white/[0.08] md:hover:border-white/20';
 
   return (
-    <div className="relative flex h-auto min-h-0 w-full max-w-full shrink-0 flex-col">
+    <div className="relative flex h-full min-h-0 w-full max-w-full shrink-0 flex-col">
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -202,7 +202,7 @@ export function BeefCard({
       onClick={onClick}
       onMouseEnter={() => isReplay && setReplayHover(true)}
       onMouseLeave={() => isReplay && setReplayHover(false)}
-      className={`group relative flex min-h-0 h-auto w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border md:bg-[#08080A] ${dynamicBorderClass} ${
+      className={`group relative flex min-h-0 flex-1 h-full w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border md:bg-[#08080A] ${dynamicBorderClass} ${
         status === 'live'
           ? 'md:shadow-[0_0_0_1px_rgba(162,0,255,0.35)] md:group-hover:shadow-[0_0_24px_rgba(162,0,255,0.55)]'
           : ''

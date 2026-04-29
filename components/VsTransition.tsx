@@ -47,7 +47,7 @@ export function VsTransition({ challengerA, challengerB, debateTitle, onComplete
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <h2 className="text-right font-sans text-4xl sm:text-6xl md:text-7xl font-black uppercase italic text-white drop-shadow-[0_0_25px_rgba(168,85,247,0.9)] line-clamp-2 pr-4 pb-2">
+          <h2 className="text-right font-sans text-4xl sm:text-6xl md:text-7xl font-black uppercase italic text-white drop-shadow-[0_0_25px_rgba(168,85,247,0.9)] line-clamp-2 px-4 pb-2">
             {challengerA}
           </h2>
         </motion.div>
@@ -57,7 +57,7 @@ export function VsTransition({ challengerA, challengerB, debateTitle, onComplete
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <h2 className="text-left font-sans text-4xl sm:text-6xl md:text-7xl font-black uppercase italic text-white drop-shadow-[0_0_25px_rgba(16,185,129,0.9)] line-clamp-2 pl-4 pb-2">
+          <h2 className="text-left font-sans text-4xl sm:text-6xl md:text-7xl font-black uppercase italic text-white drop-shadow-[0_0_25px_rgba(16,185,129,0.9)] line-clamp-2 px-4 pb-2">
             {challengerB}
           </h2>
         </motion.div>
