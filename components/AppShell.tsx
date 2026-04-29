@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Header } from '@/components/Header';
 
@@ -20,6 +21,19 @@ function isStandalonePublicPage(pathname: string | null): boolean {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  // Éradication silencieuse des anciens Service Workers (Nettoyage de cache PWA)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister().then((boolean) => {
+            if (boolean) console.log('Ancien Service Worker neutralisé.');
+          });
+        }
+      });
+    }
+  }, []);
+
   const pathname = usePathname();
   const fullWidthShell = pathname?.startsWith('/admin') ?? false;
   const roomImmersive = isRoomImmersiveRoute(pathname ?? null);
