@@ -228,22 +228,20 @@ export function TikTokStyleArena({
 
   const isViewer = userRole === 'viewer' || userRole === 'spectator';
 
-  /** Mode spectateur anonyme → modale Arena VIP avant actions interactives */
-  type AuthArenaVip = { title: string; subtitle: string };
-  const [authHook, setAuthHook] = useState<AuthArenaVip | null>(null);
-  const requireAuth = useCallback(
-    (title: string, subtitle: string): boolean => {
-      if (userRole !== 'spectator' && userId.trim() !== '') return true;
+  // ── AUTH HOOK (Conversion des anonymes) ──
+  const [authHook, setAuthHook] = useState<{ title: string; subtitle: string } | null>(null);
+  const requireAuth = useCallback((title: string, subtitle: string) => {
+    if (!userId) {
       setAuthHook({ title, subtitle });
-      return false;
-    },
-    [userId, userRole],
-  );
+      return true;
+    }
+    return false;
+  }, [userId]);
 
   const [hasJoined, setHasJoined] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
-        return sessionStorage.getItem(`arena_joined_${roomId}`) === 'true';
+        return sessionStorage.getItem(`arena_joined_${roomId}_${userId || 'anon'}`) === 'true';
       } catch {
         return false;
       }
@@ -938,7 +936,7 @@ export function TikTokStyleArena({
     if (beefEndedRef.current) return;
     if (typeof window !== 'undefined') {
       try {
-        sessionStorage.removeItem(`arena_joined_${roomId}`);
+        sessionStorage.removeItem(`arena_joined_${roomId}_${userId || 'anon'}`);
       } catch {
         /* ignore */
       }
@@ -994,7 +992,7 @@ export function TikTokStyleArena({
     endSummaryTimerRef.current = setTimeout(() => {
       router.replace('/feed');
     }, 12000);
-  }, [roomId, router, runBeefManage]);
+  }, [roomId, router, runBeefManage, userId]);
 
   const handleMediatorVerdict = useCallback(
     async (kind: 'resolved' | 'closed' | 'rematch') => {
@@ -1558,13 +1556,13 @@ export function TikTokStyleArena({
     [sortedChallengerIds],
   );
 
-  const leftSlot = getSlotForUser(leftPanel?.arenaUserId);
-  const rightSlot = getSlotForUser(rightPanel?.arenaUserId);
+  const leftSlot = 'A';
+  const rightSlot = 'B';
 
-  const leftAura = leftSlot === 'A' ? auraA : auraB;
-  const rightAura = rightSlot === 'A' ? auraA : auraB;
-  const leftColor = leftSlot === 'A' ? '168,85,247' : '16,185,129';
-  const rightColor = rightSlot === 'A' ? '168,85,247' : '16,185,129';
+  const leftAura = auraA;
+  const rightAura = auraB;
+  const leftColor = '168,85,247';
+  const rightColor = '16,185,129';
 
   const expectedChallengers = useMemo(
     () =>
@@ -1834,13 +1832,7 @@ export function TikTokStyleArena({
 
   const emitTapSupport = useCallback(
     (target: 'A' | 'B' | 'M') => {
-      if (
-        !requireAuth(
-          'Décuple ton soutien',
-          'Tape pour les challengers : enregistre-toi pour que ton Aura compte officiellement dans l’Arène.',
-        )
-      )
-        return;
+      if (requireAuth('Fais grimper l\'Aura', 'Crée un compte gratuit pour tapoter l\'écran et soutenir tes favoris !')) return;
       const boost = getAuraBoost();
       setGlobalHeat((v) => Math.min(100, v + 2));
       if (target === 'M') {
@@ -2038,7 +2030,7 @@ export function TikTokStyleArena({
       .on('broadcast', { event: 'beef_ended' }, ({ payload }: any) => {
         if (typeof window !== 'undefined') {
           try {
-            sessionStorage.removeItem(`arena_joined_${roomId}`);
+            sessionStorage.removeItem(`arena_joined_${roomId}_${userId || 'anon'}`);
           } catch {
             /* ignore */
           }
@@ -2200,13 +2192,7 @@ export function TikTokStyleArena({
   }, [roomId, userId, addRemoteReaction]);
 
   const handleReaction = (emoji: string) => {
-    if (
-      !requireAuth(
-        'Réactions réservées au ring Beefs',
-        'Rejoins l’arena pour balancer des emoji et soutenir le débat comme les autres spectateurs.',
-      )
-    )
-      return;
+    if (requireAuth('Donne de la force', 'Crée un compte gratuit pour envoyer des réactions.')) return;
     onReaction(emoji);
 
     const integrated = INTEGRATED_SUPPORT_REACTIONS.has(emoji);
@@ -2869,13 +2855,7 @@ export function TikTokStyleArena({
   };
 
   const toggleFollowProfileTarget = async () => {
-    if (
-      !requireAuth(
-        'Arena VIP · Abonnements',
-        'Suis ce profil après connexion pour ne rien rater du ring.',
-      )
-    )
-      return;
+    if (requireAuth('Abonne-toi', 'Crée un compte pour suivre ce profil.')) return;
     if (!selectedProfile || selectedProfile.id === userId) return;
     try {
       if (profileFollowsTarget) {
@@ -2950,13 +2930,7 @@ export function TikTokStyleArena({
   );
 
   const handleSendMessage = () => {
-    if (
-      !requireAuth(
-        'Chat réservé aux membres',
-        'Crée ton compte gratuit pour rejoindre la conversation en direct.',
-      )
-    )
-      return;
+    if (requireAuth('Rejoins la discussion', 'Crée un compte gratuit pour envoyer des messages dans le chat.')) return;
     if (!chatInput.trim()) return;
 
     const cleanContent = sanitizeMessage(chatInput);
@@ -3100,7 +3074,7 @@ export function TikTokStyleArena({
     setHasJoined(true);
     if (typeof window !== 'undefined') {
       try {
-        sessionStorage.setItem(`arena_joined_${roomId}`, 'true');
+        sessionStorage.setItem(`arena_joined_${roomId}_${userId || 'anon'}`, 'true');
       } catch {
         /* ignore */
       }
@@ -3113,7 +3087,7 @@ export function TikTokStyleArena({
   const handleLeave = useCallback(async () => {
     if (typeof window !== 'undefined') {
       try {
-        sessionStorage.removeItem(`arena_joined_${roomId}`);
+        sessionStorage.removeItem(`arena_joined_${roomId}_${userId || 'anon'}`);
       } catch {
         /* ignore */
       }
@@ -3135,7 +3109,7 @@ export function TikTokStyleArena({
       await leave();
       router.replace('/feed');
     }
-  }, [leave, router, isHost, endBeef, roomId]);
+  }, [leave, router, isHost, endBeef, roomId, userId]);
 
   // Show pre-join screen before entering
   if (!hasJoined) {
@@ -3416,13 +3390,7 @@ export function TikTokStyleArena({
             <button
               type="button"
               onClick={() => {
-                if (
-                  !requireAuth(
-                    'Arena VIP · Cadeaux Aura',
-                    'Offre des cadeaux et boost le ring après inscription.',
-                  )
-                )
-                  return;
+                if (requireAuth('Offre un cadeau', 'Crée un compte gratuit pour envoyer des cadeaux épiques et faire briller ton nom !')) return;
                 setShowAllReactions(false);
                 setShowGiftPicker(!showGiftPicker);
               }}
@@ -3828,13 +3796,7 @@ export function TikTokStyleArena({
             <button
               type="button"
               onClick={() => {
-                if (
-                  !requireAuth(
-                    'Arena VIP · Cadeaux Aura',
-                    'Offre des cadeaux et boost le ring après inscription.',
-                  )
-                )
-                  return;
+                if (requireAuth('Offre un cadeau', 'Crée un compte gratuit pour envoyer des cadeaux épiques et faire briller ton nom !')) return;
                 setShowAllReactions(false);
                 setShowGiftPicker(!showGiftPicker);
               }}
@@ -4475,14 +4437,15 @@ export function TikTokStyleArena({
         )}
       </AnimatePresence>
 
-      {/* === HOOK DE CONVERSION PREMIUM — Arena VIP === */}
+      {/* === HOOK DE CONVERSION PREMIUM === */}
       <AnimatePresence>
         {authHook && (
           <motion.div
+            key="arena-vip-hook"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-2xl"
+            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-[12px]"
             onClick={() => setAuthHook(null)}
           >
             <motion.div
@@ -4491,47 +4454,39 @@ export function TikTokStyleArena({
               exit={{ scale: 0.9, y: 30, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-[360px] overflow-hidden rounded-[2.5rem] border border-plasma-500/40 bg-[#08080A]/92 p-8 text-center shadow-[0_0_120px_rgba(162,0,255,0.28)] ring-1 ring-white/15 backdrop-blur-2xl"
+              className="relative w-full max-w-[360px] overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#08080A]/90 p-8 text-center shadow-[0_0_100px_rgba(162,0,255,0.2)] ring-1 ring-white/20"
             >
-              <div className="absolute -top-28 -left-28 h-56 w-56 rounded-full bg-plasma-600/25 blur-[70px]" />
-              <div className="pointer-events-none absolute inset-0 rounded-[2.5rem] shadow-[inset_0_0_60px_rgba(162,0,255,0.08)]" />
-              <div className="relative z-10">
-                <div className="mx-auto mb-6 flex h-20 w-20 rotate-3 items-center justify-center rounded-3xl bg-gradient-to-br from-plasma-600 to-violet-700 shadow-glow-plasma">
-                  <Flame className="h-10 w-10 text-white" strokeWidth={1.85} aria-hidden />
-                </div>
+              <h2 className="mb-3 font-sans text-2xl font-black uppercase italic tracking-tighter text-white drop-shadow-md">
+                {authHook.title}
+              </h2>
 
-                <h2 className="mb-3 font-sans text-2xl font-black uppercase italic tracking-tighter text-white drop-shadow-md">
-                  {authHook.title}
-                </h2>
+              <p className="mb-8 text-sm font-medium leading-relaxed text-gray-400">{authHook.subtitle}</p>
 
-                <p className="mb-8 text-sm font-medium leading-relaxed text-gray-400">{authHook.subtitle}</p>
-
-                <div className="flex flex-col gap-3">
-                  <button
-                    type="button"
-                    onClick={() => router.push(`/signup?next=${encodeURIComponent(window.location.pathname)}`)}
-                    className="w-full rounded-2xl bg-plasma-600 py-4 text-xs font-black uppercase tracking-widest text-white shadow-[0_0_40px_rgba(162,0,255,0.45)] transition-all hover:scale-[1.02] hover:bg-plasma-500 hover:shadow-glow-plasma active:scale-95"
-                  >
-                    Créer mon profil
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`)}
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.06] py-4 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-white/10"
-                  >
-                    Déjà inscrit ?
-                  </button>
-                </div>
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/signup?next=${encodeURIComponent(window.location.pathname)}`)}
+                  className="w-full rounded-2xl bg-plasma-600 py-4 text-xs font-black uppercase tracking-widest text-white shadow-[0_0_20px_rgba(162,0,255,0.4)] transition-all hover:scale-[1.02] hover:bg-plasma-500"
+                >
+                  Créer mon profil
+                </button>
 
                 <button
                   type="button"
-                  onClick={() => setAuthHook(null)}
-                  className="mt-6 text-[10px] font-bold uppercase tracking-widest text-white/30 transition-colors hover:text-white/65"
+                  onClick={() => router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`)}
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 text-xs font-bold uppercase tracking-widest text-white hover:bg-white/10"
                 >
-                  Rester en mode spectateur
+                  Déjà inscrit ?
                 </button>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setAuthHook(null)}
+                className="mt-6 text-[10px] font-bold uppercase tracking-widest text-white/30 hover:text-white/60"
+              >
+                Rester en mode spectateur
+              </button>
             </motion.div>
           </motion.div>
         )}
