@@ -150,7 +150,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
   const { user, userRole, signOut } = useAuth();
   const { toast } = useToast();
   const { openSearch } = useGlobalSearch();
-  const showGlobalSearch = Boolean(user) && !hideGlobalSearchOnPath(pathname);
+  const showGlobalSearch = !hideGlobalSearchOnPath(pathname);
 
   useEffect(() => {
     setUserMenuOpen(false);

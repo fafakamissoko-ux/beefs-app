@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useRef } from 'react';
 
 interface ParticipantVideoProps {
@@ -17,27 +16,37 @@ export function ParticipantVideo({ videoTrack, audioTrack, muted = false, classN
     const el = videoRef.current;
     if (!el) return;
 
-    const tracks: MediaStreamTrack[] = [];
-    if (videoTrack) tracks.push(videoTrack);
-    if (audioTrack && !muted) tracks.push(audioTrack);
-
-    if (tracks.length > 0) {
-      const stream = new MediaStream(tracks);
+    // Recyclage du stream pour éviter le clignotement (Blink)
+    let stream = el.srcObject as MediaStream;
+    if (!stream) {
+      stream = new MediaStream();
       el.srcObject = stream;
-
-      // FORÇAGE DU MOTEUR : On ordonne au navigateur de lire le flux injecté
-      el.play().catch((err) => {
-        console.warn('⚠️ Lecture automatique bloquée par le navigateur (Autoplay Policy) :', err);
-        // Note : Si l'utilisateur n'a pas cliqué sur la page avant, le navigateur bloque le son.
-      });
-    } else {
-      el.srcObject = null;
     }
 
-    return () => {
-      el.srcObject = null;
-    };
+    // Nettoyage des anciennes pistes
+    stream.getTracks().forEach(t => stream.removeTrack(t));
+
+    // Ajout des nouvelles
+    let hasTracks = false;
+    if (videoTrack) { stream.addTrack(videoTrack); hasTracks = true; }
+    if (audioTrack && !muted) { stream.addTrack(audioTrack); hasTracks = true; }
+
+    if (hasTracks) {
+      void el.play().catch(err => console.warn('Autoplay bloqué', err));
+    }
   }, [videoTrack, audioTrack, muted]);
+
+  // Correction iOS : Forcer la lecture au retour dans l'application
+  useEffect(() => {
+    const el = videoRef.current;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && el && el.srcObject) {
+        void el.play().catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   return (
     <video
