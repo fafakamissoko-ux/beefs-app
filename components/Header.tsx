@@ -305,6 +305,13 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
     },
   ];
 
+  const publicNavItems = [
+    { href: '/feed', label: 'Fil d’actu', icon: Home, badge: 0 },
+    { href: '/live', label: 'Audiences', icon: Flame, badge: 0 },
+    { href: '/rules', label: "Règles de l'Arène", icon: Shield, badge: 0 },
+  ];
+  const visibleNavItems = user ? navItems : publicNavItems;
+
   const isActive = (href: string) => {
     if (!pathname) return false;
     /** Sur les pages profil, aucun onglet principal (Fil d’actu, Messages, …) ne doit rester « actif ». */
@@ -357,7 +364,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               </span>
             </Link>
 
-            {/* Desktop Nav — liens app uniquement si connecté (sinon préfetch RSC ×6 → échecs Brave / Safari / réseau) */}
+            {/* Desktop Nav — entrées complètes si connecté ; invités : liens publics d’exploration (évite barre vide). */}
             <nav
               className={`relative z-[5] hidden min-w-0 ${
                 shell === 'full'
@@ -391,8 +398,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   <SearchKeyboardShortcut visibleFrom={shell === 'phone' ? 'lg' : 'xl'} />
                 </button>
               )}
-              {user &&
-                navItems.map((item) => {
+              {visibleNavItems.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
                   return (
@@ -601,11 +607,10 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 onClick={() => setMobileMenuOpen(false)}
               />
               <nav className="px-3 py-3 space-y-0.5">
-                {user &&
-                  navItems.map((item) => {
-                    const Icon = item.icon;
-                    const active = isActive(item.href);
-                    return (
+                {visibleNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  return (
                       <Link
                         key={item.href}
                         href={hrefWithFrom(item.href, pathname)}

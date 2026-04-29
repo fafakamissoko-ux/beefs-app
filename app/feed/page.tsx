@@ -808,12 +808,12 @@ export default function FeedPage() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed z-[500] max-md:bottom-6 max-md:left-4 max-md:right-4 max-md:mx-auto max-md:w-auto md:bottom-8 md:right-8 md:left-auto md:w-[340px] md:translate-x-0 overflow-hidden max-md:rounded-[2rem] md:rounded-2xl border border-plasma-500/30 bg-gradient-to-br from-black/95 to-obsidian-950 shadow-[0_8px_32px_rgba(0,0,0,0.8)]"
+          className="fixed z-[500] max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:w-full md:bottom-8 md:right-8 md:left-auto md:w-[340px] md:translate-x-0 overflow-hidden max-md:rounded-t-2xl max-md:rounded-b-none md:rounded-2xl border-t max-md:border-x-0 max-md:border-b-0 md:border border-plasma-500/30 bg-gradient-to-br from-black/95 to-obsidian-950 shadow-[0_-8px_32px_rgba(0,0,0,0.8)]"
         >
           <button
             type="button"
             onClick={() => router.push(`/arena/${activeBeef.id}`)}
-            className="group flex w-full items-center md:justify-between max-md:justify-center gap-3 px-3 py-2.5 text-left md:gap-4 md:p-4"
+            className="group flex w-full items-center md:justify-between max-md:justify-center gap-3 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:gap-4 md:p-4"
           >
             <div className="flex min-w-0 max-md:flex-initial md:flex-1 items-center gap-2.5 md:gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-plasma-500/30 bg-plasma-500/15">
