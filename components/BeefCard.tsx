@@ -46,7 +46,9 @@ interface BeefCardProps {
   /** Onglet feed « À Saisir » : badge ⚖️ EN ATTENTE + CTA médiateur */
   saisirTab?: boolean;
   onSaisirAffaire?: () => void;
-  /** L’Arène : médiateur manifeste peut se retirer */
+  onValiderRef?: () => void;
+  onRefuserRef?: () => void;
+  /** L'Arène : médiateur manifeste peut se retirer */
   onSeDesister?: () => void;
   /** Feed : médiateur, affaire planifiée — accès antichambre */
   onPrepareAudience?: () => void;
@@ -86,6 +88,8 @@ export function BeefCard({
   onAuraClick,
   saisirTab = false,
   onSaisirAffaire,
+  onValiderRef,
+  onRefuserRef,
   onSeDesister,
   onPrepareAudience,
   liveAudienceAction,
@@ -194,7 +198,7 @@ export function BeefCard({
         : 'border-white/[0.06] md:border-white/[0.08] md:hover:border-white/20';
 
   return (
-    <div className="relative flex h-full min-h-0 w-full max-w-full shrink-0 flex-col">
+    <div className="relative flex h-auto min-h-0 w-full max-w-full shrink-0 flex-col">
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -202,7 +206,7 @@ export function BeefCard({
       onClick={onClick}
       onMouseEnter={() => isReplay && setReplayHover(true)}
       onMouseLeave={() => isReplay && setReplayHover(false)}
-      className={`group relative flex min-h-0 flex-1 h-full w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border md:bg-[#08080A] ${dynamicBorderClass} ${
+      className={`group relative flex min-h-0 h-auto w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border md:bg-[#08080A] ${dynamicBorderClass} ${
         status === 'live'
           ? 'md:shadow-[0_0_0_1px_rgba(162,0,255,0.35)] md:group-hover:shadow-[0_0_24px_rgba(162,0,255,0.55)]'
           : ''
@@ -445,7 +449,10 @@ export function BeefCard({
       </div>
 
       {((status === 'scheduled' && onNotifyClick) ||
-        (status === 'pending' && onSaisirAffaire) ||
+        (status === 'pending' &&
+          ((!mediator_name && onSaisirAffaire) ||
+            (mediator_name && onValiderRef) ||
+            (mediator_name && !onValiderRef && !onSaisirAffaire))) ||
         (status === 'scheduled' && (onPrepareAudience || onSeDesister)) ||
         (status === 'live' && liveAudienceAction) ||
         (isManifesto && onApply)) && (
@@ -477,17 +484,58 @@ export function BeefCard({
               M&apos;alerter
             </button>
           )}
-          {status === 'pending' && onSaisirAffaire && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSaisirAffaire();
-              }}
-              className="w-full rounded-xl bg-white/10 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-white/20"
-            >
-              Saisir l&apos;Affaire
-            </button>
+          {status === 'pending' && onSaisirAffaire && !mediator_name && (
+            <div className="flex w-full flex-col items-center justify-center pt-1">
+              <span className="mb-2 text-[10px] font-medium text-gray-400">
+                Aucun juge n&apos;a encore pris cette affaire.
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSaisirAffaire();
+                }}
+                className="w-full rounded-xl bg-white py-3.5 text-center text-xs font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.35)] transition-transform hover:bg-gray-200 hover:scale-[1.02]"
+              >
+                Devenir le Ref
+              </button>
+            </div>
+          )}
+          {status === 'pending' && !!mediator_name && onValiderRef && (
+            <div className="flex w-full flex-col items-center justify-center gap-2 pt-1">
+              <span className="text-[10px] font-medium text-plasma-400">
+                @{mediator_name} postule comme Ref.
+              </span>
+              <div className="flex w-full gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRefuserRef?.();
+                  }}
+                  className="flex-1 rounded-xl bg-white/10 py-2.5 text-xs font-bold text-white transition-colors hover:bg-white/20"
+                >
+                  Refuser
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onValiderRef();
+                  }}
+                  className="flex-1 rounded-xl bg-plasma-600 py-2.5 text-xs font-bold text-white shadow-glow-plasma transition-colors hover:bg-plasma-500"
+                >
+                  Valider
+                </button>
+              </div>
+            </div>
+          )}
+          {status === 'pending' && !!mediator_name && !onValiderRef && !onSaisirAffaire && (
+            <div className="flex w-full flex-col items-center justify-center py-2">
+              <span className="text-[10px] font-medium italic text-gray-400">
+                En attente de validation du Ref (@{mediator_name}) par l&apos;initiateur…
+              </span>
+            </div>
           )}
           {status === 'scheduled' && (onPrepareAudience || onSeDesister) && (
             <div className="flex flex-col gap-2">

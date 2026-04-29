@@ -473,20 +473,47 @@ export default function FeedPage() {
       if (!user?.id) return;
       const { error } = await supabase
         .from('beefs')
-        .update({ mediator_id: user.id, status: 'scheduled' })
+        .update({ mediator_id: user.id })
         .eq('id', beefId)
         .eq('intent', 'manifesto')
         .is('mediator_id', null)
         .neq('created_by', user.id);
       if (error) {
-        toast(error.message || 'Impossible de saisir cette affaire', 'error');
+        toast(error.message || 'Impossible de postuler', 'error');
         return;
       }
-      toast('Affaire saisie ! Retrouve-la dans l’onglet Pour toi.', 'success');
-      setFeedType('pour-vous');
+      toast('Candidature envoyée ! En attente de l’initiateur.', 'success');
       void loadBeefs();
     },
-    [user?.id, toast, loadBeefs]
+    [user?.id, toast, loadBeefs],
+  );
+
+  const handleApproveRef = useCallback(
+    async (beefId: string) => {
+      if (!user?.id) return;
+      const { error } = await supabase.from('beefs').update({ status: 'scheduled' }).eq('id', beefId).eq('created_by', user.id);
+      if (error) {
+        toast('Erreur lors de la validation', 'error');
+        return;
+      }
+      toast("Ref validé ! L'affaire est programmée.", 'success');
+      void loadBeefs();
+    },
+    [user?.id, toast, loadBeefs],
+  );
+
+  const handleRejectRef = useCallback(
+    async (beefId: string) => {
+      if (!user?.id) return;
+      const { error } = await supabase.from('beefs').update({ mediator_id: null }).eq('id', beefId).eq('created_by', user.id);
+      if (error) {
+        toast('Erreur lors du refus', 'error');
+        return;
+      }
+      toast('Candidature refusée.', 'info');
+      void loadBeefs();
+    },
+    [user?.id, toast, loadBeefs],
   );
 
   const handleWithdrawManifesto = useCallback(
@@ -801,8 +828,27 @@ export default function FeedPage() {
                       beef.intent === 'manifesto' &&
                       user?.id &&
                       beef.created_by &&
-                      beef.created_by !== user.id
+                      beef.created_by !== user.id &&
+                      !beef.mediator_id
                         ? () => void handleClaimManifesto(beef.id)
+                        : undefined
+                    }
+                    onValiderRef={
+                      beef.status === 'pending' &&
+                      beef.intent === 'manifesto' &&
+                      user?.id &&
+                      beef.created_by === user.id &&
+                      beef.mediator_id
+                        ? () => void handleApproveRef(beef.id)
+                        : undefined
+                    }
+                    onRefuserRef={
+                      beef.status === 'pending' &&
+                      beef.intent === 'manifesto' &&
+                      user?.id &&
+                      beef.created_by === user.id &&
+                      beef.mediator_id
+                        ? () => void handleRejectRef(beef.id)
                         : undefined
                     }
                     onSeDesister={
