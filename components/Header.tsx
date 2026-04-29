@@ -145,12 +145,21 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
   const [pendingInvitations, setPendingInvitations] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [topUsers, setTopUsers] = useState<any[]>([]);
   const pathname = usePathname();
   const router = useRouter();
   const { user, userRole, signOut } = useAuth();
   const { toast } = useToast();
   const { openSearch } = useGlobalSearch();
   const showGlobalSearch = !hideGlobalSearchOnPath(pathname);
+
+  useEffect(() => {
+    async function fetchElite() {
+      const { data } = await supabase.from('user_public_profile').select('id, username, display_name, avatar_url').limit(4);
+      if (data) setTopUsers(data);
+    }
+    void fetchElite();
+  }, []);
 
   useEffect(() => {
     setUserMenuOpen(false);
@@ -439,13 +448,28 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 })}
             </nav>
 
-            {/* Dossiers de l'Agora (Desktop Sidebar) */}
-            <div className={`hidden shrink-0 ${shell === 'full' ? 'lg:hidden' : 'lg:flex lg:flex-col lg:gap-3 lg:px-6 lg:mt-4 lg:mb-auto'}`}>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Dossiers de l&apos;Agora</h3>
-              <div className="flex flex-col gap-2.5">
-                {['#UFC300', '#ClashRap', '#Politique', '#DramaTwitch'].map((tag) => (
-                  <Link key={tag} href={`/feed?tag=${tag.replace('#', '')}`} className="text-[13px] font-bold text-gray-400 transition-colors hover:text-plasma-400">
-                    {tag}
+            {/* L'Élite de l'Agora (Desktop Sidebar) */}
+            <div className={`hidden shrink-0 ${shell === 'full' ? 'lg:hidden' : 'lg:flex lg:flex-col lg:gap-4 lg:px-6 lg:mt-4 lg:mb-8'}`}>
+              <div className="mb-1 flex items-center gap-2">
+                <Flame className="h-4 w-4 text-plasma-500" />
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">L&apos;Élite de l&apos;Agora</h3>
+              </div>
+              <div className="flex flex-col gap-3.5">
+                {topUsers.map((u, i) => (
+                  <Link key={u.id} href={`/profile/${u.username}`} className="group flex items-center gap-3">
+                    <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-bold text-white transition-colors group-hover:border-plasma-500/50">
+                      {u.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={u.avatar_url} alt={u.username ?? ''} className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        u.username?.[0]?.toUpperCase()
+                      )}
+                      {i === 0 && <span className="absolute -right-2 -top-2 text-[12px] drop-shadow-md">👑</span>}
+                    </div>
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-xs font-bold text-gray-300 transition-colors group-hover:text-plasma-400">{u.display_name || u.username}</span>
+                      <span className="text-[9px] font-medium uppercase tracking-wider text-gray-500">Aura Suprême</span>
+                    </div>
                   </Link>
                 ))}
               </div>

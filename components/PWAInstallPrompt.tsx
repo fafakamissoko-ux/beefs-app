@@ -138,10 +138,10 @@ export function PWAInstallPrompt() {
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, y: 50 }}
+        initial={{ opacity: 0, y: -50 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 50 }}
-        className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-modal max-h-[min(85vh,480px)] overflow-y-auto"
+        exit={{ opacity: 0, y: -50 }}
+        className="fixed left-4 right-4 top-20 z-[99999] max-h-[min(85vh,480px)] overflow-y-auto shadow-2xl md:left-auto md:w-96"
         role="region"
         aria-labelledby="pwa-install-title"
       >
