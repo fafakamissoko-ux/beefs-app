@@ -166,10 +166,11 @@ export default function ArenaPage() {
   const syncVideoAccessFromApi = async (beefId: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
-      const res = await fetch(`/api/beef/access?beefId=${encodeURIComponent(beefId)}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
+      const headers: Record<string, string> = {};
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+      const res = await fetch(`/api/beef/access?beefId=${encodeURIComponent(beefId)}`, { headers });
       const data = (await res.json()) as {
         dailyRoomUrl?: string | null;
         dailyToken?: string | null;

@@ -154,7 +154,8 @@ async function videoCredentialsForUser(
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
-    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    // Création d'un faux utilisateur pour satisfaire la fonction Daily si non connecté
+    const activeUser = user || ({ id: `anon_${Date.now()}` } as unknown as User);
 
     const rawId = beefIdFromSearchParams(new URL(request.url).searchParams);
     const beefId = rawId ? normalizeBeefId(rawId) : null;
@@ -171,10 +172,10 @@ export async function GET(request: NextRequest) {
     let role: DailyTokenRole = 'spectator';
     let grantTokenRole: DailyTokenRole | null = 'spectator';
 
-    if (beef.mediator_id === user.id) {
+    if (user && beef.mediator_id === user.id) {
       role = 'mediator';
       grantTokenRole = 'mediator';
-    } else {
+    } else if (user) {
       const { data: part } = await supabaseAdmin
         .from('beef_participants')
         .select('id')
@@ -192,7 +193,7 @@ export async function GET(request: NextRequest) {
       grantTokenRole = null;
     }
 
-    const video = await videoCredentialsForUser(supabaseAdmin, user, beefId, grantTokenRole);
+    const video = await videoCredentialsForUser(supabaseAdmin, activeUser, beefId, grantTokenRole);
     return NextResponse.json({
       role,
       viewerAccess: beef.status === 'live' ? 'full' : 'not_live',
