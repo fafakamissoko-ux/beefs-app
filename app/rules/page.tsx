@@ -74,7 +74,7 @@ export default function RulesPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="mt-20 rounded-[2.5rem] border border-plasma-500/10 bg-gradient-to-br from-plasma-900/20 to-transparent p-10 text-center"
+          className="mt-8 rounded-[2.5rem] border border-plasma-500/10 bg-gradient-to-br from-plasma-900/20 to-transparent p-6 md:p-8 text-center"
         >
           <Flame className="mx-auto mb-4 h-8 w-8 text-plasma-500" aria-hidden />
           <p className="mb-8 font-mono text-xs font-bold uppercase tracking-widest text-plasma-400">

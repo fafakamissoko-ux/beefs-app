@@ -711,64 +711,6 @@ export default function FeedPage() {
         </div>
 
         {/* Content */}
-        {/* === HERO BANNER CALL OUT (Visiteurs uniquement) === */}
-        {showHero && !user && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mx-4 mt-4 shrink-0 overflow-hidden rounded-[1.5rem] border border-plasma-500/30 bg-gradient-to-br from-plasma-600/20 to-obsidian-950 p-4 text-center relative md:mx-6 md:p-5"
-          >
-            <button
-              type="button"
-              onClick={() => {
-                setShowHero(false);
-                try {
-                  localStorage.setItem('hideAgoraHero', 'true');
-                } catch {
-                  /* ignore */
-                }
-              }}
-              className="absolute right-3 top-3 z-20 p-2 text-white/40 hover:text-white"
-              aria-label="Fermer la bannière"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <h2 className="mb-1 pr-2 font-sans text-lg font-black uppercase italic text-white md:text-xl">
-              Un compte à régler ?
-            </h2>
-            <p className="mx-auto mb-4 max-w-lg text-[11px] text-gray-400 md:text-xs">
-              Ne laisse plus une affaire sans réponse. Convoque ton adversaire dans l&apos;Agora.
-            </p>
-
-            <div className="relative mb-4 flex w-full overflow-hidden border-y border-white/5 bg-black/40 py-2">
-              <motion.div
-                animate={{ x: ['0%', '-50%'] }}
-                transition={{ repeat: Infinity, duration: 15, ease: 'linear' }}
-                className="flex w-max items-center whitespace-nowrap font-mono text-[10px] font-bold uppercase tracking-widest text-plasma-400"
-              >
-                <span className="px-4">
-                  🔥 LANCE UN CALL OUT POUR OUVRIR UNE AFFAIRE • RÈGLE TES COMPTES EN DIRECT • SEULE L&apos;AURA TE DONNERA RAISON SOUS
-                  L&apos;AUTORITÉ DU REF 🔥
-                </span>
-                <span className="px-4">
-                  🔥 LANCE UN CALL OUT POUR OUVRIR UNE AFFAIRE • RÈGLE TES COMPTES EN DIRECT • SEULE L&apos;AURA TE DONNERA RAISON SOUS
-                  L&apos;AUTORITÉ DU REF 🔥
-                </span>
-              </motion.div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                router.push('/signup?next=/feed');
-              }}
-              className="mx-auto flex flex-col items-center rounded-xl bg-plasma-600 px-8 py-2 text-white shadow-glow-plasma transition-transform hover:scale-105 hover:bg-plasma-500"
-            >
-              <span className="font-black uppercase tracking-widest text-xs">Call Out</span>
-            </button>
-          </motion.div>
-        )}
         {loading ? (
             <div
             id="feed-scroll-container"
@@ -812,6 +754,38 @@ export default function FeedPage() {
               id="feed-scroll-container"
               className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 md:gap-5 md:p-6 md:pt-4 pb-28 md:pb-32 md:snap-none items-stretch`}
             >
+              {/* === CARTE APPÂT (Visiteurs) === */}
+              {!user && showHero && (
+                <div className="snap-start snap-always relative flex h-full min-h-[350px] w-full shrink-0 flex-col items-center justify-center overflow-hidden max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border border-plasma-500/40 bg-gradient-to-br from-plasma-600/10 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(162,0,255,0.1)]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowHero(false);
+                      try {
+                        localStorage.setItem('hideAgoraHero', 'true');
+                      } catch {
+                        /* ignore */
+                      }
+                    }}
+                    className="absolute right-3 top-3 z-20 p-2 text-white/40 hover:text-white"
+                    aria-label="Fermer"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                  <Flame className="mb-4 h-12 w-12 text-plasma-500 drop-shadow-[0_0_15px_rgba(162,0,255,0.8)]" aria-hidden />
+                  <h2 className="mb-2 font-sans text-xl font-black uppercase italic text-white md:text-2xl">Un compte à régler ?</h2>
+                  <p className="mx-auto mb-8 max-w-sm text-xs text-gray-400 md:text-sm">
+                    Ne laisse plus une affaire sans réponse. Convoque ton adversaire dans l&apos;Agora.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/signup?next=/feed')}
+                    className="w-full max-w-[220px] rounded-xl bg-plasma-600 py-3.5 text-sm font-black uppercase tracking-widest text-white shadow-glow-plasma transition-transform hover:scale-105 active:scale-95"
+                  >
+                    Call Out
+                  </button>
+                </div>
+              )}
               {beefs.map((beef, index) => (
                 <div key={beef.id} className="snap-start snap-always relative w-full shrink-0">
                   <BeefCard
