@@ -55,6 +55,7 @@ interface Beef {
   challenger_a_username?: string | null;
   challenger_b_username?: string | null;
   mediator_name?: string | null;
+  mediator_username?: string | null;
   is_featured?: boolean;
   feed_position?: number;
   video_url?: string | null;
@@ -418,6 +419,7 @@ export default function FeedPage() {
           host_name: hostN,
           host_username: hostSource?.username?.trim() || null,
           mediator_name: mid ? hostN : null,
+          mediator_username: mid ? (feedPublicMap.get(mid)?.username?.trim() || null) : null,
           viewer_count: Number(beef.viewer_count) || 0,
           tags: (beef.tags as string[] | undefined) || [],
           participants_count: partAgg?.[0]?.count || 0,
