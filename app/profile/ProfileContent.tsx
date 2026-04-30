@@ -926,7 +926,7 @@ export default function ProfileContent() {
               }`}
             >
               <TrendingUp className="w-4 h-4" />
-              Mes Médiations
+              Statistiques
             </button>
             <button
               onClick={() => setActiveTab('debates')}
