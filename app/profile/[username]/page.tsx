@@ -380,34 +380,39 @@ export default function PublicProfilePage() {
     void loadProfile();
   }, [loadProfile]);
 
-  /** Ancres #beefs / #followers / #following depuis l’aperçu profil ou liens directs */
+  /** Ancres #beefs / #followers / #following / #participations / #reviews */
   useEffect(() => {
     if (!profile) return;
 
     const syncFromHash = () => {
       if (typeof window === 'undefined') return;
       const raw = window.location.hash.slice(1);
+
       if (raw === 'followers') {
         setShowFollowModal('followers');
       } else if (raw === 'following') {
         setShowFollowModal('following');
-      }
-      if (raw === 'beefs' || raw === 'mediations') {
-        requestAnimationFrame(() => {
+      } else if (raw === 'beefs' || raw === 'mediations' || raw === 'debates') {
+        setActiveTab('debates');
+        setTimeout(() => {
           document.getElementById('profile-section-beefs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-      }
-      if (raw === 'participations') {
-        requestAnimationFrame(() => {
+        }, 150);
+      } else if (raw === 'participations') {
+        setActiveTab('participations');
+        setTimeout(() => {
           document.getElementById('profile-section-participations')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
+        }, 150);
+      } else if (raw === 'reviews') {
+        if (stats.beefs_hosted > 0 || mediatorReviews.length > 0) {
+          setActiveTab('reviews');
+        }
       }
     };
 
     syncFromHash();
     window.addEventListener('hashchange', syncFromHash);
     return () => window.removeEventListener('hashchange', syncFromHash);
-  }, [profile]);
+  }, [profile, stats.beefs_hosted, mediatorReviews.length]);
 
   const handleFollow = async () => {
     if (!user) {
