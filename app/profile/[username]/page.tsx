@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical, Star } from 'lucide-react';
+import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical, Star, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
@@ -15,7 +15,6 @@ import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { AppBackButton } from '@/components/AppBackButton';
 import { hrefWithFrom } from '@/lib/navigation-return';
 import { useToast } from '@/components/Toast';
-import { type StatsShortcuts, mergeStatsShortcuts } from '@/lib/profile-stats-shortcuts';
 import { MediationSummaryPublic } from '@/components/MediationSummaryPublic';
 import { resolutionStatusLabel } from '@/lib/mediation-outcome-labels';
 import {
@@ -105,7 +104,6 @@ export default function PublicProfilePage() {
     followers: 0,
     following: 0,
   });
-  const [statsShortcuts, setStatsShortcuts] = useState<StatsShortcuts>(() => mergeStatsShortcuts(undefined));
   const [beefs, setBeefs] = useState<Beef[]>([]);
   const [participantBeefs, setParticipantBeefs] = useState<Beef[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -179,7 +177,6 @@ export default function PublicProfilePage() {
           points: number;
           is_premium: boolean;
           created_at: string;
-          stats_shortcuts?: unknown;
         };
         profileData = {
           id: p.id,
@@ -191,7 +188,6 @@ export default function PublicProfilePage() {
           is_premium: p.is_premium,
           created_at: p.created_at,
         };
-        setStatsShortcuts(mergeStatsShortcuts(p.stats_shortcuts));
       }
 
       if (!profileData) {
@@ -199,18 +195,9 @@ export default function PublicProfilePage() {
         return;
       }
 
-      const pd = profileData as unknown as UserProfile & {
-        id: string;
-        username: string;
-        display_name: string;
-        premium_settings?: { statsShortcuts?: unknown };
-      };
+      const pd = profileData as unknown as UserProfile;
 
       setProfile(pd);
-
-      if (authUser) {
-        setStatsShortcuts(mergeStatsShortcuts(pd.premium_settings?.statsShortcuts));
-      }
 
       let followersCount = 0;
       let followingCount = 0;
@@ -595,115 +582,65 @@ export default function PublicProfilePage() {
               </div>
             </div>
 
-            {/* User Info */}
+            {/* User Info & Bio */}
             <div className="mb-4">
-              <h1 className="text-3xl font-black text-white mb-1">{profile.display_name}</h1>
-              <p className="text-gray-400 text-sm">@{profile.username}</p>
-              {(() => {
-                const rank = getAuraRank(profile.points);
-                return (
-                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
-                    <Flame className={`h-3.5 w-3.5 ${rank.color}`} aria-hidden />
-                    <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.color}`}>
-                      {rank.label}
-                    </span>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {profile.bio && (
-              <p className="text-gray-300 mb-4">{profile.bio}</p>
-            )}
-
-            {/* Stats Row — même logique que le profil éditable (premium_settings.statsShortcuts) */}
-            <div className="flex gap-6 mb-4 flex-wrap">
-              {statsShortcuts.participations ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    router.push(`/profile/${encodeURIComponent(username)}#participations`);
-                    requestAnimationFrame(() => {
-                      document.getElementById('profile-section-participations')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    });
-                  }}
-                  className="text-left hover:opacity-90 transition-opacity"
-                >
-                  <span className="text-2xl font-black text-white">{stats.beefs_participated}</span>
-                  <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Participations</span>
-                </button>
-              ) : (
-                <div>
-                  <span className="text-2xl font-black text-white">{stats.beefs_participated}</span>
-                  <span className="text-gray-400 text-sm ml-1">Participations</span>
-                </div>
-              )}
-              {statsShortcuts.mediations ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    router.push(`/profile/${encodeURIComponent(username)}#beefs`);
-                    requestAnimationFrame(() => {
-                      document.getElementById('profile-section-beefs')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    });
-                  }}
-                  className="text-left hover:opacity-90 transition-opacity"
-                >
-                  <span className="text-2xl font-black text-white">{stats.beefs_hosted}</span>
-                  <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Médiations</span>
-                </button>
-              ) : (
-                <div>
-                  <span className="text-2xl font-black text-white">{stats.beefs_hosted}</span>
-                  <span className="text-gray-400 text-sm ml-1">Médiations</span>
-                </div>
-              )}
-              {statsShortcuts.followers ? (
-                <button
-                  type="button"
-                  onClick={() => setShowFollowModal('followers')}
-                  className="hover:opacity-80 transition-opacity"
-                >
-                  <span className="text-2xl font-black text-white">{stats.followers}</span>
-                  <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Abonnés</span>
-                </button>
-              ) : (
-                <div>
-                  <span className="text-2xl font-black text-white">{stats.followers}</span>
-                  <span className="text-gray-400 text-sm ml-1">Abonnés</span>
-                </div>
-              )}
-              {statsShortcuts.following ? (
-                <button
-                  type="button"
-                  onClick={() => setShowFollowModal('following')}
-                  className="hover:opacity-80 transition-opacity"
-                >
-                  <span className="text-2xl font-black text-white">{stats.following}</span>
-                  <span className="text-brand-400 text-sm ml-1 underline-offset-2 hover:underline">Abonnements</span>
-                </button>
-              ) : (
-                <div>
-                  <span className="text-2xl font-black text-white">{stats.following}</span>
-                  <span className="text-gray-400 text-sm ml-1">Abonnements</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-brand-400" />
-                <span className="text-2xl font-black text-white">{profile.points}</span>
-                <span className="text-gray-400 text-sm">Points</span>
+              <div className="flex items-center gap-2 mb-1">
+                <h1 className="font-sans text-2xl font-black text-white">{profile.display_name}</h1>
               </div>
-            </div>
+              <p className="text-gray-400 text-sm mb-2">@{profile.username}</p>
 
-            {/* Member since */}
-            <div className="flex items-center gap-2 text-gray-400 text-sm">
-              <Calendar className="w-4 h-4" />
-              <span>
-                Membre depuis {new Date(profile.created_at).toLocaleDateString('fr-FR', {
-                  month: 'long',
-                  year: 'numeric'
-                })}
-              </span>
+              {profile.bio && (
+                <p className="text-gray-200 text-sm mb-4 leading-relaxed">{profile.bio}</p>
+              )}
+
+              {/* Aura & Points (Compact) */}
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                {(() => {
+                  const rank = getAuraRank(profile.points);
+                  return (
+                    <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
+                      <Flame className={`h-3.5 w-3.5 ${rank.color}`} aria-hidden />
+                      <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.color}`}>
+                        {rank.label}
+                      </span>
+                    </div>
+                  );
+                })()}
+                <div className="flex items-center gap-1.5 text-sm text-gray-400">
+                  <Trophy className="w-4 h-4 text-prestige-gold" />
+                  <span className="font-bold text-white">{profile.points.toLocaleString('fr-FR')}</span> pts
+                </div>
+              </div>
+
+              {/* Métriques Standard (X/Instagram style) */}
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                <div className="flex gap-1.5">
+                  <span className="font-bold text-white">{stats.beefs_participated}</span>
+                  <span className="text-gray-400">Affaires</span>
+                </div>
+                <div className="flex gap-1.5">
+                  <span className="font-bold text-white">{stats.beefs_hosted}</span>
+                  <span className="text-gray-400">Médiations</span>
+                </div>
+                <div className="flex gap-1.5 cursor-help" title="Forfaits ou désistements">
+                  {/* A implémenter plus tard: valeur dynamique de réputation */}
+                  <span className="font-bold text-white">0</span>
+                  <span className="text-gray-400">Réputation</span>
+                </div>
+                <button type="button" onClick={() => setShowFollowModal('followers')} className="flex gap-1.5 hover:underline">
+                  <span className="font-bold text-white">{stats.followers}</span>
+                  <span className="text-gray-400">Abonnés</span>
+                </button>
+                <button type="button" onClick={() => setShowFollowModal('following')} className="flex gap-1.5 hover:underline">
+                  <span className="font-bold text-white">{stats.following}</span>
+                  <span className="text-gray-400">Abonnements</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 text-gray-500 text-xs mt-4">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Rejoint en {new Date(profile.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</span>
+              </div>
             </div>
           </div>
         </div>

@@ -14,13 +14,7 @@ import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { AppBackButton } from '@/components/AppBackButton';
 import { hrefWithFrom } from '@/lib/navigation-return';
 import { useToast } from '@/components/Toast';
-import {
-  type StatsShortcuts,
-  DEFAULT_STATS_SHORTCUTS,
-  mergeStatsShortcuts,
-} from '@/lib/profile-stats-shortcuts';
 import { mediationCategoryForBeef } from '@/lib/mediation-resolution';
-import { StatShortcutToggles } from '@/components/StatShortcutToggles';
 import { MediationBeefEditorPanel } from '@/components/MediationBeefEditorPanel';
 import {
   fetchMediatorViewerReviews,
@@ -48,8 +42,8 @@ interface UserProfile {
     showPremiumBadge: boolean;
     showPremiumFrame: boolean;
     showPremiumAnimations: boolean;
-    /** Liens cliquables sur les stats (profil public + ton profil éditable) */
-    statsShortcuts?: StatsShortcuts;
+    /** Liens cliquables sur les stats (persisté côté premium_settings) */
+    statsShortcuts?: Record<string, unknown>;
   };
   created_at: string;
 }
@@ -112,7 +106,6 @@ export default function ProfileContent() {
   const [uploading, setUploading] = useState(false);
   const [selectedResolutionFilter, setSelectedResolutionFilter] = useState<string | null>(null);
   const [publicPreviewOpen, setPublicPreviewOpen] = useState(false);
-  const [statsShortcuts, setStatsShortcuts] = useState<StatsShortcuts>({ ...DEFAULT_STATS_SHORTCUTS });
 
   // Withdrawal state — amounts stored in EUROS for clarity
   const [withdrawalStep, setWithdrawalStep] = useState<'summary' | 'form' | 'confirm' | 'success'>('summary');
@@ -243,8 +236,6 @@ export default function ProfileContent() {
             },
             created_at: data.created_at,
           });
-
-          setStatsShortcuts(mergeStatsShortcuts(data.premium_settings?.statsShortcuts));
 
           // Load real stats from database
           const { data: followersData } = await supabase
@@ -401,32 +392,6 @@ export default function ProfileContent() {
       });
     },
     [],
-  );
-
-  const persistStatsShortcut = useCallback(
-    (key: keyof StatsShortcuts, value: boolean) => {
-      if (!user || !profile) return;
-      const previous = statsShortcuts;
-      const next: StatsShortcuts = { ...statsShortcuts, [key]: value };
-      setStatsShortcuts(next);
-      const premium_settings = {
-        ...profile.premium_settings,
-        showPremiumBadge: profile.premium_settings?.showPremiumBadge ?? true,
-        showPremiumFrame: profile.premium_settings?.showPremiumFrame ?? true,
-        showPremiumAnimations: profile.premium_settings?.showPremiumAnimations ?? true,
-        statsShortcuts: next,
-      };
-      void (async () => {
-        const { error } = await supabase.from('users').update({ premium_settings }).eq('id', user.id);
-        if (error) {
-          toast('Impossible d’enregistrer les préférences', 'error');
-          setStatsShortcuts(previous);
-          return;
-        }
-        setProfile((p) => (p ? { ...p, premium_settings } : null));
-      })();
-    },
-    [user, profile, statsShortcuts, toast],
   );
 
   const goPreviewParticipations = useCallback(() => {
@@ -757,88 +722,66 @@ export default function ProfileContent() {
               </div>
             </div>
 
-            {/* User Info */}
+            {/* User Info & Bio */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-1">
-                <h1 className="font-sans text-3xl font-black text-white">{profile.display_name}</h1>
+                <h1 className="font-sans text-2xl font-black text-white">{profile.display_name}</h1>
               </div>
-              <p className="text-gray-400 text-sm">@{profile.username}</p>
-              {(() => {
-                const rank = getAuraRank(profile.points);
-                return (
-                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
-                    <Flame className={`h-3.5 w-3.5 ${rank.color}`} aria-hidden />
-                    <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.color}`}>
-                      {rank.label}
+              <p className="text-gray-400 text-sm mb-2">@{profile.username}</p>
+
+              {profile.bio && (
+                <p className="text-gray-200 text-sm mb-4 leading-relaxed">{profile.bio}</p>
+              )}
+
+              {/* Aura & Points (Compact) */}
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                {(() => {
+                  const rank = getAuraRank(profile.points);
+                  return (
+                    <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
+                      <Flame className={`h-3.5 w-3.5 ${rank.color}`} aria-hidden />
+                      <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.color}`}>
+                        {rank.label}
+                      </span>
+                    </div>
+                  );
+                })()}
+                <div className="flex items-center gap-1.5 text-sm text-gray-400">
+                  <Trophy className="w-4 h-4 text-prestige-gold" />
+                  <span className="font-bold text-white">{profile.points.toLocaleString('fr-FR')}</span> pts
+                </div>
+                {stats.beefs_resolved >= 3 && (
+                  <div className="flex items-center gap-1.5 text-sm text-gray-400" title="Indice de Sagesse">
+                    <span className="font-bold text-prestige-gold">
+                      ✦ {(stats.beefs_resolved / Math.max(stats.beefs_hosted, 1) * 100).toFixed(0)}
                     </span>
                   </div>
-                );
-              })()}
-              {/* Wisdom Index — affiché après 3+ médiations réussies */}
-              {stats.beefs_resolved >= 3 && (
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="font-mono text-sm font-bold text-prestige-gold tabular-nums tracking-wider">
-                    ✦ {(stats.beefs_resolved / Math.max(stats.beefs_hosted, 1) * 100).toFixed(0)}
-                  </span>
-                  <span className="font-sans text-[10px] font-bold uppercase tracking-[0.12em] text-prestige-gold/50">Indice de Sagesse</span>
+                )}
+              </div>
+
+              {/* Métriques Standard (X/Instagram style) */}
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                <button type="button" onClick={goStatsParticipations} className="flex gap-1.5 hover:underline">
+                  <span className="font-bold text-white">{stats.beefs_participated}</span>
+                  <span className="text-gray-400">Affaires</span>
+                </button>
+                <button type="button" onClick={goStatsMediations} className="flex gap-1.5 hover:underline">
+                  <span className="font-bold text-white">{stats.beefs_hosted}</span>
+                  <span className="text-gray-400">Médiations</span>
+                </button>
+                <div className="flex gap-1.5 cursor-help" title="Forfaits ou désistements">
+                  <span className="font-bold text-white">{stats.beefs_abandoned}</span>
+                  <span className="text-gray-400">Réputation</span>
                 </div>
-              )}
-            </div>
-
-            {profile.bio && (
-              <p className="text-gray-300 mb-4">{profile.bio}</p>
-            )}
-
-            {/* Points — mis en avant */}
-            <div className="mb-6 rounded-2xl bg-white/[0.05] backdrop-blur-2xl border border-white/[0.1] px-6 py-5 flex items-center justify-between gap-4 shadow-[0_0_24px_rgba(212,175,55,0.06)]">
-              <div className="min-w-0">
-                <p className="font-sans text-[10px] font-bold uppercase tracking-[0.15em] text-white/40">Points totaux</p>
-                <p className="font-mono text-4xl sm:text-5xl font-black text-prestige-gold tabular-nums tracking-tight">
-                  {profile.points.toLocaleString('fr-FR')}
-                </p>
-                <p className="font-mono text-[10px] text-white/30 mt-1 tracking-wider">100 pts = 1€ · solde gains</p>
+                <button type="button" onClick={goStatsFollowers} className="flex gap-1.5 hover:underline">
+                  <span className="font-bold text-white">{stats.followers}</span>
+                  <span className="text-gray-400">Abonnés</span>
+                </button>
+                <button type="button" onClick={goStatsFollowing} className="flex gap-1.5 hover:underline">
+                  <span className="font-bold text-white">{stats.following}</span>
+                  <span className="text-gray-400">Abonnements</span>
+                </button>
               </div>
-              <div className="w-14 h-14 rounded-2xl bg-prestige-gold/10 border border-prestige-gold/20 flex items-center justify-center flex-shrink-0">
-                <Trophy className="w-8 h-8 text-prestige-gold" />
-              </div>
-            </div>
-
-            {/* Stats — raccourcis optionnels par ligne (voir cases ci‑dessous) */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
-              {[
-                { key: 'participations', value: stats.beefs_participated, label: 'Affaires', shortcut: statsShortcuts.participations, action: goStatsParticipations },
-                { key: 'mediations', value: stats.beefs_hosted, label: 'Médiations', shortcut: statsShortcuts.mediations, action: goStatsMediations },
-                { key: 'abandoned', value: stats.beefs_abandoned, label: 'Réputation (Forfaits)', shortcut: false, action: () => {} },
-                { key: 'followers', value: stats.followers, label: 'Abonnés', shortcut: statsShortcuts.followers, action: goStatsFollowers },
-                { key: 'following', value: stats.following, label: 'Abonnements', shortcut: statsShortcuts.following, action: goStatsFollowing },
-              ].map((s) => {
-                const inner = (
-                  <>
-                    <span className="font-mono text-2xl font-black text-white tabular-nums">{s.value}</span>
-                    <span className={`font-sans text-[10px] font-bold uppercase tracking-[0.12em] mt-0.5 ${s.shortcut ? 'text-brand-400' : 'text-white/40'}`}>{s.label}</span>
-                  </>
-                );
-                return s.shortcut ? (
-                  <button
-                    key={s.key}
-                    type="button"
-                    onClick={s.action}
-                    className="flex flex-col items-center rounded-xl bg-white/[0.04] border border-white/[0.06] px-3 py-3 hover:bg-white/[0.07] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40"
-                  >
-                    {inner}
-                  </button>
-                ) : (
-                  <div key={s.key} className="flex flex-col items-center rounded-xl bg-white/[0.04] border border-white/[0.06] px-3 py-3">
-                    {inner}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mb-4 max-w-lg">
-              <StatShortcutToggles
-                value={statsShortcuts}
-                onChange={(key, next) => persistStatsShortcut(key, next)}
-              />
             </div>
 
             {/* Beefs récents (participant ou médiateur) */}
@@ -1594,88 +1537,66 @@ export default function ProfileContent() {
                       profile.username[0].toUpperCase()
                     )}
                   </div>
-                  <h3 className="font-sans text-xl font-black text-white mt-3">{profile.display_name}</h3>
-                  <p className="text-gray-500 text-sm">@{profile.username}</p>
-                  {stats.beefs_resolved >= 3 && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="font-mono text-sm font-bold text-prestige-gold tabular-nums tracking-wider">
-                        ✦ {(stats.beefs_resolved / Math.max(stats.beefs_hosted, 1) * 100).toFixed(0)}
-                      </span>
-                      <span className="font-sans text-[10px] font-bold uppercase tracking-[0.12em] text-prestige-gold/50">
-                        Indice de Sagesse
-                      </span>
+                  {/* User Info & Bio — aperçu */}
+                  <div className="mb-4 mt-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-sans text-2xl font-black text-white">{profile.display_name}</h3>
                     </div>
-                  )}
-                  {profile.bio ? (
-                    <p className="text-gray-300 text-sm mt-3 whitespace-pre-wrap line-clamp-6">{profile.bio}</p>
-                  ) : null}
-                  <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 backdrop-blur-xl">
-                    <p className="font-sans text-[10px] font-bold uppercase tracking-[0.15em] text-white/40">Points totaux</p>
-                    <p className="font-mono text-2xl font-black text-prestige-gold tabular-nums">
-                      {profile.points.toLocaleString('fr-FR')}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-x-6 gap-y-2 mt-4 text-sm">
-                    {statsShortcuts.participations ? (
-                      <button
-                        type="button"
-                        onClick={goPreviewParticipations}
-                        className="text-left rounded-lg -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-                      >
-                        <span className="text-white font-black">{stats.beefs_participated}</span>
-                        <span className="text-brand-400 ml-1 underline-offset-2 hover:underline">Participations</span>
-                      </button>
-                    ) : (
-                      <span>
-                        <span className="text-white font-black">{stats.beefs_participated}</span>
-                        <span className="text-gray-500 ml-1">Participations</span>
-                      </span>
+                    <p className="text-gray-400 text-sm mb-2">@{profile.username}</p>
+
+                    {profile.bio && (
+                      <p className="text-gray-200 text-sm mb-4 leading-relaxed whitespace-pre-wrap line-clamp-6">{profile.bio}</p>
                     )}
-                    {statsShortcuts.mediations ? (
-                      <button
-                        type="button"
-                        onClick={goPreviewMediations}
-                        className="text-left rounded-lg -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-                      >
-                        <span className="text-white font-black">{stats.beefs_hosted}</span>
-                        <span className="text-brand-400 ml-1 underline-offset-2 hover:underline">Médiations</span>
+
+                    {/* Aura & Points (Compact) */}
+                    <div className="flex flex-wrap items-center gap-3 mb-4">
+                      {(() => {
+                        const rank = getAuraRank(profile.points);
+                        return (
+                          <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
+                            <Flame className={`h-3.5 w-3.5 ${rank.color}`} aria-hidden />
+                            <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.color}`}>
+                              {rank.label}
+                            </span>
+                          </div>
+                        );
+                      })()}
+                      <div className="flex items-center gap-1.5 text-sm text-gray-400">
+                        <Trophy className="w-4 h-4 text-prestige-gold" />
+                        <span className="font-bold text-white">{profile.points.toLocaleString('fr-FR')}</span> pts
+                      </div>
+                      {stats.beefs_resolved >= 3 && (
+                        <div className="flex items-center gap-1.5 text-sm text-gray-400" title="Indice de Sagesse">
+                          <span className="font-bold text-prestige-gold">
+                            ✦ {(stats.beefs_resolved / Math.max(stats.beefs_hosted, 1) * 100).toFixed(0)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Métriques Standard (X/Instagram style) */}
+                    <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                      <button type="button" onClick={goPreviewParticipations} className="flex gap-1.5 hover:underline">
+                        <span className="font-bold text-white">{stats.beefs_participated}</span>
+                        <span className="text-gray-400">Affaires</span>
                       </button>
-                    ) : (
-                      <span>
-                        <span className="text-white font-black">{stats.beefs_hosted}</span>
-                        <span className="text-gray-500 ml-1">Médiations</span>
-                      </span>
-                    )}
-                    {statsShortcuts.followers ? (
-                      <button
-                        type="button"
-                        onClick={goPreviewFollowers}
-                        className="text-left rounded-lg -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-                      >
-                        <span className="text-white font-black">{stats.followers}</span>
-                        <span className="text-brand-400 ml-1 underline-offset-2 hover:underline">Abonnés</span>
+                      <button type="button" onClick={goPreviewMediations} className="flex gap-1.5 hover:underline">
+                        <span className="font-bold text-white">{stats.beefs_hosted}</span>
+                        <span className="text-gray-400">Médiations</span>
                       </button>
-                    ) : (
-                      <span>
-                        <span className="text-white font-black">{stats.followers}</span>
-                        <span className="text-gray-500 ml-1">Abonnés</span>
-                      </span>
-                    )}
-                    {statsShortcuts.following ? (
-                      <button
-                        type="button"
-                        onClick={goPreviewFollowing}
-                        className="text-left rounded-lg -m-1 p-1 hover:bg-white/5 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-                      >
-                        <span className="text-white font-black">{stats.following}</span>
-                        <span className="text-brand-400 ml-1 underline-offset-2 hover:underline">Abonnements</span>
+                      <div className="flex gap-1.5 cursor-help" title="Forfaits ou désistements">
+                        <span className="font-bold text-white">{stats.beefs_abandoned}</span>
+                        <span className="text-gray-400">Réputation</span>
+                      </div>
+                      <button type="button" onClick={goPreviewFollowers} className="flex gap-1.5 hover:underline">
+                        <span className="font-bold text-white">{stats.followers}</span>
+                        <span className="text-gray-400">Abonnés</span>
                       </button>
-                    ) : (
-                      <span>
-                        <span className="text-white font-black">{stats.following}</span>
-                        <span className="text-gray-500 ml-1">Abonnements</span>
-                      </span>
-                    )}
+                      <button type="button" onClick={goPreviewFollowing} className="flex gap-1.5 hover:underline">
+                        <span className="font-bold text-white">{stats.following}</span>
+                        <span className="text-gray-400">Abonnements</span>
+                      </button>
+                    </div>
                   </div>
                   {(stats.beefs_hosted > 0 || mediatorReviews.length > 0) && (
                     <div className="mt-5 pt-4 border-t border-white/[0.08]">
