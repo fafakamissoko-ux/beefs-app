@@ -81,7 +81,7 @@ export default function PointsDashboardPage() {
 
         <main aria-labelledby="points-page-title">
         <h1 id="points-page-title" className="sr-only">
-          Mes points
+          Mes Lingots
         </h1>
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -96,7 +96,7 @@ export default function PointsDashboardPage() {
               <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Solde actuel</p>
               <p className="text-3xl font-black text-white tabular-nums" aria-live="polite">
                 {loading ? '…' : (balance ?? 0).toLocaleString('fr-FR')}
-                <span className="text-lg font-bold text-gray-400 ml-1">pts</span>
+                <span className="text-lg font-bold text-gray-400 ml-1">Lingots</span>
               </p>
             </div>
           </div>
@@ -107,7 +107,7 @@ export default function PointsDashboardPage() {
             className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white brand-gradient hover:opacity-95 transition-opacity"
           >
             <ShoppingBag className="w-4 h-4" aria-hidden />
-            Acquérir de l&apos;Aura
+            Recharger mes Lingots
             <ArrowRight className="w-4 h-4" aria-hidden />
           </a>
         </motion.div>
@@ -117,7 +117,7 @@ export default function PointsDashboardPage() {
           <h2 className="text-lg font-bold text-white">Historique</h2>
         </div>
         <p className="text-gray-500 text-sm mb-4">
-          Achats, cadeaux, accès aux directs et autres mouvements de points.
+          Achats, cadeaux, accès aux directs et autres mouvements de Lingots.
         </p>
 
         {loading ? (

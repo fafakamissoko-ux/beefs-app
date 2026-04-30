@@ -11,6 +11,7 @@ import {
   Gift,
   Mail,
   MessageCircle,
+  Sparkles,
   UserPlus,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -25,7 +26,8 @@ type NotificationType =
   | 'beef_live'
   | 'gift'
   | 'message'
-  | 'system';
+  | 'system'
+  | 'aura';
 
 export interface AppNotification {
   id: string;
@@ -61,7 +63,40 @@ const ICON_MAP: Record<
   gift: { icon: Gift, color: 'text-amber-400', bg: 'bg-amber-500/15' },
   message: { icon: MessageCircle, color: 'text-sky-400', bg: 'bg-sky-500/15' },
   system: { icon: Bell, color: 'text-violet-400', bg: 'bg-violet-500/15' },
+  aura: { icon: Sparkles, color: 'text-brand-400', bg: 'bg-brand-500/15' },
 };
+
+type AuraNotificationRow = {
+  id: string;
+  user_id: string;
+  created_at: string;
+  giver_name: string;
+  giver_username: string | null;
+  aura_kind: string | null;
+};
+
+function mapAuraRowToAppNotification(row: AuraNotificationRow): AppNotification {
+  const name = row.giver_name?.trim() || 'Quelqu’un';
+  const isTeaser = row.aura_kind === 'teaser';
+  const title = isTeaser
+    ? `📸 Ton Teaser gagne en Aura (+${name})`
+    : `✨ ${name} a validé ton Aura !`;
+  const slug = row.giver_username?.trim();
+  const link = slug ? `/profile/${encodeURIComponent(slug)}` : null;
+
+  return {
+    id: row.id,
+    created_at: row.created_at,
+    user_id: row.user_id,
+    type: 'aura',
+    title,
+    body: null,
+    link,
+    is_read: false,
+    metadata:
+      slug != null || row.aura_kind != null ? { giver_username: slug, aura_kind: row.aura_kind } : null,
+  };
+}
 
 function SkeletonCard() {
   return (
@@ -95,15 +130,34 @@ export default function NotificationsPage() {
     if (!user) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5000);
+      const [notifRes, auraRes] = await Promise.all([
+        supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(4000),
+        supabase
+          .from('aura_notifications')
+          .select('id,user_id,created_at,giver_name,giver_username,aura_kind')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(2000),
+      ]);
 
-      if (error) throw error;
-      setNotifications((data ?? []) as AppNotification[]);
+      if (notifRes.error) throw notifRes.error;
+      const baseRows = (notifRes.data ?? []) as AppNotification[];
+
+      const auraMerged: AppNotification[] = auraRes.error
+        ? []
+        : (auraRes.data ?? []).map((r: AuraNotificationRow) => mapAuraRowToAppNotification(r));
+
+      if (auraRes.error) console.warn('[radar] aura_notifications', auraRes.error);
+
+      const merged = [...baseRows, ...auraMerged].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+      setNotifications(merged);
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
@@ -144,6 +198,18 @@ export default function NotificationsPage() {
       .on(
         'postgres_changes',
         {
+          event: '*',
+          schema: 'public',
+          table: 'aura_sparks',
+          filter: `entity_id=eq.${user.id}`,
+        },
+        () => {
+          void fetchNotifications();
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
           event: 'UPDATE',
           schema: 'public',
           table: 'notifications',
@@ -161,7 +227,7 @@ export default function NotificationsPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.id, fetchNotifications]);
 
   const markAllRead = async () => {
     if (!user || markingAll) return;
@@ -192,7 +258,8 @@ export default function NotificationsPage() {
   };
 
   const handleRowClick = async (n: AppNotification) => {
-    if (!n.is_read) {
+    const isSparkRow = n.type === 'aura' || n.id.startsWith('spark-');
+    if (!n.is_read && !isSparkRow) {
       const { error: rpcErr } = await supabase.rpc('mark_notification_read', { p_id: n.id });
       if (rpcErr && user) {
         const { error: upErr } = await supabase
@@ -204,6 +271,13 @@ export default function NotificationsPage() {
           console.error('[notifications] mark one read', rpcErr, upErr);
         }
       }
+      setNotifications((prev) =>
+        prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))
+      );
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
+      }
+    } else if (!n.is_read && isSparkRow) {
       setNotifications((prev) =>
         prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))
       );
@@ -255,7 +329,7 @@ export default function NotificationsPage() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <h1 className="text-3xl font-black text-white truncate">
-                Notifications
+                Radar
               </h1>
               {unreadCount > 0 && (
                 <span className="brand-gradient text-white text-xs font-bold px-2.5 py-1 rounded-full shrink-0">
@@ -293,10 +367,10 @@ export default function NotificationsPage() {
               <BellOff className="w-8 h-8 text-gray-600" />
             </div>
             <h2 className="text-xl font-bold text-white mb-2">
-              Aucune notification
+              Radar vide
             </h2>
             <p className="text-gray-500 text-sm">
-              Quand tu recevras des suivis, invitations, messages ou alertes,
+              Quand tu recevras des suivis, invitations, messages, étincelles d’Aura ou alertes,
               elles apparaîtront ici.
             </p>
           </motion.div>
@@ -304,7 +378,9 @@ export default function NotificationsPage() {
           <div className="space-y-2">
             <AnimatePresence initial={false}>
               {notifications.map((n, i) => {
-                const { icon: Icon, color, bg } = ICON_MAP[n.type];
+                const mapKey =
+                  typeof n.type === 'string' && n.type in ICON_MAP ? (n.type as NotificationType) : 'system';
+                const { icon: Icon, color, bg } = ICON_MAP[mapKey];
                 const unread = isNotificationUnread(n);
                 return (
                   <motion.button

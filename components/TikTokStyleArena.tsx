@@ -4046,7 +4046,7 @@ export function TikTokStyleArena({
                       type="button"
                       onClick={async () => {
                         if (userPoints < gift.cost) {
-                          toast(`Points insuffisants — il te manque ${gift.cost - userPoints} pts (solde ${userPoints})`, 'error', {
+                          toast(`Lingots insuffisants — il te manque ${gift.cost - userPoints} Lingots (solde ${userPoints})`, 'error', {
                             action: { label: 'Recharger', onClick: () => goBuyPoints() },
                           });
                           return;
@@ -4094,7 +4094,7 @@ export function TikTokStyleArena({
                           }
                           const giftKey =
                             data.giftId != null ? String(data.giftId) : `gift_${Date.now()}`;
-                          const msgContent = `a offert ${gift.emoji} ${gift.label} (${gift.cost} pts) à ${targetName}`;
+                          const msgContent = `a offert ${gift.emoji} ${gift.label} (${gift.cost} Lingots) à ${targetName}`;
                           const initial = userName?.[0]?.toUpperCase() || '?';
                           addRemoteMessage(userName, msgContent, initial, giftKey);
                           void channelRef.current
@@ -4143,7 +4143,7 @@ export function TikTokStyleArena({
                     >
                       <span className="text-2xl">{gift.emoji}</span>
                       <span className="text-[10px] font-bold text-white">{gift.label}</span>
-                      <span className="text-[9px] font-semibold text-ember-400">{gift.cost} pts</span>
+                      <span className="text-[9px] font-semibold text-ember-400">{gift.cost} Lingots</span>
                     </button>
                   ))}
                 </div>
@@ -4230,7 +4230,7 @@ export function TikTokStyleArena({
                   <div className="flex items-center justify-center gap-2">
                     <Flame className="h-5 w-5 shrink-0 text-brand-400" />
                     <span className="text-2xl font-black text-white">{selectedProfile.stats.points}</span>
-                    <span className="text-sm text-gray-400">Points</span>
+                    <span className="text-sm text-gray-400">Lingots</span>
                   </div>
                 </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical, Star, TrendingUp, X } from 'lucide-react';
@@ -119,9 +119,44 @@ export default function PublicProfilePage() {
   const [auraDonors, setAuraDonors] = useState<any[]>([]);
   const [showDonors, setShowDonors] = useState(false);
   const [transmitAuraLoading, setTransmitAuraLoading] = useState(false);
+  const [hasTransmittedAura, setHasTransmittedAura] = useState(false);
+  const [dopamineBursts, setDopamineBursts] = useState<
+    { id: number; text: string; minus?: boolean; anchor: 'follow' | 'aura' }[]
+  >([]);
+  const burstSeq = useRef(0);
+
+  const queueBurst = useCallback((text: string, anchor: 'follow' | 'aura', minus = false) => {
+    const id = ++burstSeq.current;
+    setDopamineBursts((prev) => [...prev, { id, text, minus, anchor }]);
+    setTimeout(() => {
+      setDopamineBursts((prev) => prev.filter((b) => b.id !== id));
+    }, 520);
+  }, []);
 
   // Check if it's the current user's profile
   const isOwnProfile = user && profile && user.id === profile.id;
+
+  useEffect(() => {
+    if (!user || !profile || user.id === profile.id) {
+      setHasTransmittedAura(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase
+        .from('aura_sparks')
+        .select('id')
+        .eq('entity_id', profile.id)
+        .eq('giver_id', user.id)
+        .eq('source_kind', 'profile')
+        .maybeSingle();
+      if (!cancelled) setHasTransmittedAura(!!data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync sparkle sur changement d’identité utilisateur/profil uniquement
+  }, [profile?.id, user?.id]);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -427,7 +462,7 @@ export default function PublicProfilePage() {
     setAuraDonors(rows);
   }, [profile?.id]);
 
-  const handleTransmitAura = useCallback(async () => {
+  const handleAuraTransmissionToggle = useCallback(async () => {
     if (!profile) return;
     if (!user) {
       toast('Connectez-vous pour transmettre de l’Aura.', 'info');
@@ -438,16 +473,57 @@ export default function PublicProfilePage() {
       toast('L’Aura ne s’auto-attribue pas', 'error');
       return;
     }
+
     setTransmitAuraLoading(true);
-    const { error } = await supabase.rpc('transmit_aura', { p_entity_id: profile.id });
-    setTransmitAuraLoading(false);
-    if (error) {
-      toast(error.message || 'Impossible de transmettre l’Aura pour le moment.', 'error');
-      return;
+    try {
+      if (hasTransmittedAura) {
+        const { data: revoked, error } = await supabase.rpc('revoke_profile_aura', {
+          p_entity_id: profile.id,
+        });
+        if (error) {
+          toast(error.message || 'Impossible de retirer l’Aura pour le moment.', 'error');
+          return;
+        }
+        if (revoked === true) {
+          setHasTransmittedAura(false);
+          setProfile((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  lifetime_points: Math.max(0, (prev.lifetime_points ?? 0) - 1),
+                }
+              : null,
+          );
+          queueBurst('-1 ✨', 'aura', true);
+          toast('Tu as retiré ton Aura de ce profil.', 'success');
+        } else {
+          setHasTransmittedAura(false);
+        }
+      } else {
+        const { data: granted, error } = await supabase.rpc('transmit_aura', { p_entity_id: profile.id });
+        if (error) {
+          toast(error.message || 'Impossible de transmettre l’Aura pour le moment.', 'error');
+          return;
+        }
+        if (granted === true) {
+          setHasTransmittedAura(true);
+          setProfile((prev) =>
+            prev
+              ? { ...prev, lifetime_points: (prev.lifetime_points ?? 0) + 1 }
+              : null,
+          );
+          queueBurst('+1 ✨', 'aura');
+          toast('✨ Aura transmise !', 'success');
+        } else {
+          setHasTransmittedAura(true);
+          toast('Ton Aura était déjà enregistrée sur ce profil.', 'info');
+        }
+      }
+      void fetchDonors();
+    } finally {
+      setTransmitAuraLoading(false);
     }
-    toast('✨ Aura transmise !', 'success');
-    void fetchDonors();
-  }, [profile, user, toast, router, fetchDonors]);
+  }, [profile, user, toast, router, fetchDonors, hasTransmittedAura, queueBurst]);
 
   useEffect(() => {
     if (!viewingImage || !profile?.id) {
@@ -509,8 +585,8 @@ export default function PublicProfilePage() {
 
     setFollowLoading(true);
     try {
-      if (isFollowing) {
-        // Unfollow
+      const willUnfollow = isFollowing;
+      if (willUnfollow) {
         await supabase
           .from('followers')
           .delete()
@@ -518,18 +594,33 @@ export default function PublicProfilePage() {
           .eq('following_id', profile.id);
 
         setIsFollowing(false);
-        setStats(prev => ({ ...prev, followers: prev.followers - 1 }));
+        setStats((prev) => ({ ...prev, followers: prev.followers - 1 }));
+        queueBurst('-10 ✨', 'follow', true);
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                lifetime_points: Math.max(0, (prev.lifetime_points ?? 0) - 10),
+              }
+            : null,
+        );
       } else {
-        // Follow
-        await supabase
-          .from('followers')
-          .insert({
-            follower_id: user.id,
-            following_id: profile.id,
-          });
+        await supabase.from('followers').insert({
+          follower_id: user.id,
+          following_id: profile.id,
+        });
 
         setIsFollowing(true);
-        setStats(prev => ({ ...prev, followers: prev.followers + 1 }));
+        setStats((prev) => ({ ...prev, followers: prev.followers + 1 }));
+        queueBurst('+10 ✨', 'follow');
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                lifetime_points: (prev.lifetime_points ?? 0) + 10,
+              }
+            : null,
+        );
       }
     } catch (error) {
       console.error('Error toggling follow:', error);
@@ -652,28 +743,48 @@ export default function PublicProfilePage() {
                 )}
 
                 {!isOwnProfile && user && (
-                  <button
-                    type="button"
-                    onClick={handleFollow}
-                    disabled={followLoading}
-                    className={`flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all ${
-                      isFollowing
-                        ? 'bg-white/10 text-white hover:bg-white/20'
-                        : 'brand-gradient text-black transition-opacity hover:opacity-90'
-                    }`}
-                  >
-                    {isFollowing ? (
-                      <>
-                        <UserMinus className="h-4 w-4" />
-                        <span className="hidden sm:inline">Ne plus suivre</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="h-4 w-4" />
-                        <span className="hidden sm:inline">Suivre</span>
-                      </>
-                    )}
-                  </button>
+                  <div className="relative inline-flex items-center justify-center">
+                    <AnimatePresence>
+                      {dopamineBursts
+                        .filter((b) => b.anchor === 'follow')
+                        .map((b) => (
+                          <motion.span
+                            key={b.id}
+                            initial={{ opacity: 1, y: 0 }}
+                            animate={{ opacity: 0, y: -20 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className={`pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-black text-xl ${
+                              b.minus ? 'text-gray-400' : 'text-brand-300'
+                            }`}
+                          >
+                            {b.text}
+                          </motion.span>
+                        ))}
+                    </AnimatePresence>
+                    <button
+                      type="button"
+                      onClick={handleFollow}
+                      disabled={followLoading}
+                      className={`relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all ${
+                        isFollowing
+                          ? 'bg-white/10 text-white hover:bg-white/20'
+                          : 'brand-gradient text-black transition-opacity hover:opacity-90'
+                      }`}
+                    >
+                      {isFollowing ? (
+                        <>
+                          <UserMinus className="h-4 w-4" />
+                          <span className="hidden sm:inline">Ne plus suivre</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="h-4 w-4" />
+                          <span className="hidden sm:inline">Suivre</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 )}
 
                 {isOwnProfile && (
@@ -961,18 +1072,56 @@ export default function PublicProfilePage() {
                 />
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  void handleTransmitAura();
-                }}
-                disabled={transmitAuraLoading || !!isOwnProfile}
-                title={isOwnProfile ? 'L’Aura ne s’auto-attribue pas' : undefined}
-                className="flex items-center gap-3 rounded-full px-8 py-4 font-black text-lg text-black shadow-[0_0_30px_rgba(232,58,20,0.4)] transition-transform brand-gradient hover:scale-105 disabled:pointer-events-none disabled:opacity-45"
-              >
-                <Flame className="h-6 w-6" />
-                {transmitAuraLoading ? 'Transmission…' : 'Transmettre de l’Aura'}
-              </button>
+              <div className="relative flex flex-col items-center">
+                <AnimatePresence>
+                  {dopamineBursts
+                    .filter((b) => b.anchor === 'aura')
+                    .map((b) => (
+                      <motion.span
+                        key={b.id}
+                        initial={{ opacity: 1, y: 0 }}
+                        animate={{ opacity: 0, y: -20 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className={`pointer-events-none absolute left-1/2 top-12 z-[120] -translate-x-1/2 whitespace-nowrap font-black text-xl md:text-2xl ${
+                          b.minus ? 'text-gray-400' : 'text-brand-300'
+                        }`}
+                      >
+                        {b.text}
+                      </motion.span>
+                    ))}
+                </AnimatePresence>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleAuraTransmissionToggle();
+                  }}
+                  disabled={transmitAuraLoading || !!isOwnProfile || !profile}
+                  title={
+                    isOwnProfile
+                      ? 'L’Aura ne s’auto-attribue pas'
+                      : hasTransmittedAura
+                        ? 'Retirer ton Aura de ce profil'
+                        : 'Transmettre de l’Aura'
+                  }
+                  role="switch"
+                  aria-checked={hasTransmittedAura}
+                  aria-label={hasTransmittedAura ? 'Retirer mon Aura transmise' : 'Transmettre de l’Aura'}
+                  className={`relative flex items-center gap-3 rounded-full px-8 py-4 font-black text-lg transition-transform hover:scale-105 disabled:pointer-events-none disabled:opacity-45 ${
+                    hasTransmittedAura && !isOwnProfile
+                      ? 'border-2 border-brand-400 bg-white/10 text-white shadow-[0_0_24px_rgba(232,58,20,0.35)] hover:bg-white/15'
+                      : 'text-black shadow-[0_0_30px_rgba(232,58,20,0.4)] brand-gradient'
+                  }`}
+                >
+                  <Flame className="h-6 w-6" />
+                  {transmitAuraLoading
+                    ? 'Mise à jour…'
+                    : hasTransmittedAura && !isOwnProfile
+                      ? 'Aura transmise · Retirer'
+                      : 'Transmettre de l’Aura'}
+                </button>
+              </div>
 
               <button
                 type="button"

@@ -814,7 +814,7 @@ export default function ProfileContent() {
               }`}
             >
               <Wallet className="w-4 h-4" />
-              Mes Gains
+              Mes Lingots
             </button>
           </div>
 

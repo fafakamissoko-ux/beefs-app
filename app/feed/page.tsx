@@ -734,7 +734,7 @@ export default function FeedPage() {
               className="inline-flex min-h-[44px] max-md:hidden shrink-0 items-center justify-center gap-2 rounded-full border border-plasma-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-plasma-400 transition-colors hover:bg-plasma-500/10 hover:text-white lg:hidden"
             >
               <Coins className="w-4 h-4 flex-shrink-0" />
-              <span>Acquérir de l&apos;Aura</span>
+              <span>Lingots</span>
             </a>
             </div>
             <div className="flex items-center gap-4 max-md:flex-nowrap max-md:overflow-x-auto hide-scrollbar max-md:pb-1">

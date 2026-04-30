@@ -267,7 +267,14 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
         (payload) => {
           const n = payload.new as { type?: string; body?: string; title?: string };
           const prefs = getNotifPrefs();
-          const typeMap: Record<string, string> = { message: 'messages', follow: 'follows', invite: 'invites', beef_live: 'beefs_live', gift: 'gifts' };
+          const typeMap: Record<string, string> = {
+            message: 'messages',
+            follow: 'follows',
+            invite: 'invites',
+            beef_live: 'beefs_live',
+            gift: 'gifts',
+            aura: 'aura',
+          };
           const prefKey = typeMap[n.type || ''];
           if (prefKey && prefs[prefKey] === false) return;
 
@@ -294,12 +301,12 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
     { href: '/feed', label: 'Fil d’actu', icon: Home, badge: 0 },
     {
       href: '/notifications',
-      label: 'Notifications',
+      label: 'Radar',
       icon: Bell,
       badge: unreadNotifications,
     },
     { href: '/live', label: 'Audiences', icon: Flame, badge: 0 },
-    { href: '/points', label: 'Aura', icon: Coins, badge: 0 },
+    { href: '/points', label: 'Lingots', icon: Coins, badge: 0 },
     {
       href: '/invitations',
       label: 'Convocations',
@@ -682,16 +689,6 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           <p className="text-xs text-gray-500 truncate">{user.email}</p>
                         </div>
                       </div>
-                      <a
-                        href="/buy-points"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] rounded-xl transition-colors"
-                      >
-                        <Flame className="w-5 h-5 text-gray-500" />
-                        <span>Acquérir de l&apos;Aura</span>
-                      </a>
                       {[
                         { href: '/profile', icon: User, label: 'Profil' },
                         { href: '/settings', icon: SettingsIcon, label: 'Paramètres' },

@@ -99,7 +99,7 @@ export default function BuyPointsPage() {
           >
             <Sparkles className="w-12 h-12 text-white" />
           </motion.div>
-          <h1 className="text-4xl font-black text-white mb-3">Acheter des Points</h1>
+          <h1 className="text-4xl font-black text-white mb-3">Acheter des Lingots</h1>
           <p className="text-gray-400 text-lg">Choisis ton pack</p>
           <p className="text-gray-500 text-xs mt-4 px-2 leading-relaxed max-w-sm mx-auto">
             Paiement sécurisé par Stripe : carte, Link ; Apple Pay / Google Pay peuvent s’afficher sur la page de paiement selon l’appareil et la config du compte Stripe.
@@ -203,7 +203,10 @@ export default function BuyPointsPage() {
                         {pack.name}
                       </div>
                       <div className={`text-3xl font-black ${isSelected ? 'text-white' : 'text-white'}`}>
-                        {pack.points.toLocaleString()}
+                        {pack.points.toLocaleString()}{' '}
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${isSelected ? 'text-white/85' : 'text-gray-500'}`}>
+                          Lingots
+                        </span>
                       </div>
                       {pack.bonus > 0 && (
                         <div className={`text-sm font-bold ${isSelected ? 'text-black/80' : 'text-prestige-gold'}`}>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, LayoutTemplate, Type, Zap, MessageSquare, UserPlus, Gift, Flame, History, AlertCircle } from 'lucide-react';
+import { User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, LayoutTemplate, Type, Zap, MessageSquare, UserPlus, Gift, Flame, History, AlertCircle, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -84,6 +84,7 @@ export default function SettingsPage() {
     invites: true,
     beefs_live: true,
     gifts: true,
+    aura: true,
     browser: true,
   });
   const [loading, setLoading] = useState(false);
@@ -139,7 +140,8 @@ export default function SettingsPage() {
     void loadProfile();
     try {
       const saved = localStorage.getItem('beefs_notif_prefs');
-      if (saved) setNotifPrefs(JSON.parse(saved));
+      const parsed = saved ? (JSON.parse(saved) as Partial<typeof notifPrefs>) : {};
+      setNotifPrefs((prev) => ({ ...prev, ...parsed, aura: typeof parsed.aura === 'boolean' ? parsed.aura : prev.aura }));
     } catch {}
     try {
       setMediationAccess(localStorage.getItem(MEDIATION_ACCESS_STORAGE_KEY) === 'true');
@@ -824,7 +826,7 @@ export default function SettingsPage() {
                 <History className="w-5 h-5 text-brand-400" />
               </div>
               <div className="flex-1">
-                <h3 className="text-white font-bold text-xl">Historique des points</h3>
+                <h3 className="text-white font-bold text-xl">Historique des Lingots</h3>
                 <p className="text-gray-500 text-xs mt-0.5">Achats, accès aux directs, cadeaux, retraits (50 derniers)</p>
               </div>
               <a
@@ -833,7 +835,7 @@ export default function SettingsPage() {
                 rel="noopener noreferrer"
                 className="text-xs font-semibold text-brand-400 hover:text-brand-300 whitespace-nowrap"
               >
-                Acquérir de l&apos;Aura
+                Recharger les Lingots
               </a>
             </div>
             {pointTx.length === 0 ? (
@@ -1031,7 +1033,7 @@ export default function SettingsPage() {
               <div className="w-10 h-10 bg-cobalt-500/20 rounded-full flex items-center justify-center">
                 <Bell className="w-5 h-5 text-cobalt-400" />
               </div>
-              <h3 className="text-white font-bold text-xl">Notifications</h3>
+              <h3 className="text-white font-bold text-xl">Radar & alertes</h3>
             </div>
 
             <div className="space-y-4">
@@ -1040,6 +1042,7 @@ export default function SettingsPage() {
                 { key: 'follows' as const, icon: UserPlus, color: 'text-prestige-gold', label: 'Abonnements', desc: 'Quand quelqu\'un te suit' },
                 { key: 'invites' as const, icon: Flame, color: 'text-ember-400', label: 'Invitations', desc: 'Invitations à des beefs' },
                 { key: 'beefs_live' as const, icon: Zap, color: 'text-ember-500', label: 'Beefs en direct', desc: 'Quand un beef que tu suis passe en live' },
+                { key: 'aura' as const, icon: Sparkles, color: 'text-brand-400', label: 'Étincelles d’Aura', desc: 'Validations d’Aura et bonus sur ton contenu' },
                 { key: 'gifts' as const, icon: Gift, color: 'text-prestige-gold', label: 'Cadeaux', desc: 'Quand tu reçois un cadeau' },
                 { key: 'browser' as const, icon: Bell, color: 'text-cobalt-300', label: 'Notifications navigateur', desc: 'Popups système même hors de l\'app' },
               ]).map(({ key, icon: Icon, color, label, desc }) => (
