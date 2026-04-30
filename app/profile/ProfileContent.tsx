@@ -21,10 +21,10 @@ import {
   type MediatorViewerReviewDisplay,
 } from '@/lib/mediator-viewer-reviews';
 
-function getAuraRank(points: number) {
-  if (points >= 5000) return { label: 'Archonte', color: 'text-prestige-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.6)]' };
-  if (points >= 2000) return { label: 'Tribun', color: 'text-plasma-400' };
-  if (points >= 500) return { label: 'Orateur', color: 'text-cyan-400' };
+function getAuraRank(aura: number) {
+  if (aura >= 5000) return { label: 'Archonte', color: 'text-prestige-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.6)]' };
+  if (aura >= 2000) return { label: 'Tribun', color: 'text-plasma-400' };
+  if (aura >= 500) return { label: 'Orateur', color: 'text-cyan-400' };
   return { label: 'Citoyen', color: 'text-gray-500' };
 }
 
@@ -37,6 +37,7 @@ interface UserProfile {
   banner_url?: string;
   accent_color?: string;
   points: number;
+  lifetime_points?: number;
   is_premium: boolean;
   premium_settings?: {
     showPremiumBadge: boolean;
@@ -225,6 +226,7 @@ export default function ProfileContent() {
             banner_url: data.banner_url,
             accent_color: data.accent_color || '#E83A14',
             points: data.points || 0,
+            lifetime_points: data.lifetime_points || 0,
             is_premium: data.is_premium || false,
             premium_settings: data.premium_settings || {
               showPremiumBadge: true,
@@ -726,10 +728,11 @@ export default function ProfileContent() {
                 <p className="text-gray-200 text-sm mb-4 leading-relaxed">{profile.bio}</p>
               )}
 
-              {/* Aura & Points (Compact) */}
+              {/* Aura (prestige) — séparé des Lingots (solde) */}
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 {(() => {
-                  const rank = getAuraRank(profile.points);
+                  const currentAura = profile.lifetime_points ?? profile.points;
+                  const rank = getAuraRank(currentAura);
                   return (
                     <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
                       <Flame className={`h-3.5 w-3.5 ${rank.color}`} aria-hidden />
@@ -740,8 +743,11 @@ export default function ProfileContent() {
                   );
                 })()}
                 <div className="flex items-center gap-1.5 text-sm text-gray-400">
-                  <Trophy className="w-4 h-4 text-prestige-gold" />
-                  <span className="font-bold text-white">{profile.points.toLocaleString('fr-FR')}</span> pts
+                  <Flame className="h-4 w-4 text-brand-500" aria-hidden />
+                  <span className="font-bold text-white">
+                    {(profile.lifetime_points ?? profile.points).toLocaleString('fr-FR')}
+                  </span>{' '}
+                  Aura
                 </div>
               </div>
 
@@ -1006,7 +1012,9 @@ export default function ProfileContent() {
                     <p className="text-4xl font-black text-white">
                       {((profile?.points || 0) / 100).toFixed(2)}€
                     </p>
-                    <p className="text-gray-500 text-xs mt-1">{profile?.points || 0} pts · 100 pts = 1€</p>
+                    <p className="text-gray-500 text-xs mt-1">
+                      {profile?.points || 0} Lingots · 100 Lingots = 1€
+                    </p>
                   </div>
                   <div className="w-16 h-16 bg-green-500/20 rounded-2xl flex items-center justify-center">
                     <Euro className="w-8 h-8 text-green-400" />
@@ -1024,7 +1032,7 @@ export default function ProfileContent() {
                   <div>
                     <p className="text-brand-300 font-semibold text-sm">Minimum non atteint</p>
                     <p className="text-gray-400 text-sm">
-                      Il vous faut au moins <strong>20€</strong> (2 000 pts) pour retirer. Il vous manque{' '}
+                      Il vous faut au moins <strong>20€</strong> (2 000 Lingots) pour retirer. Il vous manque{' '}
                       {((Math.max(0, 2000 - (profile?.points || 0))) / 100).toFixed(0)}€.
                     </p>
                   </div>
@@ -1056,7 +1064,8 @@ export default function ProfileContent() {
                       />
                     </div>
                     <p className="text-gray-500 text-xs mt-2">
-                      = {withdrawalAmountEuros * 100} pts · Solde restant après retrait : {((profile?.points || 0) / 100 - withdrawalAmountEuros).toFixed(2)}€
+                      = {withdrawalAmountEuros * 100} Lingots · Solde restant après retrait :{' '}
+                      {((profile?.points || 0) / 100 - withdrawalAmountEuros).toFixed(2)}€
                     </p>
                   </div>
 
@@ -1465,10 +1474,11 @@ export default function ProfileContent() {
                       <p className="text-gray-200 text-sm mb-4 leading-relaxed whitespace-pre-wrap line-clamp-6">{profile.bio}</p>
                     )}
 
-                    {/* Aura & Points (Compact) */}
+                    {/* Aura (aperçu public) */}
                     <div className="flex flex-wrap items-center gap-3 mb-4">
                       {(() => {
-                        const rank = getAuraRank(profile.points);
+                        const currentAura = profile.lifetime_points ?? profile.points;
+                        const rank = getAuraRank(currentAura);
                         return (
                           <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
                             <Flame className={`h-3.5 w-3.5 ${rank.color}`} aria-hidden />
@@ -1479,8 +1489,11 @@ export default function ProfileContent() {
                         );
                       })()}
                       <div className="flex items-center gap-1.5 text-sm text-gray-400">
-                        <Trophy className="w-4 h-4 text-prestige-gold" />
-                        <span className="font-bold text-white">{profile.points.toLocaleString('fr-FR')}</span> pts
+                        <Flame className="h-4 w-4 text-brand-500" aria-hidden />
+                        <span className="font-bold text-white">
+                          {(profile.lifetime_points ?? profile.points).toLocaleString('fr-FR')}
+                        </span>{' '}
+                        Aura
                       </div>
                       {stats.beefs_resolved >= 3 && (
                         <div className="flex items-center gap-1.5 text-sm text-gray-400" title="Indice de Sagesse">

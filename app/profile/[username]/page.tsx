@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
-import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical, Star, Trophy, TrendingUp, X } from 'lucide-react';
+import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical, Star, TrendingUp, X } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,10 +23,10 @@ import {
 } from '@/lib/mediator-viewer-reviews';
 import { escapeForIlikeExact } from '@/lib/ilike-exact';
 
-function getAuraRank(points: number) {
-  if (points >= 5000) return { label: 'Archonte', color: 'text-prestige-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.6)]' };
-  if (points >= 2000) return { label: 'Tribun', color: 'text-plasma-400' };
-  if (points >= 500) return { label: 'Orateur', color: 'text-cyan-400' };
+function getAuraRank(aura: number) {
+  if (aura >= 5000) return { label: 'Archonte', color: 'text-prestige-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.6)]' };
+  if (aura >= 2000) return { label: 'Tribun', color: 'text-plasma-400' };
+  if (aura >= 500) return { label: 'Orateur', color: 'text-cyan-400' };
   return { label: 'Citoyen', color: 'text-gray-500' };
 }
 
@@ -38,6 +38,7 @@ interface UserProfile {
   avatar_url?: string;
   banner_url?: string | null;
   points: number;
+  lifetime_points?: number;
   is_premium: boolean;
   created_at: string;
 }
@@ -115,6 +116,9 @@ export default function PublicProfilePage() {
   const [mediatorReviews, setMediatorReviews] = useState<MediatorViewerReviewDisplay[]>([]);
   const [activeTab, setActiveTab] = useState<'debates' | 'participations' | 'reviews'>('debates');
   const [viewingImage, setViewingImage] = useState<{ url: string; type: 'avatar' | 'banner' } | null>(null);
+  const [auraDonors, setAuraDonors] = useState<any[]>([]);
+  const [showDonors, setShowDonors] = useState(false);
+  const [transmitAuraLoading, setTransmitAuraLoading] = useState(false);
 
   // Check if it's the current user's profile
   const isOwnProfile = user && profile && user.id === profile.id;
@@ -179,6 +183,7 @@ export default function PublicProfilePage() {
           avatar_url?: string | null;
           banner_url?: string | null;
           points: number;
+          lifetime_points?: number | null;
           is_premium: boolean;
           created_at: string;
         };
@@ -190,6 +195,7 @@ export default function PublicProfilePage() {
           avatar_url: p.avatar_url,
           banner_url: p.banner_url,
           points: p.points,
+          lifetime_points: p.lifetime_points ?? 0,
           is_premium: p.is_premium,
           created_at: p.created_at,
         };
@@ -200,7 +206,12 @@ export default function PublicProfilePage() {
         return;
       }
 
-      const pd = profileData as unknown as UserProfile;
+      const raw = profileData as Record<string, unknown>;
+      const lpFromRow = Number(raw.lifetime_points ?? 0);
+      const pd: UserProfile = {
+        ...(profileData as unknown as UserProfile),
+        lifetime_points: Number.isFinite(lpFromRow) ? lpFromRow : 0,
+      };
 
       setProfile(pd);
 
@@ -380,6 +391,72 @@ export default function PublicProfilePage() {
       setLoading(false);
     }
   }, [username, user]);
+
+  const fetchDonors = useCallback(async () => {
+    const entityId = profile?.id;
+    if (!entityId) {
+      setAuraDonors([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('aura_sparks')
+      .select('giver_id, users(display_name, username, avatar_url)')
+      .eq('entity_id', entityId);
+    if (error) {
+      console.warn('[profile] aura_sparks donors', error);
+      setAuraDonors([]);
+      return;
+    }
+    const seen = new Set<string>();
+    const rows: any[] = [];
+    for (const row of data ?? []) {
+      const r = row as {
+        giver_id: string;
+        users?: { display_name?: string | null; username?: string | null; avatar_url?: string | null } | null | Array<{
+          display_name?: string | null;
+          username?: string | null;
+          avatar_url?: string | null;
+        }>;
+      };
+      const gid = r.giver_id;
+      if (!gid || seen.has(gid)) continue;
+      seen.add(gid);
+      const u = Array.isArray(r.users) ? r.users[0] : r.users;
+      rows.push({ giver_id: gid, users: u ?? null });
+    }
+    setAuraDonors(rows);
+  }, [profile?.id]);
+
+  const handleTransmitAura = useCallback(async () => {
+    if (!profile) return;
+    if (!user) {
+      toast('Connectez-vous pour transmettre de l’Aura.', 'info');
+      router.push('/login');
+      return;
+    }
+    if (user.id === profile.id) {
+      toast('L’Aura ne s’auto-attribue pas', 'error');
+      return;
+    }
+    setTransmitAuraLoading(true);
+    const { error } = await supabase.rpc('transmit_aura', { p_entity_id: profile.id });
+    setTransmitAuraLoading(false);
+    if (error) {
+      toast(error.message || 'Impossible de transmettre l’Aura pour le moment.', 'error');
+      return;
+    }
+    toast('✨ Aura transmise !', 'success');
+    void fetchDonors();
+  }, [profile, user, toast, router, fetchDonors]);
+
+  useEffect(() => {
+    if (!viewingImage || !profile?.id) {
+      setAuraDonors([]);
+      setShowDonors(false);
+      return;
+    }
+    void fetchDonors();
+  }, [viewingImage, profile?.id, fetchDonors]);
 
   useEffect(() => {
     void loadProfile();
@@ -621,10 +698,11 @@ export default function PublicProfilePage() {
                 <p className="text-gray-200 text-sm mb-4 leading-relaxed">{profile.bio}</p>
               )}
 
-              {/* Aura & Points (Compact) */}
+              {/* Aura — prestige (lifetime) vs Lingots ≠ affichés ici */}
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 {(() => {
-                  const rank = getAuraRank(profile.points);
+                  const currentAura = profile.lifetime_points ?? profile.points;
+                  const rank = getAuraRank(currentAura);
                   return (
                     <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
                       <Flame className={`h-3.5 w-3.5 ${rank.color}`} aria-hidden />
@@ -635,8 +713,11 @@ export default function PublicProfilePage() {
                   );
                 })()}
                 <div className="flex items-center gap-1.5 text-sm text-gray-400">
-                  <Trophy className="w-4 h-4 text-prestige-gold" />
-                  <span className="font-bold text-white">{profile.points.toLocaleString('fr-FR')}</span> pts
+                  <Flame className="h-4 w-4 text-brand-500" aria-hidden />
+                  <span className="font-bold text-white">
+                    {(profile.lifetime_points ?? profile.points).toLocaleString('fr-FR')}
+                  </span>{' '}
+                  Aura
                 </div>
               </div>
 
@@ -883,13 +964,63 @@ export default function PublicProfilePage() {
               <button
                 type="button"
                 onClick={() => {
-                  toast('✨ Aura transmise ! (En développement)', 'success');
+                  void handleTransmitAura();
                 }}
-                className="flex items-center gap-3 rounded-full px-8 py-4 font-black text-lg text-black shadow-[0_0_30px_rgba(232,58,20,0.4)] transition-transform brand-gradient hover:scale-105"
+                disabled={transmitAuraLoading || !!isOwnProfile}
+                title={isOwnProfile ? 'L’Aura ne s’auto-attribue pas' : undefined}
+                className="flex items-center gap-3 rounded-full px-8 py-4 font-black text-lg text-black shadow-[0_0_30px_rgba(232,58,20,0.4)] transition-transform brand-gradient hover:scale-105 disabled:pointer-events-none disabled:opacity-45"
               >
                 <Flame className="h-6 w-6" />
-                Transmettre de l&apos;Aura
+                {transmitAuraLoading ? 'Transmission…' : 'Transmettre de l’Aura'}
               </button>
+
+              <button
+                type="button"
+                onClick={() => setShowDonors((v) => !v)}
+                className="mt-4 flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white/90 backdrop-blur-md transition-colors hover:bg-white/10"
+              >
+                <span aria-hidden>✨</span>
+                {auraDonors.length} Aura transmises
+              </button>
+
+              {showDonors && (
+                <div className="mt-3 w-full max-w-md rounded-xl border border-white/10 bg-black/55 p-3 backdrop-blur-md max-h-52 overflow-y-auto">
+                  {auraDonors.length === 0 ? (
+                    <p className="text-center text-xs text-gray-500">Aucune transmission pour l’instant.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {auraDonors.map((d: { giver_id: string; users?: { display_name?: string | null; username?: string | null; avatar_url?: string | null } | null }) => {
+                        const u = d.users;
+                        const name = (u?.display_name || u?.username || 'Membre').trim();
+                        const un = (u?.username || '').trim();
+                        return (
+                          <li key={d.giver_id} className="flex items-center gap-3 rounded-lg bg-white/[0.04] px-2 py-2">
+                            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-white/10">
+                              {u?.avatar_url ? (
+                                <Image src={u.avatar_url} alt="" fill className="object-cover" sizes="36px" />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-xs font-bold text-white/70">
+                                  {name[0]?.toUpperCase() ?? '?'}
+                                </span>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              {un ? (
+                                <ProfileUserLink username={un} className="truncate font-semibold text-white hover:underline">
+                                  {name}
+                                </ProfileUserLink>
+                              ) : (
+                                <span className="truncate font-semibold text-white">{name}</span>
+                              )}
+                              {un ? <p className="truncate text-[11px] text-gray-500">@{un}</p> : null}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
