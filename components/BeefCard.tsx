@@ -3,7 +3,7 @@
 import { useState, useRef, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, ChevronDown } from 'lucide-react';
+import { Clock, Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, ChevronDown, MoreVertical, Trash2, Edit2, Flag } from 'lucide-react';
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 
@@ -38,6 +38,10 @@ interface BeefCardProps {
   challenger_a_username?: string | null;
   challenger_b_username?: string | null;
   mediator_name?: string | null;
+  mediator_username?: string | null;
+  onDelete?: () => void;
+  onEdit?: () => void;
+  onForfeit?: () => void;
   onClick: () => void;
   onTagClick?: (tag: string) => void;
   onNotifyClick?: () => void;
@@ -81,6 +85,10 @@ export function BeefCard({
   challenger_a_username,
   challenger_b_username,
   mediator_name,
+  mediator_username,
+  onDelete,
+  onEdit,
+  onForfeit,
   onClick,
   onTagClick,
   onNotifyClick,
@@ -103,6 +111,7 @@ export function BeefCard({
   const [floatingAuras, setFloatingAuras] = useState<{ id: number; x: number }[]>([]);
   const [replayHover, setReplayHover] = useState(false);
   const [isTeaserOpen, setIsTeaserOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useLayoutEffect(() => {
     if (!video_url?.trim()) return;
@@ -272,6 +281,74 @@ export function BeefCard({
             )}
             {getPrimaryStatusBadge()}
         </div>
+
+        {(onEdit || onDelete || onForfeit) && (
+          <div className="absolute right-2 top-2 z-[60]">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsMenuOpen(!isMenuOpen);
+              }}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white backdrop-blur-md transition-colors hover:bg-white/20"
+              aria-expanded={isMenuOpen}
+              aria-label="Actions sur l&apos;affaire"
+            >
+              <MoreVertical className="h-4 w-4" aria-hidden />
+            </button>
+            <AnimatePresence>
+              {isMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-obsidian-900 py-1 shadow-2xl"
+                >
+                  {onEdit && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsMenuOpen(false);
+                        onEdit();
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
+                    >
+                      <Edit2 className="h-4 w-4 shrink-0" aria-hidden /> Modifier l&apos;affaire
+                    </button>
+                  )}
+                  {onForfeit && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsMenuOpen(false);
+                        onForfeit();
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-bold text-prestige-gold transition-colors hover:bg-prestige-gold/10"
+                    >
+                      <Flag className="h-4 w-4 shrink-0" aria-hidden /> Déclarer Forfait
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsMenuOpen(false);
+                        onDelete();
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-bold text-blood-400 transition-colors hover:bg-blood-500/10"
+                    >
+                      <Trash2 className="h-4 w-4 shrink-0" aria-hidden /> Supprimer
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
         {status === 'scheduled' && scheduled_at ? (
           <div
@@ -504,7 +581,14 @@ export function BeefCard({
           {status === 'pending' && !!mediator_name && onValiderRef && (
             <div className="flex w-full flex-col items-center justify-center gap-2 pt-1">
               <span className="text-[10px] font-medium text-plasma-400">
-                @{mediator_name} postule comme Ref.
+                <ProfileUserLink
+                  username={mediator_username || mediator_name}
+                  className="underline hover:text-plasma-300"
+                  profileLabel={mediator_name ? `Profil de @${mediator_name}` : 'Profil du Ref'}
+                >
+                  @{mediator_name}
+                </ProfileUserLink>{' '}
+                postule comme Ref.
               </span>
               <div className="flex w-full gap-2">
                 <button
