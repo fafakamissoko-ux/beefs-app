@@ -975,7 +975,7 @@ export default function FeedPage() {
               <Radio className="h-5 w-5 animate-pulse text-plasma-400" />
             </div>
             <div className="flex flex-col items-start text-left">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-plasma-400">Combat en cours</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-plasma-400">Beef en cours</span>
               <span className="max-w-[120px] truncate text-xs font-semibold text-white md:max-w-[150px]">
                 {activeBeef.title}
               </span>
