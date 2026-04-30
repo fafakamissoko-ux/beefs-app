@@ -380,7 +380,7 @@ export default function PublicProfilePage() {
     void loadProfile();
   }, [loadProfile]);
 
-  /** Ancres #beefs / #followers / #following / #participations / #reviews */
+  /** Ancres #beefs / #followers / #following / #participations / #reviews / #vox-populi */
   useEffect(() => {
     if (!profile) return;
 
@@ -402,9 +402,12 @@ export default function PublicProfilePage() {
         setTimeout(() => {
           document.getElementById('profile-section-participations')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 150);
-      } else if (raw === 'reviews') {
+      } else if (raw === 'reviews' || raw === 'vox-populi') {
         if (stats.beefs_hosted > 0 || mediatorReviews.length > 0) {
           setActiveTab('reviews');
+          setTimeout(() => {
+            document.getElementById('profile-section-reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 150);
         }
       }
     };
@@ -773,7 +776,7 @@ export default function PublicProfilePage() {
           )}
 
           {activeTab === 'reviews' && (
-            <div>
+            <div id="profile-section-reviews" className="scroll-mt-24">
               <h2 className="mb-3 flex items-center gap-2 font-black text-xl text-white">
                 <Star className="h-5 w-5 text-prestige-gold" aria-hidden strokeWidth={1.5} />
                 Vox Populi · Évaluations
