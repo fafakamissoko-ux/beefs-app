@@ -42,8 +42,6 @@ interface UserProfile {
     showPremiumBadge: boolean;
     showPremiumFrame: boolean;
     showPremiumAnimations: boolean;
-    /** Liens cliquables sur les stats (persisté côté premium_settings) */
-    statsShortcuts?: Record<string, unknown>;
   };
   created_at: string;
 }
