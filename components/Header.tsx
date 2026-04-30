@@ -155,7 +155,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
 
   useEffect(() => {
     async function fetchElite() {
-      const { data } = await supabase.from('user_public_profile').select('id, username, display_name, avatar_url').limit(4);
+      const { data } = await supabase.from('user_public_profile').select('id, username, display_name, avatar_url').not('username', 'is', null).limit(4);
       if (data) setTopUsers(data);
     }
     void fetchElite();

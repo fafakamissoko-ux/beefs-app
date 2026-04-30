@@ -488,33 +488,39 @@ export default function FeedPage() {
     [user?.id, toast, loadBeefs],
   );
 
-  const handleApproveRef = useCallback(
-    async (beefId: string) => {
-      if (!user?.id) return;
-      const { error } = await supabase.from('beefs').update({ status: 'scheduled' }).eq('id', beefId).eq('created_by', user.id);
-      if (error) {
-        toast('Erreur lors de la validation', 'error');
-        return;
-      }
-      toast("Ref validé ! L'affaire est programmée.", 'success');
-      void loadBeefs();
-    },
-    [user?.id, toast, loadBeefs],
-  );
+  const handleApproveRef = useCallback(async (beefId: string) => {
+    if (!user?.id) return;
+    const { error } = await supabase
+      .from('beefs')
+      .update({ status: 'scheduled' })
+      .eq('id', beefId)
+      .eq('created_by', user.id)
+      .eq('intent', 'manifesto')
+      .eq('status', 'pending');
+    if (error) {
+      toast('Erreur lors de la validation', 'error');
+      return;
+    }
+    toast("Ref validé ! L'affaire est programmée.", 'success');
+    void loadBeefs();
+  }, [user?.id, toast, loadBeefs]);
 
-  const handleRejectRef = useCallback(
-    async (beefId: string) => {
-      if (!user?.id) return;
-      const { error } = await supabase.from('beefs').update({ mediator_id: null }).eq('id', beefId).eq('created_by', user.id);
-      if (error) {
-        toast('Erreur lors du refus', 'error');
-        return;
-      }
-      toast('Candidature refusée.', 'info');
-      void loadBeefs();
-    },
-    [user?.id, toast, loadBeefs],
-  );
+  const handleRejectRef = useCallback(async (beefId: string) => {
+    if (!user?.id) return;
+    const { error } = await supabase
+      .from('beefs')
+      .update({ mediator_id: null })
+      .eq('id', beefId)
+      .eq('created_by', user.id)
+      .eq('intent', 'manifesto')
+      .eq('status', 'pending');
+    if (error) {
+      toast('Erreur lors du refus', 'error');
+      return;
+    }
+    toast('Candidature refusée.', 'info');
+    void loadBeefs();
+  }, [user?.id, toast, loadBeefs]);
 
   const handleWithdrawManifesto = useCallback(
     async (beefId: string) => {
