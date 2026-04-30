@@ -962,30 +962,23 @@ export default function FeedPage() {
         )}
       {activeBeef && (
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed z-[500] max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:w-full md:bottom-8 md:right-8 md:left-auto md:w-[340px] md:translate-x-0 overflow-hidden max-md:rounded-t-2xl max-md:rounded-b-none md:rounded-2xl border-t max-md:border-x-0 max-md:border-b-0 md:border border-plasma-500/30 bg-gradient-to-br from-black/95 to-obsidian-950 shadow-[0_-8px_32px_rgba(0,0,0,0.8)]"
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="fixed z-[500] bottom-6 right-4 md:bottom-8 md:right-8 flex flex-col items-end pointer-events-none"
         >
           <button
             type="button"
             onClick={() => router.push(`/arena/${activeBeef.id}`)}
-            className="group flex w-full items-center md:justify-between max-md:justify-center gap-3 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:gap-4 md:p-4"
+            className="group pointer-events-auto flex items-center gap-3 rounded-full border border-plasma-500/40 bg-black/90 p-2 pr-4 shadow-[0_4px_20px_rgba(162,0,255,0.4)] backdrop-blur-xl transition-all hover:scale-105 hover:border-plasma-500/70"
           >
-            <div className="flex min-w-0 max-md:flex-initial md:flex-1 items-center gap-2.5 md:gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-plasma-500/30 bg-plasma-500/15">
-                <Radio className="h-4 w-4 shrink-0 animate-pulse text-plasma-400" />
-              </div>
-              <div className="min-w-0 max-md:flex-initial max-md:pr-2 md:flex-1">
-                <p className="truncate font-sans text-sm font-bold text-white">
-                  {activeBeef.title}
-                </p>
-                <p className="mt-0.5 max-md:hidden font-sans text-[11px] text-white/50 md:text-xs">
-                  Tu es <span className="font-semibold text-plasma-400">{activeBeef.role}</span> dans ce beef
-                </p>
-              </div>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-plasma-500/20">
+              <Radio className="h-5 w-5 animate-pulse text-plasma-400" />
             </div>
-            <div className="px-4 py-2 shrink-0 rounded-full bg-gradient-to-r from-plasma-600 to-plasma-500 text-[10px] md:text-[11px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(162,0,255,0.5)]">
-              Rejoindre
+            <div className="flex flex-col items-start text-left">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-plasma-400">Combat en cours</span>
+              <span className="max-w-[120px] truncate text-xs font-semibold text-white md:max-w-[150px]">
+                {activeBeef.title}
+              </span>
             </div>
           </button>
         </motion.div>

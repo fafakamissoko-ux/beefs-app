@@ -659,7 +659,7 @@ export function BeefCard({
               className="w-full rounded-xl border border-plasma-500/35 bg-plasma-500/15 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-plasma-500/25"
             >
               {liveAudienceAction.variant === 'return'
-                ? "Retourner dans l'Arène"
+                ? "Retourner dans l'Agora"
                 : "Rejoindre l'Audience"}
             </button>
           )}
@@ -756,7 +756,7 @@ export function BeefCard({
               <div className="relative mb-6 flex min-h-0 flex-1 flex-col">
                 <div className="hide-scrollbar flex-1 overflow-y-auto pr-2 text-sm font-medium leading-relaxed text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] whitespace-pre-wrap">
                   {description?.trim() ||
-                    "Aucune description fournie. Rejoignez l'Arène pour découvrir l'enjeu de ce choc."}
+                    "Aucune description fournie. Rejoignez l'Agora pour découvrir l'enjeu de ce choc."}
                 </div>
                 {description && description.length > 150 && (
                   <div className="pointer-events-none absolute bottom-0 left-0 right-0 flex h-12 items-end justify-center bg-gradient-to-t from-obsidian-900 to-transparent pb-1">
@@ -773,7 +773,7 @@ export function BeefCard({
                   }}
                   className="flex w-full items-center justify-center rounded-xl bg-plasma-600 py-4 text-sm font-black uppercase tracking-widest text-white shadow-glow-plasma transition-transform hover:scale-[1.02] hover:bg-plasma-500"
                 >
-                  Entrer dans l&apos;Arène
+                  Entrer dans l&apos;Agora
                 </button>
               </div>
             </div>

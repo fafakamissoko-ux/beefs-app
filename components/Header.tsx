@@ -317,7 +317,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
   const publicNavItems = [
     { href: '/feed', label: 'Fil d’actu', icon: Home, badge: 0 },
     { href: '/live', label: 'Audiences', icon: Flame, badge: 0 },
-    { href: '/rules', label: "Règles de l'Arène", icon: Shield, badge: 0 },
+    { href: '/rules', label: "Règles de l'Agora", icon: Shield, badge: 0 },
   ];
   const visibleNavItems = user ? navItems : publicNavItems;
 
