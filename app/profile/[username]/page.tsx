@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
-import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical, Star, TrendingUp, X } from 'lucide-react';
+import { Share2, Flame, Calendar, MoreVertical, Star, TrendingUp, X } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +12,7 @@ import { BeefCard } from '@/components/BeefCard';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { FollowListModal } from '@/components/FollowListModal';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
+import { FollowButton } from '@/components/FollowButton';
 import { AppBackButton } from '@/components/AppBackButton';
 import { hrefWithFrom } from '@/lib/navigation-return';
 import { useToast } from '@/components/Toast';
@@ -28,6 +29,11 @@ function getAuraRank(aura: number) {
   if (aura >= 2000) return { label: 'Tribun', color: 'text-plasma-400' };
   if (aura >= 500) return { label: 'Orateur', color: 'text-cyan-400' };
   return { label: 'Citoyen', color: 'text-gray-500' };
+}
+
+/** Prestige Affiché « Aura » Radar (lifetime_points ; compat si colonne legacy absente). */
+function prestigeAuraDisplay(profile: Pick<UserProfile, 'lifetime_points' | 'points'>): number {
+  return profile.lifetime_points ?? profile.points;
 }
 
 interface UserProfile {
@@ -110,7 +116,6 @@ export default function PublicProfilePage() {
   const [participantBeefs, setParticipantBeefs] = useState<Beef[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [followLoading, setFollowLoading] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showFollowModal, setShowFollowModal] = useState<null | 'followers' | 'following'>(null);
   const [mediatorReviews, setMediatorReviews] = useState<MediatorViewerReviewDisplay[]>([]);
@@ -157,6 +162,15 @@ export default function PublicProfilePage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- resync sparkle sur changement d’identité utilisateur/profil uniquement
   }, [profile?.id, user?.id]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (viewingImage) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = 'unset';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [viewingImage]);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
@@ -575,61 +589,6 @@ export default function PublicProfilePage() {
     return () => window.removeEventListener('hashchange', syncFromHash);
   }, [profile, stats.beefs_hosted, mediatorReviews.length]);
 
-  const handleFollow = async () => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
-    if (!profile) return;
-
-    setFollowLoading(true);
-    try {
-      const willUnfollow = isFollowing;
-      if (willUnfollow) {
-        await supabase
-          .from('followers')
-          .delete()
-          .eq('follower_id', user.id)
-          .eq('following_id', profile.id);
-
-        setIsFollowing(false);
-        setStats((prev) => ({ ...prev, followers: prev.followers - 1 }));
-        queueBurst('-10 ✨', 'follow', true);
-        setProfile((prev) =>
-          prev
-            ? {
-                ...prev,
-                lifetime_points: Math.max(0, (prev.lifetime_points ?? 0) - 10),
-              }
-            : null,
-        );
-      } else {
-        await supabase.from('followers').insert({
-          follower_id: user.id,
-          following_id: profile.id,
-        });
-
-        setIsFollowing(true);
-        setStats((prev) => ({ ...prev, followers: prev.followers + 1 }));
-        queueBurst('+10 ✨', 'follow');
-        setProfile((prev) =>
-          prev
-            ? {
-                ...prev,
-                lifetime_points: (prev.lifetime_points ?? 0) + 10,
-              }
-            : null,
-        );
-      }
-    } catch (error) {
-      console.error('Error toggling follow:', error);
-      toast('Erreur lors de l\'action', 'error');
-    } finally {
-      setFollowLoading(false);
-    }
-  };
-
   const handleShare = () => {
     const url = `${window.location.origin}/profile/${username}`;
     if (navigator.share) {
@@ -742,7 +701,7 @@ export default function PublicProfilePage() {
                   </button>
                 )}
 
-                {!isOwnProfile && user && (
+                {!isOwnProfile && profile && (
                   <div className="relative inline-flex items-center justify-center">
                     <AnimatePresence>
                       {dopamineBursts
@@ -762,28 +721,32 @@ export default function PublicProfilePage() {
                           </motion.span>
                         ))}
                     </AnimatePresence>
-                    <button
-                      type="button"
-                      onClick={handleFollow}
-                      disabled={followLoading}
-                      className={`relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all ${
-                        isFollowing
-                          ? 'bg-white/10 text-white hover:bg-white/20'
-                          : 'brand-gradient text-black transition-opacity hover:opacity-90'
-                      }`}
-                    >
-                      {isFollowing ? (
-                        <>
-                          <UserMinus className="h-4 w-4" />
-                          <span className="hidden sm:inline">Ne plus suivre</span>
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="h-4 w-4" />
-                          <span className="hidden sm:inline">Suivre</span>
-                        </>
-                      )}
-                    </button>
+                    <FollowButton
+                      followingId={profile.id}
+                      initialFollowing={isFollowing}
+                      loginRedirectPath={pathname}
+                      classNameWhenFollowing="relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-white/10 text-white hover:bg-white/20"
+                      classNameWhenNotFollowing="relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all brand-gradient text-black hover:opacity-90"
+                      onSynced={(p) => {
+                        setIsFollowing(p.following);
+                        if (p.recipientFollowersCount != null) {
+                          setStats((prev) => ({ ...prev, followers: p.recipientFollowersCount! }));
+                        }
+                        if (p.recipientLifetimePoints != null) {
+                          setProfile((prev) =>
+                            prev ? { ...prev, lifetime_points: p.recipientLifetimePoints! } : null,
+                          );
+                        }
+                        queueBurst(
+                          p.following ? '+10 ✨' : '-10 ✨',
+                          'follow',
+                          !p.following,
+                        );
+                      }}
+                      onError={(msg) => {
+                        toast(msg || 'Erreur lors de l\'action', 'error');
+                      }}
+                    />
                   </div>
                 )}
 
@@ -826,7 +789,7 @@ export default function PublicProfilePage() {
                 <div className="flex items-center gap-1.5 text-sm text-gray-400">
                   <Flame className="h-4 w-4 text-brand-500" aria-hidden />
                   <span className="font-bold text-white">
-                    {(profile.lifetime_points ?? profile.points).toLocaleString('fr-FR')}
+                    {prestigeAuraDisplay(profile).toLocaleString('fr-FR')}
                   </span>{' '}
                   Aura
                 </div>

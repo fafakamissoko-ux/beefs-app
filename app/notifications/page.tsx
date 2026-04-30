@@ -73,6 +73,7 @@ type AuraNotificationRow = {
   giver_name: string;
   giver_username: string | null;
   aura_kind: string | null;
+  giver_id?: string | null;
 };
 
 function mapAuraRowToAppNotification(row: AuraNotificationRow): AppNotification {
@@ -81,8 +82,10 @@ function mapAuraRowToAppNotification(row: AuraNotificationRow): AppNotification 
   const title = isTeaser
     ? `📸 Ton Teaser gagne en Aura (+${name})`
     : `✨ ${name} a validé ton Aura !`;
-  const slug = row.giver_username?.trim();
-  const link = slug ? `/profile/${encodeURIComponent(slug)}` : null;
+  const slugRaw = row.giver_username?.trim();
+  const slug = slugRaw ? slugRaw.replace(/^@/, '') : '';
+  /** Profils publics : segment [username], encodé pour caractères spéciaux. */
+  const link = slug.length > 0 ? `/profile/${encodeURIComponent(slug)}` : null;
 
   return {
     id: row.id,
@@ -93,8 +96,11 @@ function mapAuraRowToAppNotification(row: AuraNotificationRow): AppNotification 
     body: null,
     link,
     is_read: false,
-    metadata:
-      slug != null || row.aura_kind != null ? { giver_username: slug, aura_kind: row.aura_kind } : null,
+    metadata: {
+      giver_username: slug.length > 0 ? slug : null,
+      aura_kind: row.aura_kind,
+      ...(row.giver_id ? { giver_id: row.giver_id } : {}),
+    },
   };
 }
 
@@ -139,7 +145,7 @@ export default function NotificationsPage() {
           .limit(4000),
         supabase
           .from('aura_notifications')
-          .select('id,user_id,created_at,giver_name,giver_username,aura_kind')
+          .select('id,user_id,created_at,giver_name,giver_username,aura_kind,giver_id')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(2000),
@@ -201,7 +207,7 @@ export default function NotificationsPage() {
           event: '*',
           schema: 'public',
           table: 'aura_sparks',
-          filter: `entity_id=eq.${user.id}`,
+          filter: `receiver_id=eq.${user.id}`,
         },
         () => {
           void fetchNotifications();
