@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
-import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical, Star, Trophy, TrendingUp } from 'lucide-react';
+import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical, Star, Trophy, TrendingUp, X } from 'lucide-react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { BeefCard } from '@/components/BeefCard';
@@ -35,6 +36,7 @@ interface UserProfile {
   display_name: string;
   bio?: string;
   avatar_url?: string;
+  banner_url?: string | null;
   points: number;
   is_premium: boolean;
   created_at: string;
@@ -112,6 +114,7 @@ export default function PublicProfilePage() {
   const [showFollowModal, setShowFollowModal] = useState<null | 'followers' | 'following'>(null);
   const [mediatorReviews, setMediatorReviews] = useState<MediatorViewerReviewDisplay[]>([]);
   const [activeTab, setActiveTab] = useState<'debates' | 'participations' | 'reviews'>('debates');
+  const [viewingImage, setViewingImage] = useState<{ url: string; type: 'avatar' | 'banner' } | null>(null);
 
   // Check if it's the current user's profile
   const isOwnProfile = user && profile && user.id === profile.id;
@@ -174,6 +177,7 @@ export default function PublicProfilePage() {
           display_name: string;
           bio?: string | null;
           avatar_url?: string | null;
+          banner_url?: string | null;
           points: number;
           is_premium: boolean;
           created_at: string;
@@ -184,6 +188,7 @@ export default function PublicProfilePage() {
           display_name: p.display_name,
           bio: p.bio,
           avatar_url: p.avatar_url,
+          banner_url: p.banner_url,
           points: p.points,
           is_premium: p.is_premium,
           created_at: p.created_at,
@@ -512,26 +517,37 @@ export default function PublicProfilePage() {
         {/* Profile Header */}
         <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-3xl border border-gray-700 overflow-hidden mb-6">
           {/* Cover Image & Back Button */}
-          <div className="h-48 bg-gradient-to-r from-brand-500/20 via-brand-400/20 to-brand-600/20 relative rounded-t-3xl">
+          <div className="h-48 bg-gradient-to-r from-brand-500/20 via-brand-400/20 to-brand-600/20 relative rounded-t-3xl overflow-hidden">
             <div className="absolute top-4 left-4 z-10">
               <AppBackButton className="backdrop-blur-md bg-black/40 hover:bg-black/60 border border-white/10 rounded-full text-white [&_span]:hidden p-2" fallback="/feed" />
             </div>
-            <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10"></div>
+            {profile.banner_url ? (
+              <button
+                type="button"
+                onClick={() => setViewingImage({ url: profile.banner_url!, type: 'banner' })}
+                className="absolute inset-0 z-0 h-full w-full cursor-pointer border-0 p-0"
+                aria-label="Voir la bannière en grand"
+              >
+                <Image src={profile.banner_url} alt="Bannière" fill className="object-cover" sizes="100vw" priority />
+              </button>
+            ) : (
+              <div className="pointer-events-none absolute inset-0 z-0 bg-[url('/grid-pattern.svg')] opacity-10" />
+            )}
           </div>
 
           <div className="px-6 pb-6 -mt-16 relative">
             {/* Avatar */}
             <div className="flex items-end justify-between mb-4">
-              <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-4 border-gray-900 overflow-hidden flex items-center justify-center text-4xl font-black text-white">
+              <div className="relative flex h-32 w-32 items-center justify-center overflow-hidden rounded-full border-4 border-gray-900 bg-gradient-to-br from-gray-700 to-gray-800 text-4xl font-black text-white">
                 {profile.avatar_url ? (
-                  <Image
-                    src={profile.avatar_url}
-                    alt={profile.display_name}
-                    fill
-                    className="object-cover"
-                    sizes="128px"
-                    priority
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setViewingImage({ url: profile.avatar_url!, type: 'avatar' })}
+                    className="relative block h-full w-full cursor-pointer border-0 p-0"
+                    aria-label="Voir la photo de profil en grand"
+                  >
+                    <Image src={profile.avatar_url} alt={profile.display_name} fill className="object-cover" sizes="128px" priority />
+                  </button>
                 ) : (
                   profile.username[0].toUpperCase()
                 )}
@@ -634,11 +650,6 @@ export default function PublicProfilePage() {
                   <span className="font-bold text-white">{stats.beefs_hosted}</span>
                   <span className="text-gray-400">Médiations</span>
                 </div>
-                <div className="flex gap-1.5 cursor-help" title="Forfaits ou désistements">
-                  {/* A implémenter plus tard: valeur dynamique de réputation */}
-                  <span className="font-bold text-white">0</span>
-                  <span className="text-gray-400">Réputation</span>
-                </div>
                 <button type="button" onClick={() => setShowFollowModal('followers')} className="flex gap-1.5 hover:underline">
                   <span className="font-bold text-white">{stats.followers}</span>
                   <span className="text-gray-400">Abonnés</span>
@@ -659,7 +670,7 @@ export default function PublicProfilePage() {
 
         {/* Tabs Publics */}
         <div className="rounded-[2rem] bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700 p-6 mt-6 mb-6">
-          <div className="inline-flex items-center gap-1 rounded-full bg-white/[0.05] p-1 backdrop-blur-md mb-6 overflow-x-auto max-w-full">
+          <div className="flex max-w-full flex-nowrap items-center gap-1 overflow-x-auto rounded-full bg-white/[0.05] p-1 [scrollbar-width:none] backdrop-blur-md [-ms-overflow-style:none] mb-6 [&::-webkit-scrollbar]:hidden">
             <button
               type="button"
               onClick={() => setActiveTab('debates')}
@@ -835,6 +846,54 @@ export default function PublicProfilePage() {
           onClose={() => setShowFollowModal(null)}
         />
       )}
+
+      <AnimatePresence>
+        {viewingImage && (
+          <motion.div
+            key="profile-image-lightbox"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+            onClick={() => setViewingImage(null)}
+          >
+            <button
+              type="button"
+              onClick={() => setViewingImage(null)}
+              className="absolute right-6 top-6 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+              aria-label="Fermer"
+            >
+              <X className="h-6 w-6" />
+            </button>
+
+            <div
+              className="relative flex w-full max-w-3xl flex-col items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative mb-6 aspect-square w-full max-w-lg sm:aspect-video sm:max-w-3xl">
+                <Image
+                  src={viewingImage.url}
+                  alt="Aperçu"
+                  fill
+                  className={`object-contain ${viewingImage.type === 'avatar' ? 'scale-75 rounded-full' : 'rounded-lg'}`}
+                  sizes="(max-width: 768px) 100vw, 896px"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  toast('✨ Aura transmise ! (En développement)', 'success');
+                }}
+                className="flex items-center gap-3 rounded-full px-8 py-4 font-black text-lg text-black shadow-[0_0_30px_rgba(232,58,20,0.4)] transition-transform brand-gradient hover:scale-105"
+              >
+                <Flame className="h-6 w-6" />
+                Transmettre de l&apos;Aura
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -755,10 +755,12 @@ export default function ProfileContent() {
                   <span className="font-bold text-white">{stats.beefs_hosted}</span>
                   <span className="text-gray-400">Médiations</span>
                 </button>
-                <div className="flex gap-1.5 cursor-help" title="Forfaits ou désistements">
-                  <span className="font-bold text-white">{stats.beefs_abandoned}</span>
-                  <span className="text-gray-400">Réputation</span>
-                </div>
+                {(stats.beefs_participated > 0 || stats.beefs_hosted > 0) && (
+                  <div className="flex gap-1.5 cursor-help" title="Forfaits ou désistements">
+                    <span className="font-bold text-white">{stats.beefs_abandoned}</span>
+                    <span className="text-gray-400">Réputation</span>
+                  </div>
+                )}
                 <button type="button" onClick={goStatsFollowers} className="flex gap-1.5 hover:underline">
                   <span className="font-bold text-white">{stats.followers}</span>
                   <span className="text-gray-400">Abonnés</span>
@@ -774,7 +776,7 @@ export default function ProfileContent() {
 
         {/* Tabs */}
         <div className="rounded-[2rem] bg-white/[0.04] border border-white/[0.08] backdrop-blur-2xl p-6">
-          <div className="inline-flex items-center gap-1 rounded-full bg-white/[0.05] p-1 backdrop-blur-md mb-6">
+          <div className="flex max-w-full flex-nowrap items-center gap-1 overflow-x-auto rounded-full bg-white/[0.05] p-1 [scrollbar-width:none] backdrop-blur-md [-ms-overflow-style:none] mb-6 [&::-webkit-scrollbar]:hidden">
             <button
               onClick={() => setActiveTab('stats')}
               className={`flex items-center gap-2 rounded-full px-5 py-2 font-sans text-xs font-bold transition-all duration-200 ${
