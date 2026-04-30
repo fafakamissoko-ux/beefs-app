@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical, Star, Trophy } from 'lucide-react';
+import { Share2, UserPlus, UserMinus, Flame, Calendar, MoreVertical, Star, Trophy, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
@@ -112,6 +111,7 @@ export default function PublicProfilePage() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showFollowModal, setShowFollowModal] = useState<null | 'followers' | 'following'>(null);
   const [mediatorReviews, setMediatorReviews] = useState<MediatorViewerReviewDisplay[]>([]);
+  const [activeTab, setActiveTab] = useState<'debates' | 'participations' | 'reviews'>('debates');
 
   // Check if it's the current user's profile
   const isOwnProfile = user && profile && user.id === profile.id;
@@ -645,127 +645,160 @@ export default function PublicProfilePage() {
           </div>
         </div>
 
-        {(stats.beefs_hosted > 0 || mediatorReviews.length > 0) && (
-          <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl border border-gray-700 p-6 mb-6 scroll-mt-24">
-            <h2 className="text-xl font-black text-white mb-4 flex items-center gap-2">
-              <Star className="w-5 h-5 text-prestige-gold" strokeWidth={1.5} aria-hidden />
-              Livre d&apos;Or · avis spectateurs
-            </h2>
-            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-              Les spectateurs déposent un avis depuis la page résumé d&apos;un direct terminé (une fois par beef).
-            </p>
-            {mediatorReviews.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">Aucun avis pour le moment.</p>
-            ) : (
-              <ul className="space-y-3">
-                {mediatorReviews.slice(0, 12).map((review) => (
-                  <li
-                    key={review.id}
-                    className="rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3 backdrop-blur-sm"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                      <ProfileUserLink
-                        username={review.authorUsername}
-                        className="text-sm font-semibold text-white/80"
-                      >
-                        {review.authorName}
-                      </ProfileUserLink>
-                      <span className="flex gap-0.5" aria-label={`${review.rating} sur 5`}>
-                        {Array.from({ length: review.rating }).map((_, i) => (
-                          <Star key={i} className="w-3.5 h-3.5 fill-prestige-gold text-prestige-gold" />
-                        ))}
-                      </span>
-                    </div>
-                    {review.comment ? (
-                      <p className="text-sm text-gray-400 italic leading-relaxed">&ldquo;{review.comment}&rdquo;</p>
-                    ) : (
-                      <p className="text-xs text-gray-600">Note sans commentaire</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
+        {/* Tabs Publics */}
+        <div className="rounded-[2rem] bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700 p-6 mt-6 mb-6">
+          <div className="inline-flex items-center gap-1 rounded-full bg-white/[0.05] p-1 backdrop-blur-md mb-6 overflow-x-auto max-w-full">
+            <button
+              type="button"
+              onClick={() => setActiveTab('debates')}
+              className={`flex shrink-0 items-center gap-2 rounded-full px-5 py-2 font-sans text-xs font-bold transition-all duration-200 ${
+                activeTab === 'debates'
+                  ? 'text-white bg-white/10 ring-1 ring-white/[0.12]'
+                  : 'text-gray-500 hover:text-gray-200'
+              }`}
+            >
+              <Flame className="w-4 h-4" />
+              Médiations
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('participations')}
+              className={`flex shrink-0 items-center gap-2 rounded-full px-5 py-2 font-sans text-xs font-bold transition-all duration-200 ${
+                activeTab === 'participations'
+                  ? 'text-white bg-white/10 ring-1 ring-white/[0.12]'
+                  : 'text-gray-500 hover:text-gray-200'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              Affaires
+            </button>
+            {(stats.beefs_hosted > 0 || mediatorReviews.length > 0) && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('reviews')}
+                className={`flex shrink-0 items-center gap-2 rounded-full px-5 py-2 font-sans text-xs font-bold transition-all duration-200 ${
+                  activeTab === 'reviews'
+                    ? 'text-white bg-white/10 ring-1 ring-white/[0.12]'
+                    : 'text-gray-500 hover:text-gray-200'
+                }`}
+              >
+                <Star className="w-4 h-4" />
+                Livre d&apos;Or
+              </button>
             )}
           </div>
-        )}
 
-        {/* Participations (autres beefs que le profil médié) */}
-        {participantBeefs.length > 0 && (
-          <div
-            id="profile-section-participations"
-            className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl border border-gray-700 p-6 scroll-mt-24 mb-6"
-          >
-            <h2 className="text-2xl font-black text-white mb-6 flex items-center gap-2">
-              <Flame className="w-6 h-6 text-orange-400" />
-              Participations
-            </h2>
-            <div className="grid grid-cols-1 gap-4">
-              {participantBeefs.map((beef, idx) => (
-                <BeefCard
-                  key={beef.id}
-                  id={beef.id}
-                  index={idx}
-                  title={beef.title}
-                  host_name={beef.host_name}
-                  host_username={beef.host_username}
-                  status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
-                  created_at={beef.created_at}
-                  viewer_count={beef.viewer_count || 0}
-                  tags={beef.tags}
-                  scheduled_at={beef.scheduled_at}
-                  onClick={() => router.push(`/arena/${beef.id}`)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Beefs List */}
-        <div
-          id="profile-section-beefs"
-          className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-2xl border border-gray-700 p-6 scroll-mt-24"
-        >
-          <h2 className="text-2xl font-black text-white mb-6 flex items-center gap-2">
-            <Flame className="w-6 h-6 text-brand-400" />
-            Beefs de {profile.display_name}
-          </h2>
-
-          {beefs.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4">
-              {beefs.map((beef, idx) => (
-                <div key={beef.id} className="space-y-2">
-                  <BeefCard
-                    id={beef.id}
-                    index={idx}
-                    title={beef.title}
-                    host_name={beef.host_name}
-                    host_username={beef.host_username}
-                    status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
-                    created_at={beef.created_at}
-                    viewer_count={beef.viewer_count || 0}
-                    tags={beef.tags}
-                    scheduled_at={beef.scheduled_at}
-                    onClick={() => router.push(`/arena/${beef.id}`)}
-                  />
-                  {(beef.resolution_status && beef.resolution_status !== 'in_progress') || beef.mediation_summary?.trim() ? (
-                    <div className="pl-1 space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                      {beef.resolution_status && beef.resolution_status !== 'in_progress' && (
-                        <p className="text-[11px] text-gray-500">
-                          Issue de la médiation :{' '}
-                          <span className="text-gray-400 font-medium">
-                            {resolutionStatusLabel(beef.resolution_status)}
-                          </span>
-                        </p>
-                      )}
-                      <MediationSummaryPublic text={beef.mediation_summary ?? ''} />
+          {/* Contenu des Onglets */}
+          {activeTab === 'debates' && (
+            <div id="profile-section-beefs" className="scroll-mt-24">
+              {beefs.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {beefs.map((beef, idx) => (
+                    <div key={beef.id} className="space-y-2">
+                      <BeefCard
+                        id={beef.id}
+                        index={idx}
+                        title={beef.title}
+                        host_name={beef.host_name}
+                        host_username={beef.host_username}
+                        status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
+                        created_at={beef.created_at}
+                        viewer_count={beef.viewer_count || 0}
+                        tags={beef.tags}
+                        scheduled_at={beef.scheduled_at}
+                        onClick={() => router.push(`/arena/${beef.id}`)}
+                      />
+                      {(beef.resolution_status && beef.resolution_status !== 'in_progress') || beef.mediation_summary?.trim() ? (
+                        <div className="pl-1 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                          {beef.resolution_status && beef.resolution_status !== 'in_progress' && (
+                            <p className="text-[11px] text-gray-500">
+                              Issue de la médiation :{' '}
+                              <span className="text-gray-400 font-medium">
+                                {resolutionStatusLabel(beef.resolution_status)}
+                              </span>
+                            </p>
+                          )}
+                          <MediationSummaryPublic text={beef.mediation_summary ?? ''} />
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div className="text-center py-12">
+                  <Flame className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400">Aucune médiation pour le moment</p>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <Flame className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">Aucun beef pour le moment</p>
+          )}
+
+          {activeTab === 'participations' && (
+            <div id="profile-section-participations" className="scroll-mt-24">
+              {participantBeefs.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {participantBeefs.map((beef, idx) => (
+                    <BeefCard
+                      key={beef.id}
+                      id={beef.id}
+                      index={idx}
+                      title={beef.title}
+                      host_name={beef.host_name}
+                      host_username={beef.host_username}
+                      status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
+                      created_at={beef.created_at}
+                      viewer_count={beef.viewer_count || 0}
+                      tags={beef.tags}
+                      scheduled_at={beef.scheduled_at}
+                      onClick={() => router.push(`/arena/${beef.id}`)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <TrendingUp className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400">Aucune affaire pour le moment</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'reviews' && (
+            <div>
+              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                Les spectateurs déposent un avis depuis la page résumé d&apos;un direct terminé (une fois par beef).
+              </p>
+              {mediatorReviews.length === 0 ? (
+                <p className="text-sm text-gray-500 italic">Aucun avis pour le moment.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {mediatorReviews.map((review) => (
+                    <li
+                      key={review.id}
+                      className="rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3 backdrop-blur-sm"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                        <ProfileUserLink
+                          username={review.authorUsername}
+                          className="text-sm font-semibold text-white/80"
+                        >
+                          {review.authorName}
+                        </ProfileUserLink>
+                        <span className="flex gap-0.5" aria-label={`${review.rating} sur 5`}>
+                          {Array.from({ length: review.rating }).map((_, i) => (
+                            <Star key={i} className="w-3.5 h-3.5 fill-prestige-gold text-prestige-gold" />
+                          ))}
+                        </span>
+                      </div>
+                      {review.comment ? (
+                        <p className="text-sm text-gray-400 italic leading-relaxed">&ldquo;{review.comment}&rdquo;</p>
+                      ) : (
+                        <p className="text-xs text-gray-600">Note sans commentaire</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </div>
