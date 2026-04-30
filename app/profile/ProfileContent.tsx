@@ -97,7 +97,6 @@ export default function ProfileContent() {
   });
   const [beefs, setBeefs] = useState<Beef[]>([]);
   const [mediationBeefs, setMediationBeefs] = useState<Beef[]>([]);
-  const [recentBeefs, setRecentBeefs] = useState<Beef[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'stats' | 'debates' | 'gains'>('stats');
   const [showEditModal, setShowEditModal] = useState(false);
@@ -334,7 +333,6 @@ export default function ProfileContent() {
           });
 
           setBeefs(mergedSorted.map(attachHost));
-          setRecentBeefs(mergedSorted.slice(0, 5).map(attachHost));
           setMediationBeefs(mediatedList.map((b) => attachHost({ ...b, card_host_name: displayNameSelf })));
 
           const viewerReviews = await fetchMediatorViewerReviews(supabase, data.id);
@@ -376,7 +374,6 @@ export default function ProfileContent() {
   const applyMediationBeefPatch = useCallback(
     (beefId: string, patch: { resolution_status?: string; mediation_summary?: string | null }) => {
       setBeefs((prev) => prev.map((b) => (b.id === beefId ? { ...b, ...patch } : b)));
-      setRecentBeefs((prev) => prev.map((b) => (b.id === beefId ? { ...b, ...patch } : b)));
       setMediationBeefs((prev) => {
         const next = prev.map((b) => (b.id === beefId ? { ...b, ...patch } : b));
         setStats((s) => ({
@@ -624,12 +621,14 @@ export default function ProfileContent() {
   return (
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <AppBackButton className="mb-4" />
 
         {/* Profile Header */}
         <div className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.08] backdrop-blur-2xl mb-8">
-          {/* Cover Image */}
-          <div className="h-48 relative overflow-hidden group">
+          {/* Cover Image & Back Button */}
+          <div className="h-48 relative overflow-hidden group rounded-t-[2rem]">
+            <div className="absolute top-4 left-4 z-10">
+              <AppBackButton className="backdrop-blur-md bg-black/40 hover:bg-black/60 border border-white/10 rounded-full text-white [&_span]:hidden p-2" fallback="/feed" />
+            </div>
             {profile.banner_url ? (
               <Image src={profile.banner_url} alt="Banner" fill className="object-cover" sizes="100vw" priority />
             ) : (
@@ -680,16 +679,7 @@ export default function ProfileContent() {
                 </label>
               </div>
 
-              <div className="flex flex-wrap gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setPublicPreviewOpen(true)}
-                  className="px-4 py-2 bg-white/[0.06] hover:bg-white/10 border border-white/[0.1] rounded-full text-white font-sans font-semibold transition-colors flex items-center gap-2 text-sm"
-                  title="Voir ton profil public tel qu’il apparaît pour les autres"
-                >
-                  <Eye className="w-4 h-4" aria-hidden />
-                  Aperçu
-                </button>
+              <div className="flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={async () => {
@@ -705,17 +695,22 @@ export default function ProfileContent() {
                       toast('Lien copié !', 'success');
                     }
                   }}
-                  className="px-4 py-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] rounded-full text-white font-sans font-semibold transition-colors flex items-center gap-2"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.04] text-white transition-colors hover:bg-white/10"
+                  title="Partager"
                 >
-                  <Share2 className="w-4 h-4" />
-                  Partager
+                  <Share2 className="h-4 w-4" />
                 </button>
-                <Link
-                  href={hrefWithFrom('/settings', pathname)}
-                  className="px-4 py-2 bg-brand-500 hover:bg-brand-600 rounded-full text-white font-sans font-semibold transition-colors flex items-center gap-2"
+                <button
+                  type="button"
+                  onClick={() => setPublicPreviewOpen(true)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.1] bg-white/[0.04] text-white transition-colors hover:bg-white/10"
+                  title="Aperçu public"
                 >
-                  <Settings className="w-4 h-4" />
-                  Modifier
+                  <Eye className="h-4 w-4" aria-hidden />
+                </button>
+                <Link href={hrefWithFrom('/settings', pathname)} className="flex items-center gap-2 rounded-full bg-brand-500 px-5 py-2 font-sans font-semibold text-white transition-colors hover:bg-brand-600">
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden sm:inline">Modifier</span>
                 </Link>
               </div>
             </div>
@@ -748,13 +743,6 @@ export default function ProfileContent() {
                   <Trophy className="w-4 h-4 text-prestige-gold" />
                   <span className="font-bold text-white">{profile.points.toLocaleString('fr-FR')}</span> pts
                 </div>
-                {stats.beefs_resolved >= 3 && (
-                  <div className="flex items-center gap-1.5 text-sm text-gray-400" title="Indice de Sagesse">
-                    <span className="font-bold text-prestige-gold">
-                      ✦ {(stats.beefs_resolved / Math.max(stats.beefs_hosted, 1) * 100).toFixed(0)}
-                    </span>
-                  </div>
-                )}
               </div>
 
               {/* Métriques Standard (X/Instagram style) */}
@@ -781,77 +769,6 @@ export default function ProfileContent() {
                 </button>
               </div>
             </div>
-
-            {/* Beefs récents (participant ou médiateur) */}
-            {recentBeefs.length > 0 && (
-              <div className="mt-2 pt-6 border-t border-gray-800">
-                <h2 className="text-white font-bold text-lg mb-3 flex items-center gap-2">
-                  <Flame className="w-5 h-5 text-brand-400" />
-                  Beefs récents
-                </h2>
-                <div className="space-y-3">
-                  {recentBeefs.map((beef, idx) => (
-                    <BeefCard
-                      key={beef.id}
-                      id={beef.id}
-                      index={idx}
-                      title={beef.title}
-                      host_name={beef.card_host_name || profile.display_name || profile.username || 'Utilisateur'}
-                      host_username={beef.card_host_username}
-                      status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
-                      created_at={beef.created_at}
-                      viewer_count={beef.viewer_count || 0}
-                      tags={beef.tags}
-                      scheduled_at={beef.scheduled_at}
-                      onClick={() => router.push(`/arena/${beef.id}`)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Livre d&apos;Or — avis spectateurs (page résumé du beef) · visible si tu médies ou si des avis existent */}
-            {(stats.beefs_hosted > 0 || mediatorReviews.length > 0) && (
-              <div className="mt-6 pt-6 border-t border-white/[0.06]">
-                <h2 className="font-sans text-sm font-bold text-white mb-3 flex items-center gap-2">
-                  <Star className="w-4 h-4 text-prestige-gold" />
-                  Livre d&apos;Or
-                </h2>
-                <div className="space-y-2.5">
-                  {mediatorReviews.length === 0 ? (
-                    <p className="font-sans text-xs text-white/25 italic">
-                      Aucun avis spectateur pour le moment — ils sont déposés sur la page résumé après un direct terminé.
-                    </p>
-                  ) : (
-                    mediatorReviews.slice(0, 5).map((review) => (
-                      <div
-                        key={review.id}
-                        className="rounded-xl bg-white/[0.04] border border-white/[0.06] backdrop-blur-xl px-4 py-3"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                          <ProfileUserLink
-                            username={review.authorUsername}
-                            className="font-sans text-xs font-bold text-white/70"
-                          >
-                            {review.authorName}
-                          </ProfileUserLink>
-                          <span className="flex items-center gap-0.5 font-mono text-[10px] font-bold text-prestige-gold tracking-wider" aria-label={`${review.rating} sur 5`}>
-                            {Array.from({ length: review.rating }).map((_, i) => (
-                              <Star key={i} className="w-2.5 h-2.5 fill-prestige-gold text-prestige-gold" />
-                            ))}
-                          </span>
-                        </div>
-                        {review.comment ? (
-                          <p className="font-sans text-xs text-white/40 font-light italic leading-relaxed">&ldquo;{review.comment}&rdquo;</p>
-                        ) : (
-                          <p className="font-sans text-[10px] text-white/20">Note sans commentaire</p>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -895,7 +812,7 @@ export default function ProfileContent() {
 
           {activeTab === 'stats' && (
             <div>
-              <h3 className="text-white font-bold text-lg mb-2">📊 Résultats des médiations</h3>
+              <h3 className="text-white font-bold text-lg mb-2">⚖️ Historique des Jugements</h3>
               <p className="text-gray-500 text-xs leading-relaxed mb-4 max-w-3xl">
                 Chaque beef médié est classé selon son statut en base :{' '}
                 <strong className="text-gray-400">En cours</strong> (live, programmé, préparation),{' '}
@@ -907,10 +824,10 @@ export default function ProfileContent() {
               </p>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 {([
-                  { id: 'resolved', value: stats.beefs_resolved, label: 'Résolus', desc: 'Conflits réglés avec succès', color: 'green', icon: Check },
+                  { id: 'resolved', value: stats.beefs_resolved, label: 'Verdicts', desc: 'Conflits tranchés', color: 'green', icon: Check },
                   { id: 'in_progress', value: stats.beefs_in_progress, label: 'En cours', desc: 'Beefs actifs ou programmés', color: 'blue', icon: Clock },
-                  { id: 'unresolved', value: stats.beefs_unresolved, label: 'Non résolus', desc: 'Médiation sans accord', color: 'brand', icon: X },
-                  { id: 'abandoned', value: stats.beefs_abandoned, label: 'Abandonnés', desc: 'Beefs annulés', color: 'gray', icon: Flame },
+                  { id: 'unresolved', value: stats.beefs_unresolved, label: 'Impasses', desc: 'Médiation sans accord', color: 'brand', icon: X },
+                  { id: 'abandoned', value: stats.beefs_abandoned, label: 'Désertions', desc: 'Beefs annulés/forfaits', color: 'gray', icon: Flame },
                 ] as const).map((tile) => {
                   const Icon = tile.icon;
                   const active = selectedResolutionFilter === tile.id;
@@ -948,10 +865,10 @@ export default function ProfileContent() {
                 >
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-white font-bold text-lg">
-                      {selectedResolutionFilter === 'resolved' && '✅ Beefs Résolus'}
+                      {selectedResolutionFilter === 'resolved' && '✅ Verdicts'}
                       {selectedResolutionFilter === 'in_progress' && '⏳ Beefs En Cours'}
-                      {selectedResolutionFilter === 'unresolved' && '❌ Beefs Non Résolus'}
-                      {selectedResolutionFilter === 'abandoned' && '🚫 Beefs Abandonnés'}
+                      {selectedResolutionFilter === 'unresolved' && '❌ Impasses'}
+                      {selectedResolutionFilter === 'abandoned' && '🚫 Désertions'}
                     </h3>
                     <button
                       onClick={() => setSelectedResolutionFilter(null)}
@@ -1600,7 +1517,7 @@ export default function ProfileContent() {
                     <div className="mt-5 pt-4 border-t border-white/[0.08]">
                       <h4 className="font-sans text-xs font-bold text-white mb-2 flex items-center gap-2">
                         <Star className="w-3.5 h-3.5 text-prestige-gold" aria-hidden />
-                        Livre d&apos;Or (spectateurs)
+                        Vox Populi (Évaluations)
                       </h4>
                       {mediatorReviews.length === 0 ? (
                         <p className="font-sans text-xs text-white/25 italic">

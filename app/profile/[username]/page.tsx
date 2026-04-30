@@ -505,12 +505,14 @@ export default function PublicProfilePage() {
   return (
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <AppBackButton className="mb-4" />
 
         {/* Profile Header */}
         <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-3xl border border-gray-700 overflow-hidden mb-6">
-          {/* Cover Image */}
-          <div className="h-48 bg-gradient-to-r from-brand-500/20 via-brand-400/20 to-brand-600/20 relative">
+          {/* Cover Image & Back Button */}
+          <div className="h-48 bg-gradient-to-r from-brand-500/20 via-brand-400/20 to-brand-600/20 relative rounded-t-3xl">
+            <div className="absolute top-4 left-4 z-10">
+              <AppBackButton className="backdrop-blur-md bg-black/40 hover:bg-black/60 border border-white/10 rounded-full text-white [&_span]:hidden p-2" fallback="/feed" />
+            </div>
             <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10"></div>
           </div>
 
@@ -532,44 +534,46 @@ export default function PublicProfilePage() {
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-end">
                 <button
+                  type="button"
                   onClick={handleShare}
-                  className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white font-semibold transition-colors flex items-center gap-2"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition-colors hover:bg-white/10"
+                  title="Partager"
                 >
-                  <Share2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Partager</span>
+                  <Share2 className="h-4 w-4" />
                 </button>
 
                 {!isOwnProfile && (
                   <button
                     type="button"
                     onClick={() => setShowReportModal(true)}
-                    className="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-white font-semibold transition-colors flex items-center justify-center"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition-colors hover:bg-white/10"
                     aria-label="Signaler ou bloquer"
                   >
-                    <MoreVertical className="w-4 h-4" />
+                    <MoreVertical className="h-4 w-4" />
                   </button>
                 )}
 
                 {!isOwnProfile && user && (
                   <button
+                    type="button"
                     onClick={handleFollow}
                     disabled={followLoading}
-                    className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                    className={`flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all ${
                       isFollowing
-                        ? 'bg-white/10 hover:bg-white/20 text-white'
-                        : 'brand-gradient hover:opacity-90 text-black transition-opacity'
+                        ? 'bg-white/10 text-white hover:bg-white/20'
+                        : 'brand-gradient text-black transition-opacity hover:opacity-90'
                     }`}
                   >
                     {isFollowing ? (
                       <>
-                        <UserMinus className="w-4 h-4" />
+                        <UserMinus className="h-4 w-4" />
                         <span className="hidden sm:inline">Ne plus suivre</span>
                       </>
                     ) : (
                       <>
-                        <UserPlus className="w-4 h-4" />
+                        <UserPlus className="h-4 w-4" />
                         <span className="hidden sm:inline">Suivre</span>
                       </>
                     )}
@@ -579,9 +583,9 @@ export default function PublicProfilePage() {
                 {isOwnProfile && (
                   <Link
                     href={hrefWithFrom('/profile', pathname)}
-                    className="px-4 py-2 bg-brand-500 hover:bg-brand-600 rounded-lg text-white font-semibold transition-colors"
+                    className="rounded-full bg-brand-500 px-5 py-2 font-semibold text-white transition-colors hover:bg-brand-600"
                   >
-                    Modifier le profil
+                    Modifier
                   </Link>
                 )}
               </div>
@@ -688,7 +692,7 @@ export default function PublicProfilePage() {
                 }`}
               >
                 <Star className="w-4 h-4" />
-                Livre d&apos;Or
+                Vox Populi
               </button>
             )}
           </div>
@@ -770,6 +774,10 @@ export default function PublicProfilePage() {
 
           {activeTab === 'reviews' && (
             <div>
+              <h2 className="mb-3 flex items-center gap-2 font-black text-xl text-white">
+                <Star className="h-5 w-5 text-prestige-gold" aria-hidden strokeWidth={1.5} />
+                Vox Populi · Évaluations
+              </h2>
               <p className="text-xs text-gray-500 mb-4 leading-relaxed">
                 Les spectateurs déposent un avis depuis la page résumé d&apos;un direct terminé (une fois par beef).
               </p>
