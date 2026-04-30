@@ -24,6 +24,13 @@ import {
 } from '@/lib/mediator-viewer-reviews';
 import { escapeForIlikeExact } from '@/lib/ilike-exact';
 
+function getAuraRank(points: number) {
+  if (points >= 5000) return { label: 'Archonte', color: 'text-prestige-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.6)]' };
+  if (points >= 2000) return { label: 'Tribun', color: 'text-plasma-400' };
+  if (points >= 500) return { label: 'Orateur', color: 'text-cyan-400' };
+  return { label: 'Citoyen', color: 'text-gray-500' };
+}
+
 interface UserProfile {
   id: string;
   username: string;
@@ -592,6 +599,17 @@ export default function PublicProfilePage() {
             <div className="mb-4">
               <h1 className="text-3xl font-black text-white mb-1">{profile.display_name}</h1>
               <p className="text-gray-400 text-sm">@{profile.username}</p>
+              {(() => {
+                const rank = getAuraRank(profile.points);
+                return (
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
+                    <Flame className={`h-3.5 w-3.5 ${rank.color}`} aria-hidden />
+                    <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.color}`}>
+                      {rank.label}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             {profile.bio && (

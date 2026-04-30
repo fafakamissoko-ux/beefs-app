@@ -27,6 +27,13 @@ import {
   type MediatorViewerReviewDisplay,
 } from '@/lib/mediator-viewer-reviews';
 
+function getAuraRank(points: number) {
+  if (points >= 5000) return { label: 'Archonte', color: 'text-prestige-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.6)]' };
+  if (points >= 2000) return { label: 'Tribun', color: 'text-plasma-400' };
+  if (points >= 500) return { label: 'Orateur', color: 'text-cyan-400' };
+  return { label: 'Citoyen', color: 'text-gray-500' };
+}
+
 interface UserProfile {
   id: string;
   username: string;
@@ -756,6 +763,17 @@ export default function ProfileContent() {
                 <h1 className="font-sans text-3xl font-black text-white">{profile.display_name}</h1>
               </div>
               <p className="text-gray-400 text-sm">@{profile.username}</p>
+              {(() => {
+                const rank = getAuraRank(profile.points);
+                return (
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
+                    <Flame className={`h-3.5 w-3.5 ${rank.color}`} aria-hidden />
+                    <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.color}`}>
+                      {rank.label}
+                    </span>
+                  </div>
+                );
+              })()}
               {/* Wisdom Index — affiché après 3+ médiations réussies */}
               {stats.beefs_resolved >= 3 && (
                 <div className="flex items-center gap-2 mt-2">
@@ -786,10 +804,11 @@ export default function ProfileContent() {
             </div>
 
             {/* Stats — raccourcis optionnels par ligne (voir cases ci‑dessous) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
               {[
-                { key: 'participations', value: stats.beefs_participated, label: 'Participations', shortcut: statsShortcuts.participations, action: goStatsParticipations },
+                { key: 'participations', value: stats.beefs_participated, label: 'Affaires', shortcut: statsShortcuts.participations, action: goStatsParticipations },
                 { key: 'mediations', value: stats.beefs_hosted, label: 'Médiations', shortcut: statsShortcuts.mediations, action: goStatsMediations },
+                { key: 'abandoned', value: stats.beefs_abandoned, label: 'Réputation (Forfaits)', shortcut: false, action: () => {} },
                 { key: 'followers', value: stats.followers, label: 'Abonnés', shortcut: statsShortcuts.followers, action: goStatsFollowers },
                 { key: 'following', value: stats.following, label: 'Abonnements', shortcut: statsShortcuts.following, action: goStatsFollowing },
               ].map((s) => {
@@ -907,7 +926,7 @@ export default function ProfileContent() {
               }`}
             >
               <TrendingUp className="w-4 h-4" />
-              Statistiques
+              Mes Médiations
             </button>
             <button
               onClick={() => setActiveTab('debates')}
@@ -918,7 +937,7 @@ export default function ProfileContent() {
               }`}
             >
               <Flame className="w-4 h-4" />
-              Mes Beefs
+              Mes Affaires
             </button>
             <button
               onClick={() => { setActiveTab('gains'); setWithdrawalStep('summary'); }}
