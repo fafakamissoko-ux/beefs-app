@@ -28,11 +28,10 @@ function followErrorUserMessage(err: PostgrestError | null): string {
 }
 
 export type FollowButtonSuccessPayload = {
-  /** État suivre après succès PG (ligne followers) */
   following: boolean;
-  /** Prestige destinataire — lu sur `user_public_profile` après le trigger +10 / −10 */
+  /** Prestige destinataire — valeur optimiste (+10 / −10) */
   recipientLifetimePoints: number | null;
-  /** Nombre d’abonnés du profil suivi — recalculé côté serveur */
+  /** Abonnés du profil suivi — valeur optimiste (+1 / −1) */
   recipientFollowersCount: number | null;
 };
 
@@ -41,6 +40,10 @@ type FollowButtonProps = {
   followingId: string;
   /** Suivi au chargement (vérité précédente) */
   initialFollowing: boolean;
+  /** Compteur abonnés affiché (profil suivi) — base du calcul optimiste */
+  currentFollowersCount?: number;
+  /** Prestige lifetime affiché (profil suivi) — base du calcul optimiste */
+  currentLifetimePoints?: number;
   disabled?: boolean;
   classNameWhenFollowing?: string;
   classNameWhenNotFollowing?: string;
@@ -49,7 +52,7 @@ type FollowButtonProps = {
     follow: string;
     unfollow: string;
   };
-  /** Appelé uniquement après insert/delete réussi + refetch serveur du prestige et des abonnés */
+  /** Appelé après mutation suivie/non suivie avec valeurs dérivées en local (+10 Aura, ±1 abonné) */
   onSynced?: (payload: FollowButtonSuccessPayload) => void;
   /** Erreur RLS ou réseau */
   onError?: (message: string) => void;
@@ -60,13 +63,13 @@ type FollowButtonProps = {
 
 /**
  * Suivi / désabonnement via la table `followers`.
- * Le prestige (+10 / −10 sur `lifetime_points` du destinataire) est appliqué par le trigger PG
- * (`follow_adjust_recipient_lifetime`). Après chaque mutation, on relit la vue `user_public_profile`
- * pour afficher exactement ce qu’a écrit la base — pas une simple simulation client.
+ * Les +10 / −10 prestige sont appliqués côté PG ; l’UI se met à jour tout de suite par calcul optimiste.
  */
 export function FollowButton({
   followingId,
   initialFollowing,
+  currentFollowersCount,
+  currentLifetimePoints,
   disabled = false,
   classNameWhenFollowing = 'flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-white/10 text-white hover:bg-white/20',
   classNameWhenNotFollowing =
@@ -119,33 +122,23 @@ export function FollowButton({
 
       let { error } = await mutateFollow();
       if (error && isP0001OrProfileReservedError(error)) {
-        await new Promise<void>((r) => setTimeout(r, 500));
         ({ error } = await mutateFollow());
       }
 
-      const finalizeAfterMutation = async (nextFollowing: boolean) => {
+      const emitOptimistic = (nextFollowing: boolean) => {
         setFollowing(nextFollowing);
-        await new Promise<void>((r) => setTimeout(r, 200));
-        const [{ data: auraRow, error: auraErr }, followerCountRes] = await Promise.all([
-          supabase.from('user_public_profile').select('lifetime_points').eq('id', followingId).maybeSingle(),
-          supabase
-            .from('followers')
-            .select('*', { count: 'exact', head: true })
-            .eq('following_id', followingId),
-        ]);
-        if (auraErr) {
-          console.warn('[FollowButton] refetch prestige', auraErr);
-        }
-        const lp =
-          auraRow && typeof auraRow === 'object' && 'lifetime_points' in auraRow && auraRow.lifetime_points != null
-            ? Number(auraRow.lifetime_points as number)
+        const newFollowers =
+          currentFollowersCount != null
+            ? currentFollowersCount + (nextFollowing ? 1 : -1)
             : null;
-        const recipientFollowersCount =
-          followerCountRes.error ? null : (followerCountRes.count ?? null);
+        const newPoints =
+          currentLifetimePoints != null
+            ? currentLifetimePoints + (nextFollowing ? 10 : -10)
+            : null;
         onSynced?.({
           following: nextFollowing,
-          recipientLifetimePoints: lp,
-          recipientFollowersCount,
+          recipientLifetimePoints: newPoints,
+          recipientFollowersCount: newFollowers,
         });
       };
 
@@ -154,8 +147,7 @@ export function FollowButton({
           toast('Erreur de synchronisation du prestige. Réessaie dans 5 secondes.', 'error', {
             durationMs: 6500,
           });
-          /** Lien social prioritaire : UI « suivi » même si prestige trigger a échoué. */
-          await finalizeAfterMutation(true);
+          emitOptimistic(true);
           return;
         }
         if (isP0001PostgresError(error)) {
@@ -168,7 +160,7 @@ export function FollowButton({
         return;
       }
 
-      await finalizeAfterMutation(!willUnfollow);
+      emitOptimistic(!willUnfollow);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Erreur lors du suivi';
       onError?.(msg);

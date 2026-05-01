@@ -724,17 +724,21 @@ export default function PublicProfilePage() {
                     <FollowButton
                       followingId={profile.id}
                       initialFollowing={isFollowing}
+                      currentFollowersCount={stats.followers}
+                      currentLifetimePoints={profile.lifetime_points ?? profile.points}
                       loginRedirectPath={pathname}
                       classNameWhenFollowing="relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-white/10 text-white hover:bg-white/20"
                       classNameWhenNotFollowing="relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-[#00F0FF] text-black shadow-[0_0_18px_rgba(0,240,255,0.45)] hover:brightness-110"
                       onSynced={(p) => {
                         setIsFollowing(p.following);
-                        if (p.recipientFollowersCount != null) {
-                          setStats((prev) => ({ ...prev, followers: p.recipientFollowersCount! }));
+                        const nextFollowers = p.recipientFollowersCount;
+                        if (nextFollowers != null) {
+                          setStats((prev) => ({ ...prev, followers: nextFollowers }));
                         }
-                        if (p.recipientLifetimePoints != null) {
+                        const nextLp = p.recipientLifetimePoints;
+                        if (nextLp != null) {
                           setProfile((prev) =>
-                            prev ? { ...prev, lifetime_points: p.recipientLifetimePoints! } : null,
+                            prev ? { ...prev, lifetime_points: nextLp } : null,
                           );
                         }
                         queueBurst(
