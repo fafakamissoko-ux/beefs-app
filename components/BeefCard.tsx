@@ -576,7 +576,8 @@ export function BeefCard({
               onClick={(e) => {
                 e.stopPropagation();
                 setIsReminded(!isReminded);
-                toast(isReminded ? 'Rappel annulé' : 'Rappel activé', 'success');
+                onNotifyClick?.();
+                toast(!isReminded ? 'Rappel activé' : 'Rappel annulé', 'success');
               }}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/40 backdrop-blur-md py-2.5 text-xs font-bold uppercase tracking-wide text-white transition-all hover:bg-white/10"
             >
