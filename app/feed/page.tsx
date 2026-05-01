@@ -8,6 +8,7 @@ import { TrendingUp, Users, Flame, X, Radio, Coins, FileText, Swords } from 'luc
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { BeefCard } from '@/components/BeefCard';
+import { EditBeefModal } from '@/components/EditBeefModal';
 import dynamic from 'next/dynamic';
 import { submitNewBeef } from '@/lib/submitNewBeef';
 import type { SubmitBeefPayload } from '@/lib/submitNewBeef';
@@ -122,7 +123,7 @@ export default function FeedPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [showHero, setShowHero] = useState(false);
   const [beefToDelete, setBeefToDelete] = useState<string | null>(null);
-  const [beefToEdit, setBeefToEdit] = useState<{ id: string; description: string } | null>(null);
+  const [editBeefId, setEditBeefId] = useState<string | null>(null);
   const [beefToForfeit, setBeefToForfeit] = useState<string | null>(null);
 
   useEffect(() => {
@@ -558,23 +559,6 @@ export default function FeedPage() {
     void loadBeefs();
   };
 
-  const confirmEdit = async (newDesc: string) => {
-    if (!beefToEdit || !user?.id) return;
-    const { error } = await supabase
-      .from('beefs')
-      .update({ description: newDesc })
-      .eq('id', beefToEdit.id)
-      .eq('created_by', user.id)
-      .eq('status', 'pending');
-    if (error) {
-      toast('Erreur de modification', 'error');
-      return;
-    }
-    toast('Teaser mis à jour.', 'success');
-    setBeefToEdit(null);
-    void loadBeefs();
-  };
-
   const confirmForfeit = async () => {
     if (!beefToForfeit || !user?.id) return;
     const { error } = await supabase.from('beefs').update({ status: 'cancelled' }).eq('id', beefToForfeit).eq('created_by', user.id);
@@ -928,7 +912,7 @@ export default function FeedPage() {
                     }
                     onEdit={
                       beef.status === 'pending' && user?.id === beef.created_by
-                        ? () => setBeefToEdit({ id: beef.id, description: beef.description || '' })
+                        ? () => setEditBeefId(beef.id)
                         : undefined
                     }
                     onForfeit={
@@ -1045,39 +1029,16 @@ export default function FeedPage() {
         </div>
       )}
 
-      {/* Modal Édition */}
-      {beefToEdit && (
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="beef-edit-title"
-          onClick={() => setBeefToEdit(null)}
-        >
-          <div
-            className="w-full max-w-md rounded-2xl border border-plasma-500/30 bg-obsidian-900 p-6 shadow-glow-plasma"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 id="beef-edit-title" className="mb-4 text-xl font-black text-white">
-              Modifier le teaser
-            </h3>
-            <textarea
-              value={beefToEdit.description}
-              onChange={(e) => setBeefToEdit({ ...beefToEdit, description: e.target.value })}
-              className="mb-4 min-h-[100px] w-full resize-none rounded-xl border border-white/10 bg-black/50 p-3 text-sm text-white placeholder:text-gray-500 focus:border-plasma-500 focus:outline-none"
-              placeholder="Décrivez l'enjeu du combat..."
-              aria-label="Description du teaser"
-            />
-            <div className="flex gap-3">
-              <button type="button" onClick={() => setBeefToEdit(null)} className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-bold text-white transition-colors hover:bg-white/20">
-                Annuler
-              </button>
-              <button type="button" onClick={() => void confirmEdit(beefToEdit.description)} className="flex-1 rounded-xl bg-plasma-600 py-3 text-sm font-bold text-white transition-colors hover:bg-plasma-500">
-                Sauvegarder
-              </button>
-            </div>
-          </div>
-        </div>
+      {editBeefId && (
+        <EditBeefModal
+          beefId={editBeefId}
+          onClose={() => setEditBeefId(null)}
+          onSaved={() => {
+            setEditBeefId(null);
+            void loadBeefs();
+            toast('Affaire mise à jour', 'success');
+          }}
+        />
       )}
       {showCreateModal && <CreateBeefForm onSubmit={handleCreateBeef} onCancel={() => setShowCreateModal(false)} />}
 
