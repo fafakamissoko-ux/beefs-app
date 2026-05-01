@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, ChevronDown, MoreVertical, Trash2, Edit2, Flag } from 'lucide-react';
@@ -107,6 +107,7 @@ export function BeefCard({
 }: BeefCardProps) {
   const [isMuted, setIsMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const modalVideoRef = useRef<HTMLVideoElement | null>(null);
   const mediaBlockRef = useRef<HTMLDivElement | null>(null);
 
   const [floatingAuras, setFloatingAuras] = useState<{ id: number; x: number }[]>([]);
@@ -115,6 +116,19 @@ export function BeefCard({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isReminded, setIsReminded] = useState(false);
+
+  const handleToggleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    // Modification DOM synchrone pour préserver le User Gesture sur iOS
+    if (videoRef.current) videoRef.current.muted = nextMuted;
+    if (modalVideoRef.current) {
+      modalVideoRef.current.muted = nextMuted;
+      // Force la lecture pour éviter le blocage Safari
+      modalVideoRef.current.play().catch(() => {});
+    }
+  };
 
   const { toast } = useToast();
   useLayoutEffect(() => {
@@ -366,10 +380,7 @@ export function BeefCard({
         {video_url && (
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsMuted((m) => !m);
-            }}
+            onClick={handleToggleMute}
             className={`absolute z-30 rounded-full border border-white/15 bg-black/50 p-1.5 backdrop-blur-md transition-colors hover:bg-black/70 ${
               status === 'scheduled' && scheduled_at ? 'bottom-14 left-2' : 'bottom-2 left-2'
             }`}
@@ -739,23 +750,18 @@ export function BeefCard({
               {video_url ? (
                 <>
                   <video
+                    ref={modalVideoRef}
                     src={video_url}
                     autoPlay
                     loop
                     playsInline
                     muted={isMuted}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsMuted(!isMuted);
-                    }}
+                    onClick={handleToggleMute}
                     className="h-full w-full object-contain bg-black"
                   />
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsMuted(!isMuted);
-                    }}
+                    onClick={handleToggleMute}
                     className="absolute bottom-4 right-4 z-[9999] flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white backdrop-blur-md transition-colors hover:bg-white/20"
                     aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
                   >
