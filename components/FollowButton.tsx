@@ -3,8 +3,23 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserMinus, UserPlus } from 'lucide-react';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+
+function isP0001OrProfileReservedError(err: PostgrestError | null): boolean {
+  if (!err) return false;
+  const blob = `${err.code ?? ''}|${err.message ?? ''}|${err.details ?? ''}|${err.hint ?? ''}`;
+  return blob.includes('P0001') || /réservée au compte connecté|Mise à jour de profil réservée/i.test(blob);
+}
+
+function followErrorUserMessage(err: PostgrestError | null): string {
+  if (!err?.message) return 'Erreur lors du suivi';
+  if (isP0001OrProfileReservedError(err)) {
+    return 'Synchronisation du compte en cours. Réessaie dans un instant ou rafraîchis la page.';
+  }
+  return err.message;
+}
 
 export type FollowButtonSuccessPayload = {
   /** État suivre après succès PG (ligne followers) */
@@ -80,26 +95,34 @@ export function FollowButton({
     const willUnfollow = following;
 
     try {
-      if (willUnfollow) {
-        const { error } = await supabase
-          .from('followers')
-          .delete()
-          .eq('follower_id', user.id)
-          .eq('following_id', followingId);
-        if (error) {
-          onError?.(error.message);
-          return;
+      const mutateFollow = async (): Promise<{ error: PostgrestError | null }> => {
+        if (willUnfollow) {
+          return supabase
+            .from('followers')
+            .delete()
+            .eq('follower_id', user.id)
+            .eq('following_id', followingId);
         }
-        setFollowing(false);
-      } else {
-        const { error } = await supabase.from('followers').insert({
+        return supabase.from('followers').insert({
           follower_id: user.id,
           following_id: followingId,
         });
-        if (error) {
-          onError?.(error.message);
-          return;
-        }
+      };
+
+      let { error } = await mutateFollow();
+      if (error && isP0001OrProfileReservedError(error)) {
+        await new Promise<void>((r) => setTimeout(r, 500));
+        ({ error } = await mutateFollow());
+      }
+
+      if (error) {
+        onError?.(followErrorUserMessage(error));
+        return;
+      }
+
+      if (willUnfollow) {
+        setFollowing(false);
+      } else {
         setFollowing(true);
       }
 

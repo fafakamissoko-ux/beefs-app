@@ -106,7 +106,7 @@ function hideGlobalSearchOnPath(pathname: string | null): boolean {
   return false;
 }
 
-/** Badge compteur nav (desktop + mobile menu) — plasma + ping pour les convocations. */
+/** Badge compteur nav (desktop + mobile menu) — rouge Radar ; ping convocations. */
 function NavUnreadBadge({
   href,
   count,
@@ -126,10 +126,10 @@ function NavUnreadBadge({
   return (
     <span className={outer}>
       {href === '/invitations' && (
-        <span className="absolute inset-0 animate-ping rounded-full bg-plasma-400 opacity-75" aria-hidden />
+        <span className="absolute inset-0 animate-ping rounded-full bg-red-400 opacity-75" aria-hidden />
       )}
       <span
-        className={`relative z-[1] inline-flex items-center justify-center rounded-full bg-plasma-500 font-bold text-white ${inner}`}
+        className={`relative z-[1] inline-flex items-center justify-center rounded-full bg-red-600 font-bold text-white ${inner}`}
       >
         {formatNavBadgeCount(count)}
       </span>
@@ -189,7 +189,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
     if (!user) return;
 
     // Toujours interroger la BDD (état réel). Badges nav alignés avec les pages correspondantes.
-    const [invRes, notifRpc, dmRpc] = await Promise.all([
+    const [invRes, notifRpc, dmRpc, auraUnreadRes] = await Promise.all([
       supabase
         .from('beef_invitations')
         .select('id', { count: 'exact', head: true })
@@ -197,20 +197,28 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
         .eq('status', 'sent'),
       supabase.rpc('count_unread_notifications'),
       supabase.rpc('count_unread_direct_messages'),
+      supabase
+        .from('aura_notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id),
     ]);
 
     setPendingInvitations(invRes.count ?? 0);
 
+    let tableUnread = 0;
     if (notifRpc.error) {
       const fb = await supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .or('is_read.is.null,is_read.eq.false');
-      setUnreadNotifications(fb.count ?? 0);
+      tableUnread = fb.count ?? 0;
     } else {
-      setUnreadNotifications(parseBadgeCount(notifRpc.data));
+      tableUnread = parseBadgeCount(notifRpc.data);
     }
+
+    const auraUnread = auraUnreadRes.error ? 0 : (auraUnreadRes.count ?? 0);
+    setUnreadNotifications(tableUnread + auraUnread);
 
     if (dmRpc.error) {
       const fb = await supabase
@@ -493,7 +501,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   <Link
                     href={hrefWithFrom('/create', pathname)}
                     prefetch
-                    className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border border-plasma-500/30 bg-plasma-600 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-white shadow-glow-plasma transition-all hover:bg-plasma-500 hover:shadow-glow-plasma active:scale-[0.97] ${
+                    className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border border-orange-500/40 bg-gradient-to-r from-orange-500 to-red-600 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-white shadow-[0_0_20px_rgba(234,88,12,0.35)] transition-all hover:from-orange-400 hover:to-red-500 active:scale-[0.97] ${
                       shell === 'phone' ? 'lg:w-full lg:justify-center' : ''
                     }`}
                   >
@@ -613,7 +621,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               {user && (
                 <Link
                   href={hrefWithFrom('/create', pathname)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-plasma-500/40 bg-plasma-600 text-white shadow-glow-plasma backdrop-blur-md transition-colors hover:bg-plasma-500"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-orange-500/45 bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-[0_0_16px_rgba(234,88,12,0.4)] backdrop-blur-md transition-all hover:from-orange-400 hover:to-red-500"
                 >
                   <Swords className="h-4 w-4" strokeWidth={2} />
                 </Link>
