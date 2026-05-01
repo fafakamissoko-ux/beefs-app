@@ -106,7 +106,7 @@ function hideGlobalSearchOnPath(pathname: string | null): boolean {
   return false;
 }
 
-/** Badge compteur nav (desktop + mobile menu) — rouge Radar ; ping convocations. */
+/** Badge compteur nav — rouge vif (Radar) ; ping convocations en rouge. */
 function NavUnreadBadge({
   href,
   count,
@@ -126,7 +126,7 @@ function NavUnreadBadge({
   return (
     <span className={outer}>
       {href === '/invitations' && (
-        <span className="absolute inset-0 animate-ping rounded-full bg-red-400 opacity-75" aria-hidden />
+        <span className="absolute inset-0 animate-ping rounded-full bg-red-500 opacity-75" aria-hidden />
       )}
       <span
         className={`relative z-[1] inline-flex items-center justify-center rounded-full bg-red-600 font-bold text-white ${inner}`}
@@ -217,8 +217,9 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       tableUnread = parseBadgeCount(notifRpc.data);
     }
 
-    const auraUnread = auraUnreadRes.error ? 0 : (auraUnreadRes.count ?? 0);
-    setUnreadNotifications(tableUnread + auraUnread);
+    const auraRows = auraUnreadRes.error ? 0 : (auraUnreadRes.count ?? 0);
+    /** Cumul affiché sur l’icône Radar : non lus `notifications` + lignes `aura_notifications`. */
+    setUnreadNotifications(tableUnread + auraRows);
 
     if (dmRpc.error) {
       const fb = await supabase
@@ -501,7 +502,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   <Link
                     href={hrefWithFrom('/create', pathname)}
                     prefetch
-                    className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border border-orange-500/40 bg-gradient-to-r from-orange-500 to-red-600 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-white shadow-[0_0_20px_rgba(234,88,12,0.35)] transition-all hover:from-orange-400 hover:to-red-500 active:scale-[0.97] ${
+                    className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border border-red-900/60 bg-gradient-to-r from-red-800 to-red-950 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-white shadow-[0_0_18px_rgba(127,29,29,0.45)] transition-all hover:from-red-700 hover:to-red-900 active:scale-[0.97] ${
                       shell === 'phone' ? 'lg:w-full lg:justify-center' : ''
                     }`}
                   >
@@ -621,7 +622,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               {user && (
                 <Link
                   href={hrefWithFrom('/create', pathname)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-orange-500/45 bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-[0_0_16px_rgba(234,88,12,0.4)] backdrop-blur-md transition-all hover:from-orange-400 hover:to-red-500"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-red-900/55 bg-gradient-to-br from-red-800 to-red-950 text-white shadow-[0_0_14px_rgba(127,29,29,0.5)] backdrop-blur-md transition-all hover:from-red-700 hover:to-red-900"
                 >
                   <Swords className="h-4 w-4" strokeWidth={2} />
                 </Link>

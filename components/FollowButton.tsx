@@ -6,18 +6,24 @@ import { UserMinus, UserPlus } from 'lucide-react';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/Toast';
+
+/** Code SQLSTATE / texte PostgREST incluant P0001 (`raise_exception`). */
+function isP0001PostgresError(err: PostgrestError | null): boolean {
+  if (!err) return false;
+  const blob = `${err.code ?? ''}|${err.message ?? ''}|${err.details ?? ''}|${err.hint ?? ''}`;
+  return blob.includes('P0001');
+}
 
 function isP0001OrProfileReservedError(err: PostgrestError | null): boolean {
   if (!err) return false;
-  const blob = `${err.code ?? ''}|${err.message ?? ''}|${err.details ?? ''}|${err.hint ?? ''}`;
-  return blob.includes('P0001') || /réservée au compte connecté|Mise à jour de profil réservée/i.test(blob);
+  if (isP0001PostgresError(err)) return true;
+  const blob = `${err.message ?? ''}|${err.details ?? ''}`;
+  return /réservée au compte connecté|Mise à jour de profil réservée/i.test(blob);
 }
 
 function followErrorUserMessage(err: PostgrestError | null): string {
   if (!err?.message) return 'Erreur lors du suivi';
-  if (isP0001OrProfileReservedError(err)) {
-    return 'Synchronisation du compte en cours. Réessaie dans un instant ou rafraîchis la page.';
-  }
   return err.message;
 }
 
@@ -72,6 +78,7 @@ export function FollowButton({
   loginPath = '/login',
 }: FollowButtonProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const { user } = useAuth();
   const [following, setFollowing] = useState(initialFollowing);
   const [busy, setBusy] = useState(false);
@@ -116,7 +123,13 @@ export function FollowButton({
       }
 
       if (error) {
-        onError?.(followErrorUserMessage(error));
+        if (isP0001PostgresError(error)) {
+          toast('Erreur de synchronisation du prestige. Réessaie dans 5 secondes.', 'error', {
+            durationMs: 6500,
+          });
+        } else {
+          onError?.(followErrorUserMessage(error));
+        }
         return;
       }
 
