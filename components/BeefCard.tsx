@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, ChevronDown, MoreVertical, Trash2, Edit2, Flag } from 'lucide-react';
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
+import { useToast } from '@/components/Toast';
 
 interface BeefCardProps {
   id: string;
@@ -112,7 +113,10 @@ export function BeefCard({
   const [replayHover, setReplayHover] = useState(false);
   const [isTeaserOpen, setIsTeaserOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
+  const [isReminded, setIsReminded] = useState(false);
 
+  const { toast } = useToast();
   useLayoutEffect(() => {
     if (!video_url?.trim()) return;
     const el = mediaBlockRef.current;
@@ -215,7 +219,7 @@ export function BeefCard({
       onClick={onClick}
       onMouseEnter={() => isReplay && setReplayHover(true)}
       onMouseLeave={() => isReplay && setReplayHover(false)}
-      className={`group relative flex min-h-0 h-auto w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border md:bg-[#08080A] ${dynamicBorderClass} ${
+      className={`group relative flex min-h-0 h-full w-full flex-col justify-between cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border md:bg-[#08080A] ${dynamicBorderClass} ${
         status === 'live'
           ? 'md:shadow-[0_0_0_1px_rgba(162,0,255,0.35)] md:group-hover:shadow-[0_0_24px_rgba(162,0,255,0.55)]'
           : ''
@@ -501,9 +505,27 @@ export function BeefCard({
             )}
           </div>
           {descText ? (
-            <p className="mt-1.5 line-clamp-1 break-words text-[11px] font-medium text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
-              {descText}
-            </p>
+            <div className="mt-1.5 flex flex-col items-start">
+              <p
+                className={`break-words text-[11px] font-medium text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] transition-all duration-300 ${
+                  isDescExpanded ? '' : 'line-clamp-2'
+                }`}
+              >
+                {descText}
+              </p>
+              {descText.length > 80 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsDescExpanded(!isDescExpanded);
+                  }}
+                  className="text-[10px] font-bold text-plasma-400 hover:text-plasma-300 mt-1 transition-colors"
+                >
+                  {isDescExpanded ? 'Réduire' : 'Voir plus'}
+                </button>
+              )}
+            </div>
           ) : null}
           {tags.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1">
@@ -553,12 +575,12 @@ export function BeefCard({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onNotifyClick();
+                setIsReminded(!isReminded);
+                toast(isReminded ? 'Rappel annulé' : 'Rappel activé', 'success');
               }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-prestige-gold/40 bg-prestige-gold/10 py-2.5 text-xs font-bold uppercase tracking-wide text-prestige-gold/95 transition-all hover:bg-prestige-gold/20"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/40 backdrop-blur-md py-2.5 text-xs font-bold uppercase tracking-wide text-white transition-all hover:bg-white/10"
             >
-              <Bell className="h-4 w-4 shrink-0" strokeWidth={2.2} />
-              M&apos;alerter
+              <Bell className={isReminded ? 'fill-white' : ''} /> {isReminded ? 'Rappel programmé' : 'Me rappeler'}
             </button>
           )}
           {status === 'pending' && onSaisirAffaire && !mediator_name && (
@@ -616,7 +638,7 @@ export function BeefCard({
           )}
           {status === 'pending' && !!mediator_name && !onValiderRef && !onSaisirAffaire && (
             <div className="flex w-full flex-col items-center justify-center py-2">
-              <span className="text-[10px] font-medium italic text-gray-400">
+              <span className="text-sm text-center py-4 text-gray-400 font-medium italic">
                 En attente de validation du Ref (@{mediator_name}) par l&apos;initiateur…
               </span>
             </div>
@@ -706,7 +728,7 @@ export function BeefCard({
             <button
               type="button"
               onClick={() => setIsTeaserOpen(false)}
-              className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white backdrop-blur-md transition-colors hover:bg-blood-500"
+              className="absolute right-4 top-4 z-[9999] flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white backdrop-blur-md transition-colors hover:bg-white/20"
               aria-label="Fermer l&apos;aperçu"
             >
               ✕
@@ -714,14 +736,14 @@ export function BeefCard({
 
             <div className="relative flex min-h-[40vh] flex-[1.5] items-center justify-center bg-black md:aspect-auto">
               {video_url ? (
-                <video src={video_url} controls autoPlay muted playsInline className="h-full w-full object-contain" />
+                <video src={video_url} controls autoPlay muted playsInline className="h-full w-full object-contain bg-black" />
               ) : thumbnail ? (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element -- lightbox teaser, URL dynamiques */}
                   <img
                     src={thumbnail}
                     alt={title}
-                    className="max-h-[50vh] w-full object-contain md:max-h-none md:h-full"
+                    className="max-h-[50vh] w-full object-contain bg-black md:max-h-none md:h-full"
                   />
                 </>
               ) : (

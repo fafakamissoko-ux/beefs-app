@@ -1034,7 +1034,11 @@ export default function PublicProfilePage() {
                   src={viewingImage.url}
                   alt="Aperçu"
                   fill
-                  className={`object-contain ${viewingImage.type === 'avatar' ? 'scale-75 rounded-full' : 'rounded-lg'}`}
+                  className={
+                    viewingImage.type === 'avatar'
+                      ? 'scale-75 rounded-full object-contain'
+                      : 'rounded-lg object-contain bg-black/80'
+                  }
                   sizes="(max-width: 768px) 100vw, 896px"
                 />
               </div>

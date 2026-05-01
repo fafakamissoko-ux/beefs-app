@@ -835,7 +835,7 @@ export default function FeedPage() {
             >
               {/* === CARTE APPÂT (Visiteurs) === */}
               {!user && showHero && (
-                <div className="snap-start snap-always relative flex h-full min-h-[350px] w-full shrink-0 flex-col items-center justify-center overflow-hidden max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border border-plasma-500/40 bg-gradient-to-br from-plasma-600/10 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(162,0,255,0.1)]">
+                <div className="snap-start snap-always relative flex min-h-[380px] h-full w-full shrink-0 flex-col justify-between items-center overflow-hidden max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border border-plasma-500/40 bg-gradient-to-br from-plasma-600/10 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(162,0,255,0.1)]">
                   <button
                     type="button"
                     onClick={() => {
