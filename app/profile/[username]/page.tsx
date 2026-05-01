@@ -607,7 +607,7 @@ export default function PublicProfilePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-white font-semibold">Chargement...</p>
         </div>
       </div>
@@ -726,7 +726,7 @@ export default function PublicProfilePage() {
                       initialFollowing={isFollowing}
                       loginRedirectPath={pathname}
                       classNameWhenFollowing="relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-white/10 text-white hover:bg-white/20"
-                      classNameWhenNotFollowing="relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all brand-gradient text-black hover:opacity-90"
+                      classNameWhenNotFollowing="relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-[#00F0FF] text-black shadow-[0_0_18px_rgba(0,240,255,0.45)] hover:brightness-110"
                       onSynced={(p) => {
                         setIsFollowing(p.following);
                         if (p.recipientFollowersCount != null) {

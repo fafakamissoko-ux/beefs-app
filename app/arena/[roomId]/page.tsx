@@ -284,7 +284,7 @@ export default function ArenaPage() {
     return (
       <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center">
         <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600 mx-auto mb-4" />
           <p>Chargement...</p>
         </div>
       </div>
@@ -295,7 +295,7 @@ export default function ArenaPage() {
     return (
       <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center">
         <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600 mx-auto mb-4" />
           <p>Chargement de l’arène…</p>
         </div>
       </div>

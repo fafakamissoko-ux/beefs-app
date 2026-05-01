@@ -69,7 +69,8 @@ export function FollowButton({
   initialFollowing,
   disabled = false,
   classNameWhenFollowing = 'flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-white/10 text-white hover:bg-white/20',
-  classNameWhenNotFollowing = 'flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all brand-gradient text-black transition-opacity hover:opacity-90',
+  classNameWhenNotFollowing =
+    'flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-[#00F0FF] text-black shadow-[0_0_18px_rgba(0,240,255,0.45)] hover:brightness-110 active:scale-[0.98]',
   showLabels = true,
   labels = { follow: 'Suivre', unfollow: 'Ne plus suivre' },
   onSynced,
@@ -122,7 +123,41 @@ export function FollowButton({
         ({ error } = await mutateFollow());
       }
 
+      const finalizeAfterMutation = async (nextFollowing: boolean) => {
+        setFollowing(nextFollowing);
+        await new Promise<void>((r) => setTimeout(r, 200));
+        const [{ data: auraRow, error: auraErr }, followerCountRes] = await Promise.all([
+          supabase.from('user_public_profile').select('lifetime_points').eq('id', followingId).maybeSingle(),
+          supabase
+            .from('followers')
+            .select('*', { count: 'exact', head: true })
+            .eq('following_id', followingId),
+        ]);
+        if (auraErr) {
+          console.warn('[FollowButton] refetch prestige', auraErr);
+        }
+        const lp =
+          auraRow && typeof auraRow === 'object' && 'lifetime_points' in auraRow && auraRow.lifetime_points != null
+            ? Number(auraRow.lifetime_points as number)
+            : null;
+        const recipientFollowersCount =
+          followerCountRes.error ? null : (followerCountRes.count ?? null);
+        onSynced?.({
+          following: nextFollowing,
+          recipientLifetimePoints: lp,
+          recipientFollowersCount,
+        });
+      };
+
       if (error) {
+        if (isP0001PostgresError(error) && !willUnfollow) {
+          toast('Erreur de synchronisation du prestige. Réessaie dans 5 secondes.', 'error', {
+            durationMs: 6500,
+          });
+          /** Lien social prioritaire : UI « suivi » même si prestige trigger a échoué. */
+          await finalizeAfterMutation(true);
+          return;
+        }
         if (isP0001PostgresError(error)) {
           toast('Erreur de synchronisation du prestige. Réessaie dans 5 secondes.', 'error', {
             durationMs: 6500,
@@ -133,40 +168,7 @@ export function FollowButton({
         return;
       }
 
-      if (willUnfollow) {
-        setFollowing(false);
-      } else {
-        setFollowing(true);
-      }
-
-      const nextFollowing = !willUnfollow;
-
-      await new Promise<void>((r) => setTimeout(r, 200));
-
-      const [{ data: auraRow, error: auraErr }, followerCountRes] = await Promise.all([
-        supabase.from('user_public_profile').select('lifetime_points').eq('id', followingId).maybeSingle(),
-        supabase
-          .from('followers')
-          .select('*', { count: 'exact', head: true })
-          .eq('following_id', followingId),
-      ]);
-
-      if (auraErr) {
-        console.warn('[FollowButton] refetch prestige', auraErr);
-      }
-      const lp =
-        auraRow && typeof auraRow === 'object' && 'lifetime_points' in auraRow && auraRow.lifetime_points != null
-          ? Number(auraRow.lifetime_points as number)
-          : null;
-
-      const recipientFollowersCount =
-        followerCountRes.error ? null : (followerCountRes.count ?? null);
-
-      onSynced?.({
-        following: nextFollowing,
-        recipientLifetimePoints: lp,
-        recipientFollowersCount,
-      });
+      await finalizeAfterMutation(!willUnfollow);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Erreur lors du suivi';
       onError?.(msg);

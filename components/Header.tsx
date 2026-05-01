@@ -205,21 +205,21 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
 
     setPendingInvitations(invRes.count ?? 0);
 
-    let tableUnread = 0;
+    let systemUnread = 0;
     if (notifRpc.error) {
       const fb = await supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .or('is_read.is.null,is_read.eq.false');
-      tableUnread = fb.count ?? 0;
+      systemUnread = fb.count ?? 0;
     } else {
-      tableUnread = parseBadgeCount(notifRpc.data);
+      systemUnread = parseBadgeCount(notifRpc.data);
     }
 
     const auraRows = auraUnreadRes.error ? 0 : (auraUnreadRes.count ?? 0);
-    /** Cumul affiché sur l’icône Radar : non lus `notifications` + lignes `aura_notifications`. */
-    setUnreadNotifications(tableUnread + auraRows);
+    /** Radar : non lus table `notifications` + entrées vue `aura_notifications`. */
+    setUnreadNotifications(systemUnread + auraRows);
 
     if (dmRpc.error) {
       const fb = await supabase
@@ -502,7 +502,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   <Link
                     href={hrefWithFrom('/create', pathname)}
                     prefetch
-                    className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border border-red-900/60 bg-gradient-to-r from-red-800 to-red-950 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-white shadow-[0_0_18px_rgba(127,29,29,0.45)] transition-all hover:from-red-700 hover:to-red-900 active:scale-[0.97] ${
+                    className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border border-red-800/70 bg-gradient-to-r from-red-700 to-red-900 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-white shadow-[0_0_20px_rgba(185,28,28,0.35)] transition-all hover:from-red-600 hover:to-red-800 active:scale-[0.97] ${
                       shell === 'phone' ? 'lg:w-full lg:justify-center' : ''
                     }`}
                   >
@@ -622,7 +622,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               {user && (
                 <Link
                   href={hrefWithFrom('/create', pathname)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-red-900/55 bg-gradient-to-br from-red-800 to-red-950 text-white shadow-[0_0_14px_rgba(127,29,29,0.5)] backdrop-blur-md transition-all hover:from-red-700 hover:to-red-900"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-red-800/65 bg-gradient-to-br from-red-700 to-red-900 text-white shadow-[0_0_16px_rgba(185,28,28,0.45)] backdrop-blur-md transition-all hover:from-red-600 hover:to-red-800"
                 >
                   <Swords className="h-4 w-4" strokeWidth={2} />
                 </Link>

@@ -282,7 +282,7 @@ export default function LiveBeefRoomPage() {
     return (
       <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center">
         <div className="text-center text-white">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-orange-500" />
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-red-600" />
           <p>Chargement...</p>
         </div>
       </div>
@@ -293,7 +293,7 @@ export default function LiveBeefRoomPage() {
     return (
       <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center">
         <div className="text-center text-white">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-orange-500" />
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-red-600" />
           <p>Chargement de l’arène…</p>
         </div>
       </div>
