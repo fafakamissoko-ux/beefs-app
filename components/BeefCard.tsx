@@ -737,7 +737,31 @@ export function BeefCard({
 
             <div className="relative flex min-h-[40vh] flex-[1.5] items-center justify-center bg-black md:aspect-auto">
               {video_url ? (
-                <video src={video_url} controls autoPlay muted playsInline className="h-full w-full object-contain bg-black" />
+                <>
+                  <video
+                    src={video_url}
+                    autoPlay
+                    loop
+                    playsInline
+                    muted={isMuted}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMuted(!isMuted);
+                    }}
+                    className="h-full w-full object-contain bg-black"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMuted(!isMuted);
+                    }}
+                    className="absolute bottom-4 right-4 z-[9999] flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white backdrop-blur-md transition-colors hover:bg-white/20"
+                    aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
+                  >
+                    {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
+                  </button>
+                </>
               ) : thumbnail ? (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element -- lightbox teaser, URL dynamiques */}

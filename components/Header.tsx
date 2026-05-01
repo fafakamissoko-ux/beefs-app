@@ -304,7 +304,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
   }, [user, pathname, toast, loadUnreadCounts]);
 
   /** Liens masqués jusqu’à xl sur la barre horizontale (shell full) — évite le carambolage laptop. */
-  const navSecondaryHrefs = new Set(['/notifications', '/live', '/points', '/invitations']);
+  const navSecondaryHrefs = new Set(['/notifications', '/points', '/invitations']);
 
   const navItems = [
     { href: '/feed', label: 'Fil d’actu', icon: Home, badge: 0 },
@@ -314,7 +314,6 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       icon: Bell,
       badge: unreadNotifications,
     },
-    { href: '/live', label: 'Audiences', icon: Flame, badge: 0 },
     { href: '/points', label: 'Lingots', icon: Coins, badge: 0 },
     {
       href: '/invitations',
@@ -332,7 +331,6 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
 
   const publicNavItems = [
     { href: '/feed', label: 'Fil d’actu', icon: Home, badge: 0 },
-    { href: '/live', label: 'Audiences', icon: Flame, badge: 0 },
     { href: '/rules', label: "Règles de l'Agora", icon: Shield, badge: 0 },
   ];
   const visibleNavItems = user ? navItems : publicNavItems;
@@ -444,7 +442,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           className={`w-[18px] h-[18px] ${
                             active
                               ? 'max-lg:text-plasma-400 ' +
-                                (item.href === '/live' || item.href === '/points' ? 'lg:text-plasma-400' : '')
+                                (item.href === '/points' ? 'lg:text-plasma-400' : '')
                               : ''
                           }`}
                         />
