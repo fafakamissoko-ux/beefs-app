@@ -8,6 +8,12 @@ import { AtSign, Lock, Eye, EyeOff, AlertCircle, ArrowRight } from 'lucide-react
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { BeefLogo } from '@/components/BeefLogo';
+import { sanitizeReturnPath } from '@/lib/navigation-return';
+
+function loginPostAuthPath(searchParams: ReturnType<typeof useSearchParams>): string {
+  const raw = searchParams.get('redirect') ?? searchParams.get('next');
+  return sanitizeReturnPath(raw) ?? '/feed';
+}
 
 function LoginPageContent() {
   const router = useRouter();
@@ -26,7 +32,8 @@ function LoginPageContent() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
-    if (user) router.push(searchParams.get('redirect') || '/feed');
+    if (!user) return;
+    router.push(loginPostAuthPath(searchParams));
   }, [user, router, searchParams]);
 
   useEffect(() => {
@@ -114,7 +121,7 @@ function LoginPageContent() {
       setLoading(false);
       focusLoginField('password');
     } else {
-      router.push(searchParams.get('redirect') || '/feed');
+      router.push(loginPostAuthPath(searchParams));
     }
   };
 

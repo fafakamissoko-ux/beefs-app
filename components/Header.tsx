@@ -491,7 +491,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               {user ? (
                 <>
                   <Link
-                    href="/create"
+                    href={hrefWithFrom('/create', pathname)}
                     prefetch
                     className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border border-plasma-500/30 bg-plasma-600 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-white shadow-glow-plasma transition-all hover:bg-plasma-500 hover:shadow-glow-plasma active:scale-[0.97] ${
                       shell === 'phone' ? 'lg:w-full lg:justify-center' : ''

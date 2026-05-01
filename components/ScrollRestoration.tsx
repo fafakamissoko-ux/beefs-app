@@ -44,6 +44,11 @@ export function ScrollRestoration() {
   const pathname = usePathname();
 
   useEffect(() => {
+    /** Évite blocage Desktop si une lightbox a laissé `body { overflow: hidden }`. */
+    if (typeof document !== 'undefined') {
+      document.body.style.overflow = 'unset';
+    }
+
     const onScroll = () => savePosition(pathname, window.scrollY);
 
     const onHidden = () => savePosition(pathname, window.scrollY);

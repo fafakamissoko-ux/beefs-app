@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createSupabaseMiddlewareClient } from '@/lib/supabase/middleware';
+import { sanitizeReturnPath } from '@/lib/navigation-return';
 
 // Simple in-memory rate limiter for API routes
 const rateLimits = new Map<string, { count: number; resetAt: number }>();
@@ -79,9 +80,22 @@ function canonicalHostRedirect(request: NextRequest): NextResponse | null {
 
 function pathRequiresArenaProfile(pathname: string): boolean {
   if (pathname === '/feed' || pathname.startsWith('/feed/')) return true;
-  if (pathname.startsWith('/live/')) return true;
-  if (pathname.startsWith('/arena/')) return true;
+  if (pathname === '/live' || pathname.startsWith('/live/')) return true;
+  if (pathname === '/arena' || pathname.startsWith('/arena/')) return true;
   return false;
+}
+
+/** Pages « Agora » : accès garanti avec session même si autres chemins peuvent encore rafraîchir les jetons */
+function isAuthenticatedExperiencePath(pathname: string): boolean {
+  return (
+    pathRequiresArenaProfile(pathname) ||
+    pathname === '/messages' ||
+    pathname.startsWith('/messages/') ||
+    pathname === '/profile' ||
+    pathname.startsWith('/profile/') ||
+    pathname === '/notifications' ||
+    pathname.startsWith('/notifications/')
+  );
 }
 
 export async function middleware(request: NextRequest) {
@@ -124,26 +138,51 @@ export async function middleware(request: NextRequest) {
   }
 
   const { supabase, response } = createSupabaseMiddlewareClient(request);
+  /** Met à jour les cookies avant `getUser` pour éviter une session JWT « trop tôt » / instable après refresh. */
+  await supabase.auth.getSession();
+
   const {
     data: { user },
+    error: getUserError,
   } = await supabase.auth.getUser();
 
-  const protectedPaths = ['/profile', '/create', '/settings', '/invitations', '/messages', '/admin'];
-  const authPaths = ['/login', '/signup', '/welcome'];
+  const protectedPrefixes = ['/create', '/settings', '/invitations', '/messages', '/admin', '/notifications'];
 
-  const isProtectedPath = protectedPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  /** Hub « Mon profil » uniquement — les pages `/profile/:username` restent publiques. */
+  const isProtectedPath =
+    pathname === '/profile' ||
+    protectedPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const authPaths = ['/login', '/signup', '/welcome'];
   const isAuthPath = authPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   // 1. Bloquer les non-connectés hors des zones sécurisées
   if (!user && isProtectedPath) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = '/login';
-    loginUrl.searchParams.set('next', pathname); // Mémorise la page voulue
+    loginUrl.searchParams.set('redirect', pathname);
+    loginUrl.searchParams.set('next', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // 2. Bloquer les connectés hors des pages d'inscription/connexion
+  // Erreur transitoire (réseau) : une session encore présente côté cookies ne doit pas forcer `/feed`.
+  if (
+    user == null &&
+    getUserError &&
+    isAuthenticatedExperiencePath(pathname)
+  ) {
+    return response;
+  }
+
+  // 2. Connectés sur login / signup : suivre `redirect` ou `next` (aligné avec app/login).
   if (user && isAuthPath) {
+    const pick =
+      request.nextUrl.searchParams.get('redirect') ?? request.nextUrl.searchParams.get('next');
+    const sanitized = sanitizeReturnPath(pick);
+    if (sanitized) {
+      const pathOnly = sanitized.split('?')[0]!;
+      return NextResponse.redirect(new URL(pathOnly, request.nextUrl.origin));
+    }
+
     const feedUrl = request.nextUrl.clone();
     feedUrl.pathname = '/feed';
     return NextResponse.redirect(feedUrl);
@@ -153,6 +192,7 @@ export async function middleware(request: NextRequest) {
     if (!user) {
       const login = request.nextUrl.clone();
       login.pathname = '/login';
+      login.searchParams.set('redirect', '/onboarding');
       login.searchParams.set('next', '/onboarding');
       return NextResponse.redirect(login);
     }

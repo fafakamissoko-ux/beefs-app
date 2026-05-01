@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { validateSignupEmail } from '@/lib/email-signup-policy';
 import { hydrateLocalPrefsFromUser } from '@/lib/sync-user-client-prefs';
@@ -31,46 +31,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<'user' | 'admin' | 'moderator' | null>(null);
 
-  const loadUserRole = async (userId: string) => {
+  const loadUserRole = useCallback(async (userId: string) => {
     try {
       const { data } = await supabase.from('users').select('role').eq('id', userId).single();
       setUserRole((data?.role as 'user' | 'admin' | 'moderator') ?? 'user');
     } catch {
       setUserRole('user');
     }
-  };
+  }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let cancelled = false;
+    let unsubAuth: () => void = () => {};
+
+    void (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (cancelled) return;
+
       setSession(session);
       setUser(session?.user ?? null);
+
       if (session?.user) {
         void ensurePublicUserProfile(supabase, session.user);
         hydrateLocalPrefsFromUser(session.user);
-        loadUserRole(session.user.id);
+        await loadUserRole(session.user.id);
       } else {
         setUserRole(null);
       }
       setLoading(false);
-    });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        void ensurePublicUserProfile(supabase, session.user);
-        hydrateLocalPrefsFromUser(session.user);
-        loadUserRole(session.user.id);
-      } else {
-        setUserRole(null);
-      }
-      setLoading(false);
-    });
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        void (async () => {
+          setSession(session);
+          setUser(session?.user ?? null);
 
-    return () => subscription.unsubscribe();
-  }, []);
+          if (session?.user) {
+            void ensurePublicUserProfile(supabase, session.user);
+            hydrateLocalPrefsFromUser(session.user);
+            await loadUserRole(session.user.id);
+          } else {
+            setUserRole(null);
+          }
+
+          if (!cancelled) setLoading(false);
+        })();
+      });
+      unsubAuth = () => subscription.unsubscribe();
+    })();
+
+    return () => {
+      cancelled = true;
+      unsubAuth();
+    };
+  }, [loadUserRole]);
 
   const signUp = async (email: string, password: string, username: string) => {
     try {
