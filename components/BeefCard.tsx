@@ -34,6 +34,10 @@ interface BeefCardProps {
   duration?: number;
   engagement_score?: number;
   has_liked_by_user?: boolean;
+  /** Compteur et like du teaser modal (distinct du feed `engagement_score`). */
+  teaser_score?: number;
+  has_liked_teaser?: boolean;
+  onTeaserAuraClick?: () => void;
   participants_count?: number;
   challenger_a_name?: string | null;
   challenger_b_name?: string | null;
@@ -81,6 +85,8 @@ export function BeefCard({
   duration,
   engagement_score = 0,
   has_liked_by_user = false,
+  teaser_score = 0,
+  has_liked_teaser = false,
   participants_count,
   challenger_a_name,
   challenger_b_name,
@@ -96,6 +102,7 @@ export function BeefCard({
   onNotifyClick,
   onApply,
   onAuraClick,
+  onTeaserAuraClick,
   saisirTab = false,
   onSaisirAffaire,
   onValiderRef,
@@ -791,17 +798,17 @@ export function BeefCard({
                   Live
                 </div>
               )}
-              {onAuraClick && (
+              {onTeaserAuraClick && (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (!has_liked_by_user) {
+                    if (!has_liked_teaser) {
                       const newId = Date.now() + Math.random();
                       setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
                       setTimeout(() => setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
                     }
-                    onAuraClick();
+                    onTeaserAuraClick();
                   }}
                   className={`absolute right-4 z-[60] flex flex-col items-center gap-1.5 transition-transform hover:scale-105 ${
                     video_url ? 'bottom-20' : 'bottom-4'
@@ -823,13 +830,13 @@ export function BeefCard({
                   </AnimatePresence>
                   <div
                     className={`flex h-12 w-12 items-center justify-center rounded-full border bg-black/60 backdrop-blur-md transition-colors ${
-                      has_liked_by_user ? 'border-volt-500/50' : 'border-white/10 hover:bg-white/20'
+                      has_liked_teaser ? 'border-volt-500/50' : 'border-white/10 hover:bg-white/20'
                     }`}
                   >
-                    <Sparkles className={`h-6 w-6 ${has_liked_by_user ? 'fill-volt-400 text-volt-400' : 'text-white'}`} />
+                    <Sparkles className={`h-6 w-6 ${has_liked_teaser ? 'fill-volt-400 text-volt-400' : 'text-white'}`} />
                   </div>
                   <span className="font-mono text-xs font-bold text-white drop-shadow-md">
-                    {engagement_score.toLocaleString()}
+                    {(teaser_score || 0).toLocaleString()}
                   </span>
                 </button>
               )}

@@ -18,7 +18,11 @@ self.addEventListener('activate', (event) => {
       )
     )
   );
-  self.clients.claim();
+  try {
+    self.clients.claim();
+  } catch {
+    console.warn('Clients claim bypassed during install phase');
+  }
 });
 
 // Fetch — Network First for everything dynamic

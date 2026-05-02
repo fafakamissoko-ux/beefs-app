@@ -50,6 +50,9 @@ interface Beef {
   engagement_score?: number;
   /** Like unique courant (table `beef_likes` côté serveur). */
   has_liked_by_user?: boolean;
+  /** Aura du teaser plein écran (table `teaser_likes`, colonne `teaser_score`). */
+  teaser_score?: number;
+  has_liked_teaser?: boolean;
   participants_count?: number;
   challenger_a_name?: string | null;
   challenger_b_name?: string | null;
@@ -256,7 +259,7 @@ export default function FeedPage() {
       if (!isBackgroundRefresh) setLoading(true);
       let query = supabase
         .from('beefs')
-        .select('*, beef_participants(count), beef_likes!left(user_id)')
+        .select('*, beef_participants(count), beef_likes!left(user_id), teaser_likes!left(user_id)')
         .order('feed_position', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(fetchLimit);
@@ -416,8 +419,12 @@ export default function FeedPage() {
         const userLikes = beef.beef_likes as { user_id: string }[] | undefined;
         const hasLiked =
           Array.isArray(userLikes) && userLikes.some((like) => like.user_id === uid);
+        const teaserLikes = beef.teaser_likes as { user_id: string }[] | undefined;
+        const hasLikedTeaser =
+          Array.isArray(teaserLikes) && teaserLikes.some((like) => like.user_id === uid);
         const beefFields = { ...beef } as Record<string, unknown>;
         delete beefFields.beef_likes;
+        delete beefFields.teaser_likes;
         delete beefFields.price;
         delete beefFields.is_premium;
         return {
@@ -436,6 +443,8 @@ export default function FeedPage() {
           user_is_live_ring: onRing,
           video_url: (beef.video_url as string | null | undefined) ?? null,
           has_liked_by_user: hasLiked,
+          teaser_score: Number(beef.teaser_score) || 0,
+          has_liked_teaser: hasLikedTeaser,
         };
       }) as Beef[];
 
@@ -633,6 +642,42 @@ export default function FeedPage() {
       }
     } catch (error) {
       console.error('Erreur lors du vote Aura:', error);
+    }
+  };
+
+  const handleTeaserAuraClick = async (beefId: string) => {
+    if (!user?.id) return;
+    const targetBeef = beefs.find((b) => b.id === beefId);
+    if (!targetBeef) return;
+    const isCurrentlyLiked = !!targetBeef.has_liked_teaser;
+
+    setBeefs((prev) =>
+      prev.map((b) => {
+        if (b.id === beefId) {
+          const wasLiked = !!b.has_liked_teaser;
+          return {
+            ...b,
+            has_liked_teaser: !wasLiked,
+            teaser_score: Math.max(0, (b.teaser_score || 0) + (wasLiked ? -1 : 1)),
+          };
+        }
+        return b;
+      }),
+    );
+
+    try {
+      if (isCurrentlyLiked) {
+        const { error } = await supabase
+          .from('teaser_likes')
+          .delete()
+          .match({ beef_id: beefId, user_id: user.id });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('teaser_likes').insert({ beef_id: beefId, user_id: user.id });
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Erreur lors du vote Aura (teaser):', error);
     }
   };
 
@@ -909,6 +954,9 @@ export default function FeedPage() {
                     }
                     onClick={() => handleBeefClick(beef)}
                     onAuraClick={() => handleAuraClick(beef.id)}
+                    teaser_score={beef.teaser_score}
+                    has_liked_teaser={beef.has_liked_teaser}
+                    onTeaserAuraClick={() => handleTeaserAuraClick(beef.id)}
                     onTagClick={handleTagClick}
                     onDelete={
                       beef.status === 'pending' && user?.id === beef.created_by
