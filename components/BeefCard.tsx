@@ -561,7 +561,7 @@ export function BeefCard({
         </div>
       </div>
 
-      {((status === 'scheduled' && onNotifyClick) ||
+      {((!!scheduled_at && (status === 'scheduled' || status === 'pending') && onNotifyClick) ||
         (status === 'pending' &&
           ((!mediator_name && onSaisirAffaire) ||
             (mediator_name && onValiderRef) ||
@@ -584,7 +584,7 @@ export function BeefCard({
               </button>
             </div>
           )}
-          {status === 'scheduled' && onNotifyClick && (
+          {!!scheduled_at && (status === 'scheduled' || status === 'pending') && onNotifyClick && (
             <button
               type="button"
               onClick={(e) => {
@@ -764,6 +764,27 @@ export function BeefCard({
                     onClick={handleToggleMute}
                     className="h-full w-full object-contain bg-black"
                   />
+                  {onAuraClick && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAuraClick();
+                      }}
+                      className="absolute bottom-20 right-4 z-[9999] flex flex-col items-center gap-1.5 transition-transform hover:scale-105"
+                    >
+                      <div
+                        className={`flex h-12 w-12 items-center justify-center rounded-full border bg-black/60 backdrop-blur-md transition-colors ${
+                          has_liked_by_user ? 'border-volt-500/50' : 'border-white/10 hover:bg-white/20'
+                        }`}
+                      >
+                        <Sparkles className={`h-6 w-6 ${has_liked_by_user ? 'fill-volt-400 text-volt-400' : 'text-white'}`} />
+                      </div>
+                      <span className="font-mono text-xs font-bold text-white drop-shadow-md">
+                        {engagement_score.toLocaleString()}
+                      </span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleToggleMute}
@@ -781,6 +802,27 @@ export function BeefCard({
                     alt={title}
                     className="max-h-[50vh] w-full object-contain bg-black md:max-h-none md:h-full"
                   />
+                  {onAuraClick && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAuraClick();
+                      }}
+                      className="absolute bottom-4 right-4 z-[9999] flex flex-col items-center gap-1.5 transition-transform hover:scale-105"
+                    >
+                      <div
+                        className={`flex h-12 w-12 items-center justify-center rounded-full border bg-black/60 backdrop-blur-md transition-colors ${
+                          has_liked_by_user ? 'border-volt-500/50' : 'border-white/10 hover:bg-white/20'
+                        }`}
+                      >
+                        <Sparkles className={`h-6 w-6 ${has_liked_by_user ? 'fill-volt-400 text-volt-400' : 'text-white'}`} />
+                      </div>
+                      <span className="font-mono text-xs font-bold text-white drop-shadow-md">
+                        {engagement_score.toLocaleString()}
+                      </span>
+                    </button>
+                  )}
                 </>
               ) : (
                 <div className="text-white/30">Aucun média</div>

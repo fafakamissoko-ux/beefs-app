@@ -926,7 +926,7 @@ export default function FeedPage() {
                         : undefined
                     }
                     onNotifyClick={
-                      beef.status === 'scheduled'
+                      beef.status === 'scheduled' || (beef.status === 'pending' && !!beef.scheduled_at)
                         ? () => toast('Bientôt : rappel quand l’heure approche.', 'info')
                         : undefined
                     }
