@@ -10,19 +10,17 @@ self.addEventListener('install', (event) => {
 // Activate — delete ALL old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) =>
-      Promise.all(
-        cacheNames
-          .filter((name) => name !== STATIC_CACHE)
-          .map((name) => caches.delete(name))
-      )
-    )
+    Promise.all([
+      caches.keys().then((cacheNames) =>
+        Promise.all(
+          cacheNames
+            .filter((name) => name !== STATIC_CACHE)
+            .map((name) => caches.delete(name)),
+        ),
+      ),
+      self.clients.claim().catch(() => console.warn('Clients claim bypassed')),
+    ]),
   );
-  try {
-    self.clients.claim();
-  } catch {
-    console.warn('Clients claim bypassed during install phase');
-  }
 });
 
 // Fetch — Network First for everything dynamic

@@ -16,6 +16,7 @@ import { hrefWithFrom } from '@/lib/navigation-return';
 import { useToast } from '@/components/Toast';
 import { mediationCategoryForBeef } from '@/lib/mediation-resolution';
 import { MediationBeefEditorPanel } from '@/components/MediationBeefEditorPanel';
+import { ImageCropModal } from '@/components/ImageCropModal';
 import {
   fetchMediatorViewerReviews,
   type MediatorViewerReviewDisplay,
@@ -104,6 +105,8 @@ export default function ProfileContent() {
   const [uploading, setUploading] = useState(false);
   const [selectedResolutionFilter, setSelectedResolutionFilter] = useState<string | null>(null);
   const [publicPreviewOpen, setPublicPreviewOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [cropType, setCropType] = useState<'avatar' | 'banner' | null>(null);
 
   // Withdrawal state — amounts stored in EUROS for clarity
   const [withdrawalStep, setWithdrawalStep] = useState<'summary' | 'form' | 'confirm' | 'success'>('summary');
@@ -499,73 +502,80 @@ export default function ProfileContent() {
     }
   };
 
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0] || !user) return;
-    
+    const file = e.target.files[0];
+    const url = URL.createObjectURL(file);
+    setCropImageSrc(url);
+    setCropType('banner');
+    e.target.value = '';
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !user) return;
+    const file = e.target.files[0];
+    const url = URL.createObjectURL(file);
+    setCropImageSrc(url);
+    setCropType('avatar');
+    e.target.value = '';
+  };
+
+  const cancelCropModal = useCallback(() => {
+    if (cropImageSrc?.startsWith('blob:')) URL.revokeObjectURL(cropImageSrc);
+    setCropImageSrc(null);
+    setCropType(null);
+  }, [cropImageSrc]);
+
+  const handleProcessCroppedImage = async (croppedBlob: Blob) => {
+    if (!user || !cropType) return;
+    const blobUrlToRevoke = cropImageSrc;
+    setUploading(true);
     try {
-      const file = e.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `banner_${user.id}_${Date.now()}.${fileExt}`;
+      const fileName =
+        cropType === 'banner'
+          ? `banner_${user.id}_${Date.now()}.jpg`
+          : `${user.id}_${Date.now()}.jpg`;
       const filePath = `${user.id}/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, croppedBlob, {
+        upsert: true,
+        contentType: 'image/jpeg',
+      });
 
       if (uploadError) throw uploadError;
 
       const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
 
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ banner_url: data.publicUrl })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      setProfile(prev => prev ? { ...prev, banner_url: data.publicUrl } : null);
-      toast('Bannière mise à jour !', 'success');
+      if (cropType === 'banner') {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ banner_url: data.publicUrl })
+          .eq('id', user.id);
+        if (updateError) throw updateError;
+        setProfile((prev) => (prev ? { ...prev, banner_url: data.publicUrl } : null));
+        toast('Bannière mise à jour !', 'success');
+      } else {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ avatar_url: data.publicUrl })
+          .eq('id', user.id);
+        if (updateError) throw updateError;
+        setProfile((prev) => (prev ? { ...prev, avatar_url: data.publicUrl } : null));
+        toast('Avatar mis à jour avec succès!', 'success');
+      }
     } catch (error) {
-      console.error('Error uploading banner:', error);
-      toast('Erreur lors de l\'upload de la bannière', 'error');
-    }
-  };
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0] || !user) return;
-
-    setUploading(true);
-
-    try {
-      const file = e.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}_${Date.now()}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ avatar_url: data.publicUrl })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      setProfile((prev) => prev ? { ...prev, avatar_url: data.publicUrl } : null);
-      toast('Avatar mis à jour avec succès!', 'success');
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-      toast('Erreur lors de l\'upload de l\'avatar.', 'error');
+      console.error('Error uploading cropped image:', error);
+      toast(
+        cropType === 'banner'
+          ? "Erreur lors de l'upload de la bannière"
+          : "Erreur lors de l'upload de l'avatar.",
+        'error',
+      );
     } finally {
       setUploading(false);
+      if (blobUrlToRevoke?.startsWith('blob:')) URL.revokeObjectURL(blobUrlToRevoke);
+      setCropImageSrc(null);
+      setCropType(null);
     }
   };
 
@@ -1587,6 +1597,16 @@ export default function ProfileContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {cropImageSrc && cropType && (
+        <ImageCropModal
+          imageSrc={cropImageSrc}
+          cropShape={cropType === 'avatar' ? 'round' : 'rect'}
+          aspect={cropType === 'avatar' ? 1 : 3}
+          onCropComplete={(blob) => void handleProcessCroppedImage(blob)}
+          onCancel={cancelCropModal}
+        />
       )}
     </div>
   );
