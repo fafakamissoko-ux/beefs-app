@@ -764,27 +764,6 @@ export function BeefCard({
                     onClick={handleToggleMute}
                     className="h-full w-full object-contain bg-black"
                   />
-                  {onAuraClick && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onAuraClick();
-                      }}
-                      className="absolute bottom-20 right-4 z-[9999] flex flex-col items-center gap-1.5 transition-transform hover:scale-105"
-                    >
-                      <div
-                        className={`flex h-12 w-12 items-center justify-center rounded-full border bg-black/60 backdrop-blur-md transition-colors ${
-                          has_liked_by_user ? 'border-volt-500/50' : 'border-white/10 hover:bg-white/20'
-                        }`}
-                      >
-                        <Sparkles className={`h-6 w-6 ${has_liked_by_user ? 'fill-volt-400 text-volt-400' : 'text-white'}`} />
-                      </div>
-                      <span className="font-mono text-xs font-bold text-white drop-shadow-md">
-                        {engagement_score.toLocaleString()}
-                      </span>
-                    </button>
-                  )}
                   <button
                     type="button"
                     onClick={handleToggleMute}
@@ -802,27 +781,6 @@ export function BeefCard({
                     alt={title}
                     className="max-h-[50vh] w-full object-contain bg-black md:max-h-none md:h-full"
                   />
-                  {onAuraClick && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onAuraClick();
-                      }}
-                      className="absolute bottom-4 right-4 z-[9999] flex flex-col items-center gap-1.5 transition-transform hover:scale-105"
-                    >
-                      <div
-                        className={`flex h-12 w-12 items-center justify-center rounded-full border bg-black/60 backdrop-blur-md transition-colors ${
-                          has_liked_by_user ? 'border-volt-500/50' : 'border-white/10 hover:bg-white/20'
-                        }`}
-                      >
-                        <Sparkles className={`h-6 w-6 ${has_liked_by_user ? 'fill-volt-400 text-volt-400' : 'text-white'}`} />
-                      </div>
-                      <span className="font-mono text-xs font-bold text-white drop-shadow-md">
-                        {engagement_score.toLocaleString()}
-                      </span>
-                    </button>
-                  )}
                 </>
               ) : (
                 <div className="text-white/30">Aucun média</div>
@@ -831,6 +789,29 @@ export function BeefCard({
                 <div className="absolute left-4 top-4 z-20 flex items-center gap-1.5 rounded bg-blood-500 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-white shadow-glow-blood animate-pulse">
                   Live
                 </div>
+              )}
+              {onAuraClick && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAuraClick();
+                  }}
+                  className={`absolute right-4 z-[60] flex flex-col items-center gap-1.5 transition-transform hover:scale-105 ${
+                    video_url ? 'bottom-20' : 'bottom-4'
+                  }`}
+                >
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-full border bg-black/60 backdrop-blur-md transition-colors ${
+                      has_liked_by_user ? 'border-volt-500/50' : 'border-white/10 hover:bg-white/20'
+                    }`}
+                  >
+                    <Sparkles className={`h-6 w-6 ${has_liked_by_user ? 'fill-volt-400 text-volt-400' : 'text-white'}`} />
+                  </div>
+                  <span className="font-mono text-xs font-bold text-white drop-shadow-md">
+                    {engagement_score.toLocaleString()}
+                  </span>
+                </button>
               )}
             </div>
 
