@@ -113,7 +113,8 @@ export function BeefCard({
   const modalVideoRef = useRef<HTMLVideoElement | null>(null);
   const mediaBlockRef = useRef<HTMLDivElement | null>(null);
 
-  const [floatingAuras, setFloatingAuras] = useState<{ id: number; x: number }[]>([]);
+  const [cardFloatingAuras, setCardFloatingAuras] = useState<{ id: number; x: number }[]>([]);
+  const [teaserFloatingAuras, setTeaserFloatingAuras] = useState<{ id: number; x: number }[]>([]);
   const [replayHover, setReplayHover] = useState(false);
   const [isTeaserOpen, setIsTeaserOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -420,8 +421,8 @@ export function BeefCard({
                 e.stopPropagation();
                 if (!has_liked_by_user) {
                   const newId = Date.now() + Math.random();
-                  setFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 30 - 15 }]);
-                  setTimeout(() => setFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
+                  setCardFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 30 - 15 }]);
+                  setTimeout(() => setCardFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
                 }
                 onAuraClick();
               }}
@@ -437,7 +438,7 @@ export function BeefCard({
               aria-label={has_liked_by_user ? "Retirer l'Aura" : "Envoyer de l'Aura"}
             >
               <AnimatePresence>
-                {floatingAuras.map((aura) => (
+                {cardFloatingAuras.map((aura) => (
                   <motion.span
                     key={aura.id}
                     initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
@@ -795,12 +796,31 @@ export function BeefCard({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!has_liked_by_user) {
+                      const newId = Date.now() + Math.random();
+                      setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
+                      setTimeout(() => setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
+                    }
                     onAuraClick();
                   }}
                   className={`absolute right-4 z-[60] flex flex-col items-center gap-1.5 transition-transform hover:scale-105 ${
                     video_url ? 'bottom-20' : 'bottom-4'
                   }`}
                 >
+                  <AnimatePresence>
+                    {teaserFloatingAuras.map((aura) => (
+                      <motion.span
+                        key={aura.id}
+                        initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
+                        animate={{ opacity: 0, y: -40, scale: 1.5 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.65 }}
+                        className="pointer-events-none absolute -top-8 left-1/2 z-50 -translate-x-1/2 text-sm font-black text-volt-400 drop-shadow-[0_0_12px_rgba(223,255,0,0.8)]"
+                      >
+                        +1
+                      </motion.span>
+                    ))}
+                  </AnimatePresence>
                   <div
                     className={`flex h-12 w-12 items-center justify-center rounded-full border bg-black/60 backdrop-blur-md transition-colors ${
                       has_liked_by_user ? 'border-volt-500/50' : 'border-white/10 hover:bg-white/20'
