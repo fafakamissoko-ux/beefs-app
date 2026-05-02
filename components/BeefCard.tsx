@@ -7,6 +7,7 @@ import { Clock, Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, ChevronDo
 import { Countdown } from '@/components/Countdown';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { useToast } from '@/components/Toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BeefCardProps {
   id: string;
@@ -103,8 +104,10 @@ export function BeefCard({
   onPrepareAudience,
   liveAudienceAction,
   intent,
+  created_by,
   index,
 }: BeefCardProps) {
+  const { user } = useAuth();
   const [isMuted, setIsMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const modalVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -598,7 +601,7 @@ export function BeefCard({
           {status === 'pending' && onSaisirAffaire && !mediator_name && (
             <div className="flex w-full flex-col items-center justify-center pt-1">
               <span className="mb-2 text-[10px] font-medium text-gray-400">
-                Aucun juge n&apos;a encore pris cette affaire.
+                Aucun Ref n&apos;a encore pris cette affaire.
               </span>
               <button
                 type="button"
@@ -651,7 +654,9 @@ export function BeefCard({
           {status === 'pending' && !!mediator_name && !onValiderRef && !onSaisirAffaire && (
             <div className="flex w-full flex-col items-center justify-center py-2">
               <span className="text-sm text-center py-4 text-gray-400 font-medium italic">
-                En attente de validation du Ref (@{mediator_name}) par l&apos;initiateur…
+                {user?.id === created_by
+                  ? `En attente de ta validation du Ref (@${mediator_name})…`
+                  : `En attente d'un Ref…`}
               </span>
             </div>
           )}

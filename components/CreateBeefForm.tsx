@@ -16,7 +16,6 @@ import {
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
-import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
 import {
   minDateTimeLocalValue,
   scheduledLocalInputToIso,
@@ -90,19 +89,6 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   const [teaserFile, setTeaserFile] = useState<File | null>(null);
   const [teaserPreview, setTeaserPreview] = useState<string | null>(null);
   const teaserPreviewUrlRef = useRef<string | null>(null);
-
-  const [estimatedSuitePrice, setEstimatedSuitePrice] = useState<number | null>(null);
-  useEffect(() => {
-    if (!user?.id) return;
-    void (async () => {
-      const { count } = await supabase
-        .from('beefs')
-        .select('*', { count: 'exact', head: true })
-        .eq('mediator_id', user.id)
-        .eq('resolution_status', 'resolved');
-      setEstimatedSuitePrice(continuationPriceFromResolvedCount(count ?? 0));
-    })();
-  }, [user?.id]);
 
   useEffect(() => {
     return () => {
@@ -836,37 +822,6 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                   {fieldErrors.scheduled_at && (
                     <p className="pl-8 text-xs text-red-400">⚠️ {fieldErrors.scheduled_at}</p>
                   )}
-                </div>
-
-                <div className="rounded-[2rem] border border-brand-500/30 bg-brand-500/10 p-3">
-                  <p className="mb-2 text-sm font-bold text-brand-400">📋 Récap</p>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between gap-2">
-                      <span className="text-gray-400">Intention</span>
-                      <span className="max-w-[58%] truncate text-right font-semibold text-white">
-                        {intent === 'manifesto' ? 'Manifeste' : 'Médiation'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <span className="text-gray-400">Tags</span>
-                      <span className="font-semibold text-white">{beefData.tags.length}</span>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <span className="text-gray-400">Participants</span>
-                      <span className="font-semibold text-white">{beefData.participants.length}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-[2rem] border border-white/[0.08] bg-white/[0.04] p-3">
-                  <p className="text-sm leading-relaxed text-gray-300">
-                    Après les premières minutes gratuites en direct, les spectateurs peuvent débloquer la suite avec des
-                    points. Palier estimé pour ce beef :{' '}
-                    <span className="font-bold text-brand-400">
-                      {estimatedSuitePrice === null ? '…' : `${estimatedSuitePrice} pts`}
-                    </span>
-                    .
-                  </p>
                 </div>
               </div>
             </div>

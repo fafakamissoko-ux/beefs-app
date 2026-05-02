@@ -346,7 +346,12 @@ export default function FeedPage() {
             byBeef.set(row.beef_id, list);
           }
           const packName = (userId: string) => displayNameFromPublicRow(feedPublicMap.get(userId), '');
-          for (const beef of beefList as { id: string; mediator_id?: string | null; created_by?: string | null }[]) {
+          for (const beef of beefList as {
+            id: string;
+            mediator_id?: string | null;
+            created_by?: string | null;
+            intent?: string | null;
+          }[]) {
             const mid = beef.mediator_id;
             const creatorId = beef.created_by;
             const rows = byBeef.get(beef.id) || [];
@@ -354,7 +359,7 @@ export default function FeedPage() {
             const nonMed = rows.filter((r) => {
               if (r.role === 'witness') return false;
               if (mid && r.user_id === mid) return false;
-              if (!mid && creatorId && r.user_id === creatorId) return false;
+              if (beef.intent !== 'manifesto' && !mid && creatorId && r.user_id === creatorId) return false;
               return true;
             });
             // Inclure les « pending » dès qu’ils sont dans beef_participants : les spectateurs ne voient
