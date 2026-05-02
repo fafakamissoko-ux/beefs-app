@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Flame,
   Calendar,
   AlertTriangle,
   FileText,
@@ -11,7 +10,6 @@ import {
   Check,
   Search,
   UserPlus,
-  Plus,
   ImagePlus,
   Film,
 } from 'lucide-react';
@@ -58,6 +56,24 @@ const initialBeefData = (): BeefData => ({
   participants: [],
   event_type: 'standard',
 });
+
+const getQuickDate = (hoursToAdd: number) => {
+  const d = new Date();
+  d.setHours(d.getHours() + hoursToAdd);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+const getTonight = () => {
+  const d = new Date();
+  d.setHours(21, 0, 0, 0);
+  if (d.getTime() < Date.now()) d.setDate(d.getDate() + 1);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+const getTomorrow = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(20, 0, 0, 0);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
 
 export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   const { user } = useAuth();
@@ -311,11 +327,18 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
         description: beefData.description.trim(),
         tags: beefData.tags,
         scheduled_at: beefData.is_scheduled ? beefData.scheduled_at : '',
-        participants: beefData.participants.map((p) => ({
-          user_id: p.user_id,
-          role: p.role,
-          is_main: p.is_main,
-        })),
+        participants: [
+          ...beefData.participants.map((p) => ({
+            user_id: p.user_id,
+            role: p.role,
+            is_main: p.is_main,
+          })),
+          ...(intent === 'manifesto' &&
+          !beefData.participants.some((p) => p.user_id === user?.id) &&
+          user?.id
+            ? [{ user_id: user.id, role: 'participant' as const, is_main: true }]
+            : []),
+        ],
         teaser_file: teaserFile,
       };
       await onSubmit(payload);
@@ -442,26 +465,6 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                   )}
                 </div>
 
-                <div>
-                  <p className="mb-2 text-sm font-semibold text-white">Calibre</p>
-                  <div className="flex flex-wrap gap-2">
-                    {(['standard', 'prestige'] as const).map((ev) => (
-                      <button
-                        key={ev}
-                        type="button"
-                        onClick={() => updateData('event_type', ev)}
-                        className={`rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all ${
-                          beefData.event_type === ev
-                            ? 'brand-gradient text-black shadow-glow'
-                            : 'border border-white/[0.12] bg-white/[0.04] text-gray-400 hover:border-white/20'
-                        }`}
-                      >
-                        {ev === 'standard' ? 'Standard' : 'Prestige (Affiche)'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 px-1 text-[10px] font-bold uppercase tracking-widest text-white/40">
                     <Film className="h-3.5 w-3.5 shrink-0 text-brand-400" aria-hidden />
@@ -477,14 +480,14 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                         document.getElementById('teaser-upload')?.click();
                       }
                     }}
-                    className="relative flex h-32 cursor-pointer items-center justify-center overflow-hidden rounded-[1.5rem] border-2 border-dashed border-white/10 bg-white/5 transition-all hover:border-brand-500/50 hover:bg-white/10"
+                    className="relative flex aspect-video w-full cursor-pointer items-center justify-center overflow-hidden rounded-[1.5rem] border-2 border-dashed border-white/10 bg-white/5 transition-all hover:border-brand-500/50 hover:bg-white/10"
                   >
                     {teaserPreview ? (
                       teaserFile?.type.startsWith('video/') ? (
                         <div className="relative h-full w-full">
                           <video
                             src={teaserPreview}
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-contain bg-black"
                             muted
                             loop
                             autoPlay
@@ -496,7 +499,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                         </div>
                       ) : (
                         // eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob)
-                        <img src={teaserPreview} className="h-full w-full object-cover" alt="Aperçu teaser" />
+                        <img src={teaserPreview} className="h-full w-full object-contain bg-black" alt="Aperçu teaser" />
                       )
                     ) : (
                       <div className="flex flex-col items-center gap-3 text-white/40">
@@ -747,58 +750,71 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                     <Calendar className="h-4 w-4 shrink-0 text-cyan-400" aria-hidden />
                     Démarrage du beef
                   </div>
-                  {intent === 'mediation' && !beefData.is_scheduled && (
-                    <p className="text-xs text-amber-400/90">
-                      Recommandé : programme une date pour que les parties se préparent.
-                    </p>
-                  )}
-                  <p className="text-xs text-gray-400">
-                    {intent === 'manifesto'
-                      ? 'Optionnel : tu peux lancer sans date fixe.'
-                      : 'Choisis le mode de démarrage.'}
-                  </p>
-                  <label className="flex cursor-pointer items-start gap-2 rounded-lg p-2 hover:bg-white/5">
-                    <input
-                      type="radio"
-                      name="beef-schedule-mode"
-                      checked={!beefData.is_scheduled}
-                      onChange={() => {
-                        setFieldErrors((p) => {
-                          const n = { ...p };
-                          delete n.scheduled_at;
-                          return n;
-                        });
-                        setBeefData((prev) => ({ ...prev, is_scheduled: false, scheduled_at: '' }));
-                      }}
-                      className="mt-1 h-4 w-4 border-gray-600 text-cyan-500 focus:ring-cyan-500"
-                    />
-                    <span>
-                      <span className="block text-sm font-semibold text-white">Dès que c’est prêt</span>
-                      <span className="block text-xs text-gray-400">Pas de date fixée.</span>
-                    </span>
-                  </label>
-                  <label className="flex cursor-pointer items-start gap-2 rounded-lg p-2 hover:bg-white/5">
-                    <input
-                      type="radio"
-                      name="beef-schedule-mode"
-                      checked={beefData.is_scheduled}
-                      onChange={() => {
-                        setFieldErrors((p) => {
-                          const n = { ...p };
-                          delete n.scheduled_at;
-                          return n;
-                        });
-                        setBeefData((prev) => ({
-                          ...prev,
-                          is_scheduled: true,
-                          scheduled_at: prev.scheduled_at?.trim() ? prev.scheduled_at : minDateTimeLocalValue(),
-                        }));
-                      }}
-                      className="mt-1 h-4 w-4 border-gray-600 text-cyan-500 focus:ring-cyan-500"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-white">Programmer date et heure</span>
-                      {beefData.is_scheduled && (
+                  <div className="flex flex-col gap-2">
+                    <label className="flex cursor-pointer items-start gap-2 rounded-lg p-2 hover:bg-white/5">
+                      <input
+                        type="radio"
+                        name="beef-schedule-mode"
+                        checked={!beefData.is_scheduled}
+                        onChange={() => {
+                          setFieldErrors((p) => {
+                            const n = { ...p };
+                            delete n.scheduled_at;
+                            return n;
+                          });
+                          setBeefData((prev) => ({ ...prev, is_scheduled: false, scheduled_at: '' }));
+                        }}
+                        className="mt-1 h-4 w-4 border-gray-600 text-cyan-500 focus:ring-cyan-500"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-white">Dès que c’est prêt</span>
+                        <span className="block text-xs text-gray-400">Pas de date fixée.</span>
+                      </span>
+                    </label>
+                    <label className="flex cursor-pointer items-start gap-2 rounded-lg p-2 hover:bg-white/5">
+                      <input
+                        type="radio"
+                        name="beef-schedule-mode"
+                        checked={beefData.is_scheduled}
+                        onChange={() => {
+                          setFieldErrors((p) => {
+                            const n = { ...p };
+                            delete n.scheduled_at;
+                            return n;
+                          });
+                          setBeefData((prev) => ({ ...prev, is_scheduled: true, scheduled_at: getQuickDate(2) }));
+                        }}
+                        className="mt-1 h-4 w-4 border-gray-600 text-cyan-500 focus:ring-cyan-500"
+                      />
+                      <span className="block text-sm font-semibold text-white">Programmer</span>
+                    </label>
+                  </div>
+                  {beefData.is_scheduled && (
+                    <div className="flex flex-col gap-2 pl-8">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateData('scheduled_at', getQuickDate(2))}
+                          className="rounded-full bg-white/10 px-3 py-1 text-xs text-white transition hover:bg-white/20"
+                        >
+                          Dans 2h
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateData('scheduled_at', getTonight())}
+                          className="rounded-full bg-white/10 px-3 py-1 text-xs text-white transition hover:bg-white/20"
+                        >
+                          Ce soir 21h
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateData('scheduled_at', getTomorrow())}
+                          className="rounded-full bg-white/10 px-3 py-1 text-xs text-white transition hover:bg-white/20"
+                        >
+                          Demain 20h
+                        </button>
+                      </div>
+                      <div className="relative mt-2">
                         <input
                           type="datetime-local"
                           value={beefData.scheduled_at}
@@ -811,13 +827,14 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                               return n;
                             });
                           }}
-                          className="mt-2 min-h-[44px] w-full rounded-[2rem] border border-white/[0.12] bg-black/40 px-3 py-2.5 text-base text-white transition-colors focus:border-cyan-500 focus:outline-none"
+                          style={{ colorScheme: 'dark' }}
+                          className="w-full cursor-pointer rounded-xl border border-white/20 bg-black/60 px-4 py-2.5 text-sm text-white transition-colors focus:border-cyan-500 focus:outline-none"
                         />
-                      )}
-                    </span>
-                  </label>
+                      </div>
+                    </div>
+                  )}
                   {fieldErrors.scheduled_at && (
-                    <p className="text-xs text-red-400">⚠️ {fieldErrors.scheduled_at}</p>
+                    <p className="pl-8 text-xs text-red-400">⚠️ {fieldErrors.scheduled_at}</p>
                   )}
                 </div>
 
@@ -829,10 +846,6 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                       <span className="max-w-[58%] truncate text-right font-semibold text-white">
                         {intent === 'manifesto' ? 'Manifeste' : 'Médiation'}
                       </span>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <span className="text-gray-400">Calibre</span>
-                      <span className="font-semibold text-white">{beefData.event_type}</span>
                     </div>
                     <div className="flex justify-between gap-2">
                       <span className="text-gray-400">Tags</span>

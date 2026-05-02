@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import type { KeyboardEvent } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import type { KeyboardEvent, ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
 import {
   X,
@@ -10,6 +10,8 @@ import {
   FileText,
   AlertTriangle,
   Check,
+  ImagePlus,
+  Film,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -61,13 +63,28 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
   const [searching, setSearching] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  const [teaserFile, setTeaserFile] = useState<File | null>(null);
+  const [teaserPreview, setTeaserPreview] = useState<string | null>(null);
+  const [remotePreviewIsVideo, setRemotePreviewIsVideo] = useState(false);
+  const teaserPreviewUrlRef = useRef<string | null>(null);
+  const baselineMediaRef = useRef<{ video: string | null; thumb: string | null }>({ video: null, thumb: null });
+
+  useEffect(() => {
+    return () => {
+      if (teaserPreviewUrlRef.current) {
+        URL.revokeObjectURL(teaserPreviewUrlRef.current);
+        teaserPreviewUrlRef.current = null;
+      }
+    };
+  }, []);
+
   const loadData = useCallback(async () => {
     if (!user?.id || !beefId) return;
     setLoading(true);
     try {
       const { data: beef, error: beefErr } = await supabase
         .from('beefs')
-        .select('id, title, description, tags, intent, created_by, status')
+        .select('id, title, description, tags, intent, created_by, status, video_url, thumbnail')
         .eq('id', beefId)
         .single();
 
@@ -90,6 +107,17 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
       setTitle(beef.title || '');
       setDescription(beef.description || '');
       setTags(Array.isArray(beef.tags) ? [...beef.tags] : []);
+
+      if (teaserPreviewUrlRef.current) {
+        URL.revokeObjectURL(teaserPreviewUrlRef.current);
+        teaserPreviewUrlRef.current = null;
+      }
+      setTeaserFile(null);
+      const vUrl = beef.video_url as string | null | undefined;
+      const tUrl = beef.thumbnail as string | null | undefined;
+      setRemotePreviewIsVideo(Boolean(vUrl));
+      setTeaserPreview(vUrl || tUrl || null);
+      baselineMediaRef.current = { video: vUrl ?? null, thumb: tUrl ?? null };
 
       const { data: partRows, error: partErr } = await supabase
         .from('beef_participants')
@@ -128,6 +156,29 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setTeaserFile(null);
+      if (teaserPreviewUrlRef.current) {
+        URL.revokeObjectURL(teaserPreviewUrlRef.current);
+        teaserPreviewUrlRef.current = null;
+      }
+      const { video, thumb } = baselineMediaRef.current;
+      setRemotePreviewIsVideo(Boolean(video));
+      setTeaserPreview(video || thumb || null);
+      return;
+    }
+    setTeaserFile(file);
+    setRemotePreviewIsVideo(file.type.startsWith('video/'));
+    if (teaserPreviewUrlRef.current) {
+      URL.revokeObjectURL(teaserPreviewUrlRef.current);
+    }
+    const url = URL.createObjectURL(file);
+    teaserPreviewUrlRef.current = url;
+    setTeaserPreview(url);
+  };
 
   const addTag = (tag: string) => {
     const cleanTag = tag.replace(/^[#$]/, '').trim().toLowerCase();
@@ -259,6 +310,26 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
       removed = removed.filter((id) => !(intent === 'manifesto' && id === user.id));
       const added = participants.filter((p) => !initialIds.has(p.user_id));
 
+      let videoUrlPayload: string | null | undefined;
+      let thumbnailPayload: string | null | undefined;
+
+      if (teaserFile) {
+        const fileExt = teaserFile.name.split('.').pop();
+        const fileName = `${user.id}_${Date.now()}.${fileExt}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage.from('teasers').upload(fileName, teaserFile);
+        if (uploadError) throw uploadError;
+        if (!uploadData) throw new Error('Upload teaser échoué');
+        const { data: publicUrlData } = supabase.storage.from('teasers').getPublicUrl(fileName);
+        const isVideo = teaserFile.type.startsWith('video/');
+        if (isVideo) {
+          videoUrlPayload = publicUrlData.publicUrl;
+          thumbnailPayload = null;
+        } else {
+          thumbnailPayload = publicUrlData.publicUrl;
+          videoUrlPayload = null;
+        }
+      }
+
       const { error: upBeefErr } = await supabase
         .from('beefs')
         .update({
@@ -266,6 +337,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
           subject: title.trim(),
           description: description.trim(),
           tags,
+          ...(teaserFile ? { video_url: videoUrlPayload, thumbnail: thumbnailPayload } : {}),
         })
         .eq('id', beefId)
         .eq('created_by', user.id)
@@ -288,7 +360,6 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
           .in('user_id', removed);
         if (bpDelErr) throw bpDelErr;
       }
-
       for (const p of added) {
         const { error: insP } = await supabase.from('beef_participants').insert({
           beef_id: beefId,
@@ -409,6 +480,65 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                       }`}
                     />
                     {fieldErrors.title && <p className="mt-1 text-xs text-red-400">⚠️ {fieldErrors.title}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 px-1 text-[10px] font-bold uppercase tracking-widest text-white/40">
+                      <Film className="h-3.5 w-3.5 shrink-0 text-brand-400" aria-hidden />
+                      Teaser (Vidéo ou Image)
+                    </label>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => document.getElementById('edit-beef-teaser-upload')?.click()}
+                      onKeyDown={(ev) => {
+                        if (ev.key === 'Enter' || ev.key === ' ') {
+                          ev.preventDefault();
+                          document.getElementById('edit-beef-teaser-upload')?.click();
+                        }
+                      }}
+                      className="relative flex aspect-video w-full cursor-pointer items-center justify-center overflow-hidden rounded-[1.5rem] border-2 border-dashed border-white/10 bg-white/5 transition-all hover:border-brand-500/50 hover:bg-white/10"
+                    >
+                      {teaserPreview ? (
+                        (teaserFile ? teaserFile.type.startsWith('video/') : remotePreviewIsVideo) ? (
+                          <div className="relative h-full w-full">
+                            <video
+                              src={teaserPreview}
+                              className="h-full w-full object-contain bg-black"
+                              muted
+                              loop
+                              autoPlay
+                              playsInline
+                            />
+                            <div className="absolute bottom-2 right-2 rounded-full bg-black/50 p-1.5 backdrop-blur-sm">
+                              <Film className="h-3.5 w-3.5 text-brand-400" aria-hidden />
+                            </div>
+                          </div>
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element -- aperçu distant ou blob
+                          <img
+                            src={teaserPreview}
+                            className="h-full w-full object-contain bg-black"
+                            alt="Aperçu teaser"
+                          />
+                        )
+                      ) : (
+                        <div className="flex flex-col items-center gap-3 text-white/40">
+                          <div className="flex items-center gap-5">
+                            <ImagePlus className="h-6 w-6" aria-hidden />
+                            <Film className="h-6 w-6 text-brand-400" aria-hidden />
+                          </div>
+                          <span className="text-[10px] font-medium uppercase tracking-tighter">Photo ou vidéo</span>
+                        </div>
+                      )}
+                      <input
+                        id="edit-beef-teaser-upload"
+                        type="file"
+                        accept="video/*,image/*"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                    </div>
                   </div>
 
                   <div>

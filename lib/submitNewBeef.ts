@@ -19,8 +19,8 @@ export interface SubmitBeefPayload {
 
 /**
  * Crée un beef + participants / invitations.
- * — mediation : mediator_id = créateur, invitations envoyées aux participants.
- * — manifesto : mediator_id null, créateur inséré en challenger principal (is_main).
+ * — Les lignes `beef_participants` et invitations suivent exactement la liste envoyée par le front
+ *   (`invite_status` accepted pour auth.uid(), pending pour les autres).
  */
 export async function submitNewBeef(
   supabase: SupabaseClient,
@@ -70,54 +70,19 @@ export async function submitNewBeef(
   const { data: beef, error } = await supabase.from('beefs').insert(insertData).select().single();
   if (error) throw new Error(error.message);
 
-  type PartRow = {
-    beef_id: string;
-    user_id: string;
-    role: string;
-    is_main: boolean;
-    invite_status: string;
-  };
-
-  const participantRows: PartRow[] = [];
-
-  if (beefData.intent === 'manifesto') {
-    participantRows.push({
-      beef_id: beef.id,
-      user_id: userId,
-      role: 'participant',
-      is_main: true,
-      invite_status: 'accepted',
-    });
-    const others = (beefData.participants ?? []).filter((p) => p.user_id !== userId);
-    for (const p of others) {
-      participantRows.push({
-        beef_id: beef.id,
-        user_id: p.user_id,
-        role: p.role || 'participant',
-        is_main: Boolean(p.is_main),
-        invite_status: 'pending',
-      });
-    }
-  } else {
-    for (const p of beefData.participants ?? []) {
-      participantRows.push({
-        beef_id: beef.id,
-        user_id: p.user_id,
-        role: p.role || 'participant',
-        is_main: Boolean(p.is_main),
-        invite_status: 'pending',
-      });
-    }
-  }
+  const participantRows = (beefData.participants ?? []).map((p) => ({
+    beef_id: beef.id,
+    user_id: p.user_id,
+    role: p.role || 'participant',
+    is_main: Boolean(p.is_main),
+    invite_status: p.user_id === userId ? 'accepted' : 'pending',
+  }));
 
   if (participantRows.length > 0) {
     const { error: pErr } = await supabase.from('beef_participants').insert(participantRows);
     if (pErr) throw new Error(pErr.message);
 
-    const invitees =
-      beefData.intent === 'manifesto'
-        ? (beefData.participants ?? []).filter((p) => p.user_id !== userId)
-        : beefData.participants ?? [];
+    const invitees = (beefData.participants ?? []).filter((p) => p.user_id !== userId);
 
     if (invitees.length > 0) {
       const { error: invErr } = await supabase.from('beef_invitations').insert(
