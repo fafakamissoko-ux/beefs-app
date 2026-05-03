@@ -43,6 +43,9 @@ interface UserProfile {
   bio?: string;
   avatar_url?: string;
   banner_url?: string | null;
+  /** Upload brut avant recadrage (lightbox HD si présent). */
+  avatar_original_url?: string | null;
+  banner_original_url?: string | null;
   /** Compteurs agrégés (trigger `profile_media_likes`). */
   avatar_likes?: number;
   banner_likes?: number;
@@ -218,6 +221,8 @@ export default function PublicProfilePage() {
           bio?: string | null;
           avatar_url?: string | null;
           banner_url?: string | null;
+          avatar_original_url?: string | null;
+          banner_original_url?: string | null;
           points: number;
           lifetime_points?: number | null;
           is_premium: boolean;
@@ -232,6 +237,8 @@ export default function PublicProfilePage() {
           bio: p.bio,
           avatar_url: p.avatar_url,
           banner_url: p.banner_url,
+          avatar_original_url: p.avatar_original_url ?? null,
+          banner_original_url: p.banner_original_url ?? null,
           points: p.points,
           lifetime_points: p.lifetime_points ?? 0,
           is_premium: p.is_premium,
@@ -253,6 +260,8 @@ export default function PublicProfilePage() {
         lifetime_points: Number.isFinite(lpFromRow) ? lpFromRow : 0,
         avatar_likes: Number(raw.avatar_likes ?? 0),
         banner_likes: Number(raw.banner_likes ?? 0),
+        avatar_original_url: typeof raw.avatar_original_url === 'string' ? raw.avatar_original_url : null,
+        banner_original_url: typeof raw.banner_original_url === 'string' ? raw.banner_original_url : null,
       };
 
       setProfile(pd);
@@ -664,7 +673,12 @@ export default function PublicProfilePage() {
             {profile.banner_url ? (
               <button
                 type="button"
-                onClick={() => setViewingImage({ url: profile.banner_url!, type: 'banner' })}
+                onClick={() =>
+                  setViewingImage({
+                    url: profile.banner_original_url || profile.banner_url!,
+                    type: 'banner',
+                  })
+                }
                 className="absolute inset-0 z-0 h-full w-full cursor-pointer border-0 p-0"
                 aria-label="Voir la bannière en grand"
               >
@@ -682,7 +696,12 @@ export default function PublicProfilePage() {
                 {profile.avatar_url ? (
                   <button
                     type="button"
-                    onClick={() => setViewingImage({ url: profile.avatar_url!, type: 'avatar' })}
+                    onClick={() =>
+                      setViewingImage({
+                        url: profile.avatar_original_url || profile.avatar_url!,
+                        type: 'avatar',
+                      })
+                    }
                     className="relative block h-full w-full cursor-pointer border-0 p-0"
                     aria-label="Voir la photo de profil en grand"
                   >
