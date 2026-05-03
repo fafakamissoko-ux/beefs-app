@@ -654,7 +654,7 @@ export default function FeedPage() {
     }, 1000);
   };
 
-  /** Teaser : jamais de update sur `beefs.teaser_score` — uniquement teaser_likes + trigger SQL ; ici UI optimiste uniquement. */
+  /** Teaser : pas d’optimiste local (évite conflit avec Realtime sur `beefs`) — trigger SQL + canal `beefs_changes` → loadBeefs. */
   const handleTeaserAuraClick = async (beefId: string) => {
     if (!user?.id || isLikingTeaser.current) return;
     isLikingTeaser.current = true;
@@ -664,20 +664,6 @@ export default function FeedPage() {
       return;
     }
     const isCurrentlyLiked = !!targetBeef.has_liked_teaser;
-
-    setBeefs((prev) =>
-      prev.map((b) => {
-        if (b.id === beefId) {
-          const wasLiked = !!b.has_liked_teaser;
-          return {
-            ...b,
-            has_liked_teaser: !wasLiked,
-            teaser_score: Math.max(0, (b.teaser_score || 0) + (wasLiked ? -1 : 1)),
-          };
-        }
-        return b;
-      }),
-    );
 
     try {
       if (isCurrentlyLiked) {
