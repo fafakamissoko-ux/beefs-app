@@ -128,6 +128,8 @@ export default function FeedPage() {
   const [beefToDelete, setBeefToDelete] = useState<string | null>(null);
   const [editBeefId, setEditBeefId] = useState<string | null>(null);
   const [beefToForfeit, setBeefToForfeit] = useState<string | null>(null);
+  const isLikingCard = useRef(false);
+  const isLikingTeaser = useRef(false);
 
   useEffect(() => {
     try {
@@ -613,9 +615,13 @@ export default function FeedPage() {
   };
 
   const handleAuraClick = async (beefId: string) => {
-    if (!user?.id) return;
+    if (!user?.id || isLikingCard.current) return;
+    isLikingCard.current = true;
     const targetBeef = beefs.find((b) => b.id === beefId);
-    if (!targetBeef) return;
+    if (!targetBeef) {
+      isLikingCard.current = false;
+      return;
+    }
     const isCurrentlyLiked = !!targetBeef.has_liked_by_user;
 
     setBeefs((prev) =>
@@ -643,13 +649,20 @@ export default function FeedPage() {
     } catch (error) {
       console.error('Erreur lors du vote Aura:', error);
     }
+    setTimeout(() => {
+      isLikingCard.current = false;
+    }, 1000);
   };
 
   /** Teaser : jamais de update sur `beefs.teaser_score` — uniquement teaser_likes + trigger SQL ; ici UI optimiste uniquement. */
   const handleTeaserAuraClick = async (beefId: string) => {
-    if (!user?.id) return;
+    if (!user?.id || isLikingTeaser.current) return;
+    isLikingTeaser.current = true;
     const targetBeef = beefs.find((b) => b.id === beefId);
-    if (!targetBeef) return;
+    if (!targetBeef) {
+      isLikingTeaser.current = false;
+      return;
+    }
     const isCurrentlyLiked = !!targetBeef.has_liked_teaser;
 
     setBeefs((prev) =>
@@ -680,6 +693,9 @@ export default function FeedPage() {
     } catch (error) {
       console.error('Erreur lors du vote Aura (teaser):', error);
     }
+    setTimeout(() => {
+      isLikingTeaser.current = false;
+    }, 1000);
   };
 
   const handleBeefClick = (beef: Beef) => {
