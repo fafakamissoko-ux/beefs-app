@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
-import { Share2, Flame, Calendar, MoreVertical, Star, TrendingUp, X } from 'lucide-react';
+import { Share2, Flame, Calendar, MoreVertical, Star, TrendingUp, X, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,6 +43,9 @@ interface UserProfile {
   bio?: string;
   avatar_url?: string;
   banner_url?: string | null;
+  /** Compteurs agrégés (trigger `profile_media_likes`). */
+  avatar_likes?: number;
+  banner_likes?: number;
   points: number;
   lifetime_points?: number;
   is_premium: boolean;
@@ -123,45 +126,29 @@ export default function PublicProfilePage() {
   const [viewingImage, setViewingImage] = useState<{ url: string; type: 'avatar' | 'banner' } | null>(null);
   const [auraDonors, setAuraDonors] = useState<any[]>([]);
   const [showDonors, setShowDonors] = useState(false);
-  const [transmitAuraLoading, setTransmitAuraLoading] = useState(false);
-  const [hasTransmittedAura, setHasTransmittedAura] = useState(false);
+  const [mediaAuraLoading, setMediaAuraLoading] = useState(false);
+  const [mediaLikes, setMediaLikes] = useState({
+    avatar: { count: 0, liked: false },
+    banner: { count: 0, liked: false },
+  });
   const [dopamineBursts, setDopamineBursts] = useState<
-    { id: number; text: string; minus?: boolean; anchor: 'follow' | 'aura' }[]
+    { id: number; text: string; minus?: boolean; anchor: 'follow' | 'aura'; solar?: boolean }[]
   >([]);
   const burstSeq = useRef(0);
 
-  const queueBurst = useCallback((text: string, anchor: 'follow' | 'aura', minus = false) => {
-    const id = ++burstSeq.current;
-    setDopamineBursts((prev) => [...prev, { id, text, minus, anchor }]);
-    setTimeout(() => {
-      setDopamineBursts((prev) => prev.filter((b) => b.id !== id));
-    }, 520);
-  }, []);
+  const queueBurst = useCallback(
+    (text: string, anchor: 'follow' | 'aura', minus = false, solar = false) => {
+      const id = ++burstSeq.current;
+      setDopamineBursts((prev) => [...prev, { id, text, minus, anchor, solar }]);
+      setTimeout(() => {
+        setDopamineBursts((prev) => prev.filter((b) => b.id !== id));
+      }, 520);
+    },
+    [],
+  );
 
   // Check if it's the current user's profile
   const isOwnProfile = user && profile && user.id === profile.id;
-
-  useEffect(() => {
-    if (!user || !profile || user.id === profile.id) {
-      setHasTransmittedAura(false);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      const { data } = await supabase
-        .from('aura_sparks')
-        .select('id')
-        .eq('entity_id', profile.id)
-        .eq('giver_id', user.id)
-        .eq('source_kind', 'profile')
-        .maybeSingle();
-      if (!cancelled) setHasTransmittedAura(!!data);
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- resync sparkle sur changement d’identité utilisateur/profil uniquement
-  }, [profile?.id, user?.id]);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -235,6 +222,8 @@ export default function PublicProfilePage() {
           lifetime_points?: number | null;
           is_premium: boolean;
           created_at: string;
+          avatar_likes?: number | null;
+          banner_likes?: number | null;
         };
         profileData = {
           id: p.id,
@@ -247,6 +236,8 @@ export default function PublicProfilePage() {
           lifetime_points: p.lifetime_points ?? 0,
           is_premium: p.is_premium,
           created_at: p.created_at,
+          avatar_likes: Number(p.avatar_likes ?? 0),
+          banner_likes: Number(p.banner_likes ?? 0),
         };
       }
 
@@ -260,6 +251,8 @@ export default function PublicProfilePage() {
       const pd: UserProfile = {
         ...(profileData as unknown as UserProfile),
         lifetime_points: Number.isFinite(lpFromRow) ? lpFromRow : 0,
+        avatar_likes: Number(raw.avatar_likes ?? 0),
+        banner_likes: Number(raw.banner_likes ?? 0),
       };
 
       setProfile(pd);
@@ -331,6 +324,10 @@ export default function PublicProfilePage() {
 
         const viewerReviewsGuest = await fetchMediatorViewerReviews(supabase, pd.id);
         setMediatorReviews(viewerReviewsGuest);
+        setMediaLikes({
+          avatar: { count: pd.avatar_likes ?? 0, liked: false },
+          banner: { count: pd.banner_likes ?? 0, liked: false },
+        });
         return;
       }
 
@@ -434,6 +431,25 @@ export default function PublicProfilePage() {
 
       const viewerReviews = await fetchMediatorViewerReviews(supabase, pd.id);
       setMediatorReviews(viewerReviews);
+
+      let likedAvatar = false;
+      let likedBanner = false;
+      if (authUser && authUser.id !== pd.id) {
+        const { data: myMediaLikes } = await supabase
+          .from('profile_media_likes')
+          .select('media_type')
+          .eq('media_owner_id', pd.id)
+          .eq('user_id', authUser.id);
+        for (const row of myMediaLikes || []) {
+          const mt = (row as { media_type?: string }).media_type;
+          if (mt === 'avatar') likedAvatar = true;
+          if (mt === 'banner') likedBanner = true;
+        }
+      }
+      setMediaLikes({
+        avatar: { count: pd.avatar_likes ?? 0, liked: likedAvatar },
+        banner: { count: pd.banner_likes ?? 0, liked: likedBanner },
+      });
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {
@@ -476,68 +492,65 @@ export default function PublicProfilePage() {
     setAuraDonors(rows);
   }, [profile?.id]);
 
-  const handleAuraTransmissionToggle = useCallback(async () => {
-    if (!profile) return;
+  const handleMediaAuraClick = useCallback(async () => {
+    if (!profile || !viewingImage) return;
     if (!user) {
-      toast('Connectez-vous pour transmettre de l’Aura.', 'info');
+      toast('Connectez-vous pour liker ce média.', 'info');
       router.push('/login');
       return;
     }
     if (user.id === profile.id) {
-      toast('L’Aura ne s’auto-attribue pas', 'error');
+      toast('Tu ne peux pas liker ton propre média.', 'info');
       return;
     }
 
-    setTransmitAuraLoading(true);
+    const type = viewingImage.type;
+    const wasLiked = mediaLikes[type].liked;
+
+    setMediaLikes((prev) => {
+      const cur = prev[type];
+      const nextLiked = !cur.liked;
+      return {
+        ...prev,
+        [type]: {
+          liked: nextLiked,
+          count: Math.max(0, cur.count + (nextLiked ? 1 : -1)),
+        },
+      };
+    });
+
+    queueBurst(wasLiked ? '-1 ✨' : '+1 ✨', 'aura', wasLiked, true);
+
+    setMediaAuraLoading(true);
     try {
-      if (hasTransmittedAura) {
-        const { data: revoked, error } = await supabase.rpc('revoke_profile_aura', {
-          p_entity_id: profile.id,
+      if (wasLiked) {
+        const { error } = await supabase.from('profile_media_likes').delete().match({
+          media_owner_id: profile.id,
+          user_id: user.id,
+          media_type: type,
         });
-        if (error) {
-          toast(error.message || 'Impossible de retirer l’Aura pour le moment.', 'error');
-          return;
-        }
-        if (revoked === true) {
-          setHasTransmittedAura(false);
-          setProfile((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  lifetime_points: Math.max(0, (prev.lifetime_points ?? 0) - 1),
-                }
-              : null,
-          );
-          queueBurst('-1 ✨', 'aura', true);
-          toast('Tu as retiré ton Aura de ce profil.', 'success');
-        } else {
-          setHasTransmittedAura(false);
-        }
+        if (error) throw error;
       } else {
-        const { data: granted, error } = await supabase.rpc('transmit_aura', { p_entity_id: profile.id });
-        if (error) {
-          toast(error.message || 'Impossible de transmettre l’Aura pour le moment.', 'error');
-          return;
-        }
-        if (granted === true) {
-          setHasTransmittedAura(true);
-          setProfile((prev) =>
-            prev
-              ? { ...prev, lifetime_points: (prev.lifetime_points ?? 0) + 1 }
-              : null,
-          );
-          queueBurst('+1 ✨', 'aura');
-          toast('✨ Aura transmise !', 'success');
-        } else {
-          setHasTransmittedAura(true);
-          toast('Ton Aura était déjà enregistrée sur ce profil.', 'info');
-        }
+        const { error } = await supabase.from('profile_media_likes').insert({
+          media_owner_id: profile.id,
+          user_id: user.id,
+          media_type: type,
+        });
+        if (error) throw error;
       }
-      void fetchDonors();
+    } catch {
+      toast('Impossible de mettre à jour ce like.', 'error');
+      setMediaLikes((prev) => ({
+        ...prev,
+        [type]: {
+          liked: wasLiked,
+          count: Math.max(0, prev[type].count + (wasLiked ? 1 : -1)),
+        },
+      }));
     } finally {
-      setTransmitAuraLoading(false);
+      setMediaAuraLoading(false);
     }
-  }, [profile, user, toast, router, fetchDonors, hasTransmittedAura, queueBurst]);
+  }, [profile, viewingImage, user, mediaLikes, toast, router, queueBurst]);
 
   useEffect(() => {
     if (!viewingImage || !profile?.id) {
@@ -1055,7 +1068,11 @@ export default function PublicProfilePage() {
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.5 }}
                         className={`pointer-events-none absolute left-1/2 top-12 z-[120] -translate-x-1/2 whitespace-nowrap font-black text-xl md:text-2xl ${
-                          b.minus ? 'text-gray-400' : 'text-brand-300'
+                          b.minus
+                            ? 'text-gray-400'
+                            : b.solar
+                              ? 'text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
+                              : 'text-brand-300'
                         }`}
                       >
                         {b.text}
@@ -1066,31 +1083,38 @@ export default function PublicProfilePage() {
                 <button
                   type="button"
                   onClick={() => {
-                    void handleAuraTransmissionToggle();
+                    void handleMediaAuraClick();
                   }}
-                  disabled={transmitAuraLoading || !!isOwnProfile || !profile}
+                  disabled={mediaAuraLoading || !!isOwnProfile || !profile}
                   title={
-                    isOwnProfile
-                      ? 'L’Aura ne s’auto-attribue pas'
-                      : hasTransmittedAura
-                        ? 'Retirer ton Aura de ce profil'
-                        : 'Transmettre de l’Aura'
+                    isOwnProfile ? 'Tu ne peux pas liker ton propre média' : 'Aura sur ce média'
                   }
-                  role="switch"
-                  aria-checked={hasTransmittedAura}
-                  aria-label={hasTransmittedAura ? 'Retirer mon Aura transmise' : 'Transmettre de l’Aura'}
-                  className={`relative flex items-center gap-3 rounded-full px-8 py-4 font-black text-lg transition-transform hover:scale-105 disabled:pointer-events-none disabled:opacity-45 ${
-                    hasTransmittedAura && !isOwnProfile
-                      ? 'border-2 border-brand-400 bg-white/10 text-white shadow-[0_0_24px_rgba(232,58,20,0.35)] hover:bg-white/15'
-                      : 'text-black shadow-[0_0_30px_rgba(232,58,20,0.4)] brand-gradient'
+                  aria-pressed={mediaLikes[viewingImage.type].liked}
+                  aria-label={
+                    viewingImage.type === 'avatar'
+                      ? 'Aura sur la photo de profil'
+                      : 'Aura sur la bannière'
+                  }
+                  className={`relative flex items-center gap-3 rounded-full border-2 px-8 py-4 font-black text-lg transition-transform hover:scale-105 disabled:pointer-events-none disabled:opacity-45 ${
+                    mediaLikes[viewingImage.type].liked && !isOwnProfile
+                      ? 'border-yellow-400/50 bg-black/40 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)] hover:bg-black/55'
+                      : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
                   }`}
                 >
-                  <Flame className="h-6 w-6" />
-                  {transmitAuraLoading
-                    ? 'Mise à jour…'
-                    : hasTransmittedAura && !isOwnProfile
-                      ? 'Aura transmise · Retirer'
-                      : 'Transmettre de l’Aura'}
+                  <Sparkles
+                    className={`h-6 w-6 ${
+                      mediaLikes[viewingImage.type].liked && !isOwnProfile
+                        ? 'fill-yellow-400 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
+                        : 'text-white'
+                    }`}
+                  />
+                  {mediaAuraLoading ? (
+                    'Mise à jour…'
+                  ) : (
+                    <span className="font-mono tabular-nums">
+                      {(mediaLikes[viewingImage.type].count ?? 0).toLocaleString()}
+                    </span>
+                  )}
                 </button>
               </div>
 

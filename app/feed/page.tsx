@@ -645,6 +645,7 @@ export default function FeedPage() {
     }
   };
 
+  /** Teaser : jamais de update sur `beefs.teaser_score` — uniquement teaser_likes + trigger SQL ; ici UI optimiste uniquement. */
   const handleTeaserAuraClick = async (beefId: string) => {
     if (!user?.id) return;
     const targetBeef = beefs.find((b) => b.id === beefId);
