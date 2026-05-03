@@ -127,8 +127,6 @@ export default function PublicProfilePage() {
   const [mediatorReviews, setMediatorReviews] = useState<MediatorViewerReviewDisplay[]>([]);
   const [activeTab, setActiveTab] = useState<'debates' | 'participations' | 'reviews'>('debates');
   const [viewingImage, setViewingImage] = useState<{ url: string; type: 'avatar' | 'banner' } | null>(null);
-  const [auraDonors, setAuraDonors] = useState<any[]>([]);
-  const [showDonors, setShowDonors] = useState(false);
   const [mediaAuraLoading, setMediaAuraLoading] = useState(false);
   const [mediaLikes, setMediaLikes] = useState({
     avatar: { count: 0, liked: false },
@@ -466,41 +464,6 @@ export default function PublicProfilePage() {
     }
   }, [username, user]);
 
-  const fetchDonors = useCallback(async () => {
-    const entityId = profile?.id;
-    if (!entityId) {
-      setAuraDonors([]);
-      return;
-    }
-    const { data, error } = await supabase
-      .from('aura_sparks')
-      .select('giver_id, users(display_name, username, avatar_url)')
-      .eq('entity_id', entityId);
-    if (error) {
-      console.warn('[profile] aura_sparks donors', error);
-      setAuraDonors([]);
-      return;
-    }
-    const seen = new Set<string>();
-    const rows: any[] = [];
-    for (const row of data ?? []) {
-      const r = row as {
-        giver_id: string;
-        users?: { display_name?: string | null; username?: string | null; avatar_url?: string | null } | null | Array<{
-          display_name?: string | null;
-          username?: string | null;
-          avatar_url?: string | null;
-        }>;
-      };
-      const gid = r.giver_id;
-      if (!gid || seen.has(gid)) continue;
-      seen.add(gid);
-      const u = Array.isArray(r.users) ? r.users[0] : r.users;
-      rows.push({ giver_id: gid, users: u ?? null });
-    }
-    setAuraDonors(rows);
-  }, [profile?.id]);
-
   const handleMediaAuraClick = useCallback(async () => {
     if (!profile || !viewingImage) return;
     if (!user) {
@@ -560,15 +523,6 @@ export default function PublicProfilePage() {
       setMediaAuraLoading(false);
     }
   }, [profile, viewingImage, user, mediaLikes, toast, router, queueBurst]);
-
-  useEffect(() => {
-    if (!viewingImage || !profile?.id) {
-      setAuraDonors([]);
-      setShowDonors(false);
-      return;
-    }
-    void fetchDonors();
-  }, [viewingImage, profile?.id, fetchDonors]);
 
   useEffect(() => {
     void loadProfile();
@@ -1136,54 +1090,6 @@ export default function PublicProfilePage() {
                   )}
                 </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setShowDonors((v) => !v)}
-                className="mt-4 flex items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white/90 backdrop-blur-md transition-colors hover:bg-white/10"
-              >
-                <span aria-hidden>✨</span>
-                {auraDonors.length} Aura transmises
-              </button>
-
-              {showDonors && (
-                <div className="mt-3 w-full max-w-md rounded-xl border border-white/10 bg-black/55 p-3 backdrop-blur-md max-h-52 overflow-y-auto">
-                  {auraDonors.length === 0 ? (
-                    <p className="text-center text-xs text-gray-500">Aucune transmission pour l’instant.</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {auraDonors.map((d: { giver_id: string; users?: { display_name?: string | null; username?: string | null; avatar_url?: string | null } | null }) => {
-                        const u = d.users;
-                        const name = (u?.display_name || u?.username || 'Membre').trim();
-                        const un = (u?.username || '').trim();
-                        return (
-                          <li key={d.giver_id} className="flex items-center gap-3 rounded-lg bg-white/[0.04] px-2 py-2">
-                            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-white/10">
-                              {u?.avatar_url ? (
-                                <Image src={u.avatar_url} alt="" fill className="object-cover" sizes="36px" />
-                              ) : (
-                                <span className="flex h-full w-full items-center justify-center text-xs font-bold text-white/70">
-                                  {name[0]?.toUpperCase() ?? '?'}
-                                </span>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              {un ? (
-                                <ProfileUserLink username={un} className="truncate font-semibold text-white hover:underline">
-                                  {name}
-                                </ProfileUserLink>
-                              ) : (
-                                <span className="truncate font-semibold text-white">{name}</span>
-                              )}
-                              {un ? <p className="truncate text-[11px] text-gray-500">@{un}</p> : null}
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              )}
             </div>
           </motion.div>
         )}
