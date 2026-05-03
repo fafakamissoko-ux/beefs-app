@@ -4181,7 +4181,7 @@ export function TikTokStyleArena({
               </button>
 
               <div className="relative h-28 bg-gradient-to-r from-brand-500/20 via-brand-400/20 to-brand-600/20">
-                <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10" />
+                <div className="absolute inset-0 bg-white/5" />
               </div>
 
               <div className="relative px-6 pb-6 -mt-12">

@@ -822,7 +822,7 @@ export function BeefCard({
                         animate={{ opacity: 0, y: -40, scale: 1.5 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.65 }}
-                        className="pointer-events-none absolute -top-8 left-1/2 z-50 -translate-x-1/2 text-sm font-black text-volt-400 drop-shadow-[0_0_12px_rgba(223,255,0,0.8)]"
+                        className="pointer-events-none absolute -top-8 left-1/2 z-50 -translate-x-1/2 text-sm font-black text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]"
                       >
                         +1
                       </motion.span>
@@ -830,12 +830,26 @@ export function BeefCard({
                   </AnimatePresence>
                   <div
                     className={`flex h-12 w-12 items-center justify-center rounded-full border bg-black/60 backdrop-blur-md transition-colors ${
-                      has_liked_teaser ? 'border-volt-500/50' : 'border-white/10 hover:bg-white/20'
+                      has_liked_teaser
+                        ? 'border-yellow-400/50 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
+                        : 'border-white/10 hover:bg-white/20'
                     }`}
                   >
-                    <Sparkles className={`h-6 w-6 ${has_liked_teaser ? 'fill-volt-400 text-volt-400' : 'text-white'}`} />
+                    <Sparkles
+                      className={`h-6 w-6 ${
+                        has_liked_teaser
+                          ? 'fill-yellow-400 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
+                          : 'text-white'
+                      }`}
+                    />
                   </div>
-                  <span className="font-mono text-xs font-bold text-white drop-shadow-md">
+                  <span
+                    className={`font-mono text-xs font-bold drop-shadow-md ${
+                      has_liked_teaser
+                        ? 'text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
+                        : 'text-white'
+                    }`}
+                  >
                     {(teaser_score || 0).toLocaleString()}
                   </span>
                 </button>

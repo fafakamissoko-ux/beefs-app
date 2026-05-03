@@ -36,6 +36,8 @@ interface UserProfile {
   bio?: string;
   avatar_url?: string;
   banner_url?: string;
+  avatar_original_url?: string | null;
+  banner_original_url?: string | null;
   accent_color?: string;
   points: number;
   lifetime_points?: number;
@@ -107,6 +109,7 @@ export default function ProfileContent() {
   const [publicPreviewOpen, setPublicPreviewOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [cropType, setCropType] = useState<'avatar' | 'banner' | null>(null);
+  const [cropOriginalFile, setCropOriginalFile] = useState<File | null>(null);
 
   // Withdrawal state — amounts stored in EUROS for clarity
   const [withdrawalStep, setWithdrawalStep] = useState<'summary' | 'form' | 'confirm' | 'success'>('summary');
@@ -227,6 +230,8 @@ export default function ProfileContent() {
             bio: data.bio,
             avatar_url: data.avatar_url,
             banner_url: data.banner_url,
+            avatar_original_url: data.avatar_original_url,
+            banner_original_url: data.banner_original_url,
             accent_color: data.accent_color || '#E83A14',
             points: data.points || 0,
             lifetime_points: data.lifetime_points || 0,
@@ -506,6 +511,7 @@ export default function ProfileContent() {
     if (!e.target.files || !e.target.files[0] || !user) return;
     const file = e.target.files[0];
     const url = URL.createObjectURL(file);
+    setCropOriginalFile(file);
     setCropImageSrc(url);
     setCropType('banner');
     e.target.value = '';
@@ -515,6 +521,7 @@ export default function ProfileContent() {
     if (!e.target.files || !e.target.files[0] || !user) return;
     const file = e.target.files[0];
     const url = URL.createObjectURL(file);
+    setCropOriginalFile(file);
     setCropImageSrc(url);
     setCropType('avatar');
     e.target.value = '';
@@ -524,43 +531,62 @@ export default function ProfileContent() {
     if (cropImageSrc?.startsWith('blob:')) URL.revokeObjectURL(cropImageSrc);
     setCropImageSrc(null);
     setCropType(null);
+    setCropOriginalFile(null);
   }, [cropImageSrc]);
 
   const handleProcessCroppedImage = async (croppedBlob: Blob) => {
-    if (!user || !cropType) return;
+    if (!user || !cropType || !cropOriginalFile) {
+      toast('Fichier source introuvable.', 'error');
+      return;
+    }
     const blobUrlToRevoke = cropImageSrc;
+    const originalFile = cropOriginalFile;
     setUploading(true);
     try {
-      const fileName =
-        cropType === 'banner'
-          ? `banner_${user.id}_${Date.now()}.jpg`
-          : `${user.id}_${Date.now()}.jpg`;
-      const filePath = `${user.id}/${fileName}`;
+      const rawParts = originalFile.name.split('.');
+      const rawExt = rawParts.length > 1 ? rawParts.pop()! : 'jpg';
+      const safeExt = rawExt.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+      const ts = Date.now();
 
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, croppedBlob, {
+      const originalPath = `${user.id}/original_${user.id}_${ts}.${safeExt}`;
+      const cropPath = `${user.id}/${user.id}_${ts}.jpg`;
+
+      const { error: upOriginalError } = await supabase.storage.from('avatars').upload(originalPath, originalFile, {
+        upsert: true,
+        contentType: originalFile.type || 'application/octet-stream',
+      });
+      if (upOriginalError) throw upOriginalError;
+
+      const { error: upCropError } = await supabase.storage.from('avatars').upload(cropPath, croppedBlob, {
         upsert: true,
         contentType: 'image/jpeg',
       });
+      if (upCropError) throw upCropError;
 
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const { data: originalRef } = supabase.storage.from('avatars').getPublicUrl(originalPath);
+      const { data: cropRef } = supabase.storage.from('avatars').getPublicUrl(cropPath);
+      const originalUrl = originalRef.publicUrl;
+      const cropUrl = cropRef.publicUrl;
 
       if (cropType === 'banner') {
         const { error: updateError } = await supabase
           .from('users')
-          .update({ banner_url: data.publicUrl })
+          .update({ banner_url: cropUrl, banner_original_url: originalUrl })
           .eq('id', user.id);
         if (updateError) throw updateError;
-        setProfile((prev) => (prev ? { ...prev, banner_url: data.publicUrl } : null));
+        setProfile((prev) =>
+          prev ? { ...prev, banner_url: cropUrl, banner_original_url: originalUrl } : null,
+        );
         toast('Bannière mise à jour !', 'success');
       } else {
         const { error: updateError } = await supabase
           .from('users')
-          .update({ avatar_url: data.publicUrl })
+          .update({ avatar_url: cropUrl, avatar_original_url: originalUrl })
           .eq('id', user.id);
         if (updateError) throw updateError;
-        setProfile((prev) => (prev ? { ...prev, avatar_url: data.publicUrl } : null));
+        setProfile((prev) =>
+          prev ? { ...prev, avatar_url: cropUrl, avatar_original_url: originalUrl } : null,
+        );
         toast('Avatar mis à jour avec succès!', 'success');
       }
     } catch (error) {
@@ -576,6 +602,7 @@ export default function ProfileContent() {
       if (blobUrlToRevoke?.startsWith('blob:')) URL.revokeObjectURL(blobUrlToRevoke);
       setCropImageSrc(null);
       setCropType(null);
+      setCropOriginalFile(null);
     }
   };
 
@@ -1599,11 +1626,11 @@ export default function ProfileContent() {
         </div>
       )}
 
-      {cropImageSrc && cropType && (
+      {cropImageSrc && (
         <ImageCropModal
           imageSrc={cropImageSrc}
-          cropShape={cropType === 'avatar' ? 'round' : 'rect'}
-          aspect={cropType === 'avatar' ? 1 : 3}
+          cropShape={cropType === 'banner' ? 'rect' : 'round'}
+          aspect={cropType === 'banner' ? 3 : 1}
           onCropComplete={(blob) => void handleProcessCroppedImage(blob)}
           onCancel={cancelCropModal}
         />

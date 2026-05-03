@@ -18,7 +18,7 @@ self.addEventListener('activate', (event) => {
             .map((name) => caches.delete(name)),
         ),
       ),
-      self.clients.claim().catch(() => console.warn('Clients claim bypassed')),
+      self.clients.claim().catch(() => {}),
     ]),
   );
 });

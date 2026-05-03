@@ -658,7 +658,7 @@ export default function PublicProfilePage() {
                 <Image src={profile.banner_url} alt="Bannière" fill className="object-cover" sizes="100vw" priority />
               </button>
             ) : (
-              <div className="pointer-events-none absolute inset-0 z-0 bg-[url('/grid-pattern.svg')] opacity-10" />
+              <div className="pointer-events-none absolute inset-0 z-0 bg-white/5" />
             )}
           </div>
 
