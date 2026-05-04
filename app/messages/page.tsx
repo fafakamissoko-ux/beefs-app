@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense, type KeyboardEvent 
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck, X } from 'lucide-react';
+import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck, X, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
@@ -37,6 +37,7 @@ interface Message {
   is_read: boolean;
   reply_to_id?: string | null;
   reactions?: Record<string, string[]> | null;
+  is_deleted?: boolean;
 }
 
 const DM_WITH_UUID_RE =
@@ -68,6 +69,7 @@ function MessagesPageInner() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dmDeepLinkLockRef = useRef(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [messageMenu, setMessageMenu] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -144,29 +146,38 @@ function MessagesPageInner() {
     }
   }, [messages, selectedConv, scrollToBottom]);
 
-  // Real-time messages
+  // Real-time messages & updates
   useEffect(() => {
     if (!selectedConv) return;
 
     const channel = supabase
       .channel(`dm_${selectedConv.id}`)
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'direct_messages',
         filter: `conversation_id=eq.${selectedConv.id}`,
       }, (payload) => {
-        const msg = payload.new as Message;
-        if (msg.sender_id !== user?.id) {
-          setMessages(prev => [...prev, msg]);
-          supabase.from('direct_messages').update({ is_read: true }).eq('id', msg.id).then(() => {});
-          supabase.from('notifications')
-            .update({ is_read: true })
-            .eq('user_id', user?.id || '')
-            .eq('type', 'message')
-            .or('is_read.is.null,is_read.eq.false')
-            .filter('metadata->>conversation_id', 'eq', selectedConv.id)
-            .then(() => {});
+        if (payload.eventType === 'INSERT') {
+          const msg = payload.new as Message;
+          if (msg.sender_id !== user?.id) {
+            setMessages(prev => [...prev, msg]);
+            supabase.from('direct_messages').update({ is_read: true }).eq('id', msg.id).then(() => {});
+            supabase.from('notifications')
+              .update({ is_read: true })
+              .eq('user_id', user?.id || '')
+              .eq('type', 'message')
+              .or('is_read.is.null,is_read.eq.false')
+              .filter('metadata->>conversation_id', 'eq', selectedConv.id)
+              .then(() => {});
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const msg = payload.new as Message;
+          if (msg.is_deleted) {
+            setMessages(prev => prev.filter(m => m.id !== msg.id));
+          } else {
+            setMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
+          }
         }
       })
       .subscribe();
@@ -176,6 +187,7 @@ function MessagesPageInner() {
 
   const loadMessages = useCallback(async (conv: Conversation) => {
     setReplyingTo(null);
+    setMessageMenu(null);
     setSelectedConv(conv);
     setLoadingMsgs(true);
     try {
@@ -266,6 +278,27 @@ function MessagesPageInner() {
       last_message_text: clean,
       last_message_at: new Date().toISOString(),
     }).eq('id', selectedConv.id);
+  };
+
+  const toggleReaction = async (msg: Message, emoji: string) => {
+    if (!user) return;
+    const currentReactions = msg.reactions || {};
+    const usersReacted = currentReactions[emoji] || [];
+    const hasReacted = usersReacted.includes(user.id);
+
+    const newUsers = hasReacted ? usersReacted.filter(id => id !== user.id) : [...usersReacted, user.id];
+
+    const newReactions = { ...currentReactions, [emoji]: newUsers };
+    if (newUsers.length === 0) delete newReactions[emoji];
+
+    setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, reactions: newReactions } : m));
+    await supabase.from('direct_messages').update({ reactions: newReactions }).eq('id', msg.id);
+  };
+
+  const deleteMessage = async (msgId: string) => {
+    setMessages(prev => prev.filter(m => m.id !== msgId));
+    await supabase.from('direct_messages').update({ is_deleted: true }).eq('id', msgId);
+    setMessageMenu(null);
   };
 
   const searchUsers = async (query: string) => {
@@ -599,7 +632,7 @@ function MessagesPageInner() {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" onClick={() => setMessageMenu(null)}>
                 {loadingMsgs ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
@@ -618,10 +651,49 @@ function MessagesPageInner() {
                         key={msg.id}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                        onContextMenu={(e) => { e.preventDefault(); setMessageMenu(msg.id); }}
+                        className={`relative flex flex-col gap-1 w-full ${isMine ? 'items-end' : 'items-start'}`}
                       >
+                        <AnimatePresence>
+                          {messageMenu === msg.id && (
+                            <motion.div
+                              key={`menu-${msg.id}`}
+                              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                              className={`absolute z-[50] -top-12 flex items-center gap-1 bg-[#1A1A1A] border border-white/10 rounded-full px-2 py-1.5 shadow-xl backdrop-blur-md ${isMine ? 'right-0' : 'left-0'}`}
+                            >
+                              {['👍', '❤️', '🔥', '😂', '😮', '😢'].map((emoji) => {
+                                const hasReacted = msg.reactions?.[emoji]?.includes(user.id);
+                                return (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); toggleReaction(msg, emoji); setMessageMenu(null); }}
+                                    className={`w-8 h-8 flex items-center justify-center rounded-full text-lg transition-transform hover:scale-125 ${hasReacted ? 'bg-plasma-500/30' : 'hover:bg-white/10'}`}
+                                  >
+                                    {emoji}
+                                  </button>
+                                );
+                              })}
+                              {isMine && (
+                                <>
+                                  <div className="w-px h-5 bg-white/10 mx-1" />
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); deleteMessage(msg.id); }}
+                                    className="w-8 h-8 flex items-center justify-center rounded-full text-red-500 hover:bg-red-500/20 transition-colors"
+                                    title="Supprimer"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                         <div
-                          onDoubleClick={() => setReplyingTo(msg)}
+                          onDoubleClick={(e) => { e.stopPropagation(); setReplyingTo(msg); }}
                           className={`max-w-[75%] px-4 py-2.5 text-[15px] leading-relaxed shadow-md select-none cursor-pointer ${
                           isMine
                             ? 'rounded-[20px] rounded-br-[4px] bg-gradient-to-br from-plasma-600 to-plasma-500 text-white'
@@ -645,6 +717,25 @@ function MessagesPageInner() {
                             )}
                           </div>
                         </div>
+                        {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                          <div className={`flex flex-wrap gap-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                            {Object.entries(msg.reactions).map(([emoji, users]) => {
+                              if (users.length === 0) return null;
+                              const hasReacted = users.includes(user.id);
+                              return (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); toggleReaction(msg, emoji); }}
+                                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] border ${hasReacted ? 'bg-plasma-500/20 border-plasma-500/50 text-plasma-400' : 'bg-white/5 border-white/10 text-gray-300'}`}
+                                >
+                                  <span>{emoji}</span>
+                                  <span>{users.length}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </motion.div>
                     );
                   })
