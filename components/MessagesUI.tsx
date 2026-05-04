@@ -913,6 +913,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                 </form>
                 </div>
               )}
+            </>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
