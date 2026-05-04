@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense, type KeyboardEvent 
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck } from 'lucide-react';
+import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
@@ -35,6 +35,8 @@ interface Message {
   content: string;
   created_at: string;
   is_read: boolean;
+  reply_to_id?: string | null;
+  reactions?: Record<string, string[]> | null;
 }
 
 const DM_WITH_UUID_RE =
@@ -65,6 +67,7 @@ function MessagesPageInner() {
   const [searching, setSearching] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dmDeepLinkLockRef = useRef(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -172,6 +175,7 @@ function MessagesPageInner() {
   }, [selectedConv, user]);
 
   const loadMessages = useCallback(async (conv: Conversation) => {
+    setReplyingTo(null);
     setSelectedConv(conv);
     setLoadingMsgs(true);
     try {
@@ -224,6 +228,12 @@ function MessagesPageInner() {
     const clean = sanitizeMessage(newMessage);
     if (!clean) return;
 
+    const pendingReplyTarget = replyingTo;
+    const replyToId =
+      pendingReplyTarget?.id && !pendingReplyTarget.id.startsWith('temp_')
+        ? pendingReplyTarget.id
+        : null;
+
     const tempMsg: Message = {
       id: `temp_${Date.now()}`,
       conversation_id: selectedConv.id,
@@ -231,14 +241,17 @@ function MessagesPageInner() {
       content: clean,
       created_at: new Date().toISOString(),
       is_read: false,
+      reply_to_id: pendingReplyTarget?.id ?? null,
     };
     setMessages(prev => [...prev, tempMsg]);
+    setReplyingTo(null);
     setNewMessage('');
 
     const { data, error } = await supabase.from('direct_messages').insert({
       conversation_id: selectedConv.id,
       sender_id: user.id,
       content: clean,
+      reply_to_id: replyToId,
     }).select().single();
 
     if (error) {
@@ -598,6 +611,7 @@ function MessagesPageInner() {
                 ) : (
                   messages.map((msg) => {
                     const isMine = msg.sender_id === user.id;
+                    const repliedMsg = msg.reply_to_id ? messages.find(m => m.id === msg.reply_to_id) : null;
                     const decodedText = msg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/');
                     return (
                       <motion.div
@@ -606,11 +620,19 @@ function MessagesPageInner() {
                         animate={{ opacity: 1, y: 0 }}
                         className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div className={`max-w-[75%] px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${
+                        <div
+                          onDoubleClick={() => setReplyingTo(msg)}
+                          className={`max-w-[75%] px-4 py-2.5 text-[15px] leading-relaxed shadow-md select-none cursor-pointer ${
                           isMine
                             ? 'rounded-[20px] rounded-br-[4px] bg-gradient-to-br from-plasma-600 to-plasma-500 text-white'
                             : 'rounded-[20px] rounded-bl-[4px] bg-white/10 border border-white/5 text-white/95 backdrop-blur-md'
                         }`}>
+                          {repliedMsg && (
+                            <div className={`mb-2 p-2 rounded-lg text-xs border-l-2 ${isMine ? 'bg-black/20 border-white/50 text-white/90' : 'bg-black/30 border-plasma-500 text-gray-300'}`}>
+                              <p className="font-bold mb-0.5 opacity-75">{repliedMsg.sender_id === user.id ? 'Vous' : selectedConv.other_user.display_name}</p>
+                              <p className="truncate opacity-90">{repliedMsg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
+                            </div>
+                          )}
                           <p className="whitespace-pre-wrap font-sans">{decodedText}</p>
                           <div className={`flex items-center justify-end gap-1 mt-1 ${isMine ? 'text-white/75' : 'text-white/40'}`}>
                             <span className="font-mono text-[10px] tracking-wider">
@@ -631,24 +653,44 @@ function MessagesPageInner() {
               </div>
 
               {/* Message input */}
-              <div className="px-4 py-3 border-t border-white/[0.06] bg-[#0A0A0A]">
-                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full p-1 pl-4 focus-within:border-plasma-500/50 focus-within:bg-white/[0.07] transition-all">
+              <div className="px-4 py-3 border-t border-white/[0.06] bg-[#0A0A0A] flex flex-col gap-2">
+                <AnimatePresence>
+                  {replyingTo && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, height: 0 }} 
+                      animate={{ opacity: 1, y: 0, height: 'auto' }} 
+                      exit={{ opacity: 0, y: 10, height: 0 }}
+                      className="flex items-center justify-between bg-white/5 border-l-2 border-plasma-500 rounded-r-lg px-3 py-2"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-plasma-400">Réponse à {replyingTo.sender_id === user.id ? 'vous-même' : selectedConv.other_user.display_name}</p>
+                        <p className="text-xs text-gray-400 truncate">{replyingTo.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
+                      </div>
+                      <button type="button" onClick={() => setReplyingTo(null)} className="p-1 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <form 
+                  onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
+                  className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full p-1 pl-4 focus-within:border-plasma-500/50 focus-within:bg-white/[0.07] transition-all"
+                >
                   <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                     placeholder="Écris ton message..."
                     className="flex-1 bg-transparent border-none font-sans text-[15px] text-white placeholder-white/40 focus:outline-none focus:ring-0"
                   />
                   <button
-                    onClick={sendMessage}
+                    type="submit"
                     disabled={!newMessage.trim()}
                     className="w-9 h-9 rounded-full bg-plasma-500 hover:bg-plasma-400 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors shrink-0"
                   >
                     <Send className="w-4 h-4 text-white -ml-0.5" />
                   </button>
-                </div>
+                </form>
               </div>
             </>
           ) : (
