@@ -263,7 +263,6 @@ export function TikTokStyleArena({
   const [showViewerList, setShowViewerList] = useState(false);
   const [showArenaMenu, setShowArenaMenu] = useState(false);
   const { openDrawer } = useMessagesDrawer();
-  const [showBuyPointsModal, setShowBuyPointsModal] = useState(false);
   const [isCinematicMode, setIsCinematicMode] = useState(false);
   const [showVsScreen, setShowVsScreen] = useState(true);
   const [soundboardExpanded, setSoundboardExpanded] = useState(false);
@@ -3232,6 +3231,24 @@ export function TikTokStyleArena({
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {isCinematicMode && (
+          <motion.button
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsCinematicMode(false);
+            }}
+            type="button"
+            className="absolute top-[max(3rem,env(safe-area-inset-top))] right-4 z-[9999] flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-4 py-2.5 text-sm font-bold text-white shadow-xl backdrop-blur-md pointer-events-auto"
+          >
+            <X className="h-4 w-4" aria-hidden /> Quitter Ciné
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
         <div className="absolute inset-0 bg-black z-[999] flex items-center justify-center">
@@ -3388,7 +3405,7 @@ export function TikTokStyleArena({
                     <span className="font-black text-white">{userPoints} Lingots</span>
                   </div>
                 </div>
-                <button type="button" onClick={() => { setShowArenaMenu(false); setShowBuyPointsModal(true); }} className="flex items-center gap-1.5 rounded-full bg-brand-500 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-brand-400">
+                <button type="button" onClick={() => { setShowArenaMenu(false); goBuyPoints(); }} className="flex items-center gap-1.5 rounded-full bg-brand-500 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-brand-400">
                   Recharger
                 </button>
               </div>
@@ -3407,7 +3424,7 @@ export function TikTokStyleArena({
                   <Share2 className="h-5 w-5 text-brand-400" />
                   <span className="text-xs font-medium">Partager</span>
                 </button>
-                <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/profile'); }} className="flex flex-col items-center gap-2 rounded-xl p-3 text-white transition-colors hover:bg-white/10">
+                <button type="button" onClick={() => { setShowArenaMenu(false); window.open('/profile', '_blank'); }} className="flex flex-col items-center gap-2 rounded-xl p-3 text-white transition-colors hover:bg-white/10">
                   <User className="h-5 w-5 text-gray-300" />
                   <span className="text-xs font-medium">Profil</span>
                 </button>
@@ -3418,7 +3435,7 @@ export function TikTokStyleArena({
                 <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/feed'); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white">
                   <Home className="h-4 w-4" /> Retour au Feed
                 </button>
-                <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/settings'); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white">
+                <button type="button" onClick={() => { setShowArenaMenu(false); window.open('/settings', '_blank'); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white">
                   <SettingsIcon className="h-4 w-4" /> Paramètres
                 </button>
               </div>
@@ -4461,7 +4478,7 @@ export function TikTokStyleArena({
                       <span className="text-xl font-black text-white">{userPoints} <span className="text-sm font-bold text-gray-400">Lingots</span></span>
                     </div>
                   </div>
-                  <button type="button" onClick={() => { setShowArenaMenu(false); setShowBuyPointsModal(true); }} className="flex items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-brand-400">
+                  <button type="button" onClick={() => { setShowArenaMenu(false); goBuyPoints(); }} className="flex items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-brand-400">
                     Recharger
                   </button>
                 </div>
@@ -4486,7 +4503,7 @@ export function TikTokStyleArena({
                     </div>
                     <span className="text-[10px] font-semibold text-white/80">Partager</span>
                   </button>
-                  <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/profile'); }} className="flex flex-col items-center gap-2">
+                  <button type="button" onClick={() => { setShowArenaMenu(false); window.open('/profile', '_blank'); }} className="flex flex-col items-center gap-2">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 transition-transform active:scale-90">
                       <User className="h-6 w-6 text-white" />
                     </div>
@@ -4499,7 +4516,7 @@ export function TikTokStyleArena({
                   <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/feed'); }} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-white transition-colors hover:bg-white/10">
                     <Home className="h-5 w-5 text-gray-400" /> Retour au Feed
                   </button>
-                  <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/settings'); }} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-white transition-colors hover:bg-white/10">
+                  <button type="button" onClick={() => { setShowArenaMenu(false); window.open('/settings', '_blank'); }} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-white transition-colors hover:bg-white/10">
                     <SettingsIcon className="h-5 w-5 text-gray-400" /> Paramètres
                   </button>
                 </div>
@@ -4508,36 +4525,6 @@ export function TikTokStyleArena({
                 <button type="button" onClick={() => { setShowArenaMenu(false); void handleLeave(); }} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4 text-sm font-black uppercase tracking-widest text-red-500 transition-colors hover:bg-red-500/20 active:scale-95">
                   Quitter le Direct
                 </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-
-        {showBuyPointsModal && (
-          <motion.div
-            key="buy-points-modal-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[600] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md"
-            onClick={() => setShowBuyPointsModal(false)}
-          >
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full h-[85dvh] sm:h-[600px] sm:max-w-md bg-[#050505] rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden border border-white/10 flex flex-col shadow-2xl"
-            >
-              <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 bg-black/60 backdrop-blur-md z-10 shrink-0">
-                <h3 className="text-white font-bold text-lg">Recharger mes Lingots</h3>
-                <button type="button" onClick={() => setShowBuyPointsModal(false)} className="p-2 rounded-full hover:bg-white/10 text-white transition-colors bg-white/5">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="flex-1 w-full bg-black relative">
-                <iframe src="/buy-points" title="Achat de Lingots" className="absolute inset-0 w-full h-full border-none" />
               </div>
             </motion.div>
           </motion.div>

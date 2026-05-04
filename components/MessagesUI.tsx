@@ -591,15 +591,15 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 flex-col gap-0.5">
                       <ProfileUserLink
                         username={conv.other_user.username}
-                        className="min-w-0 flex-1 truncate font-sans text-sm font-bold text-white"
+                        className="min-w-0 truncate font-sans text-sm font-bold text-white"
                       >
                         {conv.other_user.display_name}
                       </ProfileUserLink>
                       {conv.last_message_at && (
-                        <span className="flex-shrink-0 font-mono text-[10px] tracking-wider text-white/30">
+                        <span className="shrink-0 self-start font-mono text-[10px] tracking-wider text-white/30">
                           {formatTime(conv.last_message_at)}
                         </span>
                       )}
@@ -636,16 +636,16 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                       </span>
                     )}
                   </div>
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 flex-col leading-tight">
                     <ProfileUserLink
                       username={selectedConv.other_user.username}
-                      className="font-sans text-sm font-bold text-white"
+                      className="truncate font-sans text-sm font-bold text-white"
                     >
                       {selectedConv.other_user.display_name}
                     </ProfileUserLink>
                     <ProfileUserLink
                       username={selectedConv.other_user.username}
-                      className="font-mono text-[10px] tracking-wider text-white/35"
+                      className="truncate font-mono text-[10px] tracking-wider text-white/40"
                     >
                       @{selectedConv.other_user.username}
                     </ProfileUserLink>
@@ -673,70 +673,78 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                         key={msg.id}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        onContextMenu={(e) => { e.preventDefault(); setMessageMenu(msg.id); }}
-                        className={`relative flex flex-col gap-1 w-full ${isMine ? 'items-end' : 'items-start'}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMessageMenu(messageMenu === msg.id ? null : msg.id);
+                        }}
+                        className={`relative flex w-full flex-col gap-1 group ${isMine ? 'items-end' : 'items-start'}`}
                       >
-                        <AnimatePresence>
-                          {messageMenu === msg.id && (
-                            <motion.div
-                              key={`menu-${msg.id}`}
-                              initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                              className={`absolute z-[50] -top-12 flex items-center gap-1 bg-[#1A1A1A] border border-white/10 rounded-full px-2 py-1.5 shadow-xl backdrop-blur-md ${isMine ? 'right-0' : 'left-0'}`}
-                            >
-                              {['👍', '❤️', '🔥', '😂', '😮', '😢'].map((emoji) => {
-                                const hasReacted = msg.reactions?.[emoji]?.includes(user.id);
-                                return (
-                                  <button
-                                    key={emoji}
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); toggleReaction(msg, emoji); setMessageMenu(null); }}
-                                    className={`w-8 h-8 flex items-center justify-center rounded-full text-lg transition-transform hover:scale-125 ${hasReacted ? 'bg-plasma-500/30' : 'hover:bg-white/10'}`}
-                                  >
-                                    {emoji}
-                                  </button>
-                                );
-                              })}
-                              {isMine && (
-                                <>
-                                  <div className="w-px h-5 bg-white/10 mx-1" />
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); deleteMessage(msg.id); }}
-                                    className="w-8 h-8 flex items-center justify-center rounded-full text-red-500 hover:bg-red-500/20 transition-colors"
-                                    title="Supprimer"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </>
-                              )}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                        <div
-                          onDoubleClick={(e) => { e.stopPropagation(); setReplyingTo(msg); }}
-                          className={`max-w-[75%] px-4 py-2.5 text-[15px] leading-relaxed shadow-md select-none cursor-pointer ${
+                        <div className={`relative flex items-center gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
+                          <AnimatePresence>
+                            {messageMenu === msg.id && (
+                              <motion.div
+                                key={`menu-${msg.id}`}
+                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                                className={`absolute bottom-full z-[50] mb-2 flex items-center gap-1 rounded-full border border-white/10 bg-[#1A1A1A] px-2 py-1.5 shadow-xl backdrop-blur-md ${isMine ? 'right-0' : 'left-0'}`}
+                              >
+                                {['👍', '❤️', '🔥', '😂', '😮', '😢'].map((emoji) => {
+                                  const hasReacted = msg.reactions?.[emoji]?.includes(user.id);
+                                  return (
+                                    <button
+                                      key={emoji}
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); toggleReaction(msg, emoji); setMessageMenu(null); }}
+                                      className={`flex h-8 w-8 items-center justify-center rounded-full text-lg transition-transform hover:scale-125 ${hasReacted ? 'bg-plasma-500/30' : 'hover:bg-white/10'}`}
+                                    >
+                                      {emoji}
+                                    </button>
+                                  );
+                                })}
+                                {isMine && (
+                                  <>
+                                    <div className="mx-1 h-5 w-px bg-white/10" />
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); deleteMessage(msg.id); }}
+                                      className="flex h-8 w-8 items-center justify-center rounded-full text-red-500 transition-colors hover:bg-red-500/20"
+                                      title="Supprimer"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </>
+                                )}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                          <div
+                            onDoubleClick={(e) => { e.stopPropagation(); setReplyingTo(msg); }}
+                            className={`max-w-[75%] cursor-pointer select-none px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${
                           isMine
                             ? 'rounded-[20px] rounded-br-[4px] bg-gradient-to-br from-plasma-600 to-plasma-500 text-white'
-                            : 'rounded-[20px] rounded-bl-[4px] bg-white/10 border border-white/5 text-white/95 backdrop-blur-md'
+                            : 'rounded-[20px] rounded-bl-[4px] border border-white/5 bg-white/10 text-white/95 backdrop-blur-md'
                         }`}>
-                          {repliedMsg && (
-                            <div className={`mb-2 p-2 rounded-lg text-xs border-l-2 ${isMine ? 'bg-black/20 border-white/50 text-white/90' : 'bg-black/30 border-plasma-500 text-gray-300'}`}>
-                              <p className="font-bold mb-0.5 opacity-75">{repliedMsg.sender_id === user.id ? 'Vous' : selectedConv.other_user.display_name}</p>
-                              <p className="truncate opacity-90">{repliedMsg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
-                            </div>
-                          )}
-                          <p className="whitespace-pre-wrap font-sans">{decodedText}</p>
-                          <div className={`flex items-center justify-end gap-1 mt-1 ${isMine ? 'text-white/75' : 'text-white/40'}`}>
-                            <span className="font-mono text-[10px] tracking-wider">
-                              {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                            {isMine && (
-                              msg.is_read
-                                ? <CheckCheck className="w-3 h-3" />
-                                : <Check className="w-3 h-3" />
+                            {repliedMsg && (
+                              <div className={`mb-2 rounded-lg border-l-2 p-2 text-xs ${isMine ? 'border-white/50 bg-black/20 text-white/90' : 'border-plasma-500 bg-black/30 text-gray-300'}`}>
+                                <p className="mb-0.5 font-bold opacity-75">{repliedMsg.sender_id === user.id ? 'Vous' : selectedConv.other_user.display_name}</p>
+                                <p className="truncate opacity-90">{repliedMsg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
+                              </div>
                             )}
+                            <p className="whitespace-pre-wrap font-sans">{decodedText}</p>
+                            <div className={`mt-1 flex items-center justify-end gap-1 ${isMine ? 'text-white/75' : 'text-white/40'}`}>
+                              <span className="font-mono text-[10px] tracking-wider">
+                                {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              {isMine && (
+                                msg.is_read
+                                  ? <CheckCheck className="h-3 w-3" />
+                                  : <Check className="h-3 w-3" />
+                              )}
+                            </div>
+                          </div>
+                          <div className="pointer-events-none flex flex-col justify-end pb-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100" aria-hidden>
+                            <span className="select-none text-xs text-white/30">•••</span>
                           </div>
                         </div>
                         {msg.reactions && Object.keys(msg.reactions).length > 0 && (
