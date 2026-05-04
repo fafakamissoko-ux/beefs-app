@@ -28,6 +28,7 @@ import { BeefNotificationToasts } from '@/components/BeefNotificationToasts';
 import { supabase } from '@/lib/supabase/client';
 import { hrefWithFrom } from '@/lib/navigation-return';
 import { useGlobalSearch } from '@/contexts/GlobalSearchContext';
+import { useMessagesDrawer } from '@/contexts/MessagesDrawerContext';
 
 const buyPointsAnchorClass =
   'flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors';
@@ -151,6 +152,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
   const { user, userRole, signOut } = useAuth();
   const { toast } = useToast();
   const { openSearch } = useGlobalSearch();
+  const { openDrawer } = useMessagesDrawer();
   const showGlobalSearch = !hideGlobalSearchOnPath(pathname);
 
   useEffect(() => {
@@ -424,18 +426,35 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               {visibleNavItems.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
+                  const itemClasses = `relative flex items-center gap-2 border-l-[3px] border-transparent px-3.5 py-2 text-sm font-medium transition-all duration-200 ${
+                    active
+                      ? 'text-white max-lg:rounded-xl max-lg:border-l-transparent max-lg:bg-white/10 max-lg:text-plasma-400 lg:rounded-none lg:border-plasma-400 lg:bg-gradient-to-r lg:from-plasma-500/15 lg:to-transparent lg:text-white'
+                      : 'text-gray-500 max-lg:rounded-xl max-lg:hover:bg-white/[0.04] max-lg:hover:text-gray-200 lg:rounded-none lg:text-gray-400 lg:hover:border-transparent lg:hover:bg-white/[0.04] lg:hover:text-white'
+                  } ${shell === 'full' && navSecondaryHrefs.has(item.href) ? 'hidden xl:flex' : ''} ${
+                    shell === 'phone' ? 'lg:w-full lg:justify-start lg:px-4' : ''
+                  }`;
+
+                  if (item.href === '/messages') {
+                    return (
+                      <button key={item.href} type="button" onClick={() => openDrawer()} className={itemClasses}>
+                        <div className="relative">
+                          <Icon className={`w-[18px] h-[18px] ${active ? 'max-lg:text-plasma-400' : ''}`} />
+                          <NavUnreadBadge href={item.href} count={item.badge} />
+                        </div>
+                        <span className="md:hidden lg:inline">{item.label}</span>
+                        {active && (
+                          <motion.div layoutId="nav-indicator" className="absolute -bottom-[13px] left-3 right-3 block h-[2px] rounded-full lg:hidden" style={{ background: 'linear-gradient(90deg, #00F0FF, #A200FF)' }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
+                        )}
+                      </button>
+                    );
+                  }
+
                   return (
                     <Link
                       key={item.href}
                       href={hrefWithFrom(item.href, pathname)}
                       prefetch={false}
-                      className={`relative flex items-center gap-2 border-l-[3px] border-transparent px-3.5 py-2 text-sm font-medium transition-all duration-200 ${
-                        active
-                          ? 'text-white max-lg:rounded-xl max-lg:border-l-transparent max-lg:bg-white/10 max-lg:text-plasma-400 lg:rounded-none lg:border-plasma-400 lg:bg-gradient-to-r lg:from-plasma-500/15 lg:to-transparent lg:text-white'
-                          : 'text-gray-500 max-lg:rounded-xl max-lg:hover:bg-white/[0.04] max-lg:hover:text-gray-200 lg:rounded-none lg:text-gray-400 lg:hover:border-transparent lg:hover:bg-white/[0.04] lg:hover:text-white'
-                      } ${shell === 'full' && navSecondaryHrefs.has(item.href) ? 'hidden xl:flex' : ''} ${
-                        shell === 'phone' ? 'lg:w-full lg:justify-start lg:px-4' : ''
-                      }`}
+                      className={itemClasses}
                     >
                       <div className="relative">
                         <Icon
@@ -658,17 +677,36 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 {visibleNavItems.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(item.href);
+                  const itemClasses = `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all ${
+                    active
+                      ? 'max-lg:rounded-xl max-lg:bg-white/10 text-plasma-400'
+                      : 'text-gray-400 hover:text-white hover:bg-white/[0.04] max-lg:rounded-xl'
+                  }`;
+
+                  if (item.href === '/messages') {
+                    return (
+                      <button key={item.href} type="button" onClick={() => { openDrawer(); setMobileMenuOpen(false); }} className={`w-full text-left ${itemClasses}`}>
+                        <div className="relative">
+                          <Icon className="w-5 h-5" />
+                          <NavUnreadBadge href={item.href} count={item.badge} compact />
+                        </div>
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge > 0 && (
+                          <span className="rounded-full bg-plasma-500/10 px-2 py-0.5 text-[10px] font-bold text-plasma-400">
+                            {item.badge} nouvelle{item.badge > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  }
+
                   return (
                       <Link
                         key={item.href}
                         href={hrefWithFrom(item.href, pathname)}
                         prefetch={false}
                         onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all ${
-                          active
-                            ? 'max-lg:rounded-xl max-lg:bg-white/10 text-plasma-400'
-                            : 'text-gray-400 hover:text-white hover:bg-white/[0.04] max-lg:rounded-xl'
-                        }`}
+                        className={itemClasses}
                       >
                         <div className="relative">
                           <Icon className="w-5 h-5" />

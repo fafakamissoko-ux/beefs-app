@@ -13,6 +13,10 @@ import { AppBackButton } from '@/components/AppBackButton';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { PENDING_DM_WITH_STORAGE_KEY } from '@/lib/messages-deeplink';
 
+interface MessagesUIProps {
+  isDrawerMode?: boolean;
+}
+
 interface Conversation {
   id: string;
   participant_1: string;
@@ -50,7 +54,7 @@ type UserSearchRow = {
   avatar_url: string | null;
 };
 
-export function MessagesUI() {
+export function MessagesUI({ isDrawerMode = false }: MessagesUIProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
@@ -458,13 +462,17 @@ export function MessagesUI() {
   }
 
   return (
-    <div className="flex flex-1 -m-4 lg:-m-8 h-[calc(100dvh-3.5rem)] lg:h-[100dvh] overflow-hidden bg-[#050505]">
+    <div className={`flex flex-1 overflow-hidden bg-[#050505] ${
+      isDrawerMode
+        ? 'h-full w-full'
+        : '-m-4 lg:-m-8 h-[calc(100dvh-3.5rem)] lg:h-[100dvh]'
+    }`}>
       <div className="flex w-full h-full">
         {/* Conversation list */}
         <div className={`w-full md:w-96 border-r border-white/[0.06] flex flex-col ${selectedConv ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-white/[0.06] flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <AppBackButton className="shrink-0" />
+              {!isDrawerMode && <AppBackButton className="shrink-0" />}
               <h1 className="font-sans text-xl font-black text-white truncate">Messages</h1>
             </div>
             <button
