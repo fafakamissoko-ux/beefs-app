@@ -1075,9 +1075,9 @@ export default function PublicProfilePage() {
                       ? 'Aura sur la photo de profil'
                       : 'Aura sur la bannière'
                   }
-                  className={`relative flex items-center gap-3 rounded-full border-2 px-8 py-4 font-black text-lg transition-transform hover:scale-105 disabled:pointer-events-none disabled:opacity-45 ${
+                  className={`relative flex items-center gap-3 rounded-full border-2 px-8 py-4 font-black text-lg outline-none select-none [-webkit-tap-highlight-color:transparent] transition-transform hover:scale-105 disabled:pointer-events-none disabled:opacity-45 ${
                     mediaLikes[viewingImage.type].liked && !isOwnProfile
-                      ? 'border-yellow-400/50 bg-black/40 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)] hover:bg-black/55'
+                      ? 'border-yellow-400/50 bg-black/40 text-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.9)] hover:bg-black/55'
                       : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
                   }`}
                 >
