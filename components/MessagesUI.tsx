@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from 're
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck, X, Trash2, CheckSquare, Square } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
@@ -77,6 +77,8 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const dmDeepLinkLockRef = useRef(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [messageMenu, setMessageMenu] = useState<string | null>(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (authLoading) return;
@@ -195,6 +197,8 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const loadMessages = useCallback(async (conv: Conversation) => {
     setReplyingTo(null);
     setMessageMenu(null);
+    setIsSelectionMode(false);
+    setSelectedMessages(new Set());
     setSelectedConv(conv);
     setLoadingMsgs(true);
     try {
@@ -306,6 +310,38 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     setMessages(prev => prev.filter(m => m.id !== msgId));
     await supabase.from('direct_messages').update({ is_deleted: true }).eq('id', msgId);
     setMessageMenu(null);
+  };
+
+  const deleteSelectedMessages = async () => {
+    if (selectedMessages.size === 0) return;
+    const idsToDelete = Array.from(selectedMessages);
+    const serverIds = idsToDelete.filter((id) => !id.startsWith('temp_'));
+
+    setMessages((prev) => prev.filter((m) => !selectedMessages.has(m.id)));
+    setIsSelectionMode(false);
+    setSelectedMessages(new Set());
+    setMessageMenu(null);
+
+    if (serverIds.length === 0) return;
+
+    const { error } = await supabase
+      .from('direct_messages')
+      .update({ is_deleted: true })
+      .in('id', serverIds);
+
+    if (error) {
+      toast('Erreur lors de la suppression groupée', 'error');
+      if (selectedConv) void loadMessages(selectedConv);
+    }
+  };
+
+  const toggleMessageSelection = (msgId: string) => {
+    setSelectedMessages((prev) => {
+      const next = new Set(prev);
+      if (next.has(msgId)) next.delete(msgId);
+      else next.add(msgId);
+      return next;
+    });
   };
 
   const searchUsers = async (query: string) => {
@@ -651,10 +687,28 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                     </ProfileUserLink>
                   </div>
                 </div>
+                {messages.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSelectionMode(!isSelectionMode);
+                      setSelectedMessages(new Set());
+                      setMessageMenu(null);
+                    }}
+                    className="ml-auto rounded-full px-3 py-1.5 text-xs font-bold text-plasma-400 transition-colors hover:bg-plasma-500/10 hover:text-plasma-300"
+                  >
+                    {isSelectionMode ? 'Annuler' : 'Sélectionner'}
+                  </button>
+                )}
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" onClick={() => setMessageMenu(null)}>
+              <div
+                className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+                onClick={() => {
+                  setMessageMenu(null);
+                }}
+              >
                 {loadingMsgs ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
@@ -675,13 +729,26 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                         animate={{ opacity: 1, y: 0 }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setMessageMenu(messageMenu === msg.id ? null : msg.id);
+                          if (isSelectionMode) {
+                            toggleMessageSelection(msg.id);
+                          } else {
+                            setMessageMenu(messageMenu === msg.id ? null : msg.id);
+                          }
                         }}
                         className={`relative flex w-full flex-col gap-1 group ${isMine ? 'items-end' : 'items-start'}`}
                       >
+                        {isSelectionMode && (
+                          <div className={`pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 ${isMine ? '-left-8' : '-right-8'}`}>
+                            {selectedMessages.has(msg.id) ? (
+                              <CheckSquare className="h-5 w-5 text-plasma-500" aria-hidden />
+                            ) : (
+                              <Square className="h-5 w-5 text-gray-500" aria-hidden />
+                            )}
+                          </div>
+                        )}
                         <div className={`relative flex items-center gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
                           <AnimatePresence>
-                            {messageMenu === msg.id && (
+                            {!isSelectionMode && messageMenu === msg.id && (
                               <motion.div
                                 key={`menu-${msg.id}`}
                                 initial={{ opacity: 0, scale: 0.9, y: 10 }}
@@ -719,8 +786,14 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                             )}
                           </AnimatePresence>
                           <div
-                            onDoubleClick={(e) => { e.stopPropagation(); setReplyingTo(msg); }}
-                            className={`max-w-[75%] cursor-pointer select-none px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${
+                            onDoubleClick={(e) => {
+                              if (isSelectionMode) return;
+                              e.stopPropagation();
+                              setReplyingTo(msg);
+                            }}
+                            className={`max-w-[75%] select-none px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${
+                          isSelectionMode ? 'cursor-default' : 'cursor-pointer'
+                        } ${
                           isMine
                             ? 'rounded-[20px] rounded-br-[4px] bg-gradient-to-br from-plasma-600 to-plasma-500 text-white'
                             : 'rounded-[20px] rounded-bl-[4px] border border-white/5 bg-white/10 text-white/95 backdrop-blur-md'
@@ -743,7 +816,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                               )}
                             </div>
                           </div>
-                          <div className="pointer-events-none flex flex-col justify-end pb-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100" aria-hidden>
+                          <div className={`pointer-events-none flex flex-col justify-end pb-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 ${isSelectionMode ? 'hidden' : ''}`} aria-hidden>
                             <span className="select-none text-xs text-white/30">•••</span>
                           </div>
                         </div>
@@ -773,8 +846,34 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Message input */}
-              <div className="px-4 py-3 border-t border-white/[0.06] bg-[#0A0A0A] flex flex-col gap-2">
+              {isSelectionMode ? (
+                <div className="flex items-center justify-between border-t border-white/[0.06] bg-[#0A0A0A] px-4 py-3">
+                  <span className="text-sm font-medium text-gray-400">
+                    {selectedMessages.size} message{selectedMessages.size > 1 ? 's' : ''} sélectionné{selectedMessages.size > 1 ? 's' : ''}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSelectionMode(false);
+                        setSelectedMessages(new Set());
+                      }}
+                      className="rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-white/20"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void deleteSelectedMessages()}
+                      disabled={selectedMessages.size === 0}
+                      className="rounded-full bg-red-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 border-t border-white/[0.06] bg-[#0A0A0A] px-4 py-3">
                 <AnimatePresence>
                   {replyingTo && (
                     <motion.div 
@@ -812,8 +911,8 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                     <Send className="w-4 h-4 text-white -ml-0.5" />
                   </button>
                 </form>
-              </div>
-            </>
+                </div>
+              )}
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
