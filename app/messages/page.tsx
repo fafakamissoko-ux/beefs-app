@@ -412,8 +412,8 @@ function MessagesPageInner() {
   }
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] overflow-hidden">
-      <div className="max-w-5xl mx-auto flex h-full">
+    <div className="flex flex-1 -m-4 lg:-m-8 h-[calc(100dvh-3.5rem)] lg:h-[100dvh] overflow-hidden bg-[#050505]">
+      <div className="flex w-full h-full">
         {/* Conversation list */}
         <div className={`w-full md:w-96 border-r border-white/[0.06] flex flex-col ${selectedConv ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-white/[0.06] flex items-center justify-between gap-2">
@@ -598,6 +598,7 @@ function MessagesPageInner() {
                 ) : (
                   messages.map((msg) => {
                     const isMine = msg.sender_id === user.id;
+                    const decodedText = msg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/');
                     return (
                       <motion.div
                         key={msg.id}
@@ -605,12 +606,12 @@ function MessagesPageInner() {
                         animate={{ opacity: 1, y: 0 }}
                         className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div className={`relative max-w-[75%] px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${
+                        <div className={`max-w-[75%] px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${
                           isMine
-                            ? 'rounded-[20px] rounded-br-[4px] bg-gradient-to-br from-brand-500 to-brand-600 text-white'
+                            ? 'rounded-[20px] rounded-br-[4px] bg-gradient-to-br from-plasma-600 to-plasma-500 text-white'
                             : 'rounded-[20px] rounded-bl-[4px] bg-white/10 border border-white/5 text-white/95 backdrop-blur-md'
                         }`}>
-                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                          <p className="whitespace-pre-wrap font-sans">{decodedText}</p>
                           <div className={`flex items-center justify-end gap-1 mt-1 ${isMine ? 'text-white/75' : 'text-white/40'}`}>
                             <span className="font-mono text-[10px] tracking-wider">
                               {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -630,8 +631,8 @@ function MessagesPageInner() {
               </div>
 
               {/* Message input */}
-              <div className="px-4 py-4 border-t border-white/[0.06] bg-black/20">
-                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full p-1 pl-4 focus-within:border-brand-500/50 focus-within:bg-white/[0.07] transition-all">
+              <div className="px-4 py-3 border-t border-white/[0.06] bg-[#0A0A0A]">
+                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full p-1 pl-4 focus-within:border-plasma-500/50 focus-within:bg-white/[0.07] transition-all">
                   <input
                     type="text"
                     value={newMessage}
@@ -643,7 +644,7 @@ function MessagesPageInner() {
                   <button
                     onClick={sendMessage}
                     disabled={!newMessage.trim()}
-                    className="w-9 h-9 rounded-full bg-brand-500 hover:bg-brand-400 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors shrink-0"
+                    className="w-9 h-9 rounded-full bg-plasma-500 hover:bg-plasma-400 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors shrink-0"
                   >
                     <Send className="w-4 h-4 text-white -ml-0.5" />
                   </button>
