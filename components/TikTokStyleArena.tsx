@@ -24,6 +24,11 @@ import {
   Flame,
   Menu,
   Music,
+  MessageCircle,
+  Home,
+  User,
+  Settings as SettingsIcon,
+  Maximize,
 } from 'lucide-react';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { VsTransition } from './VsTransition';
@@ -41,6 +46,7 @@ import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import { postBeefManage, type BeefManageAction } from '@/lib/beef-manage-client';
 import { escapeForIlikeExact } from '@/lib/ilike-exact';
 import { PENDING_DM_WITH_STORAGE_KEY } from '@/lib/messages-deeplink';
+import { useMessagesDrawer } from '@/contexts/MessagesDrawerContext';
 import { ARENA_QUICK_REACTIONS } from '@/lib/arena-quick-reactions';
 import {
   buildParticipantAliasSet,
@@ -257,6 +263,8 @@ export function TikTokStyleArena({
   const [giftTarget, setGiftTarget] = useState<'mediator' | 'left' | 'right'>('left');
   const [showViewerList, setShowViewerList] = useState(false);
   const [showArenaMenu, setShowArenaMenu] = useState(false);
+  const { openDrawer } = useMessagesDrawer();
+  const [showBuyPointsModal, setShowBuyPointsModal] = useState(false);
   const [isCinematicMode, setIsCinematicMode] = useState(false);
   const [showVsScreen, setShowVsScreen] = useState(true);
   const [soundboardExpanded, setSoundboardExpanded] = useState(false);
@@ -3371,11 +3379,57 @@ export function TikTokStyleArena({
             <span className="font-mono text-[11px] font-medium">{liveViewerCount > 0 ? liveViewerCount : '—'}</span>
           </button>
           {showArenaMenu && (
-            <div className="absolute left-4 top-full z-[200] mt-2 flex w-48 flex-col rounded-xl border border-white/10 bg-[#121215] py-2 shadow-2xl" data-cinema-stay onClick={() => setShowArenaMenu(false)}>
-              <button type="button" onClick={() => router.push('/feed')} className="px-4 py-2 text-left text-sm text-white hover:bg-white/10">🏠 Retour au Feed</button>
-              <button type="button" onClick={() => router.push('/messages')} className="px-4 py-2 text-left text-sm text-white hover:bg-white/10">💬 Messages</button>
-              <div className="my-1 h-px w-full bg-white/10" />
-              <button type="button" onClick={handleLeave} className="px-4 py-2 text-left text-sm text-red-400 hover:bg-white/10">🚪 Quitter</button>
+            <div className="absolute left-4 top-full z-[200] mt-2 flex w-64 flex-col rounded-2xl border border-white/10 bg-black/70 py-2 shadow-[0_0_40px_rgba(0,0,0,0.8)] backdrop-blur-2xl" data-cinema-stay onClick={(e) => e.stopPropagation()}>
+              {/* En-tête Monétisation */}
+              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Mon Solde</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <Flame className="h-4 w-4 text-brand-400 drop-shadow-md" />
+                    <span className="font-black text-white">{userPoints} Lingots</span>
+                  </div>
+                </div>
+                <button type="button" onClick={() => { setShowArenaMenu(false); setShowBuyPointsModal(true); }} className="flex items-center gap-1.5 rounded-full bg-brand-500 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-brand-400">
+                  Recharger
+                </button>
+              </div>
+
+              {/* Grille d'actions (Standard) */}
+              <div className="grid grid-cols-2 gap-1 p-2">
+                <button type="button" onClick={() => { setShowArenaMenu(false); setIsCinematicMode(true); }} className="flex flex-col items-center gap-2 rounded-xl p-3 text-white transition-colors hover:bg-white/10">
+                  <Maximize className="h-5 w-5 text-gray-300" />
+                  <span className="text-xs font-medium">Cinématique</span>
+                </button>
+                <button type="button" onClick={() => { setShowArenaMenu(false); openDrawer(); }} className="flex flex-col items-center gap-2 rounded-xl p-3 text-white transition-colors hover:bg-white/10">
+                  <MessageCircle className="h-5 w-5 text-gray-300" />
+                  <span className="text-xs font-medium">Messages</span>
+                </button>
+                <button type="button" onClick={() => { setShowArenaMenu(false); onShare(); }} className="flex flex-col items-center gap-2 rounded-xl p-3 text-white transition-colors hover:bg-white/10">
+                  <Share2 className="h-5 w-5 text-brand-400" />
+                  <span className="text-xs font-medium">Partager</span>
+                </button>
+                <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/profile'); }} className="flex flex-col items-center gap-2 rounded-xl p-3 text-white transition-colors hover:bg-white/10">
+                  <User className="h-5 w-5 text-gray-300" />
+                  <span className="text-xs font-medium">Profil</span>
+                </button>
+              </div>
+
+              {/* Actions secondaires */}
+              <div className="border-t border-white/10 p-2">
+                <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/feed'); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white">
+                  <Home className="h-4 w-4" /> Retour au Feed
+                </button>
+                <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/settings'); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white">
+                  <SettingsIcon className="h-4 w-4" /> Paramètres
+                </button>
+              </div>
+
+              {/* Quitter */}
+              <div className="border-t border-white/10 p-2">
+                <button type="button" onClick={() => { setShowArenaMenu(false); void handleLeave(); }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500/10 px-3 py-2.5 text-sm font-black uppercase tracking-widest text-red-500 transition-colors hover:bg-red-500/20">
+                  Quitter le Direct
+                </button>
+              </div>
             </div>
           )}
         </header>
@@ -4389,54 +4443,107 @@ export function TikTokStyleArena({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[400] flex lg:hidden"
           >
-            <button
-              type="button"
-              className="absolute inset-0 bg-black/60"
-              aria-label="Fermer le menu"
-              onClick={() => setShowArenaMenu(false)}
-            />
+            <button type="button" className="absolute inset-0 bg-black/70 backdrop-blur-sm" aria-label="Fermer le menu" onClick={() => setShowArenaMenu(false)} />
+
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 360 }}
-              className="absolute bottom-0 left-0 right-0 z-10 max-h-[min(70dvh,28rem)] overflow-y-auto rounded-t-2xl border border-white/10 bg-[#121215] shadow-2xl"
+              className="absolute bottom-0 left-0 right-0 z-10 max-h-[85dvh] overflow-y-auto rounded-t-[2rem] border border-white/10 bg-gradient-to-b from-[#1c1c1e]/95 to-black/95 shadow-[0_-20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl"
               onClick={(e) => e.stopPropagation()}
               data-cinema-stay
             >
-              <div className="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-white/20" aria-hidden />
-              <div className="flex flex-col gap-0.5 px-2 pb-[max(1rem,env(safe-area-inset-bottom))] pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowArenaMenu(false);
-                    router.push('/feed');
-                  }}
-                  className="rounded-xl px-4 py-3.5 text-left text-sm font-medium text-white transition-colors hover:bg-white/10"
-                >
-                  Retour au Feed
+              <div className="mx-auto mt-3 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-white/20" aria-hidden />
+
+              <div className="flex flex-col px-4 pb-[max(2rem,env(safe-area-inset-bottom))]">
+
+                {/* Monétisation */}
+                <div className="mb-5 flex items-center justify-between rounded-2xl bg-white/5 border border-white/5 p-4 shadow-inner">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Mon Solde</p>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <Flame className="h-5 w-5 text-brand-400 drop-shadow-md" />
+                      <span className="text-xl font-black text-white">{userPoints} <span className="text-sm font-bold text-gray-400">Lingots</span></span>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => { setShowArenaMenu(false); setShowBuyPointsModal(true); }} className="flex items-center gap-1.5 rounded-full bg-brand-500 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-brand-400">
+                    Recharger
+                  </button>
+                </div>
+
+                {/* Grille d'actions (TikTok Style) */}
+                <div className="mb-5 grid grid-cols-4 gap-3">
+                  <button type="button" onClick={() => { setShowArenaMenu(false); setIsCinematicMode(true); }} className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 transition-transform active:scale-90">
+                      <Maximize className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="text-[10px] font-semibold text-white/80">Ciné</span>
+                  </button>
+                  <button type="button" onClick={() => { setShowArenaMenu(false); openDrawer(); }} className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 transition-transform active:scale-90 relative">
+                      <MessageCircle className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="text-[10px] font-semibold text-white/80">Messages</span>
+                  </button>
+                  <button type="button" onClick={() => { setShowArenaMenu(false); onShare(); }} className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 transition-transform active:scale-90">
+                      <Share2 className="h-6 w-6 text-brand-400" />
+                    </div>
+                    <span className="text-[10px] font-semibold text-white/80">Partager</span>
+                  </button>
+                  <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/profile'); }} className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 transition-transform active:scale-90">
+                      <User className="h-6 w-6 text-white" />
+                    </div>
+                    <span className="text-[10px] font-semibold text-white/80">Profil</span>
+                  </button>
+                </div>
+
+                {/* Actions secondaires */}
+                <div className="mb-5 flex flex-col gap-1 rounded-2xl bg-white/5 p-2">
+                  <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/feed'); }} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-white transition-colors hover:bg-white/10">
+                    <Home className="h-5 w-5 text-gray-400" /> Retour au Feed
+                  </button>
+                  <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/settings'); }} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-white transition-colors hover:bg-white/10">
+                    <SettingsIcon className="h-5 w-5 text-gray-400" /> Paramètres
+                  </button>
+                </div>
+
+                {/* Quitter */}
+                <button type="button" onClick={() => { setShowArenaMenu(false); void handleLeave(); }} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4 text-sm font-black uppercase tracking-widest text-red-500 transition-colors hover:bg-red-500/20 active:scale-95">
+                  Quitter le Direct
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowArenaMenu(false);
-                    router.push('/messages');
-                  }}
-                  className="rounded-xl px-4 py-3.5 text-left text-sm font-medium text-white transition-colors hover:bg-white/10"
-                >
-                  Messages
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {showBuyPointsModal && (
+          <motion.div
+            key="buy-points-modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[600] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md"
+            onClick={() => setShowBuyPointsModal(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full h-[85dvh] sm:h-[600px] sm:max-w-md bg-[#050505] rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden border border-white/10 flex flex-col shadow-2xl"
+            >
+              <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 bg-black/60 backdrop-blur-md z-10 shrink-0">
+                <h3 className="text-white font-bold text-lg">Recharger mes Lingots</h3>
+                <button type="button" onClick={() => setShowBuyPointsModal(false)} className="p-2 rounded-full hover:bg-white/10 text-white transition-colors bg-white/5">
+                  <X className="w-5 h-5" />
                 </button>
-                <div className="my-1.5 h-px bg-white/10" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowArenaMenu(false);
-                    void handleLeave();
-                  }}
-                  className="rounded-xl px-4 py-3.5 text-left text-sm font-medium text-red-400 transition-colors hover:bg-white/10"
-                >
-                  Quitter le direct
-                </button>
+              </div>
+              <div className="flex-1 w-full bg-black relative">
+                <iframe src="/buy-points" title="Achat de Lingots" className="absolute inset-0 w-full h-full border-none" />
               </div>
             </motion.div>
           </motion.div>
