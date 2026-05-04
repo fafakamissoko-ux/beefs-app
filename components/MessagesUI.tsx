@@ -688,11 +688,11 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
         </div>
 
         {/* Chat area */}
-        <div className={`flex-1 flex flex-col ${!selectedConv ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`flex-1 flex flex-col min-w-0 bg-[#050505] ${!selectedConv ? 'hidden md:flex' : 'flex'}`}>
           {selectedConv ? (
             <>
               {/* Chat header */}
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06]">
+              <div className="flex shrink-0 items-center gap-3 border-b border-white/[0.06] bg-[#050505] px-4 py-3 z-20">
                 <button
                   type="button"
                   onClick={() => setSelectedConv(null)}
@@ -768,21 +768,21 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                 </div>
               </div>
 
-              {/* Messages */}
+              {/* Messages List */}
               <div
-                className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+                className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4"
                 onClick={() => {
                   setMessageMenu(null);
                   setShowChatMenu(false);
                 }}
               >
                 {loadingMsgs ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="flex flex-1 items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-600 text-sm">Envoie le premier message !</p>
+                  <div className="flex flex-1 items-center justify-center">
+                    <p className="text-sm text-gray-600">Envoie le premier message !</p>
                   </div>
                 ) : (
                   messages.map((msg, index) => {
@@ -806,31 +806,28 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
 
                     const repliedMsg = msg.reply_to_id ? messages.find(m => m.id === msg.reply_to_id) : null;
                     const decodedText = msg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/');
+
                     return (
-                      <motion.div
-                        key={msg.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isSelectionMode) toggleMessageSelection(msg.id);
-                          else setMessageMenu(messageMenu === msg.id ? null : msg.id);
-                        }}
-                        className={`relative flex w-full flex-col gap-1 group ${isMine ? 'items-end' : 'items-start'}`}
-                      >
+                      <div key={msg.id} className={`group relative flex w-full flex-col gap-1 ${isMine ? 'items-end' : 'items-start'}`}>
                         <motion.div
                           drag={isSelectionMode ? false : 'x'}
                           dragConstraints={{ left: 0, right: 0 }}
                           dragElastic={0.08}
+                          style={{ touchAction: 'pan-y' }}
                           onDragEnd={(_e, info) => {
                             if (!isSelectionMode && Math.abs(info.offset.x) > 50) {
                               setReplyingTo(msg);
                             }
                           }}
-                          className={`relative flex min-w-0 items-center gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isSelectionMode) toggleMessageSelection(msg.id);
+                            else setMessageMenu(messageMenu === msg.id ? null : msg.id);
+                          }}
+                          className={`relative flex w-full min-w-0 items-end gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}
                         >
                           {isSelectionMode && (
-                            <div className="flex h-12 w-8 shrink-0 items-center justify-center">
+                            <div className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center">
                               {selectedMessages.has(msg.id) ? (
                                 <CheckSquare className="h-5 w-5 text-plasma-500" aria-hidden />
                               ) : (
@@ -838,6 +835,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                               )}
                             </div>
                           )}
+
                           <AnimatePresence>
                             {messageMenu === msg.id && !isSelectionMode && (
                               <>
@@ -858,7 +856,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                                   initial={{ opacity: 0, y: 50, scale: 0.95 }}
                                   animate={{ opacity: 1, y: 0, scale: 1 }}
                                   exit={{ opacity: 0, y: 50, scale: 0.95 }}
-                                  className={`fixed bottom-0 left-0 right-0 z-[100] flex flex-col gap-2 rounded-t-[2rem] border border-white/[0.1] bg-[#151515] p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] md:absolute md:bottom-full md:left-auto md:right-auto md:top-auto md:mb-2 md:flex md:w-max md:flex-row md:items-center md:rounded-full md:border md:bg-[#151515]/95 md:p-1.5 md:pb-1.5 md:shadow-xl md:backdrop-blur-md ${isMine ? 'md:right-0' : 'md:left-0'}`}
+                                  className={`fixed bottom-0 left-0 right-0 z-[100] flex flex-col gap-2 rounded-t-[2rem] border border-white/[0.1] bg-[#151515] p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] md:absolute md:bottom-[calc(100%+0.5rem)] md:left-auto md:right-auto md:top-auto md:flex md:w-max md:flex-row md:items-center md:rounded-full md:border md:bg-[#151515]/95 md:p-1.5 md:pb-1.5 md:shadow-xl md:backdrop-blur-md ${isMine ? 'md:right-0' : 'md:left-0'}`}
                                 >
                                   <div className="mb-4 flex justify-between px-2 md:mb-0 md:justify-start md:gap-1 md:px-0">
                                     {['👍', '❤️', '🔥', '😂', '😮', '😢'].map((emoji) => {
@@ -900,34 +898,29 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                               </>
                             )}
                           </AnimatePresence>
+
                           <div
                             onDoubleClick={(e) => {
                               if (isSelectionMode) return;
                               e.stopPropagation();
                               setReplyingTo(msg);
                             }}
-                            className={`max-w-[85%] sm:max-w-[75%] min-w-0 break-words select-none px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${isSelectionMode ? 'pointer-events-none' : ''} ${
-                              isMine
-                                ? `cursor-pointer ${bubbleRadius} bg-gradient-to-br from-plasma-600 to-plasma-500 text-white`
-                                : `cursor-pointer ${bubbleRadius} border border-white/5 bg-white/10 text-white/95 backdrop-blur-md`
-                            }`}
+                            className={`flex min-w-0 max-w-[85%] select-none flex-col shadow-md md:max-w-[70%] ${isSelectionMode ? 'pointer-events-none' : ''} ${isMine ? 'items-end' : 'items-start'} ${bubbleRadius} ${isMine ? 'bg-gradient-to-br from-plasma-600 to-plasma-500 text-white' : 'border border-white/5 bg-white/10 text-white/95 backdrop-blur-md'} ${!isSelectionMode ? 'cursor-pointer' : ''}`}
                           >
-                            {repliedMsg && (
-                              <div className={`mb-2 rounded-lg border-l-2 p-2 text-xs ${isMine ? 'border-white/50 bg-black/20 text-white/90' : 'border-plasma-500 bg-black/30 text-gray-300'}`}>
-                                <p className="mb-0.5 font-bold opacity-75">{repliedMsg.sender_id === user.id ? 'Vous' : selectedConv.other_user.display_name}</p>
-                                <p className="truncate opacity-90">{repliedMsg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
-                              </div>
-                            )}
-                            <p className="min-w-0 whitespace-pre-wrap break-words font-sans">{decodedText}</p>
-                            <div className={`mt-1 flex items-center justify-end gap-1 ${isMine ? 'text-white/75' : 'text-white/40'}`}>
-                              <span className="font-mono text-[10px] tracking-wider">
-                                {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                              {isMine && (
-                                msg.is_read
-                                  ? <CheckCheck className="h-3 w-3" />
-                                  : <Check className="h-3 w-3" />
+                            <div className="w-full overflow-hidden break-words px-4 py-2.5">
+                              {repliedMsg && (
+                                <div className={`mb-2 rounded-lg border-l-2 p-2 text-xs ${isMine ? 'border-white/50 bg-black/20 text-white/90' : 'border-plasma-500 bg-black/30 text-gray-300'}`}>
+                                  <p className="mb-0.5 font-bold opacity-75">{repliedMsg.sender_id === user.id ? 'Vous' : selectedConv.other_user.display_name}</p>
+                                  <p className="truncate opacity-90">{repliedMsg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
+                                </div>
                               )}
+                              <p className="min-w-0 whitespace-pre-wrap break-words font-sans">{decodedText}</p>
+                              <div className={`mt-1 flex items-center justify-end gap-1 ${isMine ? 'text-white/75' : 'text-white/40'}`}>
+                                <span className="font-mono text-[10px] tracking-wider">
+                                  {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                {isMine && (msg.is_read ? <CheckCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />)}
+                              </div>
                             </div>
                           </div>
                         </motion.div>
@@ -940,8 +933,11 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                                 <button
                                   key={emoji}
                                   type="button"
-                                  onClick={(e) => { e.stopPropagation(); toggleReaction(msg, emoji); }}
-                                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] border ${hasReacted ? 'bg-plasma-500/20 border-plasma-500/50 text-plasma-400' : 'bg-white/5 border-white/10 text-gray-300'}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleReaction(msg, emoji);
+                                  }}
+                                  className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] ${hasReacted ? 'border-plasma-500/50 bg-plasma-500/20 text-plasma-400' : 'border-white/10 bg-white/5 text-gray-300'}`}
                                 >
                                   <span>{emoji}</span>
                                   <span>{users.length}</span>
@@ -950,15 +946,15 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                             })}
                           </div>
                         )}
-                      </motion.div>
+                      </div>
                     );
                   })
                 )}
-                <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} className="h-1 shrink-0" />
               </div>
 
-              {/* Message input ou Action Bar */}
-              <div className="flex shrink-0 flex-col border-t border-white/[0.06] bg-[#0A0A0A] pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+              {/* Action Bar & Input */}
+              <div className="z-20 flex shrink-0 flex-col border-t border-white/[0.06] bg-[#0A0A0A] pb-[max(0.5rem,env(safe-area-inset-bottom))]">
                 {isSelectionMode ? (
                   <div className="flex items-center justify-between px-4 py-4">
                     <span className="text-sm font-semibold text-gray-400">
@@ -1001,71 +997,79 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                             </p>
                             <p className="truncate text-xs text-gray-400">{replyingTo.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
                           </div>
-                          <button type="button" onClick={() => setReplyingTo(null)} className="rounded-full p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-white">
+                          <button
+                            type="button"
+                            onClick={() => setReplyingTo(null)}
+                            className="shrink-0 rounded-full p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                          >
                             <X className="h-4 w-4" />
                           </button>
                         </motion.div>
                       )}
                     </AnimatePresence>
+
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();
                         sendMessage();
                       }}
-                      className="flex items-end gap-2 rounded-full border border-white/10 bg-white/5 p-1.5 pl-4 transition-all focus-within:border-plasma-500/50 focus-within:bg-white/[0.07]"
+                      className="flex w-full items-end gap-2"
                     >
                       <button
                         type="button"
                         aria-label="Options de message"
                         onClick={() => toast('Envoi de médias bientôt disponible !', 'info')}
-                        className="mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+                        className="mb-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
                       >
                         <Plus className="h-5 w-5" />
                       </button>
-                      <textarea
-                        ref={messageComposerRef}
-                        value={newMessage}
-                        onChange={(e) => {
-                          setNewMessage(e.target.value);
-                          e.target.style.height = 'auto';
-                          e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            sendMessage();
-                            const target = e.target as HTMLTextAreaElement;
-                            setTimeout(() => {
-                              target.style.height = 'auto';
-                            }, 0);
-                          }
-                        }}
-                        placeholder="Écris ton message..."
-                        rows={1}
-                        className="hide-scrollbar flex-1 resize-none border-none bg-transparent py-2.5 font-sans text-[15px] text-white placeholder-white/40 focus:outline-none focus:ring-0 max-h-[120px]"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!newMessage.trim()}
-                        className="mb-px flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-plasma-500 transition-colors hover:bg-plasma-400 disabled:cursor-not-allowed disabled:opacity-30"
-                      >
-                        <Send className="-ml-0.5 h-4 w-4 text-white" />
-                      </button>
+                      <div className="flex min-w-0 flex-1 items-end rounded-[1.5rem] border border-white/10 bg-white/5 p-1.5 transition-all focus-within:border-plasma-500/50 focus-within:bg-white/[0.07]">
+                        <textarea
+                          ref={messageComposerRef}
+                          value={newMessage}
+                          onChange={(e) => {
+                            setNewMessage(e.target.value);
+                            e.target.style.height = 'auto';
+                            e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              sendMessage();
+                              const target = e.target as HTMLTextAreaElement;
+                              setTimeout(() => {
+                                target.style.height = 'auto';
+                              }, 0);
+                            }
+                          }}
+                          placeholder="Message..."
+                          rows={1}
+                          className="hide-scrollbar flex-1 min-w-0 resize-none border-none bg-transparent px-3 py-2 font-sans text-[15px] text-white placeholder-white/40 focus:outline-none focus:ring-0 max-h-[120px]"
+                        />
+                        <button
+                          type="submit"
+                          disabled={!newMessage.trim()}
+                          className="mb-0.5 mr-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-plasma-500 text-white transition-colors hover:bg-plasma-400 disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                          <Send className="-ml-0.5 h-4 w-4" />
+                        </button>
+                      </div>
                     </form>
                   </div>
                 )}
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex flex-1 items-center justify-center">
               <div className="text-center">
-                <MessageCircle className="w-16 h-16 text-white/10 mx-auto mb-4" />
+                <MessageCircle className="mx-auto mb-4 h-16 w-16 text-white/10" />
                 <p className="font-sans text-sm font-bold text-white/50">Sélectionne une conversation</p>
-                <p className="font-sans text-xs text-white/25 mt-1">ou commence une nouvelle discussion</p>
+                <p className="mt-1 font-sans text-xs text-white/25">ou commence une nouvelle discussion</p>
               </div>
             </div>
           )}
         </div>
+
       </div>
     </div>
   );
