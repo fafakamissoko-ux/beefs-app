@@ -694,8 +694,9 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
               {/* Chat header */}
               <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.06]">
                 <button
+                  type="button"
                   onClick={() => setSelectedConv(null)}
-                  className="md:hidden w-10 h-10 rounded-xl hover:bg-white/[0.06] flex items-center justify-center transition-colors"
+                  className={`${isDrawerMode ? 'flex' : 'flex md:hidden'} h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-white/[0.06]`}
                 >
                   <ArrowLeft className="w-5 h-5 text-white" />
                 </button>
@@ -817,7 +818,17 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                         }}
                         className={`relative flex w-full flex-col gap-1 group ${isMine ? 'items-end' : 'items-start'}`}
                       >
-                        <div className={`relative flex items-center gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <motion.div
+                          drag={isSelectionMode ? false : 'x'}
+                          dragConstraints={{ left: 0, right: 0 }}
+                          dragElastic={0.08}
+                          onDragEnd={(_e, info) => {
+                            if (!isSelectionMode && Math.abs(info.offset.x) > 50) {
+                              setReplyingTo(msg);
+                            }
+                          }}
+                          className={`relative flex min-w-0 items-center gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}
+                        >
                           {isSelectionMode && (
                             <div className="flex h-12 w-8 shrink-0 items-center justify-center">
                               {selectedMessages.has(msg.id) ? (
@@ -895,7 +906,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                               e.stopPropagation();
                               setReplyingTo(msg);
                             }}
-                            className={`max-w-[75%] select-none px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${isSelectionMode ? 'pointer-events-none' : ''} ${
+                            className={`max-w-[85%] sm:max-w-[75%] min-w-0 break-words select-none px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${isSelectionMode ? 'pointer-events-none' : ''} ${
                               isMine
                                 ? `cursor-pointer ${bubbleRadius} bg-gradient-to-br from-plasma-600 to-plasma-500 text-white`
                                 : `cursor-pointer ${bubbleRadius} border border-white/5 bg-white/10 text-white/95 backdrop-blur-md`
@@ -907,7 +918,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                                 <p className="truncate opacity-90">{repliedMsg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
                               </div>
                             )}
-                            <p className="whitespace-pre-wrap font-sans">{decodedText}</p>
+                            <p className="min-w-0 whitespace-pre-wrap break-words font-sans">{decodedText}</p>
                             <div className={`mt-1 flex items-center justify-end gap-1 ${isMine ? 'text-white/75' : 'text-white/40'}`}>
                               <span className="font-mono text-[10px] tracking-wider">
                                 {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -919,7 +930,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                               )}
                             </div>
                           </div>
-                        </div>
+                        </motion.div>
                         {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                           <div className={`flex flex-wrap gap-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
                             {Object.entries(msg.reactions).map(([emoji, users]) => {
@@ -1006,7 +1017,8 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                       <button
                         type="button"
                         aria-label="Options de message"
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+                        onClick={() => toast('Envoi de médias bientôt disponible !', 'info')}
+                        className="mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/10 hover:text-white"
                       >
                         <Plus className="h-5 w-5" />
                       </button>
@@ -1035,7 +1047,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                       <button
                         type="submit"
                         disabled={!newMessage.trim()}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-plasma-500 transition-colors hover:bg-plasma-400 disabled:cursor-not-allowed disabled:opacity-30"
+                        className="mb-px flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-plasma-500 transition-colors hover:bg-plasma-400 disabled:cursor-not-allowed disabled:opacity-30"
                       >
                         <Send className="-ml-0.5 h-4 w-4 text-white" />
                       </button>
