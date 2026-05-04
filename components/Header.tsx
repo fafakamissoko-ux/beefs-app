@@ -436,7 +436,15 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
 
                   if (item.href === '/messages') {
                     return (
-                      <button key={item.href} type="button" onClick={() => openDrawer()} className={itemClasses}>
+                      <button
+                        key={item.href}
+                        type="button"
+                        onClick={() => {
+                          if (pathname === '/messages' || pathname.startsWith('/messages/')) return;
+                          openDrawer();
+                        }}
+                        className={itemClasses}
+                      >
                         <div className="relative">
                           <Icon className={`w-[18px] h-[18px] ${active ? 'max-lg:text-plasma-400' : ''}`} />
                           <NavUnreadBadge href={item.href} count={item.badge} />
@@ -685,7 +693,16 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
 
                   if (item.href === '/messages') {
                     return (
-                      <button key={item.href} type="button" onClick={() => { openDrawer(); setMobileMenuOpen(false); }} className={`w-full text-left ${itemClasses}`}>
+                      <button
+                        key={item.href}
+                        type="button"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          if (pathname === '/messages' || pathname.startsWith('/messages/')) return;
+                          openDrawer();
+                        }}
+                        className={`w-full text-left ${itemClasses}`}
+                      >
                         <div className="relative">
                           <Icon className="w-5 h-5" />
                           <NavUnreadBadge href={item.href} count={item.badge} compact />
