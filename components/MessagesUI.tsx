@@ -74,6 +74,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const [searchResults, setSearchResults] = useState<UserSearchRow[]>([]);
   const [searching, setSearching] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageComposerRef = useRef<HTMLTextAreaElement>(null);
   const dmDeepLinkLockRef = useRef(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [messageMenu, setMessageMenu] = useState<string | null>(null);
@@ -155,6 +156,13 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
       scrollToBottom();
     }
   }, [messages, selectedConv, scrollToBottom]);
+
+  useEffect(() => {
+    if (newMessage === '') {
+      const el = messageComposerRef.current;
+      if (el) el.style.height = 'auto';
+    }
+  }, [newMessage]);
 
   // Real-time messages & updates
   useEffect(() => {
@@ -776,8 +784,25 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                     <p className="text-gray-600 text-sm">Envoie le premier message !</p>
                   </div>
                 ) : (
-                  messages.map((msg) => {
+                  messages.map((msg, index) => {
                     const isMine = msg.sender_id === user.id;
+                    const prevMsg = index > 0 ? messages[index - 1] : null;
+                    const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
+                    const isConsecutivePrev = prevMsg && prevMsg.sender_id === msg.sender_id;
+                    const isConsecutiveNext = nextMsg && nextMsg.sender_id === msg.sender_id;
+
+                    let bubbleRadius = isMine
+                      ? 'rounded-[20px] rounded-br-[4px]'
+                      : 'rounded-[20px] rounded-bl-[4px]';
+
+                    if (isConsecutivePrev && isConsecutiveNext) {
+                      bubbleRadius = isMine ? 'rounded-[20px] rounded-r-[4px]' : 'rounded-[20px] rounded-l-[4px]';
+                    } else if (isConsecutivePrev && !isConsecutiveNext) {
+                      bubbleRadius = isMine ? 'rounded-[20px] rounded-tr-[4px] rounded-br-[4px]' : 'rounded-[20px] rounded-tl-[4px] rounded-bl-[4px]';
+                    } else if (!isConsecutivePrev && isConsecutiveNext) {
+                      bubbleRadius = isMine ? 'rounded-[20px] rounded-br-[4px]' : 'rounded-[20px] rounded-bl-[4px]';
+                    }
+
                     const repliedMsg = msg.reply_to_id ? messages.find(m => m.id === msg.reply_to_id) : null;
                     const decodedText = msg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/');
                     return (
@@ -872,8 +897,8 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                             }}
                             className={`max-w-[75%] select-none px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${isSelectionMode ? 'pointer-events-none' : ''} ${
                               isMine
-                                ? 'cursor-pointer rounded-[20px] rounded-br-[4px] bg-gradient-to-br from-plasma-600 to-plasma-500 text-white'
-                                : 'cursor-pointer rounded-[20px] rounded-bl-[4px] border border-white/5 bg-white/10 text-white/95 backdrop-blur-md'
+                                ? `cursor-pointer ${bubbleRadius} bg-gradient-to-br from-plasma-600 to-plasma-500 text-white`
+                                : `cursor-pointer ${bubbleRadius} border border-white/5 bg-white/10 text-white/95 backdrop-blur-md`
                             }`}
                           >
                             {repliedMsg && (
@@ -976,14 +1001,36 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                         e.preventDefault();
                         sendMessage();
                       }}
-                      className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1 pl-4 transition-all focus-within:border-plasma-500/50 focus-within:bg-white/[0.07]"
+                      className="flex items-end gap-2 rounded-full border border-white/10 bg-white/5 p-1.5 pl-4 transition-all focus-within:border-plasma-500/50 focus-within:bg-white/[0.07]"
                     >
-                      <input
-                        type="text"
+                      <button
+                        type="button"
+                        aria-label="Options de message"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+                      >
+                        <Plus className="h-5 w-5" />
+                      </button>
+                      <textarea
+                        ref={messageComposerRef}
                         value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
+                        onChange={(e) => {
+                          setNewMessage(e.target.value);
+                          e.target.style.height = 'auto';
+                          e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            sendMessage();
+                            const target = e.target as HTMLTextAreaElement;
+                            setTimeout(() => {
+                              target.style.height = 'auto';
+                            }, 0);
+                          }
+                        }}
                         placeholder="Écris ton message..."
-                        className="flex-1 border-none bg-transparent font-sans text-[15px] text-white placeholder-white/40 focus:outline-none focus:ring-0"
+                        rows={1}
+                        className="hide-scrollbar flex-1 resize-none border-none bg-transparent py-2.5 font-sans text-[15px] text-white placeholder-white/40 focus:outline-none focus:ring-0 max-h-[120px]"
                       />
                       <button
                         type="submit"
