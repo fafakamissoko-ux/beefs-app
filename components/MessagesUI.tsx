@@ -191,11 +191,8 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
           }
         } else if (payload.eventType === 'UPDATE') {
           const msg = payload.new as Message;
-          if (msg.is_deleted) {
-            setMessages(prev => prev.filter(m => m.id !== msg.id));
-          } else {
-            setMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
-          }
+          // On garde le message dans l'état pour afficher « Ce message a été supprimé »
+          setMessages((prev) => prev.map((m) => (m.id === msg.id ? msg : m)));
         }
       })
       .subscribe();
@@ -216,7 +213,6 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
         .from('direct_messages')
         .select('*')
         .eq('conversation_id', conv.id)
-        .eq('is_deleted', false)
         .order('created_at', { ascending: true })
         .limit(100);
 
@@ -317,7 +313,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   };
 
   const deleteMessage = async (msgId: string) => {
-    setMessages(prev => prev.filter(m => m.id !== msgId));
+    setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, is_deleted: true } : m)));
     await supabase.from('direct_messages').update({ is_deleted: true }).eq('id', msgId);
     setMessageMenu(null);
   };
@@ -327,7 +323,9 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     const idsToDelete = Array.from(selectedMessages);
     const serverIds = idsToDelete.filter((id) => !id.startsWith('temp_'));
 
-    setMessages((prev) => prev.filter((m) => !selectedMessages.has(m.id)));
+    setMessages((prev) =>
+      prev.map((m) => (selectedMessages.has(m.id) ? { ...m, is_deleted: true } : m))
+    );
     setIsSelectionMode(false);
     setSelectedMessages(new Set());
     setMessageMenu(null);
@@ -770,7 +768,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
 
               {/* Messages List */}
               <div
-                className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-4"
+                className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pt-4 pb-24"
                 onClick={() => {
                   setMessageMenu(null);
                   setShowChatMenu(false);
@@ -787,6 +785,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                 ) : (
                   messages.map((msg, index) => {
                     const isMine = msg.sender_id === user.id;
+                    const isDeleted = !!msg.is_deleted;
                     const prevMsg = index > 0 ? messages[index - 1] : null;
                     const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
                     const isConsecutivePrev = prevMsg && prevMsg.sender_id === msg.sender_id;
@@ -805,28 +804,32 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                     }
 
                     const repliedMsg = msg.reply_to_id ? messages.find(m => m.id === msg.reply_to_id) : null;
-                    const decodedText = msg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/');
+
+                    const decodedText = isDeleted
+                      ? '🚫 Ce message a été supprimé'
+                      : msg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/');
 
                     return (
                       <div key={msg.id} className={`group relative flex w-full flex-col gap-1 ${isMine ? 'items-end' : 'items-start'}`}>
                         <motion.div
-                          drag={isSelectionMode ? false : 'x'}
+                          drag={isSelectionMode || isDeleted ? false : 'x'}
                           dragConstraints={{ left: 0, right: 0 }}
                           dragElastic={0.08}
                           style={{ touchAction: 'pan-y' }}
                           onDragEnd={(_e, info) => {
-                            if (!isSelectionMode && Math.abs(info.offset.x) > 50) {
+                            if (!isSelectionMode && !isDeleted && Math.abs(info.offset.x) > 50) {
                               setReplyingTo(msg);
                             }
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
+                            if (isDeleted) return;
                             if (isSelectionMode) toggleMessageSelection(msg.id);
                             else setMessageMenu(messageMenu === msg.id ? null : msg.id);
                           }}
                           className={`relative flex w-full min-w-0 items-end gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}
                         >
-                          {isSelectionMode && (
+                          {isSelectionMode && !isDeleted && (
                             <div className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center">
                               {selectedMessages.has(msg.id) ? (
                                 <CheckSquare className="h-5 w-5 text-plasma-500" aria-hidden />
@@ -837,7 +840,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                           )}
 
                           <AnimatePresence>
-                            {messageMenu === msg.id && !isSelectionMode && (
+                            {messageMenu === msg.id && !isSelectionMode && !isDeleted && (
                               <>
                                 <motion.div
                                   key={`dm-overlay-${msg.id}`}
@@ -856,7 +859,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                                   initial={{ opacity: 0, y: 50, scale: 0.95 }}
                                   animate={{ opacity: 1, y: 0, scale: 1 }}
                                   exit={{ opacity: 0, y: 50, scale: 0.95 }}
-                                  className={`fixed bottom-0 left-0 right-0 z-[100] flex flex-col gap-2 rounded-t-[2rem] border border-white/[0.1] bg-[#151515] p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] md:absolute md:bottom-[calc(100%+0.5rem)] md:left-auto md:right-auto md:top-auto md:flex md:w-max md:flex-row md:items-center md:rounded-full md:border md:bg-[#151515]/95 md:p-1.5 md:pb-1.5 md:shadow-xl md:backdrop-blur-md ${isMine ? 'md:right-0' : 'md:left-0'}`}
+                                  className={`fixed bottom-0 left-0 right-0 z-[100] flex flex-col gap-2 rounded-t-[2rem] border border-white/[0.1] bg-[#151515] p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] md:absolute md:top-[calc(100%+0.5rem)] md:bottom-auto md:left-auto md:right-auto md:flex md:w-max md:flex-row md:items-center md:rounded-full md:border md:bg-[#151515]/95 md:p-1.5 md:shadow-xl md:backdrop-blur-md ${isMine ? 'md:right-0' : 'md:left-0'}`}
                                 >
                                   <div className="mb-4 flex justify-between px-2 md:mb-0 md:justify-start md:gap-1 md:px-0">
                                     {['👍', '❤️', '🔥', '😂', '😮', '😢'].map((emoji) => {
@@ -901,30 +904,30 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
 
                           <div
                             onDoubleClick={(e) => {
-                              if (isSelectionMode) return;
+                              if (isSelectionMode || isDeleted) return;
                               e.stopPropagation();
                               setReplyingTo(msg);
                             }}
-                            className={`flex min-w-0 max-w-[85%] select-none flex-col shadow-md md:max-w-[70%] ${isSelectionMode ? 'pointer-events-none' : ''} ${isMine ? 'items-end' : 'items-start'} ${bubbleRadius} ${isMine ? 'bg-gradient-to-br from-plasma-600 to-plasma-500 text-white' : 'border border-white/5 bg-white/10 text-white/95 backdrop-blur-md'} ${!isSelectionMode ? 'cursor-pointer' : ''}`}
+                            className={`flex min-w-0 max-w-[85%] select-none flex-col shadow-md md:max-w-[70%] ${isSelectionMode || isDeleted ? 'pointer-events-none' : ''} ${isMine ? 'items-end' : 'items-start'} ${bubbleRadius} ${isDeleted ? 'border border-white/10 bg-white/5 italic text-white/40' : isMine ? 'bg-gradient-to-br from-plasma-600 to-plasma-500 text-white' : 'border border-white/5 bg-white/10 text-white/95 backdrop-blur-md'} ${!isSelectionMode && !isDeleted ? 'cursor-pointer' : ''}`}
                           >
-                            <div className="w-full overflow-hidden break-words px-4 py-2.5">
-                              {repliedMsg && (
+                            <div className="w-full overflow-hidden px-4 py-2.5">
+                              {repliedMsg && !isDeleted && (
                                 <div className={`mb-2 rounded-lg border-l-2 p-2 text-xs ${isMine ? 'border-white/50 bg-black/20 text-white/90' : 'border-plasma-500 bg-black/30 text-gray-300'}`}>
                                   <p className="mb-0.5 font-bold opacity-75">{repliedMsg.sender_id === user.id ? 'Vous' : selectedConv.other_user.display_name}</p>
                                   <p className="truncate opacity-90">{repliedMsg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
                                 </div>
                               )}
-                              <p className="min-w-0 whitespace-pre-wrap break-words font-sans">{decodedText}</p>
-                              <div className={`mt-1 flex items-center justify-end gap-1 ${isMine ? 'text-white/75' : 'text-white/40'}`}>
+                              <p className="min-w-0 whitespace-pre-wrap break-all font-sans text-[15px]">{decodedText}</p>
+                              <div className={`mt-1 flex items-center justify-end gap-1 ${isDeleted ? 'text-white/20' : isMine ? 'text-white/75' : 'text-white/40'}`}>
                                 <span className="font-mono text-[10px] tracking-wider">
                                   {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
-                                {isMine && (msg.is_read ? <CheckCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />)}
+                                {isMine && !isDeleted && (msg.is_read ? <CheckCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />)}
                               </div>
                             </div>
                           </div>
                         </motion.div>
-                        {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                        {msg.reactions && Object.keys(msg.reactions).length > 0 && !isDeleted && (
                           <div className={`flex flex-wrap gap-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
                             {Object.entries(msg.reactions).map(([emoji, users]) => {
                               if (users.length === 0) return null;
