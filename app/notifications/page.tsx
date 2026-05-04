@@ -66,47 +66,9 @@ const ICON_MAP: Record<
   aura: { icon: Sparkles, color: 'text-brand-400', bg: 'bg-brand-500/15' },
 };
 
-type AuraNotificationRow = {
-  id: string;
-  user_id: string;
-  created_at: string;
-  giver_name: string;
-  giver_username: string | null;
-  aura_kind: string | null;
-  giver_id?: string | null;
-};
-
-function mapAuraRowToAppNotification(row: AuraNotificationRow): AppNotification {
-  const name = row.giver_name?.trim() || 'Quelqu’un';
-  const isTeaser = row.aura_kind === 'teaser';
-  const title = isTeaser
-    ? `📸 Ton Teaser gagne en Aura (+${name})`
-    : `✨ ${name} a validé ton Aura !`;
-  const slugRaw = row.giver_username?.trim();
-  const slug = slugRaw ? slugRaw.replace(/^@/, '') : '';
-  /** Profils publics : segment [username], encodé pour caractères spéciaux. */
-  const link = slug.length > 0 ? `/profile/${encodeURIComponent(slug)}` : null;
-
-  return {
-    id: row.id,
-    created_at: row.created_at,
-    user_id: row.user_id,
-    type: 'aura',
-    title,
-    body: null,
-    link,
-    is_read: false,
-    metadata: {
-      giver_username: slug.length > 0 ? slug : null,
-      aura_kind: row.aura_kind,
-      ...(row.giver_id ? { giver_id: row.giver_id } : {}),
-    },
-  };
-}
-
 function SkeletonCard() {
   return (
-    <div className="card rounded-xl p-4 flex items-start gap-4 animate-pulse">
+    <div className="flex items-start gap-4 animate-pulse px-4 py-3 border-b border-white/5 w-full">
       <div className="w-10 h-10 rounded-full bg-white/10 shrink-0" />
       <div className="flex-1 space-y-2">
         <div className="h-4 bg-white/10 rounded w-3/4" />
@@ -136,34 +98,15 @@ export default function NotificationsPage() {
     if (!user) return;
     setLoading(true);
     try {
-      const [notifRes, auraRes] = await Promise.all([
-        supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(4000),
-        supabase
-          .from('aura_notifications')
-          .select('id,user_id,created_at,giver_name,giver_username,aura_kind,giver_id')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(2000),
-      ]);
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(4000);
 
-      if (notifRes.error) throw notifRes.error;
-      const baseRows = (notifRes.data ?? []) as AppNotification[];
-
-      const auraMerged: AppNotification[] = auraRes.error
-        ? []
-        : (auraRes.data ?? []).map((r: AuraNotificationRow) => mapAuraRowToAppNotification(r));
-
-      if (auraRes.error) console.warn('[radar] aura_notifications', auraRes.error);
-
-      const merged = [...baseRows, ...auraMerged].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
-      setNotifications(merged);
+      if (error) throw error;
+      setNotifications((data ?? []) as AppNotification[]);
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
@@ -200,18 +143,6 @@ export default function NotificationsPage() {
             return [row, ...prev];
           });
         }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'aura_sparks',
-          filter: `receiver_id=eq.${user.id}`,
-        },
-        () => {
-          void fetchNotifications();
-        },
       )
       .on(
         'postgres_changes',
@@ -335,7 +266,7 @@ export default function NotificationsPage() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <h1 className="text-3xl font-black text-white truncate">
-                Radar
+                Notifications
               </h1>
               {unreadCount > 0 && (
                 <span className="brand-gradient text-white text-xs font-bold px-2.5 py-1 rounded-full shrink-0">
@@ -358,7 +289,7 @@ export default function NotificationsPage() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
+          <div>
             {Array.from({ length: 5 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
@@ -373,7 +304,7 @@ export default function NotificationsPage() {
               <BellOff className="w-8 h-8 text-gray-600" />
             </div>
             <h2 className="text-xl font-bold text-white mb-2">
-              Radar vide
+              Aucune notification
             </h2>
             <p className="text-gray-500 text-sm">
               Quand tu recevras des suivis, invitations, messages, étincelles d’Aura ou alertes,
@@ -381,7 +312,7 @@ export default function NotificationsPage() {
             </p>
           </motion.div>
         ) : (
-          <div className="space-y-2">
+          <div>
             <AnimatePresence initial={false}>
               {notifications.map((n, i) => {
                 const mapKey =
@@ -396,8 +327,8 @@ export default function NotificationsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.03 }}
                     onClick={() => handleRowClick(n)}
-                    className={`card rounded-xl p-4 flex items-start gap-4 w-full text-left transition-colors hover:bg-white/[0.04] relative ${
-                      unread ? 'border-l-2 border-l-brand-500' : ''
+                    className={`flex items-start gap-4 w-full text-left px-4 py-3 transition-colors hover:bg-white/[0.04] border-b border-white/5 relative ${
+                      unread ? 'bg-brand-500/5' : ''
                     }`}
                   >
                     {unread && (
