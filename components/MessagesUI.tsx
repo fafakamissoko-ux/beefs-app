@@ -15,6 +15,7 @@ import { PENDING_DM_WITH_STORAGE_KEY } from '@/lib/messages-deeplink';
 
 interface MessagesUIProps {
   isDrawerMode?: boolean;
+  onClose?: () => void;
 }
 
 interface Conversation {
@@ -54,7 +55,7 @@ type UserSearchRow = {
   avatar_url: string | null;
 };
 
-export function MessagesUI({ isDrawerMode = false }: MessagesUIProps = {}) {
+export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
@@ -472,7 +473,13 @@ export function MessagesUI({ isDrawerMode = false }: MessagesUIProps = {}) {
         <div className={`w-full md:w-96 border-r border-white/[0.06] flex flex-col ${selectedConv ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-white/[0.06] flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              {!isDrawerMode && <AppBackButton className="shrink-0" />}
+              {isDrawerMode ? (
+                <button type="button" onClick={onClose} className="shrink-0 w-8 h-8 flex items-center justify-center text-white hover:bg-white/10 rounded-full transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              ) : (
+                <AppBackButton className="shrink-0" />
+              )}
               <h1 className="font-sans text-xl font-black text-white truncate">Messages</h1>
             </div>
             <button
