@@ -536,16 +536,16 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                               <span className="text-white font-bold text-sm">{u.display_name?.[0]?.toUpperCase() || '?'}</span>
                             )}
                           </div>
-                          <div className="min-w-0">
+                          <div className="flex flex-col min-w-0 leading-tight">
                             <ProfileUserLink
                               username={u.username}
-                              className="font-sans text-sm font-bold text-white"
+                              className="font-sans text-sm font-bold text-white truncate"
                             >
                               {u.display_name}
                             </ProfileUserLink>
                             <ProfileUserLink
                               username={u.username}
-                              className="font-mono text-[10px] tracking-wider text-white/35"
+                              className="font-mono text-[10px] tracking-wider text-white/40 truncate"
                             >
                               @{u.username}
                             </ProfileUserLink>
