@@ -12,6 +12,7 @@ import { sanitizeMessage } from '@/lib/security';
 import { AppBackButton } from '@/components/AppBackButton';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { PENDING_DM_WITH_STORAGE_KEY } from '@/lib/messages-deeplink';
+import { useMessagesDrawer } from '@/contexts/MessagesDrawerContext';
 
 interface MessagesUIProps {
   isDrawerMode?: boolean;
@@ -60,6 +61,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { targetUserId } = useMessagesDrawer();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
@@ -369,15 +371,20 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     if (dmDeepLinkLockRef.current) return;
 
     let raw = searchParams.get('with');
-    if (!raw && typeof window !== 'undefined') {
+
+    // Si on est dans le tiroir et qu'un ID cible est demandé, on l'utilise en priorité
+    if (isDrawerMode && targetUserId) {
+      raw = targetUserId;
+    } else if (!raw && typeof window !== 'undefined') {
       raw = sessionStorage.getItem(PENDING_DM_WITH_STORAGE_KEY);
       if (raw) sessionStorage.removeItem(PENDING_DM_WITH_STORAGE_KEY);
     }
+
     if (!raw) return;
 
     const withId = raw.trim();
     if (!DM_WITH_UUID_RE.test(withId) || withId === user.id) {
-      router.replace('/messages', { scroll: false });
+      if (!isDrawerMode) router.replace('/messages', { scroll: false });
       return;
     }
 
@@ -430,10 +437,10 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
         toast('Impossible d’ouvrir la conversation', 'error');
       } finally {
         dmDeepLinkLockRef.current = false;
-        router.replace('/messages', { scroll: false });
+        if (!isDrawerMode) router.replace('/messages', { scroll: false });
       }
     })();
-  }, [authLoading, user, loadingConvs, searchParams, router, toast, loadMessages, loadConversations]);
+  }, [authLoading, user, loadingConvs, searchParams, router, toast, loadMessages, loadConversations, targetUserId, isDrawerMode]);
 
   const activateRow = (fn: () => void) => (e: KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {

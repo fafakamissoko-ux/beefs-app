@@ -45,7 +45,6 @@ import { sanitizeMessage } from '@/lib/security';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import { postBeefManage, type BeefManageAction } from '@/lib/beef-manage-client';
 import { escapeForIlikeExact } from '@/lib/ilike-exact';
-import { PENDING_DM_WITH_STORAGE_KEY } from '@/lib/messages-deeplink';
 import { useMessagesDrawer } from '@/contexts/MessagesDrawerContext';
 import { ARENA_QUICK_REACTIONS } from '@/lib/arena-quick-reactions';
 import {
@@ -4319,12 +4318,7 @@ export function TikTokStyleArena({
                         type="button"
                         onClick={() => {
                           setShowProfile(false);
-                          try {
-                            sessionStorage.setItem(PENDING_DM_WITH_STORAGE_KEY, selectedProfile.id);
-                          } catch {
-                            /* private mode */
-                          }
-                          router.push(`/messages?with=${encodeURIComponent(selectedProfile.id)}`);
+                          openDrawer(selectedProfile.id);
                         }}
                         className="flex-1 rounded-full border border-white/10 bg-white/5 py-2.5 font-bold text-white transition-colors hover:bg-white/10"
                       >
