@@ -298,7 +298,7 @@ export default function NotificationsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="card rounded-2xl p-12 text-center"
+            className="py-12 border-b border-white/5 flex flex-col items-center justify-center w-full"
           >
             <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
               <BellOff className="w-8 h-8 text-gray-600" />
@@ -327,16 +327,10 @@ export default function NotificationsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.03 }}
                     onClick={() => handleRowClick(n)}
-                    className={`flex items-start gap-4 w-full text-left px-4 py-3 transition-colors hover:bg-white/[0.04] border-b border-white/5 relative ${
+                    className={`flex items-start gap-4 w-full text-left px-4 py-3 transition-colors hover:bg-white/[0.04] border-b border-white/5 ${
                       unread ? 'bg-brand-500/5' : ''
                     }`}
                   >
-                    {unread && (
-                      <span
-                        className="absolute top-4 right-4 w-2 h-2 rounded-full bg-blue-500 shrink-0"
-                        aria-hidden
-                      />
-                    )}
                     <div
                       className={`w-10 h-10 rounded-full ${bg} flex items-center justify-center shrink-0`}
                     >
@@ -350,10 +344,13 @@ export default function NotificationsPage() {
                         </p>
                       ) : null}
                     </div>
-                    <span className="text-xs text-gray-600 shrink-0 flex items-center gap-1 pt-0.5">
-                      <Clock className="w-3 h-3" />
-                      {shortTimeAgo(n.created_at)}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                      <span className="text-xs text-gray-600 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {shortTimeAgo(n.created_at)}
+                      </span>
+                      {unread && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" aria-hidden />}
+                    </div>
                   </motion.button>
                 );
               })}

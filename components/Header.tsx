@@ -310,7 +310,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
     { href: '/feed', label: 'Fil d’actu', icon: Home, badge: 0 },
     {
       href: '/notifications',
-      label: 'Radar',
+      label: 'Notifications',
       icon: Bell,
       badge: unreadNotifications,
     },

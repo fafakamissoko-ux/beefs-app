@@ -1088,13 +1088,9 @@ export default function PublicProfilePage() {
                         : 'text-white'
                     }`}
                   />
-                  {mediaAuraLoading ? (
-                    'Mise à jour…'
-                  ) : (
-                    <span className="font-mono tabular-nums">
-                      {(mediaLikes[viewingImage.type].count ?? 0).toLocaleString()}
-                    </span>
-                  )}
+                  <span className="font-mono tabular-nums">
+                    {(mediaLikes[viewingImage.type].count ?? 0).toLocaleString()}
+                  </span>
                 </button>
               </div>
             </div>
