@@ -136,6 +136,7 @@ export default function PublicProfilePage() {
     { id: number; text: string; minus?: boolean; anchor: 'follow' | 'aura'; solar?: boolean }[]
   >([]);
   const burstSeq = useRef(0);
+  const isLikingMedia = useRef(false);
 
   const queueBurst = useCallback(
     (text: string, anchor: 'follow' | 'aura', minus = false, solar = false) => {
@@ -476,6 +477,9 @@ export default function PublicProfilePage() {
       return;
     }
 
+    if (isLikingMedia.current) return;
+    isLikingMedia.current = true;
+
     const type = viewingImage.type;
     const wasLiked = mediaLikes[type].liked;
 
@@ -521,6 +525,9 @@ export default function PublicProfilePage() {
       }));
     } finally {
       setMediaAuraLoading(false);
+      setTimeout(() => {
+        isLikingMedia.current = false;
+      }, 1000);
     }
   }, [profile, viewingImage, user, mediaLikes, toast, router, queueBurst]);
 
