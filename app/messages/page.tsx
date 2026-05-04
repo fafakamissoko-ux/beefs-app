@@ -605,13 +605,13 @@ function MessagesPageInner() {
                         animate={{ opacity: 1, y: 0 }}
                         className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                       >
-                        <div className={`max-w-[75%] px-4 py-2.5 text-sm leading-relaxed ${
+                        <div className={`relative max-w-[75%] px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${
                           isMine
-                            ? 'rounded-lg rounded-br-sm bg-cobalt-500/10 border border-cobalt-500/20 text-white'
-                            : 'rounded-lg rounded-bl-sm bg-white/[0.05] border border-white/[0.08] text-white'
+                            ? 'rounded-[20px] rounded-br-[4px] bg-gradient-to-br from-brand-500 to-brand-600 text-white'
+                            : 'rounded-[20px] rounded-bl-[4px] bg-white/10 border border-white/5 text-white/95 backdrop-blur-md'
                         }`}>
-                          <p className="font-sans font-light">{msg.content}</p>
-                          <div className={`flex items-center justify-end gap-1 mt-1.5 ${isMine ? 'text-white/40' : 'text-white/30'}`}>
+                          <p className="whitespace-pre-wrap">{msg.content}</p>
+                          <div className={`flex items-center justify-end gap-1 mt-1 ${isMine ? 'text-white/75' : 'text-white/40'}`}>
                             <span className="font-mono text-[10px] tracking-wider">
                               {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                             </span>
@@ -630,22 +630,22 @@ function MessagesPageInner() {
               </div>
 
               {/* Message input */}
-              <div className="px-4 py-3 border-t border-white/[0.06]">
-                <div className="flex items-center gap-2">
+              <div className="px-4 py-4 border-t border-white/[0.06] bg-black/20">
+                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full p-1 pl-4 focus-within:border-brand-500/50 focus-within:bg-white/[0.07] transition-all">
                   <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    placeholder="Ecris ton message..."
-                    className="flex-1 bg-white/[0.05] border-b border-white/[0.1] rounded-none px-4 py-2.5 font-sans text-sm text-white placeholder-white/30 focus:outline-none focus:border-cobalt-500/50 transition-colors"
+                    placeholder="Écris ton message..."
+                    className="flex-1 bg-transparent border-none font-sans text-[15px] text-white placeholder-white/40 focus:outline-none focus:ring-0"
                   />
                   <button
                     onClick={sendMessage}
                     disabled={!newMessage.trim()}
-                    className="w-10 h-10 rounded-xl bg-prestige-gold/90 hover:bg-prestige-gold disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    className="w-9 h-9 rounded-full bg-brand-500 hover:bg-brand-400 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors shrink-0"
                   >
-                    <Send className="w-4 h-4 text-black" />
+                    <Send className="w-4 h-4 text-white -ml-0.5" />
                   </button>
                 </div>
               </div>
