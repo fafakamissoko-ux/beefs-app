@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from 're
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck, X, Trash2, CheckSquare, Square } from 'lucide-react';
+import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck, X, Trash2, Trash, CheckSquare, Square, MoreVertical } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
@@ -79,6 +79,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const [messageMenu, setMessageMenu] = useState<string | null>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
+  const [showChatMenu, setShowChatMenu] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -197,6 +198,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const loadMessages = useCallback(async (conv: Conversation) => {
     setReplyingTo(null);
     setMessageMenu(null);
+    setShowChatMenu(false);
     setIsSelectionMode(false);
     setSelectedMessages(new Set());
     setSelectedConv(conv);
@@ -342,6 +344,33 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
       else next.add(msgId);
       return next;
     });
+  };
+
+  const clearEntireConversation = async () => {
+    if (!selectedConv) return;
+    const convId = selectedConv.id;
+    setMessages([]);
+    setShowChatMenu(false);
+    setMessageMenu(null);
+
+    const { error } = await supabase.from('direct_messages').update({ is_deleted: true }).eq('conversation_id', convId);
+
+    if (error) {
+      toast('Impossible de vider la discussion', 'error');
+      void loadMessages(selectedConv);
+      return;
+    }
+
+    toast('Historique purgé', 'success');
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === convId ? { ...c, last_message_text: null, last_message_at: null } : c,
+      ),
+    );
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
+    }
   };
 
   const searchUsers = async (query: string) => {
@@ -513,7 +542,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     }`}>
       <div className="flex w-full h-full">
         {/* Conversation list */}
-        <div className={`w-full md:w-96 border-r border-white/[0.06] flex flex-col ${selectedConv ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`w-full ${!isDrawerMode ? 'md:w-80 lg:w-96' : ''} flex flex-col border-r border-white/[0.06] ${selectedConv ? (isDrawerMode ? 'hidden' : 'hidden md:flex') : 'flex'}`}>
           <div className="p-4 border-b border-white/[0.06] flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               {isDrawerMode ? (
@@ -694,12 +723,40 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                       setIsSelectionMode(!isSelectionMode);
                       setSelectedMessages(new Set());
                       setMessageMenu(null);
+                      setShowChatMenu(false);
                     }}
-                    className="ml-auto rounded-full px-3 py-1.5 text-xs font-bold text-plasma-400 transition-colors hover:bg-plasma-500/10 hover:text-plasma-300"
+                    className="ml-auto shrink-0 rounded-full px-3 py-1.5 text-xs font-bold text-plasma-400 transition-colors hover:bg-plasma-500/10"
                   >
                     {isSelectionMode ? 'Annuler' : 'Sélectionner'}
                   </button>
                 )}
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowChatMenu((o) => !o)}
+                    className="rounded-full p-2 text-white transition-colors hover:bg-white/10"
+                  >
+                    <MoreVertical className="h-5 w-5" aria-hidden />
+                  </button>
+                  <AnimatePresence>
+                    {showChatMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                        className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#151515] shadow-2xl"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => void clearEntireConversation()}
+                          className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm font-bold text-red-500 transition-colors hover:bg-red-500/10"
+                        >
+                          <Trash className="h-5 w-5" aria-hidden /> Vider la discussion
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
               {/* Messages */}
@@ -707,6 +764,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                 className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
                 onClick={() => {
                   setMessageMenu(null);
+                  setShowChatMenu(false);
                 }}
               >
                 {loadingMsgs ? (
@@ -729,60 +787,81 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                         animate={{ opacity: 1, y: 0 }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (isSelectionMode) {
-                            toggleMessageSelection(msg.id);
-                          } else {
-                            setMessageMenu(messageMenu === msg.id ? null : msg.id);
-                          }
+                          if (isSelectionMode) toggleMessageSelection(msg.id);
+                          else setMessageMenu(messageMenu === msg.id ? null : msg.id);
                         }}
                         className={`relative flex w-full flex-col gap-1 group ${isMine ? 'items-end' : 'items-start'}`}
                       >
-                        {isSelectionMode && (
-                          <div className={`pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 ${isMine ? '-left-8' : '-right-8'}`}>
-                            {selectedMessages.has(msg.id) ? (
-                              <CheckSquare className="h-5 w-5 text-plasma-500" aria-hidden />
-                            ) : (
-                              <Square className="h-5 w-5 text-gray-500" aria-hidden />
-                            )}
-                          </div>
-                        )}
                         <div className={`relative flex items-center gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
+                          {isSelectionMode && (
+                            <div className="flex h-12 w-8 shrink-0 items-center justify-center">
+                              {selectedMessages.has(msg.id) ? (
+                                <CheckSquare className="h-5 w-5 text-plasma-500" aria-hidden />
+                              ) : (
+                                <Square className="h-5 w-5 text-gray-500" aria-hidden />
+                              )}
+                            </div>
+                          )}
                           <AnimatePresence>
-                            {!isSelectionMode && messageMenu === msg.id && (
-                              <motion.div
-                                key={`menu-${msg.id}`}
-                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                className={`absolute bottom-full z-[50] mb-2 flex items-center gap-1 rounded-full border border-white/10 bg-[#1A1A1A] px-2 py-1.5 shadow-xl backdrop-blur-md ${isMine ? 'right-0' : 'left-0'}`}
-                              >
-                                {['👍', '❤️', '🔥', '😂', '😮', '😢'].map((emoji) => {
-                                  const hasReacted = msg.reactions?.[emoji]?.includes(user.id);
-                                  return (
-                                    <button
-                                      key={emoji}
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); toggleReaction(msg, emoji); setMessageMenu(null); }}
-                                      className={`flex h-8 w-8 items-center justify-center rounded-full text-lg transition-transform hover:scale-125 ${hasReacted ? 'bg-plasma-500/30' : 'hover:bg-white/10'}`}
-                                    >
-                                      {emoji}
-                                    </button>
-                                  );
-                                })}
-                                {isMine && (
-                                  <>
-                                    <div className="mx-1 h-5 w-px bg-white/10" />
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); deleteMessage(msg.id); }}
-                                      className="flex h-8 w-8 items-center justify-center rounded-full text-red-500 transition-colors hover:bg-red-500/20"
-                                      title="Supprimer"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
-                                  </>
-                                )}
-                              </motion.div>
+                            {messageMenu === msg.id && !isSelectionMode && (
+                              <>
+                                <motion.div
+                                  key={`dm-overlay-${msg.id}`}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm md:hidden"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMessageMenu(null);
+                                  }}
+                                  aria-hidden
+                                />
+                                <motion.div
+                                  key={`menu-${msg.id}`}
+                                  initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, y: 50, scale: 0.95 }}
+                                  className={`fixed bottom-0 left-0 right-0 z-[100] flex flex-col gap-2 rounded-t-[2rem] border border-white/[0.1] bg-[#151515] p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] md:absolute md:bottom-full md:left-auto md:right-auto md:top-auto md:mb-2 md:flex md:w-max md:flex-row md:items-center md:rounded-full md:border md:bg-[#151515]/95 md:p-1.5 md:pb-1.5 md:shadow-xl md:backdrop-blur-md ${isMine ? 'md:right-0' : 'md:left-0'}`}
+                                >
+                                  <div className="mb-4 flex justify-between px-2 md:mb-0 md:justify-start md:gap-1 md:px-0">
+                                    {['👍', '❤️', '🔥', '😂', '😮', '😢'].map((emoji) => {
+                                      const hasReacted = msg.reactions?.[emoji]?.includes(user.id);
+                                      return (
+                                        <button
+                                          key={emoji}
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleReaction(msg, emoji);
+                                            setMessageMenu(null);
+                                          }}
+                                          className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl transition-transform hover:scale-125 active:scale-90 md:h-8 md:w-8 md:text-lg ${hasReacted ? 'bg-plasma-500/30' : 'bg-white/5 md:bg-transparent md:hover:bg-white/10'}`}
+                                        >
+                                          {emoji}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  {isMine && (
+                                    <>
+                                      <div className="mx-1 hidden h-5 w-px bg-white/10 md:block" />
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          void deleteMessage(msg.id);
+                                        }}
+                                        className="flex items-center justify-center gap-2 rounded-2xl bg-red-500/10 py-3.5 text-sm font-bold text-red-500 transition-colors hover:bg-red-500/20 md:h-8 md:w-8 md:rounded-full md:bg-transparent md:p-0 md:hover:bg-red-500/20"
+                                        title="Supprimer"
+                                      >
+                                        <Trash2 className="h-5 w-5 md:h-4 md:w-4" aria-hidden />{' '}
+                                        <span className="md:hidden">Supprimer le message</span>
+                                      </button>
+                                    </>
+                                  )}
+                                </motion.div>
+                              </>
                             )}
                           </AnimatePresence>
                           <div
@@ -791,13 +870,12 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                               e.stopPropagation();
                               setReplyingTo(msg);
                             }}
-                            className={`max-w-[75%] select-none px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${
-                          isSelectionMode ? 'cursor-default' : 'cursor-pointer'
-                        } ${
-                          isMine
-                            ? 'rounded-[20px] rounded-br-[4px] bg-gradient-to-br from-plasma-600 to-plasma-500 text-white'
-                            : 'rounded-[20px] rounded-bl-[4px] border border-white/5 bg-white/10 text-white/95 backdrop-blur-md'
-                        }`}>
+                            className={`max-w-[75%] select-none px-4 py-2.5 text-[15px] leading-relaxed shadow-md ${isSelectionMode ? 'pointer-events-none' : ''} ${
+                              isMine
+                                ? 'cursor-pointer rounded-[20px] rounded-br-[4px] bg-gradient-to-br from-plasma-600 to-plasma-500 text-white'
+                                : 'cursor-pointer rounded-[20px] rounded-bl-[4px] border border-white/5 bg-white/10 text-white/95 backdrop-blur-md'
+                            }`}
+                          >
                             {repliedMsg && (
                               <div className={`mb-2 rounded-lg border-l-2 p-2 text-xs ${isMine ? 'border-white/50 bg-black/20 text-white/90' : 'border-plasma-500 bg-black/30 text-gray-300'}`}>
                                 <p className="mb-0.5 font-bold opacity-75">{repliedMsg.sender_id === user.id ? 'Vous' : selectedConv.other_user.display_name}</p>
@@ -815,9 +893,6 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                                   : <Check className="h-3 w-3" />
                               )}
                             </div>
-                          </div>
-                          <div className={`pointer-events-none flex flex-col justify-end pb-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 ${isSelectionMode ? 'hidden' : ''}`} aria-hidden>
-                            <span className="select-none text-xs text-white/30">•••</span>
                           </div>
                         </div>
                         {msg.reactions && Object.keys(msg.reactions).length > 0 && (
@@ -846,73 +921,81 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                 <div ref={messagesEndRef} />
               </div>
 
-              {isSelectionMode ? (
-                <div className="flex items-center justify-between border-t border-white/[0.06] bg-[#0A0A0A] px-4 py-3">
-                  <span className="text-sm font-medium text-gray-400">
-                    {selectedMessages.size} message{selectedMessages.size > 1 ? 's' : ''} sélectionné{selectedMessages.size > 1 ? 's' : ''}
-                  </span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSelectionMode(false);
-                        setSelectedMessages(new Set());
-                      }}
-                      className="rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-white/20"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void deleteSelectedMessages()}
-                      disabled={selectedMessages.size === 0}
-                      className="rounded-full bg-red-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Supprimer
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2 border-t border-white/[0.06] bg-[#0A0A0A] px-4 py-3">
-                <AnimatePresence>
-                  {replyingTo && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10, height: 0 }} 
-                      animate={{ opacity: 1, y: 0, height: 'auto' }} 
-                      exit={{ opacity: 0, y: 10, height: 0 }}
-                      className="flex items-center justify-between bg-white/5 border-l-2 border-plasma-500 rounded-r-lg px-3 py-2"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-plasma-400">Réponse à {replyingTo.sender_id === user.id ? 'vous-même' : selectedConv.other_user.display_name}</p>
-                        <p className="text-xs text-gray-400 truncate">{replyingTo.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
-                      </div>
-                      <button type="button" onClick={() => setReplyingTo(null)} className="p-1 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-                        <X className="w-4 h-4" />
+              {/* Message input ou Action Bar */}
+              <div className="flex shrink-0 flex-col border-t border-white/[0.06] bg-[#0A0A0A] pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+                {isSelectionMode ? (
+                  <div className="flex items-center justify-between px-4 py-4">
+                    <span className="text-sm font-semibold text-gray-400">
+                      {selectedMessages.size} sélectionné{selectedMessages.size > 1 ? 's' : ''}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSelectionMode(false);
+                          setSelectedMessages(new Set());
+                        }}
+                        className="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-white/20"
+                      >
+                        Annuler
                       </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                <form 
-                  onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
-                  className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full p-1 pl-4 focus-within:border-plasma-500/50 focus-within:bg-white/[0.07] transition-all"
-                >
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Écris ton message..."
-                    className="flex-1 bg-transparent border-none font-sans text-[15px] text-white placeholder-white/40 focus:outline-none focus:ring-0"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newMessage.trim()}
-                    className="w-9 h-9 rounded-full bg-plasma-500 hover:bg-plasma-400 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors shrink-0"
-                  >
-                    <Send className="w-4 h-4 text-white -ml-0.5" />
-                  </button>
-                </form>
-                </div>
-              )}
+                      <button
+                        type="button"
+                        onClick={() => void deleteSelectedMessages()}
+                        disabled={selectedMessages.size === 0}
+                        className="flex items-center gap-2 rounded-full bg-red-500 px-5 py-2.5 text-sm font-black text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-colors hover:bg-red-600 disabled:opacity-30"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden /> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2 px-4 py-3">
+                    <AnimatePresence>
+                      {replyingTo && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, height: 0 }}
+                          animate={{ opacity: 1, y: 0, height: 'auto' }}
+                          exit={{ opacity: 0, y: 10, height: 0 }}
+                          className="flex items-center justify-between rounded-r-lg border-l-2 border-plasma-500 bg-white/5 px-3 py-2"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-plasma-400">
+                              Réponse à {replyingTo.sender_id === user.id ? 'vous-même' : selectedConv.other_user.display_name}
+                            </p>
+                            <p className="truncate text-xs text-gray-400">{replyingTo.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
+                          </div>
+                          <button type="button" onClick={() => setReplyingTo(null)} className="rounded-full p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-white">
+                            <X className="h-4 w-4" />
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        sendMessage();
+                      }}
+                      className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1 pl-4 transition-all focus-within:border-plasma-500/50 focus-within:bg-white/[0.07]"
+                    >
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Écris ton message..."
+                        className="flex-1 border-none bg-transparent font-sans text-[15px] text-white placeholder-white/40 focus:outline-none focus:ring-0"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!newMessage.trim()}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-plasma-500 transition-colors hover:bg-plasma-400 disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        <Send className="-ml-0.5 h-4 w-4 text-white" />
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">
