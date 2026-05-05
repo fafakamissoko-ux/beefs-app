@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck, X, Trash2, Trash, CheckSquare, Square, MoreVertical } from 'lucide-react';
@@ -83,6 +83,7 @@ const formatDateSeparator = (dateStr: string) => {
 export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const { targetUserId } = useMessagesDrawer();
@@ -99,6 +100,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const [searching, setSearching] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessagesLength = useRef(0);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageComposerRef = useRef<HTMLTextAreaElement>(null);
   const dmDeepLinkLockRef = useRef(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -115,17 +117,18 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     }
   }, [user, authLoading, router, searchParams]);
 
-  // Failsafe : force le nettoyage du body au démontage du composant
-  // (prévient les blocages de clics causés par Framer Motion drag ou un drawer mal fermé)
+  // Failsafe : nettoyage du body à chaque changement de route et au démontage
   useEffect(() => {
-    return () => {
+    const cleanupPointerEvents = () => {
       if (typeof document !== 'undefined') {
         document.body.style.pointerEvents = '';
         document.body.style.overflow = '';
         document.body.style.userSelect = '';
       }
     };
-  }, []);
+    cleanupPointerEvents();
+    return cleanupPointerEvents;
+  }, [pathname]);
 
   const loadConversations = useCallback(async (): Promise<Conversation[]> => {
     if (!user) return [];
@@ -185,13 +188,31 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   }, [user, authLoading, loadConversations]);
 
   const scrollToBottom = useCallback((instant = false) => {
-    // Le timeout laisse le navigateur peindre le DOM (longs textes) avant l’ancrage en bas
-    setTimeout(() => {
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+
+    scrollTimeoutRef.current = setTimeout(() => {
+      const container = messagesEndRef.current?.parentElement;
+      if (container && instant) {
+        container.style.scrollBehavior = 'auto';
+      }
+
       messagesEndRef.current?.scrollIntoView({
         behavior: instant ? 'auto' : 'smooth',
         block: 'end',
       });
-    }, 100);
+
+      if (container && instant) {
+        setTimeout(() => {
+          container.style.scrollBehavior = '';
+        }, 50);
+      }
+    }, 150);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    };
   }, []);
 
   useEffect(() => {
