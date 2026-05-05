@@ -6,7 +6,7 @@ import { TikTokStyleArena } from '@/components/TikTokStyleArena';
 import { supabase } from '@/lib/supabase/client';
 import { beefDailyRoomName } from '@/lib/beef-daily-room';
 import { motion } from 'framer-motion';
-import { Clock, ArrowLeft } from 'lucide-react';
+import { Clock, ArrowLeft, Camera, Mic, Play, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { normalizeBeefId } from '@/lib/beef-id';
 
@@ -45,6 +45,11 @@ export default function ArenaPage() {
   const [beefTitle, setBeefTitle] = useState('');
   /** Évite de monter l’arène avec rôle « viewer » par défaut + mauvais host.id avant chargement du beef. */
   const [arenaReady, setArenaReady] = useState(false);
+  const [isStagingPassed, setIsStagingPassed] = useState(false);
+
+  useEffect(() => {
+    setIsStagingPassed(false);
+  }, [roomId]);
 
   useEffect(() => {
     if (roomIdParam.trim() !== '' && !roomId) {
@@ -300,6 +305,72 @@ export default function ArenaPage() {
         </div>
       </div>
     );
+  }
+
+  const renderStagingRoom = () => {
+    return (
+      <div className="fixed inset-0 z-[9999] flex h-dvh w-screen flex-col items-center justify-center bg-[#050505] p-6 text-center">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-plasma-900/20 via-[#050505] to-[#050505]" />
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 flex w-full max-w-md flex-col items-center gap-8 rounded-[2rem] border border-white/10 bg-[#0A0A0A]/80 p-8 shadow-[0_0_50px_rgba(156,39,176,0.15)] backdrop-blur-2xl"
+        >
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+              <ShieldAlert className="h-8 w-8 text-plasma-400" />
+            </div>
+            <h2 className="text-2xl font-black uppercase tracking-widest text-white">Check Matériel</h2>
+            <p className="text-sm font-semibold text-white/50">
+              Tu entres dans l&apos;Arène en tant que <span className="uppercase text-plasma-400">{userRole}</span>.
+            </p>
+          </div>
+
+          <div className="w-full space-y-4">
+            <div className="flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/5 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10">
+                  <Camera className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="font-bold text-white">Caméra</span>
+                  <span className="text-xs text-white/40">Le navigateur te demandera l&apos;accès</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex w-full items-center justify-between rounded-2xl border border-white/5 bg-white/5 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10">
+                  <Mic className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="font-bold text-white">Microphone</span>
+                  <span className="text-xs text-white/40">Active-le dès ton entrée</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsStagingPassed(true)}
+            className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-plasma-500 px-6 py-4 text-lg font-black text-white shadow-[0_0_20px_rgba(156,39,176,0.3)] transition-all hover:scale-[1.02] hover:bg-plasma-400 active:scale-95"
+          >
+            <div className="relative z-10 flex items-center gap-2">
+              <Play className="h-5 w-5" /> JE SUIS PRÊT
+            </div>
+            <div className="pointer-events-none absolute inset-0 z-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
+          </button>
+        </motion.div>
+      </div>
+    );
+  };
+
+  const needsStaging = userRole === 'mediator' || userRole === 'challenger';
+
+  if (needsStaging && !isStagingPassed) {
+    return renderStagingRoom();
   }
 
   return (
