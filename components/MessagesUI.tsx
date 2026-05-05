@@ -56,6 +56,30 @@ type UserSearchRow = {
   avatar_url: string | null;
 };
 
+const formatDateSeparator = (dateStr: string) => {
+  const d = new Date(dateStr);
+  const now = new Date();
+
+  if (d.toDateString() === now.toDateString()) return "Aujourd'hui";
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return 'Hier';
+
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 7) {
+    return d.toLocaleDateString('fr-FR', { weekday: 'long' });
+  }
+
+  return d.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    ...(d.getFullYear() !== now.getFullYear() ? { year: 'numeric' as const } : {}),
+  });
+};
+
 export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -561,10 +585,11 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
               <h1 className="font-sans text-xl font-black text-white truncate">Messages</h1>
             </div>
             <button
+              type="button"
               onClick={() => setShowNewConv(!showNewConv)}
-              className="w-10 h-10 rounded-xl bg-prestige-gold/90 hover:bg-prestige-gold flex items-center justify-center transition-colors"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-plasma-500 text-white shadow-lg transition-all hover:scale-105 hover:bg-plasma-400 active:scale-95"
             >
-              <Plus className="w-4 h-4 text-black" />
+              <Plus className="h-5 w-5" />
             </button>
           </div>
 
@@ -686,7 +711,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
         </div>
 
         {/* Chat area */}
-        <div className={`flex-1 flex flex-col min-w-0 bg-[#050505] ${!selectedConv ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`flex flex-1 flex-col min-w-0 bg-[#050505] ${!selectedConv ? (isDrawerMode ? 'hidden' : 'hidden md:flex') : 'flex'}`}>
           {selectedConv ? (
             <>
               {/* Chat header */}
@@ -809,8 +834,20 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                       ? '🚫 Ce message a été supprimé'
                       : msg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/');
 
+                    const showDateSeparator =
+                      !prevMsg ||
+                      new Date(msg.created_at).toDateString() !== new Date(prevMsg.created_at).toDateString();
+
                     return (
-                      <div key={msg.id} className={`group relative flex w-full flex-col gap-1 ${isMine ? 'items-end' : 'items-start'}`}>
+                      <div key={msg.id} className="flex w-full flex-col">
+                        {showDateSeparator && (
+                          <div className="my-5 flex w-full shrink-0 items-center justify-center">
+                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white/50 backdrop-blur-md">
+                              {formatDateSeparator(msg.created_at)}
+                            </span>
+                          </div>
+                        )}
+                        <div className={`group relative flex w-full flex-col gap-1 ${isMine ? 'items-end' : 'items-start'}`}>
                         <motion.div
                           drag={isSelectionMode || isDeleted ? false : 'x'}
                           dragConstraints={{ left: 0, right: 0 }}
@@ -949,6 +986,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                             })}
                           </div>
                         )}
+                      </div>
                       </div>
                     );
                   })
