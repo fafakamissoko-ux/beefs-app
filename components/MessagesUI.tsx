@@ -185,15 +185,13 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   }, [user, authLoading, loadConversations]);
 
   const scrollToBottom = useCallback((instant = false) => {
-    // Double requestAnimationFrame : le navigateur a fini de mesurer les hauteurs avant le scroll
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({
-          behavior: instant ? 'auto' : 'smooth',
-          block: 'end',
-        });
+    // Le timeout laisse le navigateur peindre le DOM (longs textes) avant l’ancrage en bas
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: instant ? 'auto' : 'smooth',
+        block: 'end',
       });
-    });
+    }, 100);
   }, []);
 
   useEffect(() => {
@@ -255,6 +253,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     setShowChatMenu(false);
     setIsSelectionMode(false);
     setSelectedMessages(new Set());
+    setMessages([]);
     setSelectedConv(conv);
     prevMessagesLength.current = 0; // Scroll instantané au chargement des messages
     setLoadingMsgs(true);
