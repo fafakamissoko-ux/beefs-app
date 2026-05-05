@@ -26,6 +26,8 @@ interface Invitation {
     description: string;
     severity: string;
     mediator_display_name: string;
+    status?: string;
+    scheduled_at?: string | null;
   };
 }
 
@@ -58,7 +60,7 @@ export default function InvitationsPage() {
       const beefIds = [...new Set(invs.map((i) => i.beef_id))];
       const { data: beefRows, error: beefErr } = await supabase
         .from('beefs')
-        .select('id, title, subject, description, severity, mediator_id')
+        .select('id, title, subject, description, severity, mediator_id, status, scheduled_at')
         .in('id', beefIds);
 
       if (beefErr) throw beefErr;
@@ -96,6 +98,8 @@ export default function InvitationsPage() {
             description: beef.description,
             severity: beef.severity ?? 'medium',
             mediator_display_name: displayNameFromPublicRow(med, 'Médiateur'),
+            status: beef.status,
+            scheduled_at: beef.scheduled_at,
           },
         });
       }
@@ -131,7 +135,14 @@ export default function InvitationsPage() {
   const handleResponse = async (invitationId: string, beefId: string, accept: boolean) => {
     setRespondingTo(invitationId);
 
-    if (accept) {
+    const currentInv = invitations.find((i) => i.id === invitationId);
+    const scheduledAt = currentInv?.beef.scheduled_at;
+    const isScheduledForLater =
+      Boolean(scheduledAt) &&
+      new Date(scheduledAt!).getTime() > Date.now() + 5 * 60_000 &&
+      currentInv?.beef.status !== 'live';
+
+    if (accept && !isScheduledForLater) {
       setTransitioningTo(beefId);
     }
 
@@ -156,7 +167,19 @@ export default function InvitationsPage() {
       if (partError) throw partError;
 
       if (accept) {
-        setTimeout(() => router.push(`/arena/${beefId}`), 600);
+        if (isScheduledForLater && currentInv?.beef.scheduled_at) {
+          const dateStr = new Date(currentInv.beef.scheduled_at).toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          toast(`Défi relevé ! Programmé pour ${dateStr}`, 'success');
+          setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
+          if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
+          setRespondingTo(null);
+        } else {
+          setTimeout(() => router.push(`/arena/${beefId}`), 600);
+        }
       } else {
         setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
         if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
@@ -321,6 +344,20 @@ export default function InvitationsPage() {
                           <Flame className="h-5 w-5 text-plasma-400" />
                           <span className="font-bold text-white">{invitation.beef.subject}</span>
                         </div>
+                        {invitation.beef.scheduled_at &&
+                          new Date(invitation.beef.scheduled_at).getTime() > Date.now() + 5 * 60_000 && (
+                            <div className="mb-4 inline-block rounded-xl border border-plasma-500/30 bg-plasma-500/10 px-4 py-2">
+                              <p className="text-sm font-bold text-plasma-400">
+                                🗓️ Programmé le{' '}
+                                {new Date(invitation.beef.scheduled_at).toLocaleDateString('fr-FR', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            </div>
+                          )}
                         <p className="text-sm leading-relaxed text-white/60">
                           <span className="font-bold text-white">Adversaire :</span> {invitation.inviter_display_name}
                           <br />
