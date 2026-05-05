@@ -85,12 +85,20 @@ export async function submitNewBeef(
     const invitees = (beefData.participants ?? []).filter((p) => p.user_id !== userId);
 
     if (invitees.length > 0) {
+      let expiresAt = new Date();
+      if (when) {
+        expiresAt = new Date(when);
+      } else {
+        expiresAt.setHours(expiresAt.getHours() + 24);
+      }
+
       const { error: invErr } = await supabase.from('beef_invitations').insert(
         invitees.map((p) => ({
           beef_id: beef.id,
           inviter_id: userId,
           invitee_id: p.user_id,
           status: 'sent',
+          expires_at: expiresAt.toISOString(),
         }))
       );
       if (invErr) throw new Error(invErr.message);
