@@ -88,6 +88,7 @@ export async function submitNewBeef(
       let expiresAt = new Date();
       if (when) {
         expiresAt = new Date(when);
+        expiresAt.setMinutes(expiresAt.getMinutes() + 10); // Période de grâce de 10 min
       } else {
         expiresAt.setHours(expiresAt.getHours() + 24);
       }
