@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { fetchUserPublicByIds, displayNameFromPublicRow } from '@/lib/fetch-user-public-profile';
 import { sanitizeMessage } from '@/lib/security';
+import { useToast } from '@/components/Toast';
 
 interface AmbushData {
   id: string;
@@ -15,6 +16,8 @@ interface AmbushData {
   inviter_id: string;
   inviter_display_name: string;
   beef_title: string;
+  status: string;
+  scheduled_at: string | null;
 }
 
 type ActionState = 'join' | 'later' | 'decline';
@@ -31,6 +34,7 @@ export function GlobalDuelAmbush() {
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
 
   const [ambush, setAmbush] = useState<AmbushData | null>(null);
   const [timeLeft, setTimeLeft] = useState(30);
@@ -73,7 +77,11 @@ export function GlobalDuelAmbush() {
             if (old?.status === 'sent') return;
           }
 
-          const { data: beef } = await supabase.from('beefs').select('title').eq('id', inv.beef_id).single();
+          const { data: beef } = await supabase
+            .from('beefs')
+            .select('title, status, scheduled_at')
+            .eq('id', inv.beef_id)
+            .single();
           if (!beef) return;
 
           const pubMap = await fetchUserPublicByIds(supabase, [inv.inviter_id], 'id, display_name, username');
@@ -85,6 +93,8 @@ export function GlobalDuelAmbush() {
             inviter_id: inv.inviter_id,
             inviter_display_name: displayNameFromPublicRow(inviter, 'Un adversaire'),
             beef_title: beef.title,
+            status: beef.status,
+            scheduled_at: beef.scheduled_at,
           });
           setTimeLeft(30);
           setPendingAction(null);
@@ -104,29 +114,33 @@ export function GlobalDuelAmbush() {
       setIsResponding(true);
 
       try {
-        const finalStatus = action === 'join' || action === 'later' ? 'accepted' : 'declined';
+        const invStatus = action === 'join' ? 'accepted' : action === 'later' ? 'seen' : 'declined';
+        const partStatus = action === 'join' ? 'accepted' : action === 'decline' ? 'declined' : null;
 
         const { error: invError } = await supabase
           .from('beef_invitations')
           .update({
-            status: finalStatus,
-            responded_at: new Date().toISOString(),
+            status: invStatus,
+            responded_at: action !== 'later' ? new Date().toISOString() : null,
+            ...(action === 'later' ? { seen_at: new Date().toISOString() } : {}),
           })
           .eq('id', ambush.id);
         if (invError) throw invError;
 
-        const { error: partError } = await supabase
-          .from('beef_participants')
-          .update({
-            invite_status: finalStatus,
-            responded_at: new Date().toISOString(),
-          })
-          .eq('beef_id', ambush.beef_id)
-          .eq('user_id', user.id);
-        if (partError) throw partError;
+        if (partStatus) {
+          const { error: partError } = await supabase
+            .from('beef_participants')
+            .update({
+              invite_status: partStatus,
+              responded_at: new Date().toISOString(),
+            })
+            .eq('beef_id', ambush.beef_id)
+            .eq('user_id', user.id);
+          if (partError) throw partError;
+        }
 
         if (message !== undefined && message.trim().length > 0) {
-          const prefix = action === 'later' ? '[A accepté pour plus tard]' : '[A décliné le défi]';
+          const prefix = action === 'later' ? '[Mise en attente du défi]' : '[A décliné le défi]';
           const raw = `${prefix} ${message.trim()}`;
           const content = sanitizeMessage(raw);
           if (content) {
@@ -146,7 +160,21 @@ export function GlobalDuelAmbush() {
         }
 
         if (action === 'join') {
-          router.push(`/arena/${ambush.beef_id}`);
+          const isScheduledForLater =
+            Boolean(ambush.scheduled_at) &&
+            new Date(ambush.scheduled_at!).getTime() > Date.now() + 5 * 60_000 &&
+            ambush.status !== 'live';
+
+          if (isScheduledForLater && ambush.scheduled_at) {
+            const dateStr = new Date(ambush.scheduled_at).toLocaleDateString('fr-FR', {
+              weekday: 'long',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+            toast(`Défi relevé ! Programmé pour ${dateStr}`, 'success');
+          } else {
+            router.push(`/arena/${ambush.beef_id}`);
+          }
         }
 
         setAmbush(null);
@@ -162,7 +190,7 @@ export function GlobalDuelAmbush() {
         setIsResponding(false);
       }
     },
-    [ambush, user, router]
+    [ambush, user, router, toast]
   );
 
   if (!ambush) return null;
@@ -214,6 +242,21 @@ export function GlobalDuelAmbush() {
                 <span className="text-plasma-400">{ambush.inviter_display_name}</span> te convoque&nbsp;!
               </h2>
               <p className="mt-2 text-lg font-semibold text-white/60">&ldquo;{ambush.beef_title}&rdquo;</p>
+
+              {ambush.scheduled_at &&
+                new Date(ambush.scheduled_at).getTime() > Date.now() + 5 * 60_000 && (
+                  <div className="mt-4 inline-block rounded-xl border border-plasma-500/30 bg-plasma-500/10 px-4 py-2">
+                    <p className="text-sm font-bold text-plasma-400">
+                      🗓️ Programmé le{' '}
+                      {new Date(ambush.scheduled_at).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                )}
 
               <div className="my-6 font-mono text-5xl font-black text-white/90">
                 00:{timeLeft.toString().padStart(2, '0')}
