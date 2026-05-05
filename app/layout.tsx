@@ -24,6 +24,7 @@ import { ToastProvider } from "@/components/Toast";
 import { GlobalSearchProvider } from "@/contexts/GlobalSearchContext";
 import { BetaGate } from "@/components/BetaGate";
 import { GlobalMessagesDrawer } from "@/components/GlobalMessagesDrawer";
+import { GlobalDuelAmbush } from "@/components/GlobalDuelAmbush";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { ClientMonitoring } from "@/components/ClientMonitoring";
@@ -105,6 +106,7 @@ function RootLayoutClient({
                 <OnboardingReminder />
                 <PWAInstallPrompt />
                 <GlobalMessagesDrawer />
+                <GlobalDuelAmbush />
               </BetaGate>
             </MessagesDrawerProvider>
           </GlobalSearchProvider>
