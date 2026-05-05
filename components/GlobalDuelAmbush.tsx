@@ -1,19 +1,23 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Swords, Zap, X, ShieldAlert } from 'lucide-react';
+import { Swords, Zap, X, ShieldAlert, Clock, Send, MessageSquareWarning } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { fetchUserPublicByIds, displayNameFromPublicRow } from '@/lib/fetch-user-public-profile';
+import { sanitizeMessage } from '@/lib/security';
 
 interface AmbushData {
   id: string;
   beef_id: string;
+  inviter_id: string;
   inviter_display_name: string;
   beef_title: string;
 }
+
+type ActionState = 'join' | 'later' | 'decline';
 
 type InvitationRow = {
   id: string;
@@ -27,56 +31,25 @@ export function GlobalDuelAmbush() {
   const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
   const [ambush, setAmbush] = useState<AmbushData | null>(null);
   const [timeLeft, setTimeLeft] = useState(30);
   const [isResponding, setIsResponding] = useState(false);
-  const autoDeclineTriggered = useRef(false);
+
+  const [pendingAction, setPendingAction] = useState<ActionState | null>(null);
+  const [responseMessage, setResponseMessage] = useState('');
 
   const isInArena = pathname?.startsWith('/arena/');
 
-  const handleAmbushResponse = useCallback(
-    async (accept: boolean, currentAmbush: AmbushData) => {
-      setIsResponding(true);
-      try {
-        const { error: invError } = await supabase
-          .from('beef_invitations')
-          .update({
-            status: accept ? 'accepted' : 'declined',
-            responded_at: new Date().toISOString(),
-          })
-          .eq('id', currentAmbush.id);
-        if (invError) throw invError;
-
-        const { error: partError } = await supabase
-          .from('beef_participants')
-          .update({
-            invite_status: accept ? 'accepted' : 'declined',
-            responded_at: new Date().toISOString(),
-          })
-          .eq('beef_id', currentAmbush.beef_id)
-          .eq('user_id', user?.id);
-        if (partError) throw partError;
-
-        setAmbush(null);
-        autoDeclineTriggered.current = false;
-
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
-        }
-
-        if (accept) {
-          router.push(`/arena/${currentAmbush.beef_id}`);
-        }
-      } catch (err) {
-        console.error('Erreur réponse embuscade:', err);
-        setAmbush(null);
-        autoDeclineTriggered.current = false;
-      } finally {
-        setIsResponding(false);
-      }
-    },
-    [user?.id, router]
-  );
+  useEffect(() => {
+    if (!ambush || pendingAction) return;
+    if (timeLeft <= 0) {
+      setAmbush(null);
+      return;
+    }
+    const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
+    return () => clearInterval(timer);
+  }, [ambush, timeLeft, pendingAction]);
 
   useEffect(() => {
     if (!user || isInArena) return;
@@ -86,14 +59,19 @@ export function GlobalDuelAmbush() {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'beef_invitations',
           filter: `invitee_id=eq.${user.id}`,
         },
         async (payload) => {
           const inv = payload.new as InvitationRow;
-          if (inv.status !== 'sent') return;
+          if (!inv || inv.status !== 'sent') return;
+
+          if (payload.eventType === 'UPDATE') {
+            const old = payload.old as { status?: string } | null;
+            if (old?.status === 'sent') return;
+          }
 
           const { data: beef } = await supabase.from('beefs').select('title').eq('id', inv.beef_id).single();
           if (!beef) return;
@@ -101,14 +79,16 @@ export function GlobalDuelAmbush() {
           const pubMap = await fetchUserPublicByIds(supabase, [inv.inviter_id], 'id, display_name, username');
           const inviter = pubMap.get(inv.inviter_id);
 
-          autoDeclineTriggered.current = false;
           setAmbush({
             id: inv.id,
             beef_id: inv.beef_id,
+            inviter_id: inv.inviter_id,
             inviter_display_name: displayNameFromPublicRow(inviter, 'Un adversaire'),
             beef_title: beef.title,
           });
           setTimeLeft(30);
+          setPendingAction(null);
+          setResponseMessage('');
         }
       )
       .subscribe();
@@ -118,21 +98,72 @@ export function GlobalDuelAmbush() {
     };
   }, [user, isInArena]);
 
-  useEffect(() => {
-    if (!ambush) {
-      autoDeclineTriggered.current = false;
-      return;
-    }
-    if (timeLeft <= 0) {
-      if (!autoDeclineTriggered.current) {
-        autoDeclineTriggered.current = true;
-        void handleAmbushResponse(false, ambush);
+  const executeResponse = useCallback(
+    async (action: ActionState, message?: string) => {
+      if (!ambush || !user) return;
+      setIsResponding(true);
+
+      try {
+        const finalStatus = action === 'join' || action === 'later' ? 'accepted' : 'declined';
+
+        const { error: invError } = await supabase
+          .from('beef_invitations')
+          .update({
+            status: finalStatus,
+            responded_at: new Date().toISOString(),
+          })
+          .eq('id', ambush.id);
+        if (invError) throw invError;
+
+        const { error: partError } = await supabase
+          .from('beef_participants')
+          .update({
+            invite_status: finalStatus,
+            responded_at: new Date().toISOString(),
+          })
+          .eq('beef_id', ambush.beef_id)
+          .eq('user_id', user.id);
+        if (partError) throw partError;
+
+        if (message !== undefined && message.trim().length > 0) {
+          const prefix = action === 'later' ? '[A accepté pour plus tard]' : '[A décliné le défi]';
+          const raw = `${prefix} ${message.trim()}`;
+          const content = sanitizeMessage(raw);
+          if (content) {
+            const { data: convId, error: rpcErr } = await supabase.rpc('get_or_create_conversation', {
+              user_a: user.id,
+              user_b: ambush.inviter_id,
+            });
+            if (!rpcErr && convId != null) {
+              const { error: dmErr } = await supabase.from('direct_messages').insert({
+                conversation_id: String(convId),
+                sender_id: user.id,
+                content,
+              });
+              if (dmErr) console.error('Erreur envoi DM embuscade:', dmErr);
+            }
+          }
+        }
+
+        if (action === 'join') {
+          router.push(`/arena/${ambush.beef_id}`);
+        }
+
+        setAmbush(null);
+        setPendingAction(null);
+        setResponseMessage('');
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
+        }
+      } catch (err) {
+        console.error('Erreur réponse embuscade:', err);
+      } finally {
+        setIsResponding(false);
       }
-      return;
-    }
-    const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
-    return () => clearInterval(timer);
-  }, [ambush, timeLeft, handleAmbushResponse]);
+    },
+    [ambush, user, router]
+  );
 
   if (!ambush) return null;
 
@@ -145,65 +176,120 @@ export function GlobalDuelAmbush() {
         className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black/90 p-4 backdrop-blur-xl"
       >
         <motion.div
-          animate={{ opacity: [0.3, 0.6, 0.3] }}
-          transition={{ duration: 1, repeat: Infinity }}
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/40 via-transparent to-transparent"
+          animate={{ opacity: pendingAction ? 0.1 : [0.3, 0.6, 0.3] }}
+          transition={pendingAction ? { duration: 0 } : { duration: 1, repeat: Infinity }}
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-plasma-900/40 via-transparent to-transparent"
         />
 
         <motion.div
           initial={{ scale: 0.9, y: 50 }}
           animate={{ scale: 1, y: 0 }}
-          className="relative z-10 w-full max-w-lg overflow-hidden rounded-[2rem] border border-red-500/30 bg-[#0A0A0A] p-8 text-center shadow-[0_0_100px_rgba(220,38,38,0.2)]"
+          className="relative z-10 w-full max-w-lg overflow-hidden rounded-[2rem] border border-white/10 bg-[#0A0A0A] p-6 text-center shadow-2xl md:p-8"
         >
-          <div className="absolute left-0 top-0 h-1.5 w-full bg-white/10">
-            <motion.div
-              key={ambush.id}
-              initial={{ width: '100%' }}
-              animate={{ width: '0%' }}
-              transition={{ duration: 30, ease: 'linear' }}
-              className="h-full bg-red-500 shadow-[0_0_10px_rgba(220,38,38,0.8)]"
-            />
-          </div>
-
-          <div className="mb-6 flex justify-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full border border-red-500/20 bg-red-500/10">
-              <Swords className="h-10 w-10 animate-pulse text-red-500" />
+          {!pendingAction && (
+            <div className="absolute left-0 top-0 h-1.5 w-full bg-white/5">
+              <motion.div
+                key={ambush.id}
+                initial={{ width: '100%' }}
+                animate={{ width: '0%' }}
+                transition={{ duration: 30, ease: 'linear' }}
+                className="h-full bg-plasma-500"
+              />
             </div>
-          </div>
+          )}
 
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-red-500/20 px-4 py-1 text-xs font-black uppercase tracking-widest text-red-400">
-            <ShieldAlert className="h-4 w-4" /> Embuscade en Direct
-          </div>
-
-          <h2 className="mt-4 text-3xl font-black text-white">
-            <span className="text-plasma-400">{ambush.inviter_display_name}</span> te défie&nbsp;!
-          </h2>
-          <p className="mt-2 text-lg font-semibold text-white/60">&ldquo;{ambush.beef_title}&rdquo;</p>
-
-          <div className="my-8 text-6xl font-black text-white">
-            00:{timeLeft.toString().padStart(2, '0')}
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => handleAmbushResponse(true, ambush)}
-              disabled={isResponding}
-              className="group relative flex-1 overflow-hidden rounded-2xl bg-plasma-500 px-6 py-4 font-black text-white transition-all hover:scale-[1.02] hover:bg-plasma-400 active:scale-95 disabled:opacity-50"
-            >
-              <div className="relative z-10 flex items-center justify-center gap-2 text-lg">
-                <Zap className="h-5 w-5" /> RELEVER LE DÉFI
+          {!pendingAction ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div className="mb-6 flex justify-center">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full border border-plasma-500/20 bg-plasma-500/10">
+                  <Swords className="h-10 w-10 animate-pulse text-plasma-500" />
+                </div>
               </div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleAmbushResponse(false, ambush)}
-              disabled={isResponding}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 font-bold text-white/60 transition-all hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500 active:scale-95 disabled:opacity-50"
-            >
-              <X className="h-5 w-5" /> Esquiver
-            </button>
-          </div>
+
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-xs font-black uppercase tracking-widest text-white/70">
+                <ShieldAlert className="h-4 w-4 text-plasma-500" /> Nouveau Défi Reçu
+              </div>
+
+              <h2 className="mt-4 text-3xl font-black text-white">
+                <span className="text-plasma-400">{ambush.inviter_display_name}</span> te convoque&nbsp;!
+              </h2>
+              <p className="mt-2 text-lg font-semibold text-white/60">&ldquo;{ambush.beef_title}&rdquo;</p>
+
+              <div className="my-6 font-mono text-5xl font-black text-white/90">
+                00:{timeLeft.toString().padStart(2, '0')}
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => void executeResponse('join')}
+                  disabled={isResponding}
+                  className="group relative w-full overflow-hidden rounded-2xl bg-plasma-500 px-6 py-4 font-black text-white transition-all hover:scale-[1.02] hover:bg-plasma-400 active:scale-95 disabled:opacity-50"
+                >
+                  <div className="relative z-10 flex items-center justify-center gap-2 text-lg">
+                    <Zap className="h-5 w-5" /> REJOINDRE MAINTENANT
+                  </div>
+                </button>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPendingAction('later')}
+                    disabled={isResponding}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white transition-all hover:bg-white/10 active:scale-95"
+                  >
+                    <Clock className="h-4 w-4" /> Plus tard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPendingAction('decline')}
+                    disabled={isResponding}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 font-bold text-red-500 transition-all hover:bg-red-500/20 active:scale-95"
+                  >
+                    <X className="h-4 w-4" /> Refuser
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+              <div className="mb-6 flex justify-center">
+                <MessageSquareWarning className={`h-12 w-12 ${pendingAction === 'later' ? 'text-white' : 'text-red-500'}`} />
+              </div>
+              <h3 className="mb-2 text-xl font-black text-white">
+                {pendingAction === 'later' ? "J'accepte, mais pour plus tard." : 'Je refuse ce défi.'}
+              </h3>
+              <p className="mb-6 text-sm text-white/50">Laisse un message à {ambush.inviter_display_name} (optionnel)</p>
+
+              <textarea
+                value={responseMessage}
+                onChange={(e) => setResponseMessage(e.target.value)}
+                placeholder="Ex: Je finis mon live et j'arrive..."
+                className="mb-6 w-full resize-none rounded-xl border border-white/10 bg-white/5 p-4 text-white placeholder:text-white/30 focus:border-plasma-500 focus:outline-none focus:ring-1 focus:ring-plasma-500"
+                rows={3}
+                autoFocus
+              />
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPendingAction(null)}
+                  disabled={isResponding}
+                  className="flex-1 rounded-xl bg-white/10 py-3 font-bold text-white hover:bg-white/20 disabled:opacity-50"
+                >
+                  Retour
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void executeResponse(pendingAction, responseMessage)}
+                  disabled={isResponding}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 font-bold text-white disabled:opacity-50 ${pendingAction === 'later' ? 'bg-plasma-500 hover:bg-plasma-400' : 'bg-red-500 hover:bg-red-400'}`}
+                >
+                  <Send className="h-4 w-4" /> Confirmer
+                </button>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
