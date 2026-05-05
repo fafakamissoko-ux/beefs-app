@@ -98,6 +98,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const [searchResults, setSearchResults] = useState<UserSearchRow[]>([]);
   const [searching, setSearching] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessagesLength = useRef(0);
   const messageComposerRef = useRef<HTMLTextAreaElement>(null);
   const dmDeepLinkLockRef = useRef(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -113,6 +114,18 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
       router.push(`/login?redirect=${encodeURIComponent(dest)}`);
     }
   }, [user, authLoading, router, searchParams]);
+
+  // Failsafe : force le nettoyage du body au démontage du composant
+  // (prévient les blocages de clics causés par Framer Motion drag ou un drawer mal fermé)
+  useEffect(() => {
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+        document.body.style.userSelect = '';
+      }
+    };
+  }, []);
 
   const loadConversations = useCallback(async (): Promise<Conversation[]> => {
     if (!user) return [];
@@ -171,13 +184,25 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     void loadConversations();
   }, [user, authLoading, loadConversations]);
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  const scrollToBottom = useCallback((instant = false) => {
+    // Double requestAnimationFrame : le navigateur a fini de mesurer les hauteurs avant le scroll
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({
+          behavior: instant ? 'auto' : 'smooth',
+          block: 'end',
+        });
+      });
+    });
   }, []);
 
   useEffect(() => {
     if (selectedConv && messages.length > 0) {
-      scrollToBottom();
+      const isInitialLoad = prevMessagesLength.current === 0;
+      scrollToBottom(isInitialLoad);
+      prevMessagesLength.current = messages.length;
+    } else {
+      prevMessagesLength.current = 0;
     }
   }, [messages, selectedConv, scrollToBottom]);
 
@@ -231,6 +256,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     setIsSelectionMode(false);
     setSelectedMessages(new Set());
     setSelectedConv(conv);
+    prevMessagesLength.current = 0; // Scroll instantané au chargement des messages
     setLoadingMsgs(true);
     try {
       const { data } = await supabase
