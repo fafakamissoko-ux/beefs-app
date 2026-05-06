@@ -35,6 +35,41 @@ export async function submitNewBeef(
 
   const price = continuationPriceFromResolvedCount(count ?? 0);
 
+  // --- VÉRIFICATION BOUCLIER ANTI-SPAM ---
+  const inviteesList = (beefData.participants ?? []).filter((p) => p.user_id !== userId);
+  if (inviteesList.length > 0) {
+    const inviteeIds = inviteesList.map((i) => i.user_id);
+    const { data: targetUsers, error: targetErr } = await supabase
+      .from('users')
+      .select('id, display_name, username, invitation_privacy')
+      .in('id', inviteeIds);
+
+    if (!targetErr && targetUsers) {
+      for (const target of targetUsers) {
+        const privacy = target.invitation_privacy || 'everyone';
+        const targetName = target.display_name || target.username || 'Cet utilisateur';
+
+        if (privacy === 'nobody') {
+          throw new Error(`${targetName} n'accepte aucun défi pour le moment (Mode Ne pas déranger).`);
+        }
+
+        if (privacy === 'following') {
+          const { data: follows } = await supabase
+            .from('followers')
+            .select('id')
+            .eq('follower_id', target.id)
+            .eq('following_id', userId)
+            .maybeSingle();
+
+          if (!follows) {
+            throw new Error(`${targetName} n'accepte les défis que de ses abonnements.`);
+          }
+        }
+      }
+    }
+  }
+  // --- FIN VÉRIFICATION ---
+
   const insertData: Record<string, unknown> = {
     title: beefData.title,
     subject: beefData.title,
