@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from 're
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck, X, Trash2, Trash, CheckSquare, Square, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Send, Search, MessageCircle, Plus, Check, CheckCheck, X, Trash2, Trash, CheckSquare, Square, MoreVertical, Swords } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
@@ -734,20 +734,27 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 flex-col gap-0.5">
-                      <ProfileUserLink
-                        username={conv.other_user.username}
-                        className="min-w-0 truncate font-sans text-sm font-bold text-white"
-                      >
-                        {conv.other_user.display_name}
-                      </ProfileUserLink>
+                      <div className="flex items-center gap-2">
+                        <ProfileUserLink
+                          username={conv.other_user.username}
+                          className="min-w-0 truncate font-sans text-sm font-bold text-white"
+                        >
+                          {conv.other_user.display_name}
+                        </ProfileUserLink>
+                        {conv.unread_count > 0 && (
+                          <span className="h-2 w-2 shrink-0 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                        )}
+                      </div>
                       {conv.last_message_at && (
                         <span className="shrink-0 self-start font-mono text-[10px] tracking-wider text-white/30">
                           {formatTime(conv.last_message_at)}
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 truncate font-sans text-xs text-white/35">
-                      {conv.last_message_text || 'Aucun message'}
+                    <p className={`mt-0.5 truncate font-sans text-xs ${conv.unread_count > 0 ? 'font-bold text-white' : 'text-white/35'}`}>
+                      {(conv.last_message_text || 'Aucun message')
+                        .replace('[BEEF_RESPONSE:LATER] ', '⏳ Défi en attente : ')
+                        .replace('[BEEF_RESPONSE:DECLINE] ', '🛡️ Défi esquivé : ')}
                     </p>
                   </div>
                 </div>
@@ -880,6 +887,14 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                       ? '🚫 Ce message a été supprimé'
                       : msg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/');
 
+                    const isLater = decodedText.startsWith('[BEEF_RESPONSE:LATER] ');
+                    const isDecline = decodedText.startsWith('[BEEF_RESPONSE:DECLINE] ');
+                    const isBeefResponse = isLater || isDecline;
+
+                    let displayContent = decodedText;
+                    if (isLater) displayContent = displayContent.replace('[BEEF_RESPONSE:LATER] ', '');
+                    if (isDecline) displayContent = displayContent.replace('[BEEF_RESPONSE:DECLINE] ', '');
+
                     const showDateSeparator =
                       !prevMsg ||
                       new Date(msg.created_at).toDateString() !== new Date(prevMsg.created_at).toDateString();
@@ -1000,7 +1015,15 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                                   <p className="truncate opacity-90">{repliedMsg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
                                 </div>
                               )}
-                              <p className="min-w-0 whitespace-pre-wrap break-all font-sans text-[15px]">{decodedText}</p>
+                              {isBeefResponse && !isDeleted && (
+                                <div
+                                  className={`mb-1.5 flex items-center gap-1.5 border-b pb-1 text-[10px] font-black uppercase tracking-widest ${isMine ? 'border-white/20 text-white/80' : 'border-plasma-500/30 text-plasma-400'}`}
+                                >
+                                  <Swords className="h-3 w-3" />
+                                  {isLater ? 'A mis le défi en attente' : 'A esquivé le défi'}
+                                </div>
+                              )}
+                              <p className="min-w-0 whitespace-pre-wrap break-all font-sans text-[15px]">{displayContent}</p>
                               <div className={`mt-1 flex items-center justify-end gap-1 ${isDeleted ? 'text-white/20' : isMine ? 'text-white/75' : 'text-white/40'}`}>
                                 <span className="font-mono text-[10px] tracking-wider">
                                   {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}

@@ -140,7 +140,8 @@ export function GlobalDuelAmbush() {
         }
 
         if (message !== undefined && message.trim().length > 0) {
-          const prefix = action === 'later' ? '[Mise en attente du défi]' : '[A décliné le défi]';
+          // 1. Utilisation d'un tag technique invisible pour la DB
+          const prefix = action === 'later' ? '[BEEF_RESPONSE:LATER]' : '[BEEF_RESPONSE:DECLINE]';
           const raw = `${prefix} ${message.trim()}`;
           const content = sanitizeMessage(raw);
           if (content) {
@@ -154,7 +155,15 @@ export function GlobalDuelAmbush() {
                 sender_id: user.id,
                 content,
               });
-              if (dmErr) console.error('Erreur envoi DM embuscade:', dmErr);
+              if (!dmErr) {
+                // 2. CORRECTION CRITIQUE : Mettre à jour la conversation parente
+                await supabase.from('conversations').update({
+                  last_message_text: content,
+                  last_message_at: new Date().toISOString(),
+                }).eq('id', String(convId));
+              } else {
+                console.error('Erreur envoi DM embuscade:', dmErr);
+              }
             }
           }
         }
