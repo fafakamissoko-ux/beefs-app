@@ -159,7 +159,8 @@ export default function InvitationsPage() {
             title: beef.title,
             subject: beef.subject,
             description: beef.description,
-            mediator_display_name: med ? displayNameFromPublicRow(med, 'Médiateur') : '1v1 (Sans Arbitre)',
+            // Remplacement du terme Médiateur par Ref et gestion de l'attente
+            mediator_display_name: med ? displayNameFromPublicRow(med, 'Ref') : 'En attente',
             status: beef.status,
             scheduled_at: beef.scheduled_at,
             aura_score: 0, // Prêt à être connecté aux likes pour le glow
@@ -393,10 +394,9 @@ export default function InvitationsPage() {
                         <span className="font-bold text-white">Adversaire :</span> {invitation.inviter_display_name}
                         <br />
                         <span
-                          className={`mt-1 inline-block font-bold ${invitation.beef.mediator_display_name === '1v1 (Sans Arbitre)' ? 'text-gray-500 italic' : 'text-white'}`}
+                          className={`mt-1 inline-block font-bold ${invitation.beef.mediator_display_name === 'En attente' ? 'text-gray-500 italic' : 'text-white'}`}
                         >
-                          {invitation.beef.mediator_display_name !== '1v1 (Sans Arbitre)' && 'Médiateur : '}
-                          {invitation.beef.mediator_display_name}
+                          Ref : {invitation.beef.mediator_display_name}
                         </span>
                       </p>
                     </div>
