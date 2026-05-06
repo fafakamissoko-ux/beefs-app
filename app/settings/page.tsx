@@ -48,6 +48,8 @@ function PasswordInlineError({ id, message }: { id: string; message: string | un
   );
 }
 
+type InvitationPrivacy = 'everyone' | 'following' | 'nobody';
+
 export default function SettingsPage() {
   const router = useRouter();
   const { user, signOut, loading: authLoading } = useAuth();
@@ -58,6 +60,7 @@ export default function SettingsPage() {
     display_name: '',
     bio: '',
     email: '',
+    invitation_privacy: 'everyone' as InvitationPrivacy,
   });
   
   const [passwords, setPasswords] = useState({
@@ -111,16 +114,21 @@ export default function SettingsPage() {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('username, display_name, bio, accent_color')
+        .select('username, display_name, bio, accent_color, invitation_privacy')
         .eq('id', user.id)
         .single();
 
       if (data) {
+        const privacyRaw = data.invitation_privacy;
+        const invitation_privacy: InvitationPrivacy =
+          privacyRaw === 'following' || privacyRaw === 'nobody' ? privacyRaw : 'everyone';
+
         setProfile({
           username: data.username || '',
           display_name: data.display_name || '',
           bio: data.bio || '',
           email: user.email || '',
+          invitation_privacy,
         });
         if (data.accent_color) setAccentColor(data.accent_color);
       }
@@ -178,6 +186,7 @@ export default function SettingsPage() {
         .update({
           display_name: profile.display_name,
           bio: profile.bio,
+          invitation_privacy: profile.invitation_privacy,
         })
         .eq('id', user.id);
 
@@ -1019,6 +1028,69 @@ export default function SettingsPage() {
                   />
                 </button>
               </div>
+            </div>
+          </motion.div>
+
+          {/* Bouclier Anti-Spam (Confidentialité) */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.16 }}
+            className="card rounded-2xl p-6"
+          >
+            <div className="mb-6 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/20">
+                <Shield className="h-5 w-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Bouclier Anti-Spam</h3>
+                <p className="mt-0.5 text-xs text-gray-400">
+                  Qui peut te convoquer ou te demander d&apos;arbitrer ?
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {(
+                [
+                  {
+                    id: 'everyone' as const,
+                    label: 'Tout le monde',
+                    desc: "N'importe qui peut te défier (Ouvert)",
+                  },
+                  {
+                    id: 'following' as const,
+                    label: 'Mes Abonnements',
+                    desc: 'Seuls les utilisateurs que tu suis peuvent te défier',
+                  },
+                  {
+                    id: 'nobody' as const,
+                    label: 'Personne',
+                    desc: 'Verrouillage total (Mode Ne pas déranger)',
+                  },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setProfile({ ...profile, invitation_privacy: opt.id })}
+                  className={`flex w-full items-center justify-between rounded-xl border p-4 transition-all ${
+                    profile.invitation_privacy === opt.id
+                      ? 'border-red-500/50 bg-red-500/10 text-white'
+                      : 'border-white/10 bg-white/[0.02] text-gray-400 hover:bg-white/[0.05]'
+                  }`}
+                >
+                  <div className="text-left">
+                    <p
+                      className={`text-sm font-bold ${profile.invitation_privacy === opt.id ? 'text-red-400' : 'text-gray-300'}`}
+                    >
+                      {opt.label}
+                    </p>
+                    <p className="mt-0.5 text-xs opacity-70">{opt.desc}</p>
+                  </div>
+                  {profile.invitation_privacy === opt.id ? <Check className="h-5 w-5 text-red-400" /> : null}
+                </button>
+              ))}
             </div>
           </motion.div>
 
