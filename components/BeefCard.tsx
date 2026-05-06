@@ -70,8 +70,8 @@ export function BeefCard({
   duration: _duration,
   engagement_score = 0,
   has_liked_by_user = false,
-  teaser_score: _teaser_score,
-  has_liked_teaser: _has_liked_teaser,
+  teaser_score = 0,
+  has_liked_teaser = false,
   participants_count: _participants_count,
   challenger_a_name,
   challenger_b_name,
@@ -87,7 +87,7 @@ export function BeefCard({
   onNotifyClick,
   onApply,
   onAuraClick,
-  onTeaserAuraClick: _onTeaserAuraClick,
+  onTeaserAuraClick,
   saisirTab = false,
   onSaisirAffaire,
   onValiderRef,
@@ -107,6 +107,7 @@ export function BeefCard({
   const mediaBlockRef = useRef<HTMLDivElement | null>(null);
 
   const [cardFloatingAuras, setCardFloatingAuras] = useState<{ id: number; x: number }[]>([]);
+  const [teaserFloatingAuras, setTeaserFloatingAuras] = useState<{ id: number; x: number }[]>([]);
   const [replayHover, setReplayHover] = useState(false);
   const [isTeaserOpen, setIsTeaserOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -672,6 +673,64 @@ export function BeefCard({
                 <img src={thumbnail} alt={title} className="max-h-[50vh] w-full bg-black object-contain md:h-full md:max-h-none" />
               ) : (
                 <div className="text-white/40">Aucun média</div>
+              )}
+
+              {onTeaserAuraClick && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!has_liked_teaser) {
+                      const newId = Date.now() + Math.random();
+                      setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
+                      setTimeout(() => setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
+                    }
+                    onTeaserAuraClick();
+                  }}
+                  className={`absolute right-4 z-[60] flex flex-col items-center gap-1.5 transition-transform hover:scale-105 ${
+                    video_url ? 'bottom-20' : 'bottom-4'
+                  }`}
+                  aria-label="Aura teaser"
+                >
+                  <AnimatePresence>
+                    {teaserFloatingAuras.map((aura) => (
+                      <motion.span
+                        key={aura.id}
+                        initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
+                        animate={{ opacity: 0, y: -40, scale: 1.5 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.65 }}
+                        className="pointer-events-none absolute -top-8 left-1/2 z-50 -translate-x-1/2 text-sm font-black text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]"
+                      >
+                        +1
+                      </motion.span>
+                    ))}
+                  </AnimatePresence>
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-full border bg-black/60 backdrop-blur-md transition-colors ${
+                      has_liked_teaser
+                        ? 'border-yellow-400/50 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
+                        : 'border-white/10 hover:bg-white/20'
+                    }`}
+                  >
+                    <Sparkles
+                      className={`h-6 w-6 ${
+                        has_liked_teaser
+                          ? 'fill-yellow-400 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
+                          : 'text-white'
+                      }`}
+                    />
+                  </div>
+                  <span
+                    className={`font-mono text-xs font-bold drop-shadow-md ${
+                      has_liked_teaser
+                        ? 'text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
+                        : 'text-white'
+                    }`}
+                  >
+                    {(teaser_score || 0).toLocaleString()}
+                  </span>
+                </button>
               )}
             </div>
 
