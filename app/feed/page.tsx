@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Flame, X, Radio, Coins, FileText, Swords } from 'lucide-react';
+import { TrendingUp, Users, Flame, X, Radio, Coins, FileText, Swords, LayoutGrid, List } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { BeefCard } from '@/components/BeefCard';
@@ -125,6 +125,7 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [showHero, setShowHero] = useState(false);
+  const [mobileViewMode, setMobileViewMode] = useState<'list' | 'grid'>('list');
   const [beefToDelete, setBeefToDelete] = useState<string | null>(null);
   const [editBeefId, setEditBeefId] = useState<string | null>(null);
   const [beefToForfeit, setBeefToForfeit] = useState<string | null>(null);
@@ -774,20 +775,39 @@ export default function FeedPage() {
               <span>Lingots</span>
             </a>
             </div>
-            <div className="flex items-center gap-4 max-md:flex-nowrap max-md:overflow-x-auto hide-scrollbar max-md:pb-1">
-            {STATUS_FILTERS.map(s => (
-              <button
-                key={s.id}
-                onClick={() => setSelectedStatus(s.id)}
-                className={`inline-flex min-h-[44px] items-center px-4 py-1.5 rounded-full font-sans whitespace-nowrap border transition-all duration-200 font-bold uppercase tracking-wider text-[10px] ${
-                  selectedStatus === s.id
-                    ? 'text-white bg-white/10 border-white/40 shadow-[0_0_12px_rgba(255,255,255,0.15)]'
-                    : 'text-gray-500 bg-transparent border-white/[0.08] hover:text-gray-300 hover:border-white/15'
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
+            <div className="mt-2 flex w-full items-center justify-between md:mt-0 md:w-auto">
+              <div className="flex max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-1 hide-scrollbar items-center gap-3">
+                {STATUS_FILTERS.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSelectedStatus(s.id)}
+                    className={`inline-flex min-h-[44px] items-center rounded-full border px-4 py-1.5 font-sans text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-200 ${
+                      selectedStatus === s.id
+                        ? 'border-white/40 bg-white/10 text-white shadow-[0_0_12px_rgba(255,255,255,0.15)]'
+                        : 'border-white/[0.08] bg-transparent text-gray-500 hover:border-white/15 hover:text-gray-300'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="ml-2 flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-black/40 p-1 md:hidden">
+                <button
+                  type="button"
+                  onClick={() => setMobileViewMode('list')}
+                  className={`rounded-full p-1.5 transition-colors ${mobileViewMode === 'list' ? 'bg-white/20 text-white' : 'text-gray-500 hover:text-white'}`}
+                >
+                  <List className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileViewMode('grid')}
+                  className={`rounded-full p-1.5 transition-colors ${mobileViewMode === 'grid' ? 'bg-white/20 text-white' : 'text-gray-500 hover:text-white'}`}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -830,12 +850,19 @@ export default function FeedPage() {
         {loading ? (
             <div
             id="feed-scroll-container"
-            className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 md:gap-5 md:p-6 md:pt-4 pb-28 md:pb-32 md:snap-none items-stretch`}
+            className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-28 md:pb-32 md:p-6 md:pt-4 ${
+              mobileViewMode === 'grid'
+                ? 'block columns-2 gap-3 px-3 pt-3 md:columns-2 md:gap-5 lg:columns-3 xl:columns-3 2xl:columns-4'
+                : 'flex flex-col snap-y snap-mandatory items-stretch md:block md:columns-2 md:gap-5 lg:columns-3 xl:columns-3 2xl:columns-4'
+            }`}
           >
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="overflow-hidden rounded-[2rem] bg-white/[0.04] border border-white/[0.06]">
+              <div
+                key={i}
+                className={`mb-4 overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.04] break-inside-avoid md:mb-6 ${mobileViewMode === 'list' ? 'snap-start snap-always' : ''}`}
+              >
                 <div className="skeleton h-48 rounded-none" />
-                <div className="p-5 space-y-3">
+                <div className="space-y-3 p-5">
                   <div className="skeleton h-4 w-3/4 rounded-full" />
                   <div className="skeleton h-3 w-1/2 rounded-full" />
                   <div className="flex gap-2">
@@ -868,11 +895,17 @@ export default function FeedPage() {
           <>
             <div
               id="feed-scroll-container"
-              className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 md:gap-5 md:p-6 md:pt-4 pb-28 md:pb-32 md:snap-none items-stretch`}
+              className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-28 md:pb-32 md:p-6 md:pt-4 ${
+                mobileViewMode === 'grid'
+                  ? 'block columns-2 gap-3 px-3 pt-3 md:columns-2 md:gap-5 lg:columns-3 xl:columns-3 2xl:columns-4'
+                  : 'flex flex-col snap-y snap-mandatory items-stretch md:block md:columns-2 md:gap-5 lg:columns-3 xl:columns-3 2xl:columns-4'
+              }`}
             >
               {/* === CARTE APPÂT (Visiteurs) === */}
               {!user && showHero && (
-                <div className="snap-start snap-always relative flex min-h-[380px] h-full w-full shrink-0 flex-col justify-between items-center overflow-hidden max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border border-plasma-500/40 bg-gradient-to-br from-plasma-600/10 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(162,0,255,0.1)]">
+                <div
+                  className={`relative flex h-auto min-h-[380px] w-full shrink-0 flex-col items-center justify-between overflow-hidden border border-plasma-500/40 bg-gradient-to-br from-plasma-600/10 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(162,0,255,0.1)] break-inside-avoid max-md:rounded-2xl max-md:border md:mb-6 md:rounded-[1.5rem] md:border mb-4 ${mobileViewMode === 'list' ? 'snap-start snap-always' : ''}`}
+                >
                   <button
                     type="button"
                     onClick={() => {
@@ -903,7 +936,10 @@ export default function FeedPage() {
                 </div>
               )}
               {beefs.map((beef, index) => (
-                <div key={beef.id} className="snap-start snap-always relative w-full shrink-0">
+                <div
+                  key={beef.id}
+                  className={`relative mb-4 w-full shrink-0 break-inside-avoid md:mb-6 ${mobileViewMode === 'list' ? 'snap-start snap-always' : ''}`}
+                >
                   <BeefCard
                     {...beef}
                     onPrepareAudience={
