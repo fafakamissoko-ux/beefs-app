@@ -852,14 +852,14 @@ export default function FeedPage() {
             id="feed-scroll-container"
             className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-28 md:pb-32 md:p-6 md:pt-4 ${
               mobileViewMode === 'grid'
-                ? 'block columns-2 gap-3 px-3 pt-3 md:columns-2 md:gap-5 lg:columns-3 xl:columns-3 2xl:columns-4'
-                : 'flex flex-col snap-y snap-mandatory items-stretch md:block md:columns-2 md:gap-5 lg:columns-3 xl:columns-3 2xl:columns-4'
+                ? 'grid grid-cols-2 gap-3 px-3 pt-3 items-start md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5'
+                : 'flex flex-col snap-y snap-mandatory gap-4 items-stretch md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start'
             }`}
           >
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}
-                className={`mb-4 overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.04] break-inside-avoid md:mb-6 ${mobileViewMode === 'list' ? 'snap-start snap-always' : ''}`}
+                className={`overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.04] ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
               >
                 <div className="skeleton h-48 rounded-none" />
                 <div className="space-y-3 p-5">
@@ -897,14 +897,14 @@ export default function FeedPage() {
               id="feed-scroll-container"
               className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-28 md:pb-32 md:p-6 md:pt-4 ${
                 mobileViewMode === 'grid'
-                  ? 'block columns-2 gap-3 px-3 pt-3 md:columns-2 md:gap-5 lg:columns-3 xl:columns-3 2xl:columns-4'
-                  : 'flex flex-col snap-y snap-mandatory items-stretch md:block md:columns-2 md:gap-5 lg:columns-3 xl:columns-3 2xl:columns-4'
+                  ? 'grid grid-cols-2 gap-3 px-3 pt-3 items-start md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5'
+                  : 'flex flex-col snap-y snap-mandatory gap-4 items-stretch px-0 pt-0 md:grid md:grid-cols-2 md:gap-5 md:px-6 md:snap-none md:items-start lg:grid-cols-3 xl:grid-cols-4'
               }`}
             >
               {/* === CARTE APPÂT (Visiteurs) === */}
               {!user && showHero && (
                 <div
-                  className={`relative flex h-auto min-h-[380px] w-full shrink-0 flex-col items-center justify-between overflow-hidden border border-plasma-500/40 bg-gradient-to-br from-plasma-600/10 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(162,0,255,0.1)] break-inside-avoid max-md:rounded-2xl max-md:border md:mb-6 md:rounded-[1.5rem] md:border mb-4 ${mobileViewMode === 'list' ? 'snap-start snap-always' : ''}`}
+                  className={`relative flex h-auto min-h-[380px] shrink-0 flex-col items-center justify-between overflow-hidden border border-plasma-500/40 bg-gradient-to-br from-plasma-600/10 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(162,0,255,0.1)] max-md:rounded-2xl max-md:border md:mb-0 md:rounded-[1.5rem] md:border ${mobileViewMode === 'list' ? 'snap-start snap-always mb-0 w-full' : 'w-full'}`}
                 >
                   <button
                     type="button"
@@ -938,7 +938,7 @@ export default function FeedPage() {
               {beefs.map((beef, index) => (
                 <div
                   key={beef.id}
-                  className={`relative mb-4 w-full shrink-0 break-inside-avoid md:mb-6 ${mobileViewMode === 'list' ? 'snap-start snap-always' : ''}`}
+                  className={`relative shrink-0 md:mb-0 ${mobileViewMode === 'list' ? 'snap-start snap-always mb-0 w-full' : 'w-full'}`}
                 >
                   <BeefCard
                     {...beef}
