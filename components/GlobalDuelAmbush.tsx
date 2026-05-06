@@ -3,12 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Swords, Zap, X, ShieldAlert, Clock, Send, MessageSquareWarning } from 'lucide-react';
+import { Swords, Zap, X, ShieldAlert, Clock, Send, MessageSquareWarning, CalendarCheck, Scale, Gavel } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { fetchUserPublicByIds, displayNameFromPublicRow } from '@/lib/fetch-user-public-profile';
 import { sanitizeMessage } from '@/lib/security';
 import { useToast } from '@/components/Toast';
+
+type InviteType = 'combatant' | 'ref_request' | 'ref_offer';
 
 interface AmbushData {
   id: string;
@@ -18,6 +20,8 @@ interface AmbushData {
   beef_title: string;
   status: string;
   scheduled_at: string | null;
+  mediator_id: string | null;
+  invite_type: InviteType;
 }
 
 type ActionState = 'join' | 'later' | 'decline';
@@ -28,6 +32,7 @@ type InvitationRow = {
   inviter_id: string;
   invitee_id: string;
   status: string;
+  invite_type?: InviteType;
 };
 
 export function GlobalDuelAmbush() {
@@ -79,7 +84,7 @@ export function GlobalDuelAmbush() {
 
           const { data: beef } = await supabase
             .from('beefs')
-            .select('title, status, scheduled_at')
+            .select('title, status, scheduled_at, mediator_id')
             .eq('id', inv.beef_id)
             .single();
           if (!beef) return;
@@ -91,10 +96,12 @@ export function GlobalDuelAmbush() {
             id: inv.id,
             beef_id: inv.beef_id,
             inviter_id: inv.inviter_id,
-            inviter_display_name: displayNameFromPublicRow(inviter, 'Un adversaire'),
+            inviter_display_name: displayNameFromPublicRow(inviter, 'Un utilisateur'),
             beef_title: beef.title,
             status: beef.status,
             scheduled_at: beef.scheduled_at,
+            mediator_id: beef.mediator_id,
+            invite_type: inv.invite_type ?? 'combatant',
           });
           setTimeLeft(30);
           setPendingAction(null);
@@ -115,6 +122,9 @@ export function GlobalDuelAmbush() {
 
       try {
         const invStatus = action === 'join' ? 'accepted' : action === 'later' ? 'seen' : 'declined';
+
+        // Note pour plus tard : Il faudra aussi gérer l'insertion dans beef_participants
+        // avec le bon rôle (mediator ou participant) selon ambush.invite_type
         const partStatus = action === 'join' ? 'accepted' : action === 'decline' ? 'declined' : null;
 
         const { error: invError } = await supabase
@@ -140,7 +150,6 @@ export function GlobalDuelAmbush() {
         }
 
         if (message !== undefined && message.trim().length > 0) {
-          // 1. Utilisation d'un tag technique invisible pour la DB
           const prefix = action === 'later' ? '[BEEF_RESPONSE:LATER]' : '[BEEF_RESPONSE:DECLINE]';
           const raw = `${prefix} ${message.trim()}`;
           const content = sanitizeMessage(raw);
@@ -156,13 +165,10 @@ export function GlobalDuelAmbush() {
                 content,
               });
               if (!dmErr) {
-                // 2. CORRECTION CRITIQUE : Mettre à jour la conversation parente
                 await supabase.from('conversations').update({
                   last_message_text: content,
                   last_message_at: new Date().toISOString(),
                 }).eq('id', String(convId));
-              } else {
-                console.error('Erreur envoi DM embuscade:', dmErr);
               }
             }
           }
@@ -174,13 +180,22 @@ export function GlobalDuelAmbush() {
             new Date(ambush.scheduled_at!).getTime() > Date.now() + 5 * 60_000 &&
             ambush.status !== 'live';
 
-          if (isScheduledForLater && ambush.scheduled_at) {
-            const dateStr = new Date(ambush.scheduled_at).toLocaleDateString('fr-FR', {
-              weekday: 'long',
-              hour: '2-digit',
-              minute: '2-digit',
-            });
-            toast(`Défi relevé ! Programmé pour ${dateStr}`, 'success');
+          const hasRef = Boolean(ambush.mediator_id);
+
+          if (isScheduledForLater || !hasRef) {
+            const dateStr = ambush.scheduled_at
+              ? new Date(ambush.scheduled_at).toLocaleDateString('fr-FR', {
+                  weekday: 'long',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : "dès qu'un Arbitre sera trouvé";
+
+            let toastMsg = `Défi relevé ! Programmé pour ${dateStr}`;
+            if (ambush.invite_type === 'ref_request') toastMsg = `Arbitrage accepté !`;
+            if (ambush.invite_type === 'ref_offer') toastMsg = `Ref accepté !`;
+
+            toast(toastMsg, 'success');
           } else {
             router.push(`/arena/${ambush.beef_id}`);
           }
@@ -204,6 +219,73 @@ export function GlobalDuelAmbush() {
 
   if (!ambush) return null;
 
+  const isScheduledForLater =
+    Boolean(ambush.scheduled_at) &&
+    new Date(ambush.scheduled_at!).getTime() > Date.now() + 5 * 60_000 &&
+    ambush.status !== 'live';
+
+  const hasRef = Boolean(ambush.mediator_id);
+
+  const isRefRequest = ambush.invite_type === 'ref_request';
+  const isRefOffer = ambush.invite_type === 'ref_offer';
+  const isMediationConvo = ambush.invite_type === 'combatant' && ambush.mediator_id === ambush.inviter_id;
+
+  let MainIcon = Swords;
+  let themeColor = 'plasma';
+
+  if (isRefRequest || isRefOffer) {
+    MainIcon = Scale;
+    themeColor = 'yellow';
+  } else if (isMediationConvo) {
+    MainIcon = Gavel;
+    themeColor = 'brand';
+  }
+
+  let ambushTitle = (
+    <>
+      <span className="text-plasma-400">{ambush.inviter_display_name}</span> te défie !
+    </>
+  );
+  if (isRefRequest)
+    ambushTitle = (
+      <>
+        <span className="text-yellow-500">{ambush.inviter_display_name}</span> réclame ton arbitrage !
+      </>
+    );
+  if (isRefOffer)
+    ambushTitle = (
+      <>
+        <span className="text-yellow-500">{ambush.inviter_display_name}</span> propose d&apos;arbitrer ton conflit !
+      </>
+    );
+  if (isMediationConvo)
+    ambushTitle = (
+      <>
+        Le Ref <span className="text-brand-400">{ambush.inviter_display_name}</span> te convoque au tribunal !
+      </>
+    );
+
+  let buttonText = 'RELEVER LE DÉFI';
+  let ButtonIcon = Zap;
+
+  if (hasRef && !isScheduledForLater && ambush.invite_type === 'combatant') {
+    buttonText = "REJOINDRE L'ARÈNE";
+  } else if (isScheduledForLater && ambush.invite_type === 'combatant') {
+    buttonText = 'ACCEPTER LE DÉFI';
+    ButtonIcon = CalendarCheck;
+  }
+
+  if (isRefRequest) {
+    buttonText = 'PRENDRE LE SIFFLET';
+    ButtonIcon = Scale;
+  } else if (isRefOffer) {
+    buttonText = "ACCEPTER L'ARBITRE";
+    ButtonIcon = Scale;
+  } else if (isMediationConvo) {
+    buttonText = isScheduledForLater ? 'ACCEPTER LA CONVOCATION' : 'COMPARAÎTRE';
+    ButtonIcon = isScheduledForLater ? CalendarCheck : Gavel;
+  }
+
   return (
     <AnimatePresence>
       <motion.div
@@ -215,7 +297,7 @@ export function GlobalDuelAmbush() {
         <motion.div
           animate={{ opacity: pendingAction ? 0.1 : [0.3, 0.6, 0.3] }}
           transition={pendingAction ? { duration: 0 } : { duration: 1, repeat: Infinity }}
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-plasma-900/40 via-transparent to-transparent"
+          className={`pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] ${themeColor === 'yellow' ? 'from-yellow-900/40' : themeColor === 'brand' ? 'from-brand-900/40' : 'from-plasma-900/40'} via-transparent to-transparent`}
         />
 
         <motion.div
@@ -230,7 +312,7 @@ export function GlobalDuelAmbush() {
                 initial={{ width: '100%' }}
                 animate={{ width: '0%' }}
                 transition={{ duration: 30, ease: 'linear' }}
-                className="h-full bg-plasma-500"
+                className={`h-full ${themeColor === 'yellow' ? 'bg-yellow-500' : themeColor === 'brand' ? 'bg-brand-500' : 'bg-plasma-500'}`}
               />
             </div>
           )}
@@ -238,24 +320,39 @@ export function GlobalDuelAmbush() {
           {!pendingAction ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="mb-6 flex justify-center">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full border border-plasma-500/20 bg-plasma-500/10">
-                  <Swords className="h-10 w-10 animate-pulse text-plasma-500" />
+                <div
+                  className={`flex h-20 w-20 items-center justify-center rounded-full border ${themeColor === 'yellow' ? 'border-yellow-500/20 bg-yellow-500/10' : themeColor === 'brand' ? 'border-brand-500/20 bg-brand-500/10' : 'border-plasma-500/20 bg-plasma-500/10'}`}
+                >
+                  <MainIcon
+                    className={`h-10 w-10 animate-pulse ${themeColor === 'yellow' ? 'text-yellow-500' : themeColor === 'brand' ? 'text-brand-500' : 'text-plasma-500'}`}
+                  />
                 </div>
               </div>
 
               <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-xs font-black uppercase tracking-widest text-white/70">
-                <ShieldAlert className="h-4 w-4 text-plasma-500" /> Nouveau Défi Reçu
+                <ShieldAlert
+                  className={`h-4 w-4 ${themeColor === 'yellow' ? 'text-yellow-500' : themeColor === 'brand' ? 'text-brand-500' : 'text-plasma-500'}`}
+                />
+                {isRefRequest
+                  ? 'Appel au Jugement'
+                  : isRefOffer
+                    ? "Proposition d'Arbitrage"
+                    : isMediationConvo
+                      ? 'Convocation Officielle'
+                      : 'Nouveau Défi Reçu'}
               </div>
 
-              <h2 className="mt-4 text-3xl font-black text-white">
-                <span className="text-plasma-400">{ambush.inviter_display_name}</span> te convoque&nbsp;!
-              </h2>
+              <h2 className="mt-4 text-3xl font-black text-white">{ambushTitle}</h2>
               <p className="mt-2 text-lg font-semibold text-white/60">&ldquo;{ambush.beef_title}&rdquo;</p>
 
               {ambush.scheduled_at &&
                 new Date(ambush.scheduled_at).getTime() > Date.now() + 5 * 60_000 && (
-                  <div className="mt-4 inline-block rounded-xl border border-plasma-500/30 bg-plasma-500/10 px-4 py-2">
-                    <p className="text-sm font-bold text-plasma-400">
+                  <div
+                    className={`mt-4 inline-block rounded-xl border px-4 py-2 ${themeColor === 'yellow' ? 'border-yellow-500/30 bg-yellow-500/10' : themeColor === 'brand' ? 'border-brand-500/30 bg-brand-500/10' : 'border-plasma-500/30 bg-plasma-500/10'}`}
+                  >
+                    <p
+                      className={`text-sm font-bold ${themeColor === 'yellow' ? 'text-yellow-500' : themeColor === 'brand' ? 'text-brand-400' : 'text-plasma-400'}`}
+                    >
                       🗓️ Programmé le{' '}
                       {new Date(ambush.scheduled_at).toLocaleDateString('fr-FR', {
                         day: 'numeric',
@@ -276,11 +373,18 @@ export function GlobalDuelAmbush() {
                   type="button"
                   onClick={() => void executeResponse('join')}
                   disabled={isResponding}
-                  className="group relative w-full overflow-hidden rounded-2xl bg-plasma-500 px-6 py-4 font-black text-white transition-all hover:scale-[1.02] hover:bg-plasma-400 active:scale-95 disabled:opacity-50"
+                  className={`group relative w-full overflow-hidden rounded-2xl px-6 py-4 font-black text-white transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 ${
+                    themeColor === 'yellow'
+                      ? 'bg-yellow-600 shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:bg-yellow-500'
+                      : themeColor === 'brand' || isScheduledForLater || !hasRef
+                        ? 'bg-brand-600 shadow-[0_0_20px_rgba(162,0,255,0.3)] hover:bg-brand-500'
+                        : 'bg-plasma-500 shadow-[0_0_20px_rgba(156,39,176,0.3)] hover:bg-plasma-400'
+                  }`}
                 >
                   <div className="relative z-10 flex items-center justify-center gap-2 text-lg">
-                    <Zap className="h-5 w-5" /> REJOINDRE MAINTENANT
+                    <ButtonIcon className="h-5 w-5" /> {buttonText}
                   </div>
+                  <div className="pointer-events-none absolute inset-0 z-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
                 </button>
 
                 <div className="flex gap-3">
@@ -288,15 +392,15 @@ export function GlobalDuelAmbush() {
                     type="button"
                     onClick={() => setPendingAction('later')}
                     disabled={isResponding}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-bold text-white transition-all hover:bg-white/10 active:scale-95"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-sm font-bold text-white transition-all hover:bg-white/10 active:scale-95"
                   >
-                    <Clock className="h-4 w-4" /> Plus tard
+                    <Clock className="h-4 w-4" /> En attente
                   </button>
                   <button
                     type="button"
                     onClick={() => setPendingAction('decline')}
                     disabled={isResponding}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 font-bold text-red-500 transition-all hover:bg-red-500/20 active:scale-95"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-3 py-3 text-sm font-bold text-red-500 transition-all hover:bg-red-500/20 active:scale-95"
                   >
                     <X className="h-4 w-4" /> Refuser
                   </button>
@@ -309,7 +413,7 @@ export function GlobalDuelAmbush() {
                 <MessageSquareWarning className={`h-12 w-12 ${pendingAction === 'later' ? 'text-white' : 'text-red-500'}`} />
               </div>
               <h3 className="mb-2 text-xl font-black text-white">
-                {pendingAction === 'later' ? "J'accepte, mais pour plus tard." : 'Je refuse ce défi.'}
+                {pendingAction === 'later' ? 'Mise en attente.' : 'Je refuse.'}
               </h3>
               <p className="mb-6 text-sm text-white/50">Laisse un message à {ambush.inviter_display_name} (optionnel)</p>
 
