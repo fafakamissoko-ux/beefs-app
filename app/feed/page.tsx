@@ -848,12 +848,12 @@ export default function FeedPage() {
 
         {/* Content */}
         {loading ? (
-            <div
+          <div
             id="feed-scroll-container"
             className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-28 md:pb-32 md:p-6 md:pt-4 ${
               mobileViewMode === 'grid'
                 ? 'grid grid-cols-2 gap-3 px-3 pt-3 items-start md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5'
-                : 'flex flex-col snap-y snap-mandatory gap-4 items-stretch md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start'
+                : 'flex flex-col snap-y snap-mandatory gap-4 items-stretch px-0 pt-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start'
             }`}
           >
             {[...Array(6)].map((_, i) => (
@@ -898,13 +898,13 @@ export default function FeedPage() {
               className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-28 md:pb-32 md:p-6 md:pt-4 ${
                 mobileViewMode === 'grid'
                   ? 'grid grid-cols-2 gap-3 px-3 pt-3 items-start md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5'
-                  : 'flex flex-col snap-y snap-mandatory gap-4 items-stretch px-0 pt-0 md:grid md:grid-cols-2 md:gap-5 md:px-6 md:snap-none md:items-start lg:grid-cols-3 xl:grid-cols-4'
+                  : 'flex flex-col snap-y snap-mandatory gap-4 items-stretch px-0 pt-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start'
               }`}
             >
               {/* === CARTE APPÂT (Visiteurs) === */}
               {!user && showHero && (
                 <div
-                  className={`relative flex h-auto min-h-[380px] shrink-0 flex-col items-center justify-between overflow-hidden border border-plasma-500/40 bg-gradient-to-br from-plasma-600/10 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(162,0,255,0.1)] max-md:rounded-2xl max-md:border md:mb-0 md:rounded-[1.5rem] md:border ${mobileViewMode === 'list' ? 'snap-start snap-always mb-0 w-full' : 'w-full'}`}
+                  className={`relative flex h-auto min-h-[380px] shrink-0 flex-col items-center justify-between overflow-hidden border border-plasma-500/40 bg-gradient-to-br from-plasma-600/10 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(162,0,255,0.1)] max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
                 >
                   <button
                     type="button"
@@ -938,7 +938,7 @@ export default function FeedPage() {
               {beefs.map((beef, index) => (
                 <div
                   key={beef.id}
-                  className={`relative shrink-0 md:mb-0 ${mobileViewMode === 'list' ? 'snap-start snap-always mb-0 w-full' : 'w-full'}`}
+                  className={`relative shrink-0 ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
                 >
                   <BeefCard
                     {...beef}
