@@ -14,7 +14,6 @@ interface BeefCardProps {
   title: string;
   description?: string;
   host_name: string;
-  /** `username` en base pour lien profil (pas le seul display name). */
   host_username?: string | null;
   status:
     | 'live'
@@ -34,7 +33,6 @@ interface BeefCardProps {
   duration?: number;
   engagement_score?: number;
   has_liked_by_user?: boolean;
-  /** Compteur et like du teaser modal (distinct du feed `engagement_score`). */
   teaser_score?: number;
   has_liked_teaser?: boolean;
   onTeaserAuraClick?: () => void;
@@ -53,16 +51,12 @@ interface BeefCardProps {
   onNotifyClick?: () => void;
   onApply?: () => void;
   onAuraClick?: () => void;
-  /** Onglet feed « À Saisir » : badge ⚖️ EN ATTENTE + CTA médiateur */
   saisirTab?: boolean;
   onSaisirAffaire?: () => void;
   onValiderRef?: () => void;
   onRefuserRef?: () => void;
-  /** L'Arène : médiateur manifeste peut se retirer */
   onSeDesister?: () => void;
-  /** Feed : médiateur, affaire planifiée — accès antichambre */
   onPrepareAudience?: () => void;
-  /** Carte live : public vs ring (médiateur / challenger accepté) */
   liveAudienceAction?: { variant: 'join' | 'return'; onClick: () => void };
   intent?: string | null;
   created_by?: string | null;
@@ -82,12 +76,12 @@ export function BeefCard({
   tags = [],
   thumbnail,
   video_url,
-  duration,
+  duration: _duration,
   engagement_score = 0,
   has_liked_by_user = false,
   teaser_score = 0,
   has_liked_teaser = false,
-  participants_count,
+  participants_count: _participants_count,
   challenger_a_name,
   challenger_b_name,
   challenger_a_username,
@@ -115,6 +109,7 @@ export function BeefCard({
   index,
 }: BeefCardProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [isMuted, setIsMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const modalVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -128,20 +123,24 @@ export function BeefCard({
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isReminded, setIsReminded] = useState(false);
 
+  const isParticipant = user
+    ? user.id === created_by ||
+      user.user_metadata?.username === challenger_a_username ||
+      user.user_metadata?.username === challenger_b_username ||
+      user.user_metadata?.username === host_username
+    : false;
+
   const handleToggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
-    // Modification DOM synchrone pour préserver le User Gesture sur iOS
     if (videoRef.current) videoRef.current.muted = nextMuted;
     if (modalVideoRef.current) {
       modalVideoRef.current.muted = nextMuted;
-      // Force la lecture pour éviter le blocage Safari
       modalVideoRef.current.play().catch(() => {});
     }
   };
 
-  const { toast } = useToast();
   useLayoutEffect(() => {
     if (!video_url?.trim()) return;
     const el = mediaBlockRef.current;
@@ -151,9 +150,7 @@ export function BeefCard({
       (entries) => {
         for (const e of entries) {
           if (e.isIntersecting && e.intersectionRatio >= 0.5) {
-            void v?.play().catch(() => {
-              /* autoplay refusé */
-            });
+            void v?.play().catch(() => {});
           } else {
             v?.pause();
           }
@@ -213,21 +210,17 @@ export function BeefCard({
     return '';
   };
 
-  /** Pas de timer en pending (date non scellée) ; compte à rebours seulement si planifié ou live à venir */
   const showCountdownTimer =
     (status === 'scheduled' || status === 'live') &&
     !!scheduled_at &&
     new Date(scheduled_at).getTime() > Date.now();
 
   const isManifesto =
-    saisirTab ||
-    (intent === 'manifesto' && (status === 'pending' || status === 'ready'));
+    saisirTab || (intent === 'manifesto' && (status === 'pending' || status === 'ready'));
   const isReplay = status === 'ended' || status === 'replay' || status === 'completed';
 
   const descText = description?.trim() ?? '';
-
   const auraTier = engagement_score >= 500 ? 3 : engagement_score >= 50 ? 2 : 1;
-
   const dynamicBorderClass =
     auraTier === 3
       ? 'border-volt-500/80 shadow-[0_0_20px_rgba(223,255,0,0.2)] md:border-volt-500/80'
@@ -236,66 +229,62 @@ export function BeefCard({
         : 'border-white/[0.06] md:border-white/[0.08] md:hover:border-white/20';
 
   return (
-    <div className="relative flex h-auto min-h-0 w-full max-w-full shrink-0 flex-col">
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-      onClick={onClick}
-      onMouseEnter={() => isReplay && setReplayHover(true)}
-      onMouseLeave={() => isReplay && setReplayHover(false)}
-      className={`group relative flex min-h-0 h-full w-full flex-col justify-between cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border md:bg-[#08080A] ${dynamicBorderClass} ${
-        status === 'live'
-          ? 'md:shadow-[0_0_0_1px_rgba(162,0,255,0.35)] md:group-hover:shadow-[0_0_24px_rgba(162,0,255,0.55)]'
-          : ''
-      } ${
-        isManifesto
-          ? 'md:border-dashed md:border-white/15 md:hover:border-prestige-gold/30'
-          : ''
-      }`}
-    >
-      <div
-        ref={mediaBlockRef}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setIsTeaserOpen(true);
-        }}
-        className={`relative w-full cursor-zoom-in aspect-video overflow-hidden bg-black/20 shrink-0 max-md:rounded-t-2xl md:rounded-t-[1.5rem] ${
+    <div className="relative mb-6 flex h-auto w-full flex-col break-inside-avoid">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.04, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+        onClick={onClick}
+        onMouseEnter={() => isReplay && setReplayHover(true)}
+        onMouseLeave={() => isReplay && setReplayHover(false)}
+        className={`group relative flex h-auto w-full flex-col cursor-pointer overflow-hidden transition-all duration-300 max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border md:bg-[#08080A] ${dynamicBorderClass} ${
           status === 'live'
-            ? 'ring-1 ring-inset ring-plasma-500/40 md:group-hover:ring-2 md:group-hover:ring-plasma-500/60'
+            ? 'md:shadow-[0_0_0_1px_rgba(162,0,255,0.35)] md:group-hover:shadow-[0_0_24px_rgba(162,0,255,0.55)]'
             : ''
-        }`}
+        } ${isManifesto ? 'md:border-dashed md:border-white/15 md:hover:border-prestige-gold/30' : ''}`}
       >
-        <div className="absolute inset-0 overflow-hidden">
-        {video_url ? (
-          <video
-            ref={videoRef}
-            src={video_url}
-            loop
-            muted={isMuted}
-            playsInline
-            className="h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
-          />
-        ) : thumbnail ? (
-          <Image
-            src={thumbnail}
-            alt={title}
-            fill
-            className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, 384px"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-b from-obsidian-900 to-black" />
-        )}
-        </div>
-
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/40"
-          aria-hidden
-        />
+          ref={mediaBlockRef}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsTeaserOpen(true);
+          }}
+          className={`relative w-full cursor-zoom-in aspect-video overflow-hidden bg-black/20 shrink-0 max-md:rounded-t-2xl md:rounded-t-[1.5rem] ${
+            status === 'live'
+              ? 'ring-1 ring-inset ring-plasma-500/40 md:group-hover:ring-2 md:group-hover:ring-plasma-500/60'
+              : ''
+          }`}
+        >
+          <div className="absolute inset-0 overflow-hidden">
+            {video_url ? (
+              <video
+                ref={videoRef}
+                src={video_url}
+                loop
+                muted={isMuted}
+                playsInline
+                className="h-full w-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
+              />
+            ) : thumbnail ? (
+              <Image
+                src={thumbnail}
+                alt={title}
+                fill
+                className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 384px"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-b from-obsidian-900 to-black" />
+            )}
+          </div>
 
-        <div className="absolute top-2 left-2 z-20 flex max-w-[min(100%,70%)] flex-col items-start gap-1">
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/40"
+            aria-hidden
+          />
+
+          <div className="absolute left-2 top-2 z-20 flex max-w-[min(100%,70%)] flex-col items-start gap-1">
             {status === 'live' && (
               <div className="flex w-fit items-center gap-1 rounded bg-blood-500 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight text-white shadow-glow-blood animate-pulse">
                 <div className="h-1.5 w-1.5 rounded-full bg-white" />
@@ -309,452 +298,423 @@ export function BeefCard({
               </div>
             )}
             {getPrimaryStatusBadge()}
-        </div>
-
-        {(onEdit || onDelete || onForfeit) && (
-          <div className="absolute right-2 top-2 z-[60]">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsMenuOpen(!isMenuOpen);
-              }}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white backdrop-blur-md transition-colors hover:bg-white/20"
-              aria-expanded={isMenuOpen}
-              aria-label="Actions sur l&apos;affaire"
-            >
-              <MoreVertical className="h-4 w-4" aria-hidden />
-            </button>
-            <AnimatePresence>
-              {isMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                  className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-obsidian-900 py-1 shadow-2xl"
-                >
-                  {onEdit && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsMenuOpen(false);
-                        onEdit();
-                      }}
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
-                    >
-                      <Edit2 className="h-4 w-4 shrink-0" aria-hidden /> Modifier l&apos;affaire
-                    </button>
-                  )}
-                  {onForfeit && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsMenuOpen(false);
-                        onForfeit();
-                      }}
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-bold text-prestige-gold transition-colors hover:bg-prestige-gold/10"
-                    >
-                      <Flag className="h-4 w-4 shrink-0" aria-hidden /> Déclarer Forfait
-                    </button>
-                  )}
-                  {onDelete && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsMenuOpen(false);
-                        onDelete();
-                      }}
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-bold text-blood-400 transition-colors hover:bg-blood-500/10"
-                    >
-                      <Trash2 className="h-4 w-4 shrink-0" aria-hidden /> Supprimer
-                    </button>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
-        )}
 
-        {status === 'scheduled' && scheduled_at ? (
-          <div
-            className="pointer-events-none absolute bottom-2 left-2 z-10 origin-bottom-left scale-90 rounded-md border border-cyan-500/40 bg-black/70 px-2 py-1 shadow-lg backdrop-blur-md [&_.text-blue-400]:text-cyan-400 [&_svg]:text-cyan-400 [&_span.text-white]:text-white [&_span.text-white]:drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
-            aria-live="polite"
-          >
-            <Countdown scheduledAt={scheduled_at} />
-          </div>
-        ) : null}
+          <div className="absolute right-2 top-2 z-[60] flex max-w-[60%] flex-wrap items-center justify-end gap-1.5">
+            {!!scheduled_at && (status === 'scheduled' || status === 'pending') && onNotifyClick && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsReminded(!isReminded);
+                  onNotifyClick?.();
+                  toast(!isReminded ? 'Rappel activé' : 'Rappel annulé', 'success');
+                }}
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border backdrop-blur-md transition-all ${isReminded ? 'border-plasma-400 bg-plasma-500 text-white shadow-[0_0_10px_rgba(162,0,255,0.5)]' : 'border-white/10 bg-black/60 text-white hover:bg-white/20'}`}
+              >
+                <Bell className={`h-3.5 w-3.5 ${isReminded ? 'fill-white' : ''}`} />
+              </button>
+            )}
 
-        {video_url && (
-          <button
-            type="button"
-            onClick={handleToggleMute}
-            className={`absolute z-30 rounded-full border border-white/15 bg-black/50 p-1.5 backdrop-blur-md transition-colors hover:bg-black/70 ${
-              status === 'scheduled' && scheduled_at ? 'bottom-14 left-2' : 'bottom-2 left-2'
-            }`}
-            aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
-          >
-            {isMuted ? <VolumeX className="h-3.5 w-3.5 text-white" /> : <Volume2 className="h-3.5 w-3.5 text-white" />}
-          </button>
-        )}
+            {status === 'live' && getTimeDisplay() && (
+              <div className="flex h-7 shrink-0 items-center gap-0.5 rounded border border-white/10 bg-black/60 px-2 font-mono text-[10px] font-bold tabular-nums text-white/90 backdrop-blur-sm">
+                <Clock className="h-2.5 w-2.5" />
+                <span>{getTimeDisplay()}</span>
+              </div>
+            )}
 
-        <div
-          className="absolute bottom-2 right-2 z-20 flex max-w-[min(92%,calc(100%-3rem))] flex-wrap items-center justify-end gap-1.5"
-          aria-label={`${viewer_count.toLocaleString()} vues`}
-        >
-          {showCountdownTimer && scheduled_at && status !== 'scheduled' && (
-            <span className="pointer-events-auto rounded border border-white/10 bg-black/60 px-1.5 py-0.5 backdrop-blur-sm [&_*]:!text-[9px]">
-              <Countdown scheduledAt={scheduled_at} />
-            </span>
-          )}
-          {status === 'live' && getTimeDisplay() && (
-            <div className="flex items-center gap-0.5 rounded border border-white/10 bg-black/60 px-1.5 py-0.5 font-mono text-[9px] font-bold tabular-nums text-white/90 backdrop-blur-sm">
-              <Clock className="h-2.5 w-2.5" />
-              <span>{getTimeDisplay()}</span>
+            <div className="flex h-7 shrink-0 items-center gap-1 rounded border border-white/10 bg-black/60 px-2 font-mono text-[10px] font-bold tabular-nums text-white/95 backdrop-blur-sm">
+              <Eye className="h-3 w-3 text-white/90" strokeWidth={2.25} aria-hidden />
+              <span>{viewer_count.toLocaleString()}</span>
             </div>
-          )}
-          <div className="flex items-center gap-0.5 rounded border border-white/10 bg-black/60 px-1.5 py-0.5 font-mono text-[9px] font-bold tabular-nums text-white/95 backdrop-blur-sm">
-            <Eye className="h-2.5 w-2.5 text-white/90" strokeWidth={2.25} aria-hidden />
-            <span>{viewer_count.toLocaleString()}</span>
-          </div>
-          {onAuraClick ? (
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.85 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!has_liked_by_user) {
-                  const newId = Date.now() + Math.random();
-                  setCardFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 30 - 15 }]);
-                  setTimeout(() => setCardFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
-                }
-                onAuraClick();
-              }}
-              className={`relative flex h-6 shrink-0 items-center justify-center gap-1.5 rounded border bg-black/60 px-2 font-mono text-[10px] font-bold tabular-nums backdrop-blur-sm transition-colors ${
-                has_liked_by_user
-                  ? 'border-volt-500/50 text-volt-400 shadow-[0_0_8px_rgba(223,255,0,0.3)]'
-                  : auraTier === 3
-                    ? 'border-volt-500/30 text-volt-400 hover:border-volt-500/50'
+
+            {onAuraClick ? (
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.85 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!has_liked_by_user) {
+                    const newId = Date.now() + Math.random();
+                    setCardFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 30 - 15 }]);
+                    setTimeout(() => setCardFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
+                  }
+                  onAuraClick();
+                }}
+                className={`relative flex h-7 shrink-0 items-center justify-center gap-1 rounded border bg-black/60 px-2 font-mono text-[10px] font-bold tabular-nums backdrop-blur-sm transition-colors ${
+                  has_liked_by_user
+                    ? 'border-volt-500/50 text-volt-400 shadow-[0_0_8px_rgba(223,255,0,0.3)]'
+                    : auraTier === 3
+                      ? 'border-volt-500/30 text-volt-400 hover:border-volt-500/50'
+                      : auraTier === 2
+                        ? 'border-plasma-500/30 text-plasma-400 hover:border-plasma-500/50'
+                        : 'border-white/10 text-white/90 hover:border-prestige-gold/60 hover:text-prestige-gold'
+                }`}
+                aria-label={has_liked_by_user ? "Retirer l'Aura" : "Envoyer de l'Aura"}
+              >
+                <AnimatePresence>
+                  {cardFloatingAuras.map((aura) => (
+                    <motion.span
+                      key={aura.id}
+                      initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
+                      animate={{ opacity: 0, y: -28, scale: 1.1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.65 }}
+                      className="pointer-events-none absolute -top-5 left-1/2 z-50 -translate-x-1/2 text-[10px] font-black text-volt-400 drop-shadow-[0_0_8px_rgba(223,255,0,0.8)]"
+                    >
+                      +1
+                    </motion.span>
+                  ))}
+                </AnimatePresence>
+                <Sparkles className={`h-3 w-3 ${has_liked_by_user ? 'fill-current' : ''}`} />
+                <span>{engagement_score.toLocaleString()}</span>
+              </motion.button>
+            ) : (
+              <div
+                className={`flex h-7 shrink-0 items-center justify-center gap-1 rounded border bg-black/60 px-2 font-mono text-[10px] font-bold tabular-nums backdrop-blur-sm ${
+                  auraTier === 3
+                    ? 'border-volt-500/30 text-volt-400'
                     : auraTier === 2
-                      ? 'border-plasma-500/30 text-plasma-400 hover:border-plasma-500/50'
-                      : 'border-white/10 text-white/90 hover:border-prestige-gold/60 hover:text-prestige-gold'
-              }`}
-              aria-label={has_liked_by_user ? "Retirer l'Aura" : "Envoyer de l'Aura"}
-            >
-              <AnimatePresence>
-                {cardFloatingAuras.map((aura) => (
-                  <motion.span
-                    key={aura.id}
-                    initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
-                    animate={{ opacity: 0, y: -28, scale: 1.1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.65 }}
-                    className="pointer-events-none absolute -top-5 left-1/2 z-50 -translate-x-1/2 text-[10px] font-black text-volt-400 drop-shadow-[0_0_8px_rgba(223,255,0,0.8)]"
-                  >
-                    +1
-                  </motion.span>
-                ))}
-              </AnimatePresence>
-              <Sparkles className={`h-3 w-3 ${has_liked_by_user ? 'fill-current' : ''}`} />
-              <span>{engagement_score.toLocaleString()}</span>
-            </motion.button>
-          ) : (
-            <div
-              className={`flex h-6 shrink-0 items-center justify-center gap-1.5 rounded border bg-black/60 px-2 font-mono text-[10px] font-bold tabular-nums backdrop-blur-sm ${
-                auraTier === 3
-                  ? 'border-volt-500/30 text-volt-400'
-                  : auraTier === 2
-                    ? 'border-plasma-500/30 text-plasma-400'
-                    : 'border-white/10 text-white/90'
-              }`}
-            >
-              <Sparkles className="h-3 w-3" />
-              <span>{engagement_score.toLocaleString()}</span>
-            </div>
-          )}
-        </div>
-
-      </div>
-
-      <div className="relative z-10 flex min-h-0 items-stretch gap-3 bg-[#08080A] p-3 pointer-events-auto md:p-4">
-        <div className="flex shrink-0 flex-col pt-0.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 border border-white/20 text-sm font-bold text-white backdrop-blur-md">
-            {(host_name || '?')[0].toUpperCase()}
-          </div>
-        </div>
-        <div className="flex min-h-0 min-w-0 flex-col">
-          <h3 className="line-clamp-2 font-sans text-[15px] md:text-base font-bold leading-snug text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-colors md:group-hover:text-plasma-400">
-            {title}
-          </h3>
-          <div className="mt-1 flex flex-col gap-0.5">
-            <ProfileUserLink
-              username={host_username}
-              className="truncate text-xs font-medium text-gray-300 transition-colors hover:text-white"
-              profileLabel={`Profil de ${host_name || 'Médiateur'}`}
-            >
-              {host_name || 'Médiateur'}
-            </ProfileUserLink>
-            {(challenger_a_name || challenger_b_name) && (
-              <span className="line-clamp-1 truncate text-[11px] font-semibold tracking-tight">
-                {challenger_a_name ? (
-                  <ProfileUserLink
-                    username={challenger_a_username}
-                    className="font-semibold text-plasma-300 drop-shadow-[0_0_8px_rgba(162,0,255,0.8)] hover:text-plasma-200"
-                  >
-                    {challenger_a_name}
-                  </ProfileUserLink>
-                ) : (
-                  <span className="font-semibold text-plasma-300 drop-shadow-[0_0_8px_rgba(162,0,255,0.8)]">?</span>
-                )}{' '}
-                <span className="font-medium text-gray-300 drop-shadow-[0_0_6px_rgba(0,240,255,0.35)]">vs</span>{' '}
-                {challenger_b_name ? (
-                  <ProfileUserLink
-                    username={challenger_b_username}
-                    className="font-semibold text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.8)] hover:text-cyan-200"
-                  >
-                    {challenger_b_name}
-                  </ProfileUserLink>
-                ) : (
-                  <span className="font-semibold text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.8)]">?</span>
-                )}
-              </span>
-            )}
-            {isManifesto && (mediator_name || host_name) && !challenger_a_name && !challenger_b_name && (
-              <span className="text-[10px] font-medium text-prestige-gold/80">Recherche de challengers &amp; médiateur</span>
-            )}
-          </div>
-          {descText ? (
-            <div className="mt-1.5 flex flex-col items-start">
-              <p
-                className={`break-words text-[11px] font-medium text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] transition-all duration-300 ${
-                  isDescExpanded ? '' : 'line-clamp-2'
+                      ? 'border-plasma-500/30 text-plasma-400'
+                      : 'border-white/10 text-white/90'
                 }`}
               >
-                {descText}
-              </p>
-              {descText.length > 80 && (
+                <Sparkles className="h-3 w-3" />
+                <span>{engagement_score.toLocaleString()}</span>
+              </div>
+            )}
+
+            {(onEdit || onDelete || onForfeit) && (
+              <div className="relative shrink-0">
                 <button
                   type="button"
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
-                    setIsDescExpanded(!isDescExpanded);
+                    setIsMenuOpen(!isMenuOpen);
                   }}
-                  className="text-[10px] font-bold text-plasma-400 hover:text-plasma-300 mt-1 transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white backdrop-blur-md transition-colors hover:bg-white/20"
+                  aria-expanded={isMenuOpen}
+                  aria-label={"Actions sur l'affaire"}
                 >
-                  {isDescExpanded ? 'Réduire' : 'Voir plus'}
+                  <MoreVertical className="h-4 w-4" aria-hidden />
                 </button>
-              )}
+                <AnimatePresence>
+                  {isMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-white/10 bg-obsidian-900 py-1 shadow-2xl"
+                    >
+                      {onEdit && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMenuOpen(false);
+                            onEdit();
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-white/5 hover:text-white"
+                        >
+                          <Edit2 className="h-4 w-4 shrink-0" aria-hidden /> Modifier
+                        </button>
+                      )}
+                      {onForfeit && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMenuOpen(false);
+                            onForfeit();
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-bold text-prestige-gold transition-colors hover:bg-prestige-gold/10"
+                        >
+                          <Flag className="h-4 w-4 shrink-0" aria-hidden /> Déclarer Forfait
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMenuOpen(false);
+                            onDelete();
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-bold text-blood-400 transition-colors hover:bg-blood-500/10"
+                        >
+                          <Trash2 className="h-4 w-4 shrink-0" aria-hidden /> Supprimer
+                        </button>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+
+          {status === 'scheduled' && scheduled_at ? (
+            <div
+              className="pointer-events-none absolute bottom-2 left-2 z-10 origin-bottom-left scale-90 rounded-md border border-cyan-500/40 bg-black/70 px-2 py-1 shadow-lg backdrop-blur-md [&_.text-blue-400]:text-cyan-400 [&_svg]:text-cyan-400 [&_span.text-white]:text-white [&_span.text-white]:drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+              aria-live="polite"
+            >
+              <Countdown scheduledAt={scheduled_at} />
             </div>
           ) : null}
-          {tags.length > 0 && (
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {tags.slice(0, 3).map((tag, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onTagClick?.(tag);
-                  }}
-                  className="rounded px-1 text-[9px] font-bold text-white/90 transition-all hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
-                >
-                  #{tag}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
 
-      {((!!scheduled_at && (status === 'scheduled' || status === 'pending') && onNotifyClick) ||
-        (status === 'pending' &&
-          ((!mediator_name && onSaisirAffaire) ||
-            (mediator_name && onValiderRef) ||
-            (mediator_name && !onValiderRef && !onSaisirAffaire))) ||
-        (status === 'scheduled' && (onPrepareAudience || onSeDesister)) ||
-        (status === 'live' && liveAudienceAction) ||
-        (isManifesto && onApply)) && (
-        <div className="mt-auto space-y-2 bg-[#08080A] px-3 pb-3 pt-1 md:px-4 md:pb-4">
-          {isManifesto && onApply && (
-            <div className="flex flex-wrap gap-3 border-b border-white/[0.06] pb-2">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onApply?.();
-                }}
-                className="text-[10px] font-medium text-prestige-gold/90 underline-offset-2 hover:underline"
-              >
-                + Rôle au ring
-              </button>
-            </div>
-          )}
-          {!!scheduled_at && (status === 'scheduled' || status === 'pending') && onNotifyClick && (
+          {video_url && (
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsReminded(!isReminded);
-                onNotifyClick?.();
-                toast(!isReminded ? 'Rappel activé' : 'Rappel annulé', 'success');
-              }}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-black/40 backdrop-blur-md py-2.5 text-xs font-bold uppercase tracking-wide text-white transition-all hover:bg-white/10"
+              onClick={handleToggleMute}
+              className={`absolute z-30 rounded-full border border-white/15 bg-black/50 p-1.5 backdrop-blur-md transition-colors hover:bg-black/70 ${
+                status === 'scheduled' && scheduled_at ? 'bottom-14 left-2' : 'bottom-2 left-2'
+              }`}
+              aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
             >
-              <Bell className={isReminded ? 'fill-white' : ''} /> {isReminded ? 'Rappel programmé' : 'Me rappeler'}
+              {isMuted ? <VolumeX className="h-3.5 w-3.5 text-white" /> : <Volume2 className="h-3.5 w-3.5 text-white" />}
             </button>
           )}
-          {status === 'pending' && onSaisirAffaire && !mediator_name && (
-            <div className="flex w-full flex-col items-center justify-center pt-1">
-              <span className="mb-2 text-[10px] font-medium text-gray-400">
-                Aucun Ref n&apos;a encore pris cette affaire.
-              </span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSaisirAffaire();
-                }}
-                className="w-full rounded-xl bg-white py-3.5 text-center text-xs font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.35)] transition-transform hover:bg-gray-200 hover:scale-[1.02]"
-              >
-                Devenir le Ref
-              </button>
+        </div>
+
+        <div className="relative z-10 flex min-h-0 items-stretch gap-3 bg-[#08080A] p-3 pointer-events-auto md:p-4">
+          <div className="flex shrink-0 flex-col pt-0.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 border border-white/20 text-sm font-bold text-white backdrop-blur-md">
+              {(host_name || '?')[0].toUpperCase()}
             </div>
-          )}
-          {status === 'pending' && !!mediator_name && onValiderRef && (
-            <div className="flex w-full flex-col items-center justify-center gap-2 pt-1">
-              <span className="text-[10px] font-medium text-plasma-400">
-                <ProfileUserLink
-                  username={mediator_username || mediator_name}
-                  className="underline hover:text-plasma-300"
-                  profileLabel={mediator_name ? `Profil de @${mediator_name}` : 'Profil du Ref'}
+          </div>
+          <div className="flex min-h-0 min-w-0 flex-col">
+            <h3 className="line-clamp-2 font-sans text-[15px] md:text-base font-bold leading-snug text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] transition-colors md:group-hover:text-plasma-400">
+              {title}
+            </h3>
+
+            <div className="mt-1 flex flex-col gap-1.5">
+              <div className="flex flex-wrap items-center">
+                <span className="font-black italic text-[14px] md:text-[15px] uppercase tracking-widest text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
+                  {challenger_a_name || host_name || '?'}
+                  <span className="mx-2 font-black text-plasma-500 drop-shadow-[0_0_8px_rgba(162,0,255,0.8)]">VS</span>
+                  {challenger_b_name || '?'}
+                </span>
+              </div>
+
+              {mediator_name ? (
+                <span className="w-fit rounded border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold tracking-wide text-gray-300">
+                  REF : <span className="text-white">@{mediator_name}</span>
+                </span>
+              ) : (
+                <span className="w-fit rounded border border-plasma-500/30 bg-plasma-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-plasma-400 shadow-[0_0_10px_rgba(162,0,255,0.2)]">
+                  En attente de Ref
+                </span>
+              )}
+            </div>
+
+            {descText ? (
+              <div className="mt-2.5 flex flex-col items-start">
+                <p
+                  className={`break-words text-[11px] font-medium text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] transition-all duration-300 ${
+                    isDescExpanded ? '' : 'line-clamp-2'
+                  }`}
                 >
-                  @{mediator_name}
-                </ProfileUserLink>{' '}
-                postule comme Ref.
-              </span>
-              <div className="flex w-full gap-2">
+                  {descText}
+                </p>
+                {descText.length > 80 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsDescExpanded(!isDescExpanded);
+                    }}
+                    className="mt-1 text-[10px] font-bold text-plasma-400 transition-colors hover:text-plasma-300"
+                  >
+                    {isDescExpanded ? 'Réduire' : 'Voir plus'}
+                  </button>
+                )}
+              </div>
+            ) : null}
+            {tags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {tags.slice(0, 3).map((tag, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTagClick?.(tag);
+                    }}
+                    className="rounded px-1 text-[9px] font-bold text-white/90 transition-all hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {((status === 'pending' &&
+          ((!mediator_name && onSaisirAffaire && !isParticipant) || (mediator_name && onValiderRef) || (mediator_name && !onValiderRef && !onSaisirAffaire))) ||
+          (status === 'scheduled' && (onPrepareAudience || onSeDesister)) ||
+          (status === 'live' && liveAudienceAction) ||
+          (isManifesto && onApply)) && (
+          <div className="mt-auto space-y-2 bg-[#08080A] px-3 pb-3 pt-1 md:px-4 md:pb-4">
+            {isManifesto && onApply && (
+              <div className="flex flex-wrap gap-3 border-b border-white/[0.06] pb-2">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onRefuserRef?.();
+                    onApply?.();
                   }}
-                  className="flex-1 rounded-xl bg-white/10 py-2.5 text-xs font-bold text-white transition-colors hover:bg-white/20"
+                  className="text-[10px] font-medium text-prestige-gold/90 underline-offset-2 hover:underline"
                 >
-                  Refuser
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onValiderRef();
-                  }}
-                  className="flex-1 rounded-xl bg-plasma-600 py-2.5 text-xs font-bold text-white shadow-glow-plasma transition-colors hover:bg-plasma-500"
-                >
-                  Valider
+                  + Rôle au ring
                 </button>
               </div>
-            </div>
-          )}
-          {status === 'pending' && !!mediator_name && !onValiderRef && !onSaisirAffaire && (
-            <div className="flex w-full flex-col items-center justify-center py-2">
-              <span className="text-sm text-center py-4 text-gray-400 font-medium italic">
-                {user?.id === created_by
-                  ? `En attente de ta validation du Ref (@${mediator_name})…`
-                  : `En attente d'un Ref…`}
-              </span>
-            </div>
-          )}
-          {status === 'scheduled' && (onPrepareAudience || onSeDesister) && (
-            <div className="flex flex-col gap-2">
-              {onPrepareAudience && (
+            )}
+            {status === 'pending' && onSaisirAffaire && !mediator_name && !isParticipant && (
+              <div className="flex w-full flex-col items-center justify-center pt-1">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onPrepareAudience();
+                    onSaisirAffaire();
                   }}
-                  className="w-full rounded-xl border border-white/20 py-2.5 text-center text-sm font-semibold text-white transition-all hover:bg-white/10"
+                  className="w-full rounded-xl bg-white py-3.5 text-center text-xs font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.35)] transition-transform hover:scale-[1.02] hover:bg-gray-200"
                 >
-                  Préparer l&apos;Audience
+                  Devenir le Ref
                 </button>
-              )}
-              {onSeDesister && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSeDesister();
-                  }}
-                  className="w-full py-1.5 text-center text-xs font-medium text-plasma-400/90 transition-colors hover:text-plasma-500"
-                >
-                  Se désister
-                </button>
-              )}
-            </div>
-          )}
-          {status === 'live' && liveAudienceAction && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                liveAudienceAction.onClick();
-              }}
-              className="w-full rounded-xl border border-plasma-500/35 bg-plasma-500/15 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-plasma-500/25"
-            >
-              {liveAudienceAction.variant === 'return'
-                ? "Retourner dans l'Agora"
-                : "Rejoindre l'Audience"}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Overlay Replay — hover preview pour les beefs terminés */}
-      {isReplay && (
-        <AnimatePresence>
-          {replayHover && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 z-[3] flex items-center justify-center rounded-t-2xl bg-black/60 backdrop-blur-sm md:rounded-[1.5rem]"
-            >
-              <motion.div
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0.8 }}
-                className="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-md"
+              </div>
+            )}
+            {status === 'pending' && !!mediator_name && onValiderRef && (
+              <div className="flex w-full flex-col items-center justify-center gap-2 pt-1">
+                <span className="text-[10px] font-medium text-plasma-400">
+                  <ProfileUserLink
+                    username={mediator_username || mediator_name}
+                    className="underline hover:text-plasma-300"
+                    profileLabel={mediator_name ? `Profil de @${mediator_name}` : 'Profil du Ref'}
+                  >
+                    @{mediator_name}
+                  </ProfileUserLink>{' '}
+                  postule comme Ref.
+                </span>
+                <div className="flex w-full gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRefuserRef?.();
+                    }}
+                    className="flex-1 rounded-xl bg-white/10 py-2.5 text-xs font-bold text-white transition-colors hover:bg-white/20"
+                  >
+                    Refuser
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onValiderRef();
+                    }}
+                    className="flex-1 rounded-xl bg-plasma-600 py-2.5 text-xs font-bold text-white shadow-glow-plasma transition-colors hover:bg-plasma-500"
+                  >
+                    Valider
+                  </button>
+                </div>
+              </div>
+            )}
+            {status === 'pending' && !!mediator_name && !onValiderRef && !onSaisirAffaire && (
+              <div className="flex w-full flex-col items-center justify-center py-2">
+                <span className="py-4 text-center text-sm font-medium italic text-gray-400">
+                  {user?.id === created_by
+                    ? `En attente de ta validation du Ref (@${mediator_name})…`
+                    : `En attente d'un Ref…`}
+                </span>
+              </div>
+            )}
+            {status === 'scheduled' && (onPrepareAudience || onSeDesister) && (
+              <div className="flex flex-col gap-2">
+                {onPrepareAudience && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPrepareAudience();
+                    }}
+                    className="w-full rounded-xl border border-white/20 py-2.5 text-center text-sm font-semibold text-white transition-all hover:bg-white/10"
+                  >
+                    Préparer l&apos;Audience
+                  </button>
+                )}
+                {onSeDesister && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSeDesister();
+                    }}
+                    className="w-full py-1.5 text-center text-xs font-medium text-plasma-400/90 transition-colors hover:text-plasma-500"
+                  >
+                    Se désister
+                  </button>
+                )}
+              </div>
+            )}
+            {status === 'live' && liveAudienceAction && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  liveAudienceAction.onClick();
+                }}
+                className="w-full rounded-xl border border-plasma-500/35 bg-plasma-500/15 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-plasma-500/25"
               >
-                <Play className="w-7 h-7 text-white fill-white ml-1" />
+                {liveAudienceAction.variant === 'return'
+                  ? "Retourner dans l'Agora"
+                  : "Rejoindre l'Audience"}
+              </button>
+            )}
+          </div>
+        )}
+
+        {isReplay && (
+          <AnimatePresence>
+            {replayHover && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="absolute inset-0 z-[3] flex items-center justify-center rounded-t-2xl bg-black/60 backdrop-blur-sm md:rounded-[1.5rem]"
+              >
+                <motion.div
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0.8 }}
+                  className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md"
+                >
+                  <Play className="ml-1 h-7 w-7 fill-white text-white" />
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      )}
-    </motion.div>
+            )}
+          </AnimatePresence>
+        )}
+      </motion.div>
 
       {isTeaserOpen && (
         <div
-          className="fixed inset-0 z-[9999] flex flex-col md:flex-row md:items-center md:justify-center bg-obsidian-950 md:bg-obsidian-950/95 md:p-8"
+          className="fixed inset-0 z-[9999] flex flex-col bg-obsidian-950 md:flex-row md:items-center md:justify-center md:bg-obsidian-950/95 md:p-8"
           onClick={(e) => {
             e.stopPropagation();
             setIsTeaserOpen(false);
           }}
         >
           <div
-            className="relative flex h-full w-full flex-col overflow-hidden shadow-2xl md:h-auto md:max-h-[90vh] md:max-w-5xl md:flex-row md:rounded-3xl md:border md:border-white/10 md:shadow-glow-plasma bg-obsidian-900"
+            className="relative flex h-full w-full flex-col overflow-hidden bg-obsidian-900 shadow-2xl md:h-auto md:max-h-[90vh] md:max-w-5xl md:flex-row md:rounded-3xl md:border md:border-white/10 md:shadow-glow-plasma"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
               onClick={() => setIsTeaserOpen(false)}
               className="absolute right-4 top-4 z-[9999] flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white backdrop-blur-md transition-colors hover:bg-white/20"
-              aria-label="Fermer l&apos;aperçu"
+              aria-label={"Fermer l'aperçu"}
             >
               ✕
             </button>
@@ -770,7 +730,7 @@ export function BeefCard({
                     playsInline
                     muted={isMuted}
                     onClick={handleToggleMute}
-                    className="h-full w-full object-contain bg-black"
+                    className="h-full w-full bg-black object-contain"
                   />
                   <button
                     type="button"
@@ -782,14 +742,11 @@ export function BeefCard({
                   </button>
                 </>
               ) : thumbnail ? (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element -- lightbox teaser, URL dynamiques */}
-                  <img
-                    src={thumbnail}
-                    alt={title}
-                    className="max-h-[50vh] w-full object-contain bg-black md:max-h-none md:h-full"
-                  />
-                </>
+                <img
+                  src={thumbnail}
+                  alt={title}
+                  className="max-h-[50vh] w-full bg-black object-contain md:h-full md:max-h-none"
+                />
               ) : (
                 <div className="text-white/30">Aucun média</div>
               )}
@@ -861,19 +818,13 @@ export function BeefCard({
                 {title}
               </h2>
               <div className="mb-6 flex items-center rounded-xl border border-white/10 bg-white/5 p-3 text-sm font-bold">
-                <ProfileUserLink
-                  username={challenger_a_username}
-                  className="flex-1 truncate text-center text-plasma-300 drop-shadow-[0_0_8px_rgba(162,0,255,0.8)] transition-colors hover:text-plasma-200"
-                >
-                  {challenger_a_name || 'Challenger A'}
-                </ProfileUserLink>
+                <span className="flex-1 truncate text-center text-plasma-300 drop-shadow-[0_0_8px_rgba(162,0,255,0.8)]">
+                  {challenger_a_name || host_name || 'Challenger A'}
+                </span>
                 <span className="mx-3 font-black italic text-white/30">VS</span>
-                <ProfileUserLink
-                  username={challenger_b_username}
-                  className="flex-1 truncate text-center text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.8)] transition-colors hover:text-cyan-200"
-                >
-                  {challenger_b_name || 'Challenger B'}
-                </ProfileUserLink>
+                <span className="flex-1 truncate text-center text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.8)]">
+                  {challenger_b_name || '?'}
+                </span>
               </div>
               <div className="relative mb-6 flex min-h-0 flex-1 flex-col">
                 <div className="hide-scrollbar flex-1 overflow-y-auto pr-2 text-sm font-medium leading-relaxed text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] whitespace-pre-wrap">
