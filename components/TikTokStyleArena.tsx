@@ -3546,310 +3546,321 @@ export function TikTokStyleArena({
         </div>
         )}
 
-        {/* SPLIT SCREEN - Version Liquid Cards */}
-        <div className="absolute inset-0 flex flex-row items-stretch z-0 p-2 sm:p-5 gap-2 sm:gap-5">
+        {/* === ARÈNE GÉOMÉTRIQUE DYNAMIQUE (TRIANGLES & CONTRE-HALO) === */}
+        <div className="absolute inset-0 z-0 bg-[#08080a] overflow-hidden">
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
+            .clip-split-left { clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%); }
+            .clip-split-right { clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%); }
+            .clip-triangle-top { clip-path: polygon(0 0, 100% 0, 50% 50%); }
+            .clip-triangle-left { clip-path: polygon(0 100%, 0 0, 50% 50%); }
+            .clip-triangle-right { clip-path: polygon(100% 0, 100% 100%, 50% 50%); }
+            .clip-triangle-bottom { clip-path: polygon(100% 100%, 0 100%, 50% 50%); }
+          `,
+            }}
+          />
 
-          {/* DALLE GAUCHE */}
-          <motion.div
-            className="relative flex-1 min-w-0 h-full bg-[#08080a] rounded-[1.5rem] sm:rounded-[3.5rem] transition-all duration-700"
-            animate={{
-              boxShadow:
-                leftAura > 0
-                  ? `0 0 ${20 + Math.min(leftAura, 100) * 0.5}px rgba(${leftColor},${Math.min(1, 0.4 + leftAura / 100)}), 0 0 0 ${leftAura > 80 ? 2 : 1}px rgba(${leftColor},${Math.min(1, 0.35 + leftAura / 100)})`
-                  : '0 0 0 1px rgba(255,255,255,0.05)',
-            }}
-            style={{
-              opacity: speakingTurnActive && effectiveHotMicSpeakerSlot && effectiveHotMicSpeakerSlot !== leftSlot ? 0.3 : 1,
-              transform: speakingTurnActive && effectiveHotMicSpeakerSlot === leftSlot ? 'scale(1.02)' : 'scale(1)',
-              filter:
-                speakingTurnActive && effectiveHotMicSpeakerSlot && effectiveHotMicSpeakerSlot !== leftSlot
-                  ? 'grayscale(0.6) blur(3px)'
-                  : `brightness(${1 + (leftAura / 300) * 0.8}) saturate(${1 + (leftAura / 300) * 0.5})`,
-            }}
-          >
-            <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={leftPanel?.sessionId ? leftPanel.sessionId + (leftPanel.videoTrack?.id || '') : 'empty'}
-                  className="absolute inset-0"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  {leftPanel?.videoTrack ? <ParticipantVideo videoTrack={leftPanel.videoTrack} muted={leftPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
-                </motion.div>
-              </AnimatePresence>
-              {!leftPanelIsLocal && (
-                <motion.button
-                  type="button"
-                  data-cinema-stay
-                  whileTap={{ scale: 0.96 }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    emitTapSupport(leftSlot);
-                    preferSide(leftSlot);
-                  }}
-                  onDoubleClick={(e) => e.stopPropagation()}
-                  className="absolute inset-0 z-[28] touch-manipulation w-full h-full outline-none"
-                  aria-label={`Soutenir ${leftSlot}`}
-                />
-              )}
-              {leftPanelIsLocal && isCameraInterrupted && !isViewer && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-auto p-2">
-                  <button
-                    type="button"
-                    onClick={() => { void recoverMediaDevices(); }}
-                    className="pointer-events-auto absolute z-[100] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 rounded-[1rem] border border-plasma-500/50 bg-black/80 px-5 py-3.5 text-sm font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl transition-all hover:scale-105 hover:bg-plasma-500/20 active:scale-95"
+          {(() => {
+            const displayPanels = challengerRemoteSlots.slice(0, 4);
+            const mode = displayPanels.length;
+            const isXMode = mode >= 3;
+
+            type SlotKey = typeof leftSlot | typeof rightSlot | 'C' | 'D' | 'M';
+
+            interface GeoLayoutCfg {
+              clip: string;
+              name: string;
+              panel:
+                | (typeof challengerRemoteSlots)[number]
+                | null
+                | undefined;
+              slot: SlotKey;
+              aura: number;
+              color: string;
+              uiPos: string;
+            }
+
+            const layoutConfigs: GeoLayoutCfg[] = isXMode
+              ? [
+                  {
+                    clip: 'clip-triangle-top',
+                    name: displayPanels[0]?.userName || 'Challenger 1',
+                    panel: displayPanels[0],
+                    slot: leftSlot,
+                    aura: auraA,
+                    color: '168,85,247',
+                    uiPos: 'top-[8%] sm:top-[12%] left-1/2 -translate-x-1/2 flex-col items-center text-center',
+                  },
+                  {
+                    clip: 'clip-triangle-left',
+                    name: displayPanels[1]?.userName || 'Challenger 2',
+                    panel: displayPanels[1],
+                    slot: rightSlot,
+                    aura: auraB,
+                    color: '16,185,129',
+                    uiPos: 'top-1/2 left-[5%] sm:left-[8%] -translate-y-1/2 flex-col items-start text-left',
+                  },
+                  {
+                    clip: 'clip-triangle-right',
+                    name: displayPanels[2]?.userName || 'Témoin 1',
+                    panel: displayPanels[2],
+                    slot: 'C',
+                    aura: 0,
+                    color: '234,179,8',
+                    uiPos: 'top-1/2 right-[5%] sm:right-[8%] -translate-y-1/2 flex-col items-end text-right',
+                  },
+                  mode === 3
+                    ? {
+                        clip: 'clip-triangle-bottom',
+                        name: mediatorName,
+                        panel: mediatorParticipant,
+                        slot: 'M',
+                        aura: auraMed,
+                        color: '212,175,55',
+                        uiPos: 'bottom-[22%] sm:bottom-[15%] left-1/2 -translate-x-1/2 flex-col items-center text-center',
+                      }
+                    : {
+                        clip: 'clip-triangle-bottom',
+                        name: displayPanels[3]?.userName || 'Témoin 2',
+                        panel: displayPanels[3],
+                        slot: 'D',
+                        aura: 0,
+                        color: '59,130,246',
+                        uiPos: 'bottom-[22%] sm:bottom-[15%] left-1/2 -translate-x-1/2 flex-col items-center text-center',
+                      },
+                ]
+              : [
+                  {
+                    clip: 'clip-split-left',
+                    name: leftPanelName,
+                    panel: leftPanel,
+                    slot: leftSlot,
+                    aura: auraA,
+                    color: '168,85,247',
+                    uiPos: 'top-12 sm:top-6 left-3 flex-col items-stretch text-left',
+                  },
+                  {
+                    clip: 'clip-split-right',
+                    name: rightPanelName,
+                    panel: rightPanel,
+                    slot: rightSlot,
+                    aura: auraB,
+                    color: '16,185,129',
+                    uiPos: 'top-12 sm:top-6 right-3 flex-col items-stretch text-left',
+                  },
+                ];
+
+            const showCenterRef = !isXMode || mode >= 4;
+
+            return (
+              <>
+                {layoutConfigs.map((cfg, i) => {
+                  const isLocal = cfg.panel?.sessionId === localParticipant?.sessionId && !isViewer;
+                  const isSpeaking = speakingTurnActive && effectiveHotMicSpeakerSlot === cfg.slot;
+                  const isMutedByFocus =
+                    speakingTurnActive &&
+                    effectiveHotMicSpeakerSlot &&
+                    effectiveHotMicSpeakerSlot !== cfg.slot &&
+                    (cfg.slot === 'A' || cfg.slot === 'B');
+                  const filterVal = isMutedByFocus
+                    ? 'grayscale(0.6) blur(3px)'
+                    : `brightness(${1 + (cfg.aura / 300) * 0.8}) saturate(${1 + (cfg.aura / 300) * 0.5})`;
+
+                  return (
+                    <motion.div
+                      key={cfg.clip}
+                      className={`absolute inset-0 ${cfg.clip} bg-[#08080a] transition-all duration-700`}
+                      style={{
+                        opacity: isMutedByFocus ? 0.3 : 1,
+                        filter:
+                          cfg.aura > 0
+                            ? `drop-shadow(0 0 ${10 + Math.min(cfg.aura, 100) * 0.3}px rgba(${cfg.color},${Math.min(1, 0.4 + cfg.aura / 100)})) ${filterVal}`
+                            : filterVal,
+                        zIndex: 10 + i,
+                      }}
+                    >
+                      <div className="absolute inset-0 overflow-hidden">
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={cfg.panel?.sessionId ? cfg.panel.sessionId + (cfg.panel.videoTrack?.id || '') : 'empty'}
+                            className="absolute inset-0"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                          >
+                            {cfg.panel?.videoTrack ? (
+                              <ParticipantVideo videoTrack={cfg.panel.videoTrack} muted={isLocal} className="absolute inset-0 w-full h-full object-cover" />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-5xl opacity-30">👤</span>
+                              </div>
+                            )}
+                          </motion.div>
+                        </AnimatePresence>
+
+                        {!isLocal && (cfg.slot === 'A' || cfg.slot === 'B') && (
+                          <motion.button
+                            type="button"
+                            data-cinema-stay
+                            whileTap={{ scale: 0.96 }}
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                              const tapSlot = cfg.slot as 'A' | 'B';
+                              emitTapSupport(tapSlot);
+                              preferSide(tapSlot);
+                            }}
+                            onDoubleClick={(e) => e.stopPropagation()}
+                            className="absolute inset-0 z-[28] touch-manipulation h-full w-full outline-none"
+                            aria-label={`Soutenir ${cfg.name}`}
+                          />
+                        )}
+
+                        {isLocal && isCameraInterrupted && !isViewer && (
+                          <div className="pointer-events-auto absolute inset-0 z-50 flex items-center justify-center p-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void recoverMediaDevices();
+                              }}
+                              className="pointer-events-auto absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-2 rounded-[1rem] border border-plasma-500/50 bg-black/80 px-5 py-3.5 text-sm font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl"
+                            >
+                              📡 Réactiver
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div data-cinema-stay className={`pointer-events-auto absolute z-[140] flex ${cfg.uiPos} gap-2 pr-2`}>
+                        <div
+                          className={`flex min-w-0 max-w-[min(100%,12rem)] sm:max-w-[14rem] ${
+                            cfg.clip === 'clip-triangle-left' || cfg.clip === 'clip-split-left' || cfg.clip === 'clip-split-right'
+                              ? 'flex-col items-stretch'
+                              : cfg.clip === 'clip-triangle-right'
+                                ? 'flex-col items-end'
+                                : 'flex-col items-center'
+                          } gap-0.5 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-white/95 shadow-sm backdrop-blur-md`}
+                        >
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void openProfile(cfg.name, cfg.panel?.arenaUserId ?? (cfg.slot === 'M' ? host.id : null));
+                            }}
+                            className="min-w-0 truncate text-left text-sm font-black tracking-wide text-white hover:underline"
+                          >
+                            @{cfg.name.trim().startsWith('En attente') ? `Challenger ${cfg.slot}` : cfg.name}
+                          </button>
+                          {isSpeaking && (
+                            <div className="text-[10px] font-black tabular-nums text-white/90">
+                              {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                            </div>
+                          )}
+                          {!cfg.panel && (cfg.slot === 'A' || cfg.slot === 'B') && (
+                            <div className="mt-0.5 text-[8px] font-bold uppercase tracking-widest text-red-400 animate-pulse">Absent</div>
+                          )}
+                        </div>
+                        {isLocal && !isViewer && (
+                          <div className="mt-1 flex shrink-0 justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleMic();
+                              }}
+                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}
+                            >
+                              <Mic className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCam();
+                              }}
+                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}
+                            >
+                              <Video className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+
+                {showCenterRef && (
+                  <div
+                    data-cinema-stay
+                    className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
+                    style={{ zIndex: 100 }}
                   >
-                    📡 Réactiver Caméra/Micro
-                  </button>
-                </div>
-              )}
-            </div>
-            <div
-              data-cinema-stay
-              className="absolute top-12 sm:top-6 left-3 z-[140] flex max-w-[min(100%,calc(100%-1.5rem))] flex-row items-center gap-2 pr-2 pointer-events-auto"
-            >
-              <div className="flex min-w-0 max-w-[min(100%,12rem)] sm:max-w-[14rem] flex-col items-stretch gap-0.5 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-white/95 shadow-sm backdrop-blur-md">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void openProfile(leftPanelName, leftPanel?.arenaUserId ?? null);
-                  }}
-                  className="min-w-0 text-left text-sm font-black tracking-wide text-white truncate hover:underline"
-                >
-                  @{leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
-                </button>
-                {speakingTurnActive && effectiveHotMicSpeakerSlot === leftSlot && (
-                  <div className="text-[10px] font-black tabular-nums text-white/90">
-                    {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                    <div className="absolute inset-0 rounded-full bg-[#08080a] bottom-[1.3rem] top-[0.1rem]" />
+
+                    <motion.div
+                      animate={{
+                        boxShadow:
+                          auraMed > 0
+                            ? `0 0 ${20 + Math.min(auraMed, 100) * 0.5}px ${getMediatorDynamicColor(auraMed)}, 0 0 0 ${auraMed > 150 ? 4 : 2}px ${getMediatorDynamicColor(auraMed)}`
+                            : '0 0 0 2px rgba(255,255,255,0.3)',
+                      }}
+                      style={{
+                        filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})`,
+                      }}
+                      className="relative h-28 w-28 rounded-full transition-shadow duration-300 pointer-events-auto lg:h-[190px] lg:w-[190px]"
+                    >
+                      <button
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          if (isWaitingForMediator) return;
+                          emitTapSupport('M');
+                          preferSide('M' as any);
+                        }}
+                        onDoubleClick={(e) => e.stopPropagation()}
+                        className="flex h-full w-full touch-manipulation overflow-hidden rounded-full border border-transparent bg-black outline-none active:scale-95"
+                      >
+                        {isWaitingForMediator ? (
+                          <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/40 p-4">
+                            <div className="h-8 w-8 shrink-0 animate-spin rounded-full border-[3px] border-brand-400 border-t-transparent opacity-80" />
+                            <span className="mt-2 text-center text-[10px] font-black uppercase leading-none tracking-tighter text-white">
+                              Attente
+                              <br />
+                              Médiateur
+                            </span>
+                          </div>
+                        ) : mediatorParticipant?.videoTrack ? (
+                          <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="h-full w-full object-cover" />
+                        ) : mediatorGraceActive ? (
+                          <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/60 p-4">
+                            <div className="mb-2 h-10 w-10 animate-pulse rounded-full border-[3px] border-red-500 border-t-transparent" />
+                            <span className="text-center text-[12px] font-black leading-none text-red-500">
+                              DÉCONNECTÉ
+                              <br />
+                              {mediatorGraceSeconds}s
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="m-auto text-5xl text-white/30">👤</span>
+                        )}
+                      </button>
+                    </motion.div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isWaitingForMediator) void openProfile(mediatorName, host.id);
+                      }}
+                      className="pointer-events-auto relative z-10 mt-1 rounded-full border border-white/10 bg-black/80 px-3 py-1 shadow-lg hover:bg-black disabled:pointer-events-none disabled:opacity-90"
+                      disabled={isWaitingForMediator}
+                    >
+                      <span className="text-[11px] font-bold text-white">{isWaitingForMediator ? 'En attente...' : `@${mediatorName}`}</span>
+                    </button>
                   </div>
                 )}
-                {leftChallengerAbsent && (
-                  <div className="text-[8px] font-bold uppercase tracking-widest text-red-400 animate-pulse mt-0.5">Absent</div>
-                )}
-              </div>
-              {leftPanelIsLocal && !isViewer && (
-                <div className="flex shrink-0 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleMic();
-                    }}
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}
-                  >
-                    <Mic className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleCam();
-                    }}
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}
-                  >
-                    <Video className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </motion.div>
-
-          {/* DALLE DROITE */}
-          <motion.div
-            className="relative flex-1 min-w-0 h-full bg-[#08080a] rounded-[1.5rem] sm:rounded-[3.5rem] transition-all duration-700"
-            animate={{
-              boxShadow:
-                rightAura > 0
-                  ? `0 0 ${20 + Math.min(rightAura, 100) * 0.5}px rgba(${rightColor},${Math.min(1, 0.4 + rightAura / 100)}), 0 0 0 ${rightAura > 80 ? 2 : 1}px rgba(${rightColor},${Math.min(1, 0.35 + rightAura / 100)})`
-                  : '0 0 0 1px rgba(255,255,255,0.05)',
-            }}
-            style={{
-              opacity: speakingTurnActive && effectiveHotMicSpeakerSlot && effectiveHotMicSpeakerSlot !== rightSlot ? 0.3 : 1,
-              transform: speakingTurnActive && effectiveHotMicSpeakerSlot === rightSlot ? 'scale(1.02)' : 'scale(1)',
-              filter:
-                speakingTurnActive && effectiveHotMicSpeakerSlot && effectiveHotMicSpeakerSlot !== rightSlot
-                  ? 'grayscale(0.6) blur(3px)'
-                  : `brightness(${1 + (rightAura / 300) * 0.8}) saturate(${1 + (rightAura / 300) * 0.5})`,
-            }}
-          >
-            <div className="absolute inset-0 overflow-hidden rounded-[inherit]">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={rightPanel?.sessionId ? rightPanel.sessionId + (rightPanel.videoTrack?.id || '') : 'empty'}
-                  className="absolute inset-0"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  {rightPanel?.videoTrack ? <ParticipantVideo videoTrack={rightPanel.videoTrack} muted={rightPanelIsLocal} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 flex items-center justify-center"><span className="text-5xl opacity-30">👤</span></div>}
-                </motion.div>
-              </AnimatePresence>
-              {!rightPanelIsLocal && (
-                <motion.button
-                  type="button"
-                  data-cinema-stay
-                  whileTap={{ scale: 0.96 }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    emitTapSupport(rightSlot);
-                    preferSide(rightSlot);
-                  }}
-                  onDoubleClick={(e) => e.stopPropagation()}
-                  className="absolute inset-0 z-[28] touch-manipulation w-full h-full outline-none"
-                  aria-label={`Soutenir ${rightSlot}`}
-                />
-              )}
-              {rightPanelIsLocal && isCameraInterrupted && !isViewer && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-auto p-2">
-                  <button
-                    type="button"
-                    onClick={() => { void recoverMediaDevices(); }}
-                    className="pointer-events-auto absolute z-[100] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 rounded-[1rem] border border-plasma-500/50 bg-black/80 px-5 py-3.5 text-sm font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl transition-all hover:scale-105 hover:bg-plasma-500/20 active:scale-95"
-                  >
-                    📡 Réactiver Caméra/Micro
-                  </button>
-                </div>
-              )}
-            </div>
-            <div
-              data-cinema-stay
-              className="absolute top-12 sm:top-6 left-3 z-[140] flex max-w-[min(100%,calc(100%-1.5rem))] flex-row items-center gap-2 pr-2 pointer-events-auto"
-            >
-              <div className="flex min-w-0 max-w-[min(100%,12rem)] sm:max-w-[14rem] flex-col items-stretch gap-0.5 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-white/95 shadow-sm backdrop-blur-md">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void openProfile(rightPanelName, rightPanel?.arenaUserId ?? null);
-                  }}
-                  className="min-w-0 text-left text-sm font-black tracking-wide text-white truncate hover:underline"
-                >
-                  @{rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
-                </button>
-                {speakingTurnActive && effectiveHotMicSpeakerSlot === rightSlot && (
-                  <div className="text-[10px] font-black tabular-nums text-emerald-200/95">
-                    {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                  </div>
-                )}
-                {rightChallengerAbsent && (
-                  <div className="text-[8px] font-bold uppercase tracking-widest text-red-400 animate-pulse mt-0.5">Absent</div>
-                )}
-              </div>
-              {rightPanelIsLocal && !isViewer && (
-                <div className="flex shrink-0 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleMic();
-                    }}
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}
-                  >
-                    <Mic className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleCam();
-                    }}
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/50 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg'}`}
-                  >
-                    <Video className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </motion.div>
+              </>
+            );
+          })()}
         </div>
-
-        {/* MÉDIATEUR AU CENTRE */}
-        <div
-          data-cinema-stay
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[150] flex flex-col items-center gap-1 pointer-events-none"
-        >
-          <motion.div
-            animate={{
-              boxShadow:
-                auraMed > 0
-                  ? `0 0 ${20 + Math.min(auraMed, 100) * 0.5}px ${getMediatorDynamicColor(auraMed)}, 0 0 0 ${auraMed > 150 ? 4 : 2}px ${getMediatorDynamicColor(auraMed)}`
-                  : '0 0 0 2px rgba(255,255,255,0.3)',
-            }}
-            style={{
-              filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})`,
-            }}
-            className="relative h-28 w-28 lg:h-[190px] lg:w-[190px] rounded-full pointer-events-auto transition-shadow duration-300"
-          >
-            <button
-              type="button"
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                if (isWaitingForMediator) return;
-                emitTapSupport('M');
-                preferSide('M' as any);
-              }}
-              onDoubleClick={(e) => e.stopPropagation()}
-              className="flex h-full w-full rounded-full bg-black overflow-hidden active:scale-95 border border-transparent outline-none touch-manipulation"
-            >
-              {isWaitingForMediator ? (
-                <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/40 p-4">
-                  <div className="h-8 w-8 shrink-0 animate-spin rounded-full border-[3px] border-brand-400 border-t-transparent opacity-80" />
-                  <span className="mt-2 text-center text-[10px] font-black uppercase leading-none tracking-tighter text-white">
-                    Attente
-                    <br />
-                    Médiateur
-                  </span>
-                </div>
-              ) : mediatorParticipant?.videoTrack ? (
-                <ParticipantVideo
-                  videoTrack={mediatorParticipant.videoTrack}
-                  muted={mediatorIsLocal}
-                  className="h-full w-full object-cover"
-                />
-              ) : mediatorGraceActive ? (
-                <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/60 p-4">
-                  <div className="mb-2 h-10 w-10 animate-pulse rounded-full border-[3px] border-red-500 border-t-transparent" />
-                  <span className="text-center text-[12px] font-black leading-none text-red-500">
-                    DÉCONNECTÉ
-                    <br />
-                    {mediatorGraceSeconds}s
-                  </span>
-                </div>
-              ) : (
-                <span className="m-auto text-5xl text-white/30">👤</span>
-              )}
-            </button>
-            {mediatorIsLocal && isCameraInterrupted && !isViewer && !isWaitingForMediator && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-auto rounded-full bg-black/45 p-1">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void recoverMediaDevices();
-                  }}
-                  className="pointer-events-auto absolute z-[100] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center gap-2 rounded-[1rem] border border-plasma-500/50 bg-black/80 px-5 py-3.5 text-sm font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl transition-all hover:scale-105 hover:bg-plasma-500/20 active:scale-95"
-                >
-                  📡 Réactiver Caméra/Micro
-                </button>
-              </div>
-            )}
-          </motion.div>
-          <button
-            type="button"
-            onClick={() => {
-              if (isWaitingForMediator) return;
-              void openProfile(mediatorName, host.id);
-            }}
-            className="pointer-events-auto rounded-full bg-black/80 px-3 py-1 mt-1 border border-white/10 shadow-lg hover:bg-black disabled:pointer-events-none disabled:opacity-90"
-            disabled={isWaitingForMediator}
-            aria-busy={isWaitingForMediator}
-          >
-            <span className="text-[11px] font-bold text-white">
-              {isWaitingForMediator ? 'En attente...' : `@${mediatorName}`}
-            </span>
-          </button>
-        </div>
+        {/* === FIN ARÈNE GÉOMÉTRIQUE === */}
 
         {/* OVERLAY CHAT MOBILE (Intégré à la vidéo, invisible sur PC) */}
         {!isCinematicMode && (
