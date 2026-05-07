@@ -3245,8 +3245,14 @@ export function TikTokStyleArena({
         {showVsScreen && (
           <div data-cinema-stay className="contents">
             <VsTransition
-              challengerA={finalChallengerA}
-              challengerB={finalChallengerB}
+              challengers={
+                [
+                  finalChallengerA,
+                  finalChallengerB,
+                  challengerRemoteSlots[2]?.userName,
+                  challengerRemoteSlots[3]?.userName,
+                ].filter(Boolean) as string[]
+              }
               debateTitle={debateTitle}
               onComplete={() => setShowVsScreen(false)}
             />
@@ -3583,148 +3589,127 @@ export function TikTokStyleArena({
         </div>
         )}
 
-        {/* === ARÈNE GÉOMÉTRIQUE DYNAMIQUE (TRIANGLES & CONTRE-HALO) === */}
-        <div className="absolute inset-0 z-0 bg-[#08080a] overflow-hidden">
-          <style
-            dangerouslySetInnerHTML={{
-              __html: `
-            @media (max-width: 1023px) {
-              .clip-split-left { clip-path: polygon(0 0, 100% 0, 100% 50%, 0 50%); }
-              .clip-split-right { clip-path: polygon(0 50%, 100% 50%, 100% 100%, 0 100%); }
-            }
-            @media (min-width: 1024px) {
-              .clip-split-left { clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%); }
-              .clip-split-right { clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%); }
-            }
-            .clip-triangle-top { clip-path: polygon(0 0, 100% 0, 50% 50%); }
-            .clip-triangle-left { clip-path: polygon(0 100%, 0 0, 50% 50%); }
-            .clip-triangle-right { clip-path: polygon(100% 0, 100% 100%, 50% 50%); }
-            .clip-triangle-bottom { clip-path: polygon(100% 100%, 0 100%, 50% 50%); }
-          `,
-            }}
-          />
-
+        {/* === ARÈNE GRILLE SÉCURISÉE (CÔTE À CÔTE & 2x2) === */}
+        <div className="absolute inset-0 z-0 bg-[#08080a] p-1 sm:p-2">
           {(() => {
             const displayPanels = challengerRemoteSlots.slice(0, 4);
-            const mode = displayPanels.length;
-            const isXMode = mode >= 3;
+            const mode = Math.max(2, displayPanels.length);
+            const gridClass = mode <= 2 ? 'grid-cols-2 grid-rows-1' : 'grid-cols-2 grid-rows-2';
 
-            type SlotKey = typeof leftSlot | typeof rightSlot | 'C' | 'D' | 'M';
-
-            interface GeoLayoutCfg {
-              clip: string;
+            type GridSlot = 'A' | 'B' | 'C' | 'D';
+            interface GridCellCfg {
+              id: string;
               name: string;
-              panel:
-                | (typeof challengerRemoteSlots)[number]
-                | null
-                | undefined;
-              slot: SlotKey;
+              panel: (typeof challengerRemoteSlots)[number] | null | undefined;
+              slot: GridSlot;
               aura: number;
               color: string;
+              cellClass: string;
               uiPos: string;
             }
 
-            const layoutConfigs: GeoLayoutCfg[] = isXMode
-              ? [
-                  {
-                    clip: 'clip-triangle-top',
-                    name: displayPanels[0]?.userName || 'Challenger 1',
-                    panel: displayPanels[0],
-                    slot: leftSlot,
-                    aura: auraA,
-                    color: '168,85,247',
-                    uiPos: 'top-[8%] sm:top-[12%] left-1/2 -translate-x-1/2 flex-col items-center text-center',
-                  },
-                  {
-                    clip: 'clip-triangle-left',
-                    name: displayPanels[1]?.userName || 'Challenger 2',
-                    panel: displayPanels[1],
-                    slot: rightSlot,
-                    aura: auraB,
-                    color: '16,185,129',
-                    uiPos: 'top-1/2 left-[5%] sm:left-[8%] -translate-y-1/2 flex-col items-start text-left',
-                  },
-                  {
-                    clip: 'clip-triangle-right',
-                    name: displayPanels[2]?.userName || 'Témoin 1',
-                    panel: displayPanels[2],
-                    slot: 'C',
-                    aura: auraC,
-                    color: '234,179,8',
-                    uiPos: 'top-1/2 right-[5%] sm:right-[8%] -translate-y-1/2 flex-col items-end text-right',
-                  },
-                  mode === 3
-                    ? {
-                        clip: 'clip-triangle-bottom',
-                        name: mediatorName,
-                        panel: mediatorParticipant,
-                        slot: 'M',
-                        aura: auraMed,
-                        color: '212,175,55',
-                        uiPos: 'bottom-[22%] sm:bottom-[15%] left-1/2 -translate-x-1/2 flex-col items-center text-center',
-                      }
-                    : {
-                        clip: 'clip-triangle-bottom',
-                        name: displayPanels[3]?.userName || 'Témoin 2',
-                        panel: displayPanels[3],
-                        slot: 'D',
-                        aura: auraD,
-                        color: '59,130,246',
-                        uiPos: 'bottom-[22%] sm:bottom-[15%] left-1/2 -translate-x-1/2 flex-col items-center text-center',
-                      },
-                ]
-              : [
-                  {
-                    clip: 'clip-split-left',
-                    name: leftPanelName,
-                    panel: leftPanel,
-                    slot: leftSlot,
-                    aura: auraA,
-                    color: '168,85,247',
-                    uiPos: 'top-12 sm:top-6 left-3 flex-col items-stretch text-left',
-                  },
-                  {
-                    clip: 'clip-split-right',
-                    name: rightPanelName,
-                    panel: rightPanel,
-                    slot: rightSlot,
-                    aura: auraB,
-                    color: '16,185,129',
-                    uiPos:
-                      'top-[58%] lg:top-12 sm:top-6 right-3 flex-col items-stretch text-left lg:text-right',
-                  },
-                ];
-
-            const showCenterRef = !isXMode || mode >= 4;
+            const layoutConfigs: GridCellCfg[] =
+              mode >= 3
+                ? [
+                    {
+                      id: 'grid-A',
+                      name: displayPanels[0]?.userName || 'Challenger 1',
+                      panel: displayPanels[0],
+                      slot: 'A',
+                      aura: auraA,
+                      color: '168,85,247',
+                      cellClass: '',
+                      uiPos: 'top-3 left-3 items-start text-left',
+                    },
+                    {
+                      id: 'grid-B',
+                      name: displayPanels[1]?.userName || 'Challenger 2',
+                      panel: displayPanels[1],
+                      slot: 'B',
+                      aura: auraB,
+                      color: '16,185,129',
+                      cellClass: '',
+                      uiPos: 'top-3 right-3 items-end text-right',
+                    },
+                    {
+                      id: 'grid-C',
+                      name: displayPanels[2]?.userName || 'Témoin 1',
+                      panel: displayPanels[2],
+                      slot: 'C',
+                      aura: auraC,
+                      color: '234,179,8',
+                      cellClass: mode === 3 ? 'col-span-2' : '',
+                      uiPos: 'bottom-3 left-3 items-start text-left',
+                    },
+                    ...(mode === 4
+                      ? [
+                          {
+                            id: 'grid-D',
+                            name: displayPanels[3]?.userName || 'Témoin 2',
+                            panel: displayPanels[3],
+                            slot: 'D' as GridSlot,
+                            aura: auraD,
+                            color: '59,130,246',
+                            cellClass: '',
+                            uiPos: 'bottom-3 right-3 items-end text-right',
+                          },
+                        ]
+                      : []),
+                  ]
+                : [
+                    {
+                      id: 'grid-A',
+                      name: leftPanelName,
+                      panel: leftPanel,
+                      slot: 'A',
+                      aura: auraA,
+                      color: '168,85,247',
+                      cellClass: '',
+                      uiPos: 'top-4 left-4 items-start text-left sm:top-6 sm:left-6',
+                    },
+                    {
+                      id: 'grid-B',
+                      name: rightPanelName,
+                      panel: rightPanel,
+                      slot: 'B',
+                      aura: auraB,
+                      color: '16,185,129',
+                      cellClass: '',
+                      uiPos: 'top-4 right-4 items-end text-right sm:top-6 sm:right-6',
+                    },
+                  ];
 
             return (
               <>
-                {layoutConfigs.map((cfg, i) => {
-                  const isLocal = cfg.panel?.sessionId === localParticipant?.sessionId && !isViewer;
-                  const isSpeaking = speakingTurnActive && effectiveHotMicSpeakerSlot === cfg.slot;
-                  const isMutedByFocus =
-                    speakingTurnActive &&
-                    effectiveHotMicSpeakerSlot &&
-                    effectiveHotMicSpeakerSlot !== cfg.slot &&
-                    (cfg.slot === 'A' || cfg.slot === 'B' || cfg.slot === 'C' || cfg.slot === 'D');
-                  const filterVal = isMutedByFocus
-                    ? 'grayscale(0.6) blur(3px)'
-                    : `brightness(${1 + (cfg.aura / 300) * 0.8}) saturate(${1 + (cfg.aura / 300) * 0.5})`;
+                <div className={`relative h-full w-full grid gap-1 sm:gap-2 ${gridClass}`}>
+                  {layoutConfigs.map((cfg) => {
+                    const isLocal = cfg.panel?.sessionId === localParticipant?.sessionId && !isViewer;
+                    const isSpeaking = speakingTurnActive && effectiveHotMicSpeakerSlot === cfg.slot;
+                    const isMutedByFocus =
+                      speakingTurnActive &&
+                      effectiveHotMicSpeakerSlot &&
+                      effectiveHotMicSpeakerSlot !== cfg.slot &&
+                      (['A', 'B', 'C', 'D'] as const).includes(cfg.slot);
 
-                  return (
-                    <motion.div
-                      key={cfg.clip}
-                      className={`absolute inset-0 ${cfg.clip} bg-[#08080a] transition-all duration-700`}
-                      style={{
-                        opacity: isMutedByFocus ? 0.3 : 1,
-                        filter:
-                          cfg.aura > 0
-                            ? `drop-shadow(0 0 ${10 + Math.min(cfg.aura, 100) * 0.3}px rgba(${cfg.color},${Math.min(1, 0.4 + cfg.aura / 100)})) ${filterVal}`
-                            : filterVal,
-                        zIndex: 10 + i,
-                      }}
-                    >
-                      <div className="absolute inset-0 overflow-hidden">
+                    const auraShadow =
+                      cfg.aura > 0
+                        ? `0 0 ${10 + Math.min(cfg.aura, 100) * 0.4}px rgba(${cfg.color}, ${Math.min(1, 0.4 + cfg.aura / 100)})`
+                        : 'none';
+                    const filterVal = isMutedByFocus
+                      ? 'grayscale(0.6) blur(3px)'
+                      : `brightness(${1 + (cfg.aura / 300) * 0.4}) saturate(${1 + (cfg.aura / 300) * 0.4})`;
+
+                    return (
+                      <motion.div
+                        key={cfg.id}
+                        className={`relative overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-all duration-500 sm:rounded-2xl ${cfg.cellClass}`}
+                        style={{
+                          opacity: isMutedByFocus ? 0.3 : 1,
+                          filter: filterVal,
+                          boxShadow: auraShadow,
+                          zIndex: cfg.aura > 0 ? 10 : 1,
+                        }}
+                      >
                         <AnimatePresence mode="wait">
                           <motion.div
                             key={cfg.panel?.sessionId ? cfg.panel.sessionId + (cfg.panel.videoTrack?.id || '') : 'empty'}
@@ -3733,7 +3718,11 @@ export function TikTokStyleArena({
                             animate={{ opacity: 1 }}
                           >
                             {cfg.panel?.videoTrack ? (
-                              <ParticipantVideo videoTrack={cfg.panel.videoTrack} muted={isLocal} className="absolute inset-0 w-full h-full object-cover" />
+                              <ParticipantVideo
+                                videoTrack={cfg.panel.videoTrack}
+                                muted={isLocal}
+                                className="absolute inset-0 h-full w-full object-cover"
+                              />
                             ) : (
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <span className="text-5xl opacity-30">👤</span>
@@ -3741,184 +3730,169 @@ export function TikTokStyleArena({
                             )}
                           </motion.div>
                         </AnimatePresence>
-
-                        {!isLocal && (cfg.slot === 'A' || cfg.slot === 'B' || cfg.slot === 'C' || cfg.slot === 'D') && (
+                        {!isLocal && ['A', 'B', 'C', 'D'].includes(cfg.slot) && (
                           <motion.button
                             type="button"
                             data-cinema-stay
                             whileTap={{ scale: 0.96 }}
                             onPointerDown={(e) => {
                               e.stopPropagation();
-                              const tapSlot = cfg.slot as 'A' | 'B' | 'C' | 'D';
-                              emitTapSupport(tapSlot);
-                              preferSide(tapSlot);
+                              emitTapSupport(cfg.slot);
+                              preferSide(cfg.slot);
                             }}
                             onDoubleClick={(e) => e.stopPropagation()}
-                            className="absolute inset-0 z-[28] touch-manipulation h-full w-full outline-none"
+                            className="absolute inset-0 z-[28] h-full w-full touch-manipulation outline-none"
                             aria-label={`Soutenir ${cfg.name}`}
                           />
                         )}
-
                         {isLocal && isCameraInterrupted && !isViewer && (
-                          <div className="pointer-events-auto absolute inset-0 z-50 flex items-center justify-center p-2">
+                          <div className="pointer-events-auto absolute inset-0 z-[150] flex items-center justify-center p-2">
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 void recoverMediaDevices();
                               }}
-                              className="pointer-events-auto absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-2 rounded-[1rem] border border-plasma-500/50 bg-black/80 px-5 py-3.5 text-sm font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl"
+                              className="pointer-events-auto rounded-[1rem] border border-plasma-500/50 bg-black/80 px-3 py-2 text-[10px] font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl"
                             >
                               📡 Réactiver
                             </button>
                           </div>
                         )}
-                      </div>
-
-                      <div data-cinema-stay className={`pointer-events-auto absolute z-[140] flex ${cfg.uiPos} gap-2 pr-2`}>
-                        <div
-                          className={`flex min-w-0 max-w-[min(100%,12rem)] sm:max-w-[14rem] ${
-                            cfg.clip === 'clip-triangle-left' || cfg.clip === 'clip-split-left' || cfg.clip === 'clip-split-right'
-                              ? 'flex-col items-stretch'
-                              : cfg.clip === 'clip-triangle-right'
-                                ? 'flex-col items-end'
-                                : 'flex-col items-center'
-                          } gap-0.5 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-white/95 shadow-sm backdrop-blur-md`}
-                        >
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void openProfile(cfg.name, cfg.panel?.arenaUserId ?? (cfg.slot === 'M' ? host.id : null));
-                            }}
-                            className="min-w-0 truncate text-left text-sm font-black tracking-wide text-white hover:underline"
-                          >
-                            @{cfg.name.trim().startsWith('En attente') ? `Challenger ${cfg.slot}` : cfg.name}
-                          </button>
-                          {isSpeaking && (
-                            <div className="text-[10px] font-black tabular-nums text-white/90">
-                              {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                        <div data-cinema-stay className={`pointer-events-auto absolute z-[140] flex flex-col gap-0.5 ${cfg.uiPos}`}>
+                          <div className="flex max-w-[min(100%,12rem)] flex-col gap-0.5 rounded-xl border border-white/10 bg-black/50 px-3 py-1.5 shadow-sm backdrop-blur-md">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null);
+                              }}
+                              className="truncate text-[10px] font-black tracking-wide text-white hover:underline sm:text-xs"
+                            >
+                              @{cfg.name.trim().startsWith('En attente') ? `Challenger ${cfg.slot}` : cfg.name}
+                            </button>
+                            {isSpeaking && (
+                              <div className="text-[10px] font-black tabular-nums text-white/90">
+                                {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                              </div>
+                            )}
+                            {!cfg.panel && (
+                              <div className="mt-0.5 animate-pulse text-[8px] font-bold uppercase tracking-widest text-red-400">Absent</div>
+                            )}
+                          </div>
+                          {isLocal && !isViewer && (
+                            <div className={`mt-1 flex shrink-0 gap-1.5 ${cfg.uiPos.includes('items-end') ? 'self-end' : 'self-start'}`}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleMic();
+                                }}
+                                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}
+                              >
+                                <Mic className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleCam();
+                                }}
+                                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}
+                              >
+                                <Video className="h-3.5 w-3.5" />
+                              </button>
                             </div>
                           )}
-                          {!cfg.panel && (cfg.slot === 'A' || cfg.slot === 'B' || cfg.slot === 'C' || cfg.slot === 'D') && (
-                            <div className="mt-0.5 text-[8px] font-bold uppercase tracking-widest text-red-400 animate-pulse">Absent</div>
-                          )}
                         </div>
-                        {isLocal && !isViewer && (
-                          <div className="mt-1 flex shrink-0 justify-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleMic();
-                              }}
-                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}
-                            >
-                              <Mic className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleCam();
-                              }}
-                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}
-                            >
-                              <Video className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                      </motion.div>
+                    );
+                  })}
+                </div>
 
-                {showCenterRef && (
-                  <div
-                    data-cinema-stay
-                    className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
-                    style={{ zIndex: 100 }}
+                {/* LE MÉDIATEUR AU CENTRE ABSOLU (INVARIABLE) */}
+                <div
+                  data-cinema-stay
+                  className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
+                  style={{ zIndex: 100 }}
+                >
+                  <div className="absolute left-1/2 top-1/2 h-[90px] w-[90px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08080a] sm:h-[130px] sm:w-[130px]" />
+                  <motion.div
+                    animate={{
+                      boxShadow:
+                        auraMed > 0
+                          ? `0 0 ${20 + Math.min(auraMed, 100) * 0.5}px ${getMediatorDynamicColor(auraMed)}, 0 0 0 ${auraMed > 150 ? 4 : 2}px ${getMediatorDynamicColor(auraMed)}`
+                          : '0 0 0 4px rgba(255,255,255,0.05)',
+                    }}
+                    style={{ filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})` }}
+                    className="pointer-events-auto relative h-20 w-20 overflow-hidden rounded-full border-2 border-white/10 bg-black transition-shadow duration-300 sm:h-28 sm:w-28"
                   >
-                    <div className="absolute left-1/2 top-1/2 h-[116px] w-[116px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08080a] lg:h-[196px] lg:w-[196px]" />
-
-                    <motion.div
-                      animate={{
-                        boxShadow:
-                          auraMed > 0
-                            ? `0 0 ${20 + Math.min(auraMed, 100) * 0.5}px ${getMediatorDynamicColor(auraMed)}, 0 0 0 ${auraMed > 150 ? 4 : 2}px ${getMediatorDynamicColor(auraMed)}`
-                            : '0 0 0 2px rgba(255,255,255,0.3)',
-                      }}
-                      style={{
-                        filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})`,
-                      }}
-                      className="relative h-28 w-28 rounded-full transition-shadow duration-300 pointer-events-auto lg:h-[190px] lg:w-[190px]"
-                    >
-                      {mediatorIsLocal && isCameraInterrupted && !isViewer && (
-                        <div className="pointer-events-auto absolute inset-0 z-[150] flex items-center justify-center p-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void recoverMediaDevices();
-                            }}
-                            className="pointer-events-auto rounded-[1rem] border border-plasma-500/50 bg-black/80 px-3 py-2 text-[10px] font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl"
-                          >
-                            📡 Réactiver
-                          </button>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onPointerDown={(e) => {
-                          e.stopPropagation();
-                          if (isWaitingForMediator) return;
-                          emitTapSupport('M');
-                          preferSide('M');
-                        }}
-                        onDoubleClick={(e) => e.stopPropagation()}
-                        className="flex h-full w-full touch-manipulation overflow-hidden rounded-full border border-transparent bg-black outline-none active:scale-95"
-                      >
-                        {isWaitingForMediator ? (
-                          <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/40 p-4">
-                            <div className="h-8 w-8 shrink-0 animate-spin rounded-full border-[3px] border-brand-400 border-t-transparent opacity-80" />
-                            <span className="mt-2 text-center text-[10px] font-black uppercase leading-none tracking-tighter text-white">
-                              Attente
-                              <br />
-                              Médiateur
-                            </span>
-                          </div>
-                        ) : mediatorParticipant?.videoTrack ? (
-                          <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="h-full w-full object-cover" />
-                        ) : mediatorGraceActive ? (
-                          <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/60 p-4">
-                            <div className="mb-2 h-10 w-10 animate-pulse rounded-full border-[3px] border-red-500 border-t-transparent" />
-                            <span className="text-center text-[12px] font-black leading-none text-red-500">
-                              DÉCONNECTÉ
-                              <br />
-                              {mediatorGraceSeconds}s
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="m-auto text-5xl text-white/30">👤</span>
-                        )}
-                      </button>
-                    </motion.div>
+                    {mediatorIsLocal && isCameraInterrupted && !isViewer && (
+                      <div className="pointer-events-auto absolute inset-0 z-[150] flex items-center justify-center p-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void recoverMediaDevices();
+                          }}
+                          className="pointer-events-auto rounded-[1rem] border border-plasma-500/50 bg-black/80 px-3 py-2 text-[10px] font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl"
+                        >
+                          📡
+                        </button>
+                      </div>
+                    )}
                     <button
                       type="button"
-                      onClick={() => {
-                        if (!isWaitingForMediator) void openProfile(mediatorName, host.id);
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        if (isWaitingForMediator) return;
+                        emitTapSupport('M');
+                        preferSide('M');
                       }}
-                      className="pointer-events-auto relative z-10 mt-1 rounded-full border border-white/10 bg-black/80 px-3 py-1 shadow-lg hover:bg-black disabled:pointer-events-none disabled:opacity-90"
-                      disabled={isWaitingForMediator}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      className="flex h-full w-full touch-manipulation overflow-hidden rounded-full border-transparent bg-black outline-none active:scale-95"
                     >
-                      <span className="text-[11px] font-bold text-white">{isWaitingForMediator ? 'En attente...' : `@${mediatorName}`}</span>
+                      {isWaitingForMediator ? (
+                        <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/40 p-4">
+                          <div className="h-6 w-6 shrink-0 animate-spin rounded-full border-[3px] border-brand-400 border-t-transparent opacity-80 sm:h-8 sm:w-8" />
+                          <span className="mt-2 text-center text-[8px] font-black uppercase leading-none tracking-tighter text-white sm:text-[10px]">
+                            Attente
+                            <br />
+                            Ref
+                          </span>
+                        </div>
+                      ) : mediatorParticipant?.videoTrack ? (
+                        <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="h-full w-full object-cover" />
+                      ) : mediatorGraceActive ? (
+                        <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/60 p-4">
+                          <div className="mb-2 h-10 w-10 animate-pulse rounded-full border-[3px] border-red-500 border-t-transparent" />
+                          <span className="text-center text-[12px] font-black leading-none text-red-500">
+                            DÉCONNECTÉ
+                            <br />
+                            {mediatorGraceSeconds}s
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="m-auto text-3xl text-white/30 sm:text-5xl">👤</span>
+                      )}
                     </button>
-                  </div>
-                )}
+                  </motion.div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isWaitingForMediator) void openProfile(mediatorName, host.id);
+                    }}
+                    disabled={isWaitingForMediator}
+                    className="pointer-events-auto relative z-10 mt-1 rounded-full border border-white/10 bg-black/80 px-3 py-1 shadow-lg hover:bg-black disabled:pointer-events-none disabled:opacity-90"
+                  >
+                    <span className="text-[10px] font-bold text-white sm:text-[11px]">{isWaitingForMediator ? 'En attente...' : `@${mediatorName}`}</span>
+                  </button>
+                </div>
               </>
             );
           })()}
         </div>
-        {/* === FIN ARÈNE GÉOMÉTRIQUE === */}
+        {/* === FIN ARÈNE GRILLE === */}
 
         {/* OVERLAY CHAT MOBILE (Intégré à la vidéo, invisible sur PC) */}
         {!isCinematicMode && (
