@@ -49,6 +49,10 @@ const config: Config = {
         prestige: {
           gold: "#E5C07B",
         },
+        /** Alias UI produit pour le violet principal (voir `plasma`). */
+        brand: {
+          400: "#C44DFF",
+        },
       },
       boxShadow: {
         "glow-plasma": "0 0 20px rgba(162, 0, 255, 0.4)",

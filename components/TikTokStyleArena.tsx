@@ -3588,8 +3588,14 @@ export function TikTokStyleArena({
           <style
             dangerouslySetInnerHTML={{
               __html: `
-            .clip-split-left { clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%); }
-            .clip-split-right { clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%); }
+            @media (max-width: 1023px) {
+              .clip-split-left { clip-path: polygon(0 0, 100% 0, 100% 50%, 0 50%); }
+              .clip-split-right { clip-path: polygon(0 50%, 100% 50%, 100% 100%, 0 100%); }
+            }
+            @media (min-width: 1024px) {
+              .clip-split-left { clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%); }
+              .clip-split-right { clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%); }
+            }
             .clip-triangle-top { clip-path: polygon(0 0, 100% 0, 50% 50%); }
             .clip-triangle-left { clip-path: polygon(0 100%, 0 0, 50% 50%); }
             .clip-triangle-right { clip-path: polygon(100% 0, 100% 100%, 50% 50%); }
@@ -3684,7 +3690,8 @@ export function TikTokStyleArena({
                     slot: rightSlot,
                     aura: auraB,
                     color: '16,185,129',
-                    uiPos: 'top-12 sm:top-6 right-3 flex-col items-stretch text-left',
+                    uiPos:
+                      'top-[58%] lg:top-12 sm:top-6 right-3 flex-col items-stretch text-left lg:text-right',
                   },
                 ];
 
@@ -3831,7 +3838,7 @@ export function TikTokStyleArena({
                     className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
                     style={{ zIndex: 100 }}
                   >
-                    <div className="absolute inset-0 rounded-full bg-[#08080a] bottom-[1.3rem] top-[0.1rem]" />
+                    <div className="absolute left-1/2 top-1/2 h-[116px] w-[116px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08080a] lg:h-[196px] lg:w-[196px]" />
 
                     <motion.div
                       animate={{

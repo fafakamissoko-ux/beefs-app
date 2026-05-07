@@ -254,7 +254,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
 
     if (intent === 'mediation') {
       if (mainParticipants.length < 2 || mainParticipants.length > 4) {
-        errors.participants = 'Convoque entre 2 et 4 participants principaux.';
+        errors.participants = 'Médiation : entre 2 et 4 participants principaux requis.';
       }
       if (beefData.is_scheduled) {
         if (!beefData.scheduled_at?.trim()) {
@@ -669,7 +669,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                         <button
                           key={String(result.id)}
                           type="button"
-                          onClick={() => addParticipant(result, beefData.participants.length < 2)}
+                          onClick={() => addParticipant(result, beefData.participants.length < 4)}
                           className="flex w-full items-center gap-2 p-2 text-left transition-colors hover:bg-white/5"
                         >
                           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full brand-gradient text-sm font-bold text-white">

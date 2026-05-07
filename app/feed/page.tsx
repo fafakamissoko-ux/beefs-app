@@ -56,8 +56,14 @@ interface Beef {
   participants_count?: number;
   challenger_a_name?: string | null;
   challenger_b_name?: string | null;
+  challenger_c_name?: string | null;
+  challenger_d_name?: string | null;
   challenger_a_username?: string | null;
   challenger_b_username?: string | null;
+  challenger_c_username?: string | null;
+  challenger_d_username?: string | null;
+  challenger_c_avatar?: string | null;
+  challenger_d_avatar?: string | null;
   mediator_name?: string | null;
   mediator_username?: string | null;
   is_featured?: boolean;
@@ -125,7 +131,7 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [showHero, setShowHero] = useState(false);
-  const [mobileViewMode, setMobileViewMode] = useState<'list' | 'grid'>('list');
+  const [mobileViewMode, setMobileViewMode] = useState<'list' | 'grid'>('grid');
   const [beefToDelete, setBeefToDelete] = useState<string | null>(null);
   const [editBeefId, setEditBeefId] = useState<string | null>(null);
   const [beefToForfeit, setBeefToForfeit] = useState<string | null>(null);
@@ -288,8 +294,14 @@ export default function FeedPage() {
       const beefIds = beefList.map((b: { id: string }) => b.id);
       const challengerANameByBeef: Record<string, string> = {};
       const challengerBNameByBeef: Record<string, string> = {};
+      const challengerCNameByBeef: Record<string, string> = {};
+      const challengerDNameByBeef: Record<string, string> = {};
       const challengerAUsernameByBeef: Record<string, string | null> = {};
       const challengerBUsernameByBeef: Record<string, string | null> = {};
+      const challengerCUsernameByBeef: Record<string, string | null> = {};
+      const challengerDUsernameByBeef: Record<string, string | null> = {};
+      const challengerCAvatarByBeef: Record<string, string | null> = {};
+      const challengerDAvatarByBeef: Record<string, string | null> = {};
       let userOnLiveRingByBeef = new Map<string, boolean>();
 
       const publicIds = new Set<string>();
@@ -334,7 +346,7 @@ export default function FeedPage() {
         }
 
         const { fetchUserPublicByIds, displayNameFromPublicRow } = await import('@/lib/fetch-user-public-profile');
-        feedPublicMap = await fetchUserPublicByIds(supabase, [...publicIds], 'id, username, display_name');
+        feedPublicMap = await fetchUserPublicByIds(supabase, [...publicIds], 'id, username, display_name, avatar_url');
 
         if (!partErr && partRows) {
           type PartRow = {
@@ -386,11 +398,24 @@ export default function FeedPage() {
             });
             const first = packName(eligible[0]?.user_id ?? '');
             const second = packName(eligible[1]?.user_id ?? '');
+            const third = packName(eligible[2]?.user_id ?? '');
+            const fourth = packName(eligible[3]?.user_id ?? '');
             if (first) challengerANameByBeef[beef.id] = first;
             if (second) challengerBNameByBeef[beef.id] = second;
+            if (third) challengerCNameByBeef[beef.id] = third;
+            if (fourth) challengerDNameByBeef[beef.id] = fourth;
             const w = (userId: string) => feedPublicMap.get(userId)?.username?.trim() || null;
+            const av = (userId: string) => feedPublicMap.get(userId)?.avatar_url?.trim() || null;
             if (eligible[0]) challengerAUsernameByBeef[beef.id] = w(eligible[0].user_id);
             if (eligible[1]) challengerBUsernameByBeef[beef.id] = w(eligible[1].user_id);
+            if (eligible[2]) {
+              challengerCUsernameByBeef[beef.id] = w(eligible[2].user_id);
+              challengerCAvatarByBeef[beef.id] = av(eligible[2].user_id);
+            }
+            if (eligible[3]) {
+              challengerDUsernameByBeef[beef.id] = w(eligible[3].user_id);
+              challengerDAvatarByBeef[beef.id] = av(eligible[3].user_id);
+            }
           }
 
           const ringUid = user?.id;
@@ -443,6 +468,28 @@ export default function FeedPage() {
           challenger_b_name: challengerBNameByBeef[bid] ?? null,
           challenger_a_username: challengerAUsernameByBeef[bid] ?? null,
           challenger_b_username: challengerBUsernameByBeef[bid] ?? null,
+          challenger_c_name: (() => {
+            const raw = beef.challenger_c_name;
+            const s = typeof raw === 'string' ? raw.trim() : '';
+            return s || challengerCNameByBeef[bid] || null;
+          })(),
+          challenger_d_name: (() => {
+            const raw = beef.challenger_d_name;
+            const s = typeof raw === 'string' ? raw.trim() : '';
+            return s || challengerDNameByBeef[bid] || null;
+          })(),
+          challenger_c_username: challengerCUsernameByBeef[bid] ?? null,
+          challenger_d_username: challengerDUsernameByBeef[bid] ?? null,
+          challenger_c_avatar: (() => {
+            const raw = beef.challenger_c_avatar;
+            const s = typeof raw === 'string' ? raw.trim() : '';
+            return s || challengerCAvatarByBeef[bid] || null;
+          })(),
+          challenger_d_avatar: (() => {
+            const raw = beef.challenger_d_avatar;
+            const s = typeof raw === 'string' ? raw.trim() : '';
+            return s || challengerDAvatarByBeef[bid] || null;
+          })(),
           user_is_live_ring: onRing,
           video_url: (beef.video_url as string | null | undefined) ?? null,
           has_liked_by_user: hasLiked,

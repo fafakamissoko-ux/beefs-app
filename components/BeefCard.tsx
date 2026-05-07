@@ -30,8 +30,15 @@ interface BeefCardProps {
   participants_count?: number;
   challenger_a_name?: string | null;
   challenger_b_name?: string | null;
+  challenger_c_name?: string | null;
+  challenger_d_name?: string | null;
   challenger_a_username?: string | null;
   challenger_b_username?: string | null;
+  challenger_c_username?: string | null;
+  challenger_d_username?: string | null;
+  challenger_c_avatar?: string | null;
+  challenger_d_avatar?: string | null;
+  mediator_id?: string | null;
   mediator_name?: string | null;
   mediator_username?: string | null;
   onDelete?: () => void;
@@ -75,8 +82,15 @@ export function BeefCard({
   participants_count: _participants_count,
   challenger_a_name,
   challenger_b_name,
+  challenger_c_name,
+  challenger_d_name,
   challenger_a_username,
   challenger_b_username,
+  challenger_c_username,
+  challenger_d_username,
+  challenger_c_avatar: _challenger_c_avatar,
+  challenger_d_avatar: _challenger_d_avatar,
+  mediator_id,
   mediator_name,
   mediator_username: _mediator_username,
   onDelete,
@@ -118,8 +132,16 @@ export function BeefCard({
     ? user.id === created_by ||
       user.user_metadata?.username === challenger_a_username ||
       user.user_metadata?.username === challenger_b_username ||
+      user.user_metadata?.username === challenger_c_username ||
+      user.user_metadata?.username === challenger_d_username ||
       user.user_metadata?.username === host_username
     : false;
+
+  const isWaitingForMe =
+    status === 'pending' &&
+    Boolean(mediator_id) &&
+    user?.id === mediator_id &&
+    user?.id !== created_by;
 
   const handleToggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -431,9 +453,23 @@ export function BeefCard({
           <h3 className="mb-1 line-clamp-2 font-sans text-[13px] font-bold leading-snug text-white md:text-[15px]">{title}</h3>
 
           <div className="mb-2 flex flex-col gap-1.5">
-            <span className="w-full truncate font-black italic text-[11px] uppercase tracking-widest text-white md:text-[13px]">
-              {challenger_a_name || host_name || '?'} <span className="text-plasma-500">VS</span> {challenger_b_name || '?'}
-            </span>
+            <div className="mb-3 flex flex-wrap items-center gap-x-2 font-sans text-sm font-black uppercase tracking-widest text-white/90">
+              <span className="italic">{challenger_a_name || 'Challenger 1'}</span>
+              <span className="text-brand-400">VS</span>
+              <span className="italic">{challenger_b_name || 'Challenger 2'}</span>
+              {challenger_c_name && (
+                <>
+                  <span className="text-brand-400">VS</span>
+                  <span className="italic">{challenger_c_name}</span>
+                </>
+              )}
+              {challenger_d_name && (
+                <>
+                  <span className="text-brand-400">VS</span>
+                  <span className="italic">{challenger_d_name}</span>
+                </>
+              )}
+            </div>
             {mediator_name ? (
               <span className="w-fit rounded border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-bold tracking-wide text-gray-300 md:text-[10px]">
                 REF : <span className="text-white">@{mediator_name}</span>
@@ -555,10 +591,12 @@ export function BeefCard({
             {status === 'pending' && !!mediator_name && !onValiderRef && !onSaisirAffaire && (
               <span className="block py-2 text-center text-[10px] italic text-gray-500">
                 {user?.id === created_by ? (
-                  <>
-                    En attente de ta validation du Ref (@{mediator_name})…
-                  </>
-                ) : (
+                  user?.id !== mediator_id ? (
+                    <>
+                      En attente de ta validation du Ref (@{mediator_name})…
+                    </>
+                  ) : null
+                ) : isWaitingForMe ? null : (
                   <>En attente d&apos;un Ref…</>
                 )}
               </span>
