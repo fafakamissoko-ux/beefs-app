@@ -39,10 +39,9 @@ export async function submitNewBeef(
   const inviteesList = (beefData.participants ?? []).filter((p) => p.user_id !== userId);
   if (inviteesList.length > 0) {
     const inviteeIds = [...new Set(inviteesList.map((i) => i.user_id))];
-    const { data: targetUsers, error: targetErr } = await supabase
-      .from('users')
-      .select('id, display_name, username, invitation_privacy')
-      .in('id', inviteeIds);
+    const { data: targetUsers, error: targetErr } = await supabase.rpc('get_users_privacy', {
+      target_ids: inviteeIds,
+    });
 
     if (targetErr) {
       throw new Error("Erreur serveur lors de la vérification de la confidentialité. Opération annulée par sécurité.");

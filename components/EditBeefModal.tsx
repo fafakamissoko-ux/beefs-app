@@ -401,10 +401,9 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
     const uniqueInviteeIds = [...new Set(inviteeIds)];
     if (uniqueInviteeIds.length === 0 || !user?.id) return;
 
-    const { data: targetUsers, error: targetErr } = await supabase
-      .from('users')
-      .select('id, display_name, username, invitation_privacy')
-      .in('id', uniqueInviteeIds);
+    const { data: targetUsers, error: targetErr } = await supabase.rpc('get_users_privacy', {
+      target_ids: uniqueInviteeIds,
+    });
 
     if (targetErr) throw new Error('Erreur serveur lors de la vérification de la confidentialité.');
     if (!targetUsers || targetUsers.length !== uniqueInviteeIds.length) {
