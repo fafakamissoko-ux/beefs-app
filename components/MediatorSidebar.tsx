@@ -21,7 +21,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/Tabs';
 export type MediatorRemoteRow = {
   sessionId: string;
   label: string;
-  slot: 'A' | 'B';
+  slot: 'A' | 'B' | 'C' | 'D';
   debaterId: string | null;
   audioOn: boolean;
 };
@@ -41,8 +41,8 @@ type MediatorSidebarProps = {
   remoteRows: MediatorRemoteRow[];
   speakingTurnActive: boolean;
   speakingTurnPaused: boolean;
-  hotMicSpeakerSlot: 'A' | 'B' | null;
-  onHotMic: (slot: 'A' | 'B', durationSec: number, opts?: { force?: boolean }) => void;
+  hotMicSpeakerSlot: 'A' | 'B' | 'C' | 'D' | null;
+  onHotMic: (slot: 'A' | 'B' | 'C' | 'D', durationSec: number, opts?: { force?: boolean }) => void;
   onStopSpeakingTurn: () => void;
   onPauseSpeakingTurn: () => void;
   onResumeSpeakingTurn: () => void;
@@ -147,9 +147,6 @@ export function MediatorSidebar({
     setAnnounceDraft(announcementText);
     setSpeakingTurnSec(parolePresetSec);
   }, [open, announcementText, parolePresetSec]);
-
-  const rowA = remoteRows.find((r) => r.slot === 'A');
-  const rowB = remoteRows.find((r) => r.slot === 'B');
 
   const deck =
     typeof document !== 'undefined'
@@ -385,39 +382,40 @@ export function MediatorSidebar({
                         className="w-full max-w-[200px] rounded-3xl border border-white/[0.06] bg-white/[0.02] py-2"
                       />
                     </div>
-                    <div className="flex w-full gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onHotMic('A', speakingTurnSec);
-                          onClose();
-                        }}
-                        className="flex flex-1 flex-col items-center gap-1 rounded-[1.5rem] border border-purple-500/30 bg-purple-500/10 py-4 transition-all hover:bg-purple-500/20 active:scale-95"
-                      >
-                        <span className="w-full truncate px-2 text-center text-[10px] font-bold uppercase tracking-widest text-purple-400">
-                          {rowA?.label ? `@${rowA.label}` : 'Challenger 1'}
-                        </span>
-                        <div
-                          className="h-2 w-8 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                          aria-hidden
-                        />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onHotMic('B', speakingTurnSec);
-                          onClose();
-                        }}
-                        className="flex flex-1 flex-col items-center gap-1 rounded-[1.5rem] border border-emerald-500/30 bg-emerald-500/10 py-4 transition-all hover:bg-emerald-500/20 active:scale-95"
-                      >
-                        <span className="w-full truncate px-2 text-center text-[10px] font-bold uppercase tracking-widest text-emerald-400">
-                          {rowB?.label ? `@${rowB.label}` : 'Challenger 2'}
-                        </span>
-                        <div
-                          className="h-2 w-8 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-                          aria-hidden
-                        />
-                      </button>
+                    <div className="grid w-full grid-cols-2 gap-2">
+                      {remoteRows.map((row) => (
+                        <button
+                          key={row.slot}
+                          type="button"
+                          onClick={() => {
+                            onHotMic(row.slot, speakingTurnSec);
+                            onClose();
+                          }}
+                          className={`flex flex-col items-center gap-1 rounded-[1.5rem] border py-4 transition-all hover:bg-white/5 active:scale-95 ${
+                            row.slot === 'A'
+                              ? 'border-purple-500/30 bg-purple-500/10'
+                              : row.slot === 'B'
+                                ? 'border-emerald-500/30 bg-emerald-500/10'
+                                : row.slot === 'C'
+                                  ? 'border-yellow-500/30 bg-yellow-500/10'
+                                  : 'border-blue-500/30 bg-blue-500/10'
+                          }`}
+                        >
+                          <span
+                            className={`w-full truncate px-2 text-center text-[10px] font-bold uppercase tracking-widest ${
+                              row.slot === 'A'
+                                ? 'text-purple-400'
+                                : row.slot === 'B'
+                                  ? 'text-emerald-400'
+                                  : row.slot === 'C'
+                                    ? 'text-yellow-400'
+                                    : 'text-blue-400'
+                            }`}
+                          >
+                            @{row.label}
+                          </span>
+                        </button>
+                      ))}
                     </div>
                     {speakingTurnActive && (
                       <button

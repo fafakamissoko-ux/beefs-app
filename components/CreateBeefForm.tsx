@@ -253,8 +253,8 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
       errors.description = `Description trop courte (${beefData.description.trim().length}/50 caractères minimum).`;
 
     if (intent === 'mediation') {
-      if (mainParticipants.length !== 2) {
-        errors.participants = 'Convoque exactement 2 participants principaux.';
+      if (mainParticipants.length < 2 || mainParticipants.length > 4) {
+        errors.participants = 'Convoque entre 2 et 4 participants principaux.';
       }
       if (beefData.is_scheduled) {
         if (!beefData.scheduled_at?.trim()) {
@@ -643,7 +643,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                   <p className="mb-3 text-xs text-gray-400">
                     {intent === 'manifesto'
                       ? 'Tu peux publier sans inviter, ou taguer des comptes.'
-                      : 'Exactement 2 participants principaux requis.'}
+                      : 'Entre 2 et 4 participants principaux requis.'}
                   </p>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -718,10 +718,10 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                           </button>
                         </div>
                       ))}
-                      {intent === 'mediation' && mainParticipants.length !== 2 && (
+                      {intent === 'mediation' && (mainParticipants.length < 2 || mainParticipants.length > 4) && (
                         <p className="flex items-center gap-1 text-xs text-yellow-400">
                           <AlertTriangle className="h-3 w-3" />
-                          Il faut exactement 2 participants principaux.
+                          Entre 2 et 4 participants principaux requis.
                         </p>
                       )}
                       {fieldErrors.participants && (
@@ -866,7 +866,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
           <div className="mt-3 rounded-[2rem] border border-blue-500/20 bg-blue-500/10 p-2">
             <p className="text-xs text-blue-400">
               <strong>Obligatoire :</strong> titre, tags, description (50+ caractères).{' '}
-              {intent === 'mediation' && 'Médiation : 2 participants principaux.'}
+              {intent === 'mediation' && 'Médiation : entre 2 et 4 participants principaux.'}
             </p>
           </div>
         </motion.div>

@@ -326,7 +326,7 @@ export function TikTokStyleArena({
   /** Bannière partagée « tour de parole » (remplace le toast pour tous les participants) */
   const [floorAnnouncement, setFloorAnnouncement] = useState<{
     name: string;
-    slot: 'A' | 'B';
+    slot: 'A' | 'B' | 'C' | 'D';
   } | null>(null);
 
   /** Débat structuré (budget challengers, tours imposés, micros) */
@@ -1562,18 +1562,16 @@ export function TikTokStyleArena({
       ? (challengerRemoteSlots[1]?.userName || 'Challenger 2')
       : (challengerRemoteSlots[0]?.userName || 'Challenger 2');
 
-  const sortedChallengerIds = useMemo(() => {
-    return Object.keys(participantRoles)
-      .filter((uid) => uid !== host.id)
-      .sort((a, b) => a.localeCompare(b));
-  }, [participantRoles, host.id]);
-
   const getSlotForUser = useCallback(
-    (uid?: string | null): 'A' | 'B' => {
+    (uid?: string | null): 'A' | 'B' | 'C' | 'D' => {
       if (!uid) return 'A';
-      return sortedChallengerIds[1] === uid ? 'B' : 'A';
+      const idx = challengerRemoteSlots.findIndex((p) => p.arenaUserId === uid);
+      if (idx === 1) return 'B';
+      if (idx === 2) return 'C';
+      if (idx === 3) return 'D';
+      return 'A';
     },
-    [sortedChallengerIds],
+    [challengerRemoteSlots],
   );
 
   const leftSlot = 'A';
@@ -1639,46 +1637,32 @@ export function TikTokStyleArena({
 
   const mediatorRemoteRows = useMemo((): MediatorRemoteRow[] => {
     if (!isHost || !effectiveDailyRoomUrl) return [];
-    const rows: MediatorRemoteRow[] = [];
-    if (leftPanel?.sessionId) {
-      rows.push({
-        sessionId: leftPanel.sessionId,
-        label: leftPanelName,
-        slot: leftSlot,
-        debaterId: leftPanel.arenaUserId ?? null,
-        audioOn: leftPanel.audioOn,
-      });
-    }
-    if (rightPanel?.sessionId) {
-      rows.push({
-        sessionId: rightPanel.sessionId,
-        label: rightPanelName,
-        slot: rightSlot,
-        debaterId: rightPanel.arenaUserId ?? null,
-        audioOn: rightPanel.audioOn,
-      });
-    }
-    return rows;
-  }, [isHost, effectiveDailyRoomUrl, leftPanel, rightPanel, leftPanelName, rightPanelName, leftSlot, rightSlot]);
+    return challengerRemoteSlots.slice(0, 4).map((p, idx) => ({
+      sessionId: p.sessionId,
+      label: p.userName || `Participant ${idx + 1}`,
+      slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as 'A' | 'B' | 'C' | 'D',
+      debaterId: p.arenaUserId ?? null,
+      audioOn: p.audioOn,
+    }));
+  }, [isHost, effectiveDailyRoomUrl, challengerRemoteSlots]);
 
   const leftPanelRef = useRef(leftPanel);
   const rightPanelRef = useRef(rightPanel);
   leftPanelRef.current = leftPanel;
   rightPanelRef.current = rightPanel;
 
-  const hotMicSpeakerSlot = useMemo((): 'A' | 'B' | null => {
+  const hotMicSpeakerSlot = useMemo((): 'A' | 'B' | 'C' | 'D' | null => {
     if (!speakingTurnActive || !speakingTurnTarget) return null;
-    if (leftPanel?.arenaUserId && speakingTurnTarget === leftPanel.arenaUserId) {
-      return getSlotForUser(leftPanel.arenaUserId);
-    }
-    if (rightPanel?.arenaUserId && speakingTurnTarget === rightPanel.arenaUserId) {
-      return getSlotForUser(rightPanel.arenaUserId);
+    for (const p of challengerRemoteSlots) {
+      if (p.arenaUserId === speakingTurnTarget) {
+        return getSlotForUser(p.arenaUserId);
+      }
     }
     return null;
-  }, [speakingTurnActive, speakingTurnTarget, leftPanel, rightPanel, getSlotForUser]);
+  }, [speakingTurnActive, speakingTurnTarget, challengerRemoteSlots, getSlotForUser]);
 
   /** Slot affiché sur les panneaux (spectateurs : parfois pas de match arenaUserId → fallback bannière). */
-  const effectiveHotMicSpeakerSlot = useMemo((): 'A' | 'B' | null => {
+  const effectiveHotMicSpeakerSlot = useMemo((): 'A' | 'B' | 'C' | 'D' | null => {
     if (!speakingTurnActive) return null;
     return hotMicSpeakerSlot ?? floorAnnouncement?.slot ?? null;
   }, [speakingTurnActive, hotMicSpeakerSlot, floorAnnouncement]);
@@ -1987,7 +1971,7 @@ export function TikTokStyleArena({
           }
           setTimerRunning(true);
           setCurrentSpeaker(payload.debaterId);
-          const sl = payload?.slot as 'A' | 'B' | undefined;
+          const sl = payload?.slot as 'A' | 'B' | 'C' | 'D' | undefined;
           const nm = (payload?.speakerName as string) || (sl ? `Challenger ${sl}` : '');
           if (sl && nm) {
             setFloorAnnouncement({ name: nm, slot: sl });
@@ -2365,13 +2349,12 @@ export function TikTokStyleArena({
       ),
     );
 
-    const slot: 'A' | 'B' | undefined =
-      debaterId && (debaterId === leftPanel?.arenaUserId || debaterId === rightPanel?.arenaUserId)
-        ? getSlotForUser(debaterId)
-        : undefined;
+    const panelMatch = challengerRemoteSlots.find((p) => p.arenaUserId === debaterId);
+    const slot = panelMatch?.arenaUserId ? getSlotForUser(panelMatch.arenaUserId) : undefined;
     const speakerLabel =
       debaters.find((d) => d.id === debaterId)?.name ??
-      (slot ? (slot === leftSlot ? leftPanelName : rightPanelName) : 'Intervenant');
+      panelMatch?.userName ??
+      'Intervenant';
     if (slot) {
       setFloorAnnouncement({ name: speakerLabel, slot });
     }
@@ -2399,7 +2382,7 @@ export function TikTokStyleArena({
   };
 
   const startHotMicTurn = useCallback(
-    (slot: 'A' | 'B', durationSec: number, opts?: { force?: boolean }) => {
+    (slot: 'A' | 'B' | 'C' | 'D', durationSec: number, opts?: { force?: boolean }) => {
       if (speakingTurnActive && !opts?.force) {
         toast('Un tour de parole est déjà en cours.', 'info');
         return;
@@ -2409,8 +2392,14 @@ export function TikTokStyleArena({
       }
       setSpeakingTurnPaused(false);
       const duration = Math.max(15, Math.min(600, Math.round(durationSec / 5) * 5));
-      const activePanel = slot === leftSlot ? leftPanel : rightPanel;
-      const otherPanel = slot === leftSlot ? rightPanel : leftPanel;
+      const activePanel =
+        slot === 'A'
+          ? challengerRemoteSlots[0]
+          : slot === 'B'
+            ? challengerRemoteSlots[1]
+            : slot === 'C'
+              ? challengerRemoteSlots[2]
+              : challengerRemoteSlots[3];
       const debaterId = activePanel?.arenaUserId ?? null;
       if (!debaterId || !activePanel?.sessionId) {
         toast('Challenger non connecté pour ce slot.', 'info');
@@ -2423,24 +2412,18 @@ export function TikTokStyleArena({
           .send({ type: 'broadcast', event: 'mediator_floor', payload: { active: false } })
           .catch(() => {});
       }
-      if (otherPanel?.sessionId) setRemoteParticipantAudio(otherPanel.sessionId, false);
-      if (activePanel.sessionId) setRemoteParticipantAudio(activePanel.sessionId, true);
-      if (otherPanel?.arenaUserId) {
+      for (const p of challengerRemoteSlots.slice(0, 4)) {
+        if (!p?.sessionId || !p.arenaUserId) continue;
+        const isSpeaker = p.sessionId === activePanel.sessionId;
+        setRemoteParticipantAudio(p.sessionId, isSpeaker);
         channelRef.current
           ?.send({
             type: 'broadcast',
             event: 'mediator_mute_challenger',
-            payload: { targetUserId: otherPanel.arenaUserId, muted: true },
+            payload: { targetUserId: p.arenaUserId, muted: !isSpeaker },
           })
           .catch(() => {});
       }
-      channelRef.current
-        ?.send({
-          type: 'broadcast',
-          event: 'mediator_mute_challenger',
-          payload: { targetUserId: debaterId, muted: false },
-        })
-        .catch(() => {});
 
       setCurrentSpeaker(debaterId);
       setTimerRunning(true);
@@ -2455,7 +2438,9 @@ export function TikTokStyleArena({
       );
 
       const speakerLabel =
-        debaters.find((d) => d.id === debaterId)?.name ?? (slot === leftSlot ? leftPanelName : rightPanelName);
+        debaters.find((d) => d.id === debaterId)?.name ??
+        activePanel.userName ??
+        `Challenger ${slot}`;
       setFloorAnnouncement({ name: speakerLabel, slot });
 
       channelRef.current
@@ -2468,15 +2453,10 @@ export function TikTokStyleArena({
     },
     [
       speakingTurnActive,
-      leftPanel,
-      rightPanel,
-      leftSlot,
-      rightSlot,
+      challengerRemoteSlots,
       setRemoteParticipantAudio,
       toast,
       debaters,
-      leftPanelName,
-      rightPanelName,
     ],
   );
 
@@ -2485,14 +2465,8 @@ export function TikTokStyleArena({
     setFloorAnnouncement(null);
     const endedSpeakerId = speakingTurnTargetRef.current;
     if (isHost && endedSpeakerId) {
-      const lp = leftPanelRef.current;
-      const rp = rightPanelRef.current;
-      const sid =
-        endedSpeakerId === lp?.arenaUserId
-          ? lp?.sessionId
-          : endedSpeakerId === rp?.arenaUserId
-            ? rp?.sessionId
-            : null;
+      const p = challengerRemoteSlots.find((x) => x.arenaUserId === endedSpeakerId);
+      const sid = p?.sessionId;
       if (sid) setRemoteParticipantAudio(sid, false);
       channelRef.current
         ?.send({
@@ -2523,13 +2497,21 @@ export function TikTokStyleArena({
         payload: { action: 'stop' },
       }).catch(() => {});
     }
-  }, [isHost, structuredDebateEnabled, setRemoteParticipantAudio]);
+  }, [isHost, structuredDebateEnabled, setRemoteParticipantAudio, challengerRemoteSlots]);
 
   const pauseSpeakingTurn = useCallback(() => {
     if (!speakingTurnActive) return;
     setSpeakingTurnPaused(true);
     if (isHost && hotMicSpeakerSlot) {
-      const panel = hotMicSpeakerSlot === leftSlot ? leftPanel : rightPanel;
+      const idx =
+        hotMicSpeakerSlot === 'A'
+          ? 0
+          : hotMicSpeakerSlot === 'B'
+            ? 1
+            : hotMicSpeakerSlot === 'C'
+              ? 2
+              : 3;
+      const panel = challengerRemoteSlots[idx];
       const sid = panel?.sessionId;
       const uid = panel?.arenaUserId ?? null;
       if (sid && uid) {
@@ -2550,9 +2532,7 @@ export function TikTokStyleArena({
     speakingTurnActive,
     isHost,
     hotMicSpeakerSlot,
-    leftSlot,
-    leftPanel,
-    rightPanel,
+    challengerRemoteSlots,
     setRemoteParticipantAudio,
   ]);
 
@@ -2560,7 +2540,15 @@ export function TikTokStyleArena({
     if (!speakingTurnActive) return;
     setSpeakingTurnPaused(false);
     if (isHost && hotMicSpeakerSlot) {
-      const panel = hotMicSpeakerSlot === leftSlot ? leftPanel : rightPanel;
+      const idx =
+        hotMicSpeakerSlot === 'A'
+          ? 0
+          : hotMicSpeakerSlot === 'B'
+            ? 1
+            : hotMicSpeakerSlot === 'C'
+              ? 2
+              : 3;
+      const panel = challengerRemoteSlots[idx];
       const sid = panel?.sessionId;
       const uid = panel?.arenaUserId ?? null;
       if (sid && uid) {
@@ -2581,9 +2569,7 @@ export function TikTokStyleArena({
     speakingTurnActive,
     isHost,
     hotMicSpeakerSlot,
-    leftSlot,
-    leftPanel,
-    rightPanel,
+    challengerRemoteSlots,
     setRemoteParticipantAudio,
   ]);
 

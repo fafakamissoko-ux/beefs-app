@@ -392,7 +392,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
       errors.description = `Description trop courte (${description.trim().length}/50 minimum).`;
     }
     if (intent === 'mediation' && (mainParticipants.length < 2 || mainParticipants.length > 4)) {
-      errors.participants = 'Médiation : entre 2 et 4 participants requis pour l\'arène.';
+      errors.participants = 'Médiation : entre 2 et 4 participants principaux requis.';
     }
     return errors;
   };
@@ -805,7 +805,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                     </label>
                     <p className="mb-3 text-xs text-gray-400">
                       {intent === 'mediation'
-                        ? 'Exactement 2 participants avec le badge Principal.'
+                        ? 'Entre 2 et 4 participants avec le badge Principal.'
                         : 'Tu peux convoquer tes adversaires ou réclamer un Arbitre.'}
                     </p>
                     <div className="relative">
@@ -913,7 +913,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                         {intent === 'mediation' && (mainParticipants.length < 2 || mainParticipants.length > 4) && (
                           <p className="flex items-center gap-1 text-xs text-yellow-400">
                             <AlertTriangle className="h-3 w-3 shrink-0" />
-                            Entre 2 et 4 participants principaux requis pour l&apos;arène.
+                            Entre 2 et 4 participants principaux requis.
                           </p>
                         )}
                         {fieldErrors.participants && <p className="text-xs text-red-400">⚠️ {fieldErrors.participants}</p>}
