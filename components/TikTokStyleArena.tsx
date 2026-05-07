@@ -272,6 +272,8 @@ export function TikTokStyleArena({
   // ── AURA "FERVEUR SOCIALE" ──
   const [auraA, setAuraA] = useState(0);
   const [auraB, setAuraB] = useState(0);
+  const [auraC, setAuraC] = useState(0);
+  const [auraD, setAuraD] = useState(0);
   const [auraMed, setAuraMed] = useState(0);
   const [auraFeverMed, setAuraFeverMed] = useState(false);
   /** Heat Index global : activité de la salle (chat, spectateurs, réactions) — lueur chaude sur le bandeau vidéo. */
@@ -288,6 +290,8 @@ export function TikTokStyleArena({
     viewers: number;
     resonanceA: number;
     resonanceB: number;
+    resonanceC: number;
+    resonanceD: number;
     resonanceM: number;
     messages: number;
     endReason: string;
@@ -763,9 +767,9 @@ export function TikTokStyleArena({
   const pulseBroadcastPending = useRef({ A: 0, B: 0 });
 
   const pulseBroadcastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [myVote, setMyVote] = useState<'A' | 'B' | null>(null);
-  const lastPulseSideRef = useRef<'A' | 'B' | null>(null);
-  const [supportBurst, setSupportBurst] = useState({ A: 0, B: 0, M: 0 });
+  const [myVote, setMyVote] = useState<'A' | 'B' | 'C' | 'D' | null>(null);
+  const lastPulseSideRef = useRef<'A' | 'B' | 'C' | 'D' | null>(null);
+  const [supportBurst, setSupportBurst] = useState({ A: 0, B: 0, C: 0, D: 0, M: 0 });
   const supportBurstRef = useRef(supportBurst);
   useEffect(() => {
     supportBurstRef.current = supportBurst;
@@ -783,9 +787,11 @@ export function TikTokStyleArena({
   const rematchExitTimerRef = useRef<number | null>(null);
 
   /** Mémorise le panneau « préféré » pour les réactions intégrées (pas de compteur de vote). */
-  const preferSide = useCallback((side: 'A' | 'B') => {
-    setMyVote(side);
-    lastPulseSideRef.current = side;
+  const preferSide = useCallback((side: 'A' | 'B' | 'C' | 'D' | 'M') => {
+    if (side !== 'M') {
+      setMyVote(side);
+      lastPulseSideRef.current = side;
+    }
   }, []);
 
   const flushPulseBroadcast = useCallback(() => {
@@ -830,7 +836,9 @@ export function TikTokStyleArena({
     resetArenaVerdict();
     statsRef.current.votesA = 0;
     statsRef.current.votesB = 0;
-    setSupportBurst({ A: 0, B: 0, M: 0 });
+    statsRef.current.votesC = 0;
+    statsRef.current.votesD = 0;
+    setSupportBurst({ A: 0, B: 0, C: 0, D: 0, M: 0 });
   }, [roomId, resetPulseVoices, resetArenaVerdict]);
 
   useEffect(() => {
@@ -936,6 +944,8 @@ export function TikTokStyleArena({
     /** Résonance « distante » (réactions reçues en broadcast), cumulée côté client. */
     votesA: 0,
     votesB: 0,
+    votesC: 0,
+    votesD: 0,
   });
 
   const endBeef = useCallback(async (reason: string = 'Terminé par le médiateur') => {
@@ -975,6 +985,8 @@ export function TikTokStyleArena({
       viewers: s.liveViewerCount,
       resonanceA: s.votesA + sb.A,
       resonanceB: s.votesB + sb.B,
+      resonanceC: s.votesC + sb.C,
+      resonanceD: s.votesD + sb.D,
       resonanceM: sb.M,
       messages: s.messagesCount,
       endReason: reason,
@@ -1075,6 +1087,8 @@ export function TikTokStyleArena({
     const iv = setInterval(() => {
       setAuraA((v) => Math.max(0, v - 3));
       setAuraB((v) => Math.max(0, v - 3));
+      setAuraC((v) => Math.max(0, v - 3));
+      setAuraD((v) => Math.max(0, v - 3));
       if (!auraFeverRef.current) {
         setAuraMed((v) => Math.max(0, v - 3));
       }
@@ -1102,7 +1116,7 @@ export function TikTokStyleArena({
 
   /** Aura prestige-gold — cadre sponsor : les gains remontent au Host quand un soutien financier est détecté.
    *  TODO: brancher sur l'événement gift broadcast ; pour l'instant, activé par l'aura A ou B > 60. */
-  const sponsorAuraActive = auraA > 60 || auraB > 60;
+  const sponsorAuraActive = auraA > 60 || auraB > 60 || auraC > 60 || auraD > 60;
   const sponsorGlow = sponsorAuraActive
     ? 'shadow-[0_0_52px_rgba(212,175,55,0.45),0_0_96px_rgba(255,220,140,0.22),inset_0_0_26px_rgba(212,175,55,0.14)]'
     : '';
@@ -1802,15 +1816,28 @@ export function TikTokStyleArena({
     setGlobalHeat((v) => Math.min(100, v + 4));
   }, []);
 
-  const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | 'M' | null) => {
-    if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && (supportSlot === 'A' || supportSlot === 'B')) {
-      if (supportSlot === 'A') statsRef.current.votesA += 1;
-      else statsRef.current.votesB += 1;
-      return;
-    }
-    if (INTEGRATED_SUPPORT_REACTIONS.has(emoji) && supportSlot === 'M') {
-      setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
-      return;
+  const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | 'C' | 'D' | 'M' | null) => {
+    if (INTEGRATED_SUPPORT_REACTIONS.has(emoji)) {
+      if (supportSlot === 'A') {
+        statsRef.current.votesA += 1;
+        return;
+      }
+      if (supportSlot === 'B') {
+        statsRef.current.votesB += 1;
+        return;
+      }
+      if (supportSlot === 'C') {
+        statsRef.current.votesC += 1;
+        return;
+      }
+      if (supportSlot === 'D') {
+        statsRef.current.votesD += 1;
+        return;
+      }
+      if (supportSlot === 'M') {
+        setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
+        return;
+      }
     }
     const entry = createFlyingReactionEntry(emoji);
     reactionBufferRef.current.push(entry);
@@ -1837,7 +1864,7 @@ export function TikTokStyleArena({
   const getAuraBoost = () => 15;
 
   const emitTapSupport = useCallback(
-    (target: 'A' | 'B' | 'M') => {
+    (target: 'A' | 'B' | 'C' | 'D' | 'M') => {
       if (requireAuth('Fais grimper l\'Aura', 'Crée un compte gratuit pour tapoter l\'écran et soutenir tes favoris !')) return;
       const boost = getAuraBoost();
       setGlobalHeat((v) => Math.min(100, v + 2));
@@ -1847,14 +1874,12 @@ export function TikTokStyleArena({
       } else {
         setSupportBurst((p) => ({ ...p, [target]: p[target] + 1 }));
         if (target === 'A') setAuraA((v) => Math.min(300, v + boost));
-        else setAuraB((v) => Math.min(300, v + boost));
+        else if (target === 'B') setAuraB((v) => Math.min(300, v + boost));
+        else if (target === 'C') setAuraC((v) => Math.min(300, v + boost));
+        else if (target === 'D') setAuraD((v) => Math.min(300, v + boost));
       }
       channelRef.current
-        ?.send({
-          type: 'broadcast',
-          event: 'reaction',
-          payload: { emoji: '❤️', supportSlot: target },
-        })
+        ?.send({ type: 'broadcast', event: 'reaction', payload: { emoji: '❤️', supportSlot: target } })
         .catch(() => {});
     },
     [requireAuth],
@@ -1873,9 +1898,11 @@ export function TikTokStyleArena({
       .on('broadcast', { event: 'reaction' }, ({ payload }: any) => {
         addRemoteReaction(payload.emoji, payload.supportSlot);
         const boost = getAuraBoost();
-        const slot = payload?.supportSlot as 'A' | 'B' | 'M' | undefined;
+        const slot = payload?.supportSlot as 'A' | 'B' | 'C' | 'D' | 'M' | undefined;
         if (slot === 'A') setAuraA((v) => Math.min(300, v + boost));
         if (slot === 'B') setAuraB((v) => Math.min(300, v + boost));
+        if (slot === 'C') setAuraC((v) => Math.min(300, v + boost));
+        if (slot === 'D') setAuraD((v) => Math.min(300, v + boost));
         if (slot === 'M') setAuraMed((v) => Math.min(300, v + boost));
         setGlobalHeat((v) => Math.min(100, v + 3));
       })
@@ -2055,6 +2082,8 @@ export function TikTokStyleArena({
             viewers: Math.max(0, Math.floor(Number(raw.viewers) || 0)),
             resonanceA: typeof raw.resonanceA === 'number' ? raw.resonanceA : legacyA,
             resonanceB: typeof raw.resonanceB === 'number' ? raw.resonanceB : legacyB,
+            resonanceC: typeof raw.resonanceC === 'number' ? raw.resonanceC : 0,
+            resonanceD: typeof raw.resonanceD === 'number' ? raw.resonanceD : 0,
             resonanceM: typeof raw.resonanceM === 'number' ? raw.resonanceM : 0,
             messages: Math.max(0, Math.floor(Number(raw.messages) || 0)),
             endReason: String(raw.endReason ?? payload?.reason ?? 'Beef terminé'),
@@ -2074,6 +2103,8 @@ export function TikTokStyleArena({
             viewers: s.liveViewerCount,
             resonanceA: s.votesA + sb.A,
             resonanceB: s.votesB + sb.B,
+            resonanceC: s.votesC + sb.C,
+            resonanceD: s.votesD + sb.D,
             resonanceM: sb.M,
             messages: s.messagesCount,
             endReason: payload?.reason || 'Beef terminé',
@@ -2202,14 +2233,14 @@ export function TikTokStyleArena({
     onReaction(emoji);
 
     const integrated = INTEGRATED_SUPPORT_REACTIONS.has(emoji);
-    const slotAB = (myVote ?? lastPulseSideRef.current ?? 'A') as 'A' | 'B';
+    const slotPick = (myVote ?? lastPulseSideRef.current ?? 'A') as 'A' | 'B' | 'C' | 'D';
     const isHeartEmoji = emoji === '❤️' || emoji === HEART_ON_FIRE;
-    const heartTarget: 'A' | 'B' | 'M' =
+    const heartTarget: 'A' | 'B' | 'C' | 'D' | 'M' =
       isHeartEmoji && speakingTurnActive && effectiveHotMicSpeakerSlot
         ? effectiveHotMicSpeakerSlot
         : isHeartEmoji
           ? 'M'
-          : slotAB;
+          : slotPick;
 
     if (integrated && isHeartEmoji) {
       const boost = getAuraBoost();
@@ -2219,14 +2250,20 @@ export function TikTokStyleArena({
       } else {
         setSupportBurst((prev) => ({ ...prev, [heartTarget]: prev[heartTarget] + 1 }));
         if (heartTarget === 'A') setAuraA((v) => Math.min(300, v + boost));
-        else setAuraB((v) => Math.min(300, v + boost));
+        else if (heartTarget === 'B') setAuraB((v) => Math.min(300, v + boost));
+        else if (heartTarget === 'C') setAuraC((v) => Math.min(300, v + boost));
+        else setAuraD((v) => Math.min(300, v + boost));
       }
       const xPercent =
         heartTarget === 'A'
           ? 14 + Math.random() * 16
           : heartTarget === 'B'
             ? 70 + Math.random() * 16
-            : 44 + Math.random() * 12;
+            : heartTarget === 'C'
+              ? 82 + Math.random() * 10
+              : heartTarget === 'D'
+                ? 38 + Math.random() * 24
+                : 44 + Math.random() * 12;
       const entry = createFlyingReactionEntry(emoji, {
         x: xPercent,
         opacityMul: 0.5,
@@ -2234,7 +2271,7 @@ export function TikTokStyleArena({
       });
       setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
     } else if (integrated) {
-      setSupportBurst((prev) => ({ ...prev, [slotAB]: prev[slotAB] + 1 }));
+      setSupportBurst((prev) => ({ ...prev, [slotPick]: prev[slotPick] + 1 }));
       const entry = createFlyingReactionEntry(emoji);
       setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
     } else {
@@ -2251,7 +2288,7 @@ export function TikTokStyleArena({
             integrated && isHeartEmoji
               ? { emoji, supportSlot: heartTarget }
               : integrated
-                ? { emoji, supportSlot: slotAB }
+                ? { emoji, supportSlot: slotPick }
                 : { emoji },
         })
         .catch(() => console.warn('[Live] Reaction broadcast failed'));
@@ -3312,22 +3349,36 @@ export function TikTokStyleArena({
             </div>
 
             <div className="mt-3 rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-              <div className="mb-3 text-center font-mono text-xs uppercase tracking-widest text-gray-400">
-                Résonance Générée
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="flex flex-col items-center rounded-2xl border border-cobalt-500/20 bg-cobalt-500/10 p-2">
-                  <span className="text-lg font-black text-cobalt-400 tabular-nums">{endSummary.resonanceA}</span>
-                  <span className="mt-1 font-mono text-[9px] uppercase text-cobalt-200/60">Slot A</span>
+              <div className="mb-3 text-center font-mono text-xs uppercase tracking-widest text-gray-400">Résonance Générée</div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {endSummary.resonanceA > 0 && (
+                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-purple-500/20 bg-purple-500/10 p-2">
+                    <span className="text-lg font-black tabular-nums text-purple-400">{endSummary.resonanceA}</span>
+                    <span className="mt-1 font-mono text-[9px] uppercase text-purple-200/60">Slot A</span>
+                  </div>
+                )}
+                <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-prestige-gold/20 bg-prestige-gold/10 p-2">
+                  <span className="text-lg font-black tabular-nums text-prestige-gold">{endSummary.resonanceM}</span>
+                  <span className="mt-1 font-mono text-[9px] uppercase text-prestige-gold/60">Arbitre</span>
                 </div>
-                <div className="flex flex-col items-center rounded-2xl border border-prestige-gold/20 bg-prestige-gold/10 p-2">
-                  <span className="text-lg font-black text-prestige-gold tabular-nums">{endSummary.resonanceM}</span>
-                  <span className="mt-1 font-mono text-[9px] uppercase text-prestige-gold/60">Médiateur</span>
-                </div>
-                <div className="flex flex-col items-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-2">
-                  <span className="text-lg font-black text-emerald-400 tabular-nums">{endSummary.resonanceB}</span>
-                  <span className="mt-1 font-mono text-[9px] uppercase text-emerald-200/60">Slot B</span>
-                </div>
+                {endSummary.resonanceB > 0 && (
+                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-2">
+                    <span className="text-lg font-black tabular-nums text-emerald-400">{endSummary.resonanceB}</span>
+                    <span className="mt-1 font-mono text-[9px] uppercase text-emerald-200/60">Slot B</span>
+                  </div>
+                )}
+                {endSummary.resonanceC > 0 && (
+                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-2">
+                    <span className="text-lg font-black tabular-nums text-yellow-400">{endSummary.resonanceC}</span>
+                    <span className="mt-1 font-mono text-[9px] uppercase text-yellow-200/60">Slot C</span>
+                  </div>
+                )}
+                {endSummary.resonanceD > 0 && (
+                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-blue-500/20 bg-blue-500/10 p-2">
+                    <span className="text-lg font-black tabular-nums text-blue-400">{endSummary.resonanceD}</span>
+                    <span className="mt-1 font-mono text-[9px] uppercase text-blue-200/60">Slot D</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -3606,7 +3657,7 @@ export function TikTokStyleArena({
                     name: displayPanels[2]?.userName || 'Témoin 1',
                     panel: displayPanels[2],
                     slot: 'C',
-                    aura: 0,
+                    aura: auraC,
                     color: '234,179,8',
                     uiPos: 'top-1/2 right-[5%] sm:right-[8%] -translate-y-1/2 flex-col items-end text-right',
                   },
@@ -3625,7 +3676,7 @@ export function TikTokStyleArena({
                         name: displayPanels[3]?.userName || 'Témoin 2',
                         panel: displayPanels[3],
                         slot: 'D',
-                        aura: 0,
+                        aura: auraD,
                         color: '59,130,246',
                         uiPos: 'bottom-[22%] sm:bottom-[15%] left-1/2 -translate-x-1/2 flex-col items-center text-center',
                       },
@@ -3662,7 +3713,7 @@ export function TikTokStyleArena({
                     speakingTurnActive &&
                     effectiveHotMicSpeakerSlot &&
                     effectiveHotMicSpeakerSlot !== cfg.slot &&
-                    (cfg.slot === 'A' || cfg.slot === 'B');
+                    (cfg.slot === 'A' || cfg.slot === 'B' || cfg.slot === 'C' || cfg.slot === 'D');
                   const filterVal = isMutedByFocus
                     ? 'grayscale(0.6) blur(3px)'
                     : `brightness(${1 + (cfg.aura / 300) * 0.8}) saturate(${1 + (cfg.aura / 300) * 0.5})`;
@@ -3698,14 +3749,14 @@ export function TikTokStyleArena({
                           </motion.div>
                         </AnimatePresence>
 
-                        {!isLocal && (cfg.slot === 'A' || cfg.slot === 'B') && (
+                        {!isLocal && (cfg.slot === 'A' || cfg.slot === 'B' || cfg.slot === 'C' || cfg.slot === 'D') && (
                           <motion.button
                             type="button"
                             data-cinema-stay
                             whileTap={{ scale: 0.96 }}
                             onPointerDown={(e) => {
                               e.stopPropagation();
-                              const tapSlot = cfg.slot as 'A' | 'B';
+                              const tapSlot = cfg.slot as 'A' | 'B' | 'C' | 'D';
                               emitTapSupport(tapSlot);
                               preferSide(tapSlot);
                             }}
@@ -3755,7 +3806,7 @@ export function TikTokStyleArena({
                               {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
                             </div>
                           )}
-                          {!cfg.panel && (cfg.slot === 'A' || cfg.slot === 'B') && (
+                          {!cfg.panel && (cfg.slot === 'A' || cfg.slot === 'B' || cfg.slot === 'C' || cfg.slot === 'D') && (
                             <div className="mt-0.5 text-[8px] font-bold uppercase tracking-widest text-red-400 animate-pulse">Absent</div>
                           )}
                         </div>
@@ -3808,13 +3859,27 @@ export function TikTokStyleArena({
                       }}
                       className="relative h-28 w-28 rounded-full transition-shadow duration-300 pointer-events-auto lg:h-[190px] lg:w-[190px]"
                     >
+                      {mediatorIsLocal && isCameraInterrupted && !isViewer && (
+                        <div className="pointer-events-auto absolute inset-0 z-[150] flex items-center justify-center p-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void recoverMediaDevices();
+                            }}
+                            className="pointer-events-auto rounded-[1rem] border border-plasma-500/50 bg-black/80 px-3 py-2 text-[10px] font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl"
+                          >
+                            📡 Réactiver
+                          </button>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onPointerDown={(e) => {
                           e.stopPropagation();
                           if (isWaitingForMediator) return;
                           emitTapSupport('M');
-                          preferSide('M' as any);
+                          preferSide('M');
                         }}
                         onDoubleClick={(e) => e.stopPropagation()}
                         className="flex h-full w-full touch-manipulation overflow-hidden rounded-full border border-transparent bg-black outline-none active:scale-95"

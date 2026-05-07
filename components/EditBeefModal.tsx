@@ -391,8 +391,8 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
     else if (description.trim().length < 50) {
       errors.description = `Description trop courte (${description.trim().length}/50 minimum).`;
     }
-    if (intent === 'mediation' && mainParticipants.length !== 2) {
-      errors.participants = 'Médiation : exactement 2 participants principaux requis.';
+    if (intent === 'mediation' && (mainParticipants.length < 2 || mainParticipants.length > 4)) {
+      errors.participants = 'Médiation : entre 2 et 4 participants requis pour l\'arène.';
     }
     return errors;
   };
@@ -910,10 +910,10 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                             )}
                           </div>
                         ))}
-                        {intent === 'mediation' && mainParticipants.length !== 2 && (
+                        {intent === 'mediation' && (mainParticipants.length < 2 || mainParticipants.length > 4) && (
                           <p className="flex items-center gap-1 text-xs text-yellow-400">
                             <AlertTriangle className="h-3 w-3 shrink-0" />
-                            Exactement 2 participants principaux requis.
+                            Entre 2 et 4 participants principaux requis pour l&apos;arène.
                           </p>
                         )}
                         {fieldErrors.participants && <p className="text-xs text-red-400">⚠️ {fieldErrors.participants}</p>}
