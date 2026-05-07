@@ -12,6 +12,8 @@ import {
   Check,
   ImagePlus,
   Film,
+  CalendarDays,
+  Scale,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,11 +34,54 @@ interface EditableParticipant {
   role: 'participant' | 'witness';
 }
 
+interface EditableMediator {
+  user_id: string;
+  username: string;
+  display_name: string;
+}
+
+interface PublicProfileSearchRow {
+  id: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url?: string | null;
+}
+
 const POPULAR_TAGS = [
-  'tech', 'startup', 'argent', 'respect', 'business', 'crypto',
-  'politique', 'sport', 'gaming', 'culture', 'justice', 'amitié',
-  'famille', 'travail', 'collab', 'contrat', 'idée', 'crédit',
+  'tech',
+  'startup',
+  'argent',
+  'respect',
+  'business',
+  'crypto',
+  'politique',
+  'sport',
+  'gaming',
+  'culture',
+  'justice',
+  'amitié',
+  'famille',
+  'travail',
+  'collab',
+  'contrat',
+  'idée',
+  'crédit',
 ];
+
+/** Aligné avec `submitNewBeef` : péremption invitations combattants / arbitre. */
+function invitationExpiresIso(scheduledAtIso: string | null): string {
+  let expiresAt = new Date();
+  if (scheduledAtIso) {
+    const when = new Date(scheduledAtIso);
+    if (!Number.isNaN(when.getTime())) {
+      expiresAt = new Date(when);
+      expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+      return expiresAt.toISOString();
+    }
+  }
+  expiresAt.setHours(expiresAt.getHours() + 24);
+  return expiresAt.toISOString();
+}
 
 export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) {
   const { user } = useAuth();
@@ -50,8 +95,13 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [scheduledAt, setScheduledAt] = useState('');
+
   const [participants, setParticipants] = useState<EditableParticipant[]>([]);
-  /** Snapshot après chargement — diff synchro **/
+  const [mediator, setMediator] = useState<EditableMediator | null>(null);
+  /** Invité convoqué au chargement (ref_request envoyée). */
+  const [initialRefInviteeId, setInitialRefInviteeId] = useState<string | null>(null);
+
   const [initialParticipantSnapshot, setInitialParticipantSnapshot] = useState<Map<string, { is_main: boolean; role: string }>>(
     () => new Map(),
   );
@@ -59,7 +109,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
   const [tagInput, setTagInput] = useState('');
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Record<string, unknown>[]>([]);
+  const [searchResults, setSearchResults] = useState<PublicProfileSearchRow[]>([]);
   const [searching, setSearching] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -84,7 +134,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
     try {
       const { data: beef, error: beefErr } = await supabase
         .from('beefs')
-        .select('id, title, description, tags, intent, created_by, status, video_url, thumbnail')
+        .select('id, title, description, tags, scheduled_at, intent, created_by, status, video_url, thumbnail')
         .eq('id', beefId)
         .single();
 
@@ -95,8 +145,8 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
         onClose();
         return;
       }
-      if (beef.status !== 'pending') {
-        toast('Modification possible uniquement tant que l’affaire est en attente.', 'error');
+      if (!['pending', 'scheduled', 'ready'].includes(beef.status as string)) {
+        toast('Modification impossible une fois le combat commencé ou terminé.', 'error');
         onClose();
         return;
       }
@@ -107,6 +157,17 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
       setTitle(beef.title || '');
       setDescription(beef.description || '');
       setTags(Array.isArray(beef.tags) ? [...beef.tags] : []);
+
+      if (beef.scheduled_at) {
+        const date = new Date(beef.scheduled_at as string);
+        date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+        setScheduledAt(date.toISOString().slice(0, 16));
+      } else {
+        setScheduledAt('');
+      }
+
+      setInitialRefInviteeId(null);
+      setMediator(null);
 
       if (teaserPreviewUrlRef.current) {
         URL.revokeObjectURL(teaserPreviewUrlRef.current);
@@ -127,6 +188,25 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
       if (partErr) throw partErr;
 
       const ids = (partRows ?? []).map((r: { user_id: string }) => r.user_id).filter(Boolean);
+
+      let pendingRefInviteeId: string | null = null;
+      if (rawIntent === 'manifesto') {
+        const { data: refInvRow, error: refErr } = await supabase
+          .from('beef_invitations')
+          .select('invitee_id, status')
+          .eq('beef_id', beefId)
+          .eq('invite_type', 'ref_request')
+          .eq('status', 'sent')
+          .maybeSingle();
+
+        if (refErr) throw refErr;
+        if (refInvRow?.invitee_id && typeof refInvRow.invitee_id === 'string') {
+          pendingRefInviteeId = refInvRow.invitee_id;
+          if (!ids.includes(pendingRefInviteeId)) ids.push(pendingRefInviteeId);
+        }
+        setInitialRefInviteeId(pendingRefInviteeId);
+      }
+
       const pmap = await fetchUserPublicByIds(supabase, ids, 'id, username, display_name, avatar_url');
 
       const snap = new Map<string, { is_main: boolean; role: string }>();
@@ -141,6 +221,15 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
           role: (r.role === 'witness' ? 'witness' : 'participant') as 'participant' | 'witness',
         };
       });
+
+      if (pendingRefInviteeId) {
+        const pr = pmap.get(pendingRefInviteeId);
+        setMediator({
+          user_id: pendingRefInviteeId,
+          username: pr?.username ?? '',
+          display_name: displayNameFromPublicRow(pr, 'Arbitre'),
+        });
+      }
 
       setInitialParticipantSnapshot(snap);
       setParticipants(loaded);
@@ -242,7 +331,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
         .neq('id', user?.id ?? '')
         .limit(5);
       if (error) throw error;
-      setSearchResults(data || []);
+      setSearchResults((data ?? []) as PublicProfileSearchRow[]);
     } catch (err) {
       console.error(err);
     } finally {
@@ -250,17 +339,29 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
     }
   };
 
-  const addParticipant = (userData: Record<string, unknown>, isMainDefault: boolean) => {
-    const id = String(userData.id);
-    if (participants.some((p) => p.user_id === id)) return;
+  const addParticipant = (row: PublicProfileSearchRow, isMainDefault: boolean) => {
+    const id = String(row.id);
+    if (participants.some((p) => p.user_id === id) || mediator?.user_id === id) return;
     const newParticipant: EditableParticipant = {
       user_id: id,
-      username: String(userData.username ?? ''),
-      display_name: String(userData.display_name || userData.username || ''),
+      username: String(row.username ?? ''),
+      display_name: String(row.display_name || row.username || ''),
       is_main: isMainDefault,
       role: 'participant',
     };
     setParticipants((prev) => [...prev, newParticipant]);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  const addMediator = (row: PublicProfileSearchRow) => {
+    const id = String(row.id);
+    if (participants.some((p) => p.user_id === id)) return;
+    setMediator({
+      user_id: id,
+      username: String(row.username ?? ''),
+      display_name: String(row.display_name || row.username || ''),
+    });
     setSearchQuery('');
     setSearchResults([]);
   };
@@ -296,11 +397,59 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
     return errors;
   };
 
+  const assertInvitationPrivacyAllows = async (inviteeIds: string[]) => {
+    const uniqueInviteeIds = [...new Set(inviteeIds)];
+    if (uniqueInviteeIds.length === 0 || !user?.id) return;
+
+    const { data: targetUsers, error: targetErr } = await supabase
+      .from('users')
+      .select('id, display_name, username, invitation_privacy')
+      .in('id', uniqueInviteeIds);
+
+    if (targetErr) throw new Error('Erreur serveur lors de la vérification de la confidentialité.');
+    if (!targetUsers || targetUsers.length !== uniqueInviteeIds.length) {
+      throw new Error('Impossible de vérifier les paramètres de tous les utilisateurs ciblés.');
+    }
+
+    for (const target of targetUsers) {
+      const privacy = (target.invitation_privacy as string | null) || 'everyone';
+      const targetName =
+        typeof target.display_name === 'string' && target.display_name.trim()
+          ? target.display_name
+          : typeof target.username === 'string' && target.username.trim()
+            ? target.username
+            : 'Cet utilisateur';
+
+      if (privacy === 'nobody') {
+        throw new Error(`${targetName} n’accepte aucune invitation pour le moment.`);
+      }
+
+      if (privacy === 'following') {
+        const { data: follows, error: followErr } = await supabase
+          .from('followers')
+          .select('id')
+          .eq('follower_id', target.id as string)
+          .eq('following_id', user.id)
+          .maybeSingle();
+
+        if (followErr) throw new Error(`Erreur vérification accès pour ${targetName}.`);
+        if (!follows) throw new Error(`${targetName} n’accepte les défis que de ses abonnements.`);
+      }
+    }
+  };
+
   const handleSave = async () => {
     const errors = validate();
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
     if (!user?.id) return;
+
+    const scheduledAtIso =
+      scheduledAt.trim().length > 0 ? new Date(scheduledAt).toISOString() : null;
+
+    const initialNorm = initialRefInviteeId ?? null;
+    const finalRefId = mediator?.user_id ?? null;
+    const refInviteChanged = intent === 'manifesto' && initialNorm !== finalRefId;
 
     setSaving(true);
     try {
@@ -309,6 +458,13 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
       let removed = [...initialIds].filter((id) => !currentIds.has(id));
       removed = removed.filter((id) => !(intent === 'manifesto' && id === user.id));
       const added = participants.filter((p) => !initialIds.has(p.user_id));
+
+      const invitesNeedingPrivacyCheck: string[] = added.map((p) => p.user_id);
+      if (refInviteChanged && finalRefId) invitesNeedingPrivacyCheck.push(finalRefId);
+
+      await assertInvitationPrivacyAllows(invitesNeedingPrivacyCheck);
+
+      const expiresAtIso = invitationExpiresIso(scheduledAtIso);
 
       let videoUrlPayload: string | null | undefined;
       let thumbnailPayload: string | null | undefined;
@@ -337,11 +493,11 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
           subject: title.trim(),
           description: description.trim(),
           tags,
+          scheduled_at: scheduledAtIso,
           ...(teaserFile ? { video_url: videoUrlPayload, thumbnail: thumbnailPayload } : {}),
         })
         .eq('id', beefId)
-        .eq('created_by', user.id)
-        .eq('status', 'pending');
+        .eq('created_by', user.id);
 
       if (upBeefErr) throw upBeefErr;
 
@@ -360,6 +516,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
           .in('user_id', removed);
         if (bpDelErr) throw bpDelErr;
       }
+
       for (const p of added) {
         const { error: insP } = await supabase.from('beef_participants').insert({
           beef_id: beefId,
@@ -375,8 +532,30 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
           inviter_id: user.id,
           invitee_id: p.user_id,
           status: 'sent',
+          expires_at: expiresAtIso,
         });
         if (insI) throw insI;
+      }
+
+      if (refInviteChanged) {
+        const { error: refDelErr } = await supabase
+          .from('beef_invitations')
+          .delete()
+          .eq('beef_id', beefId)
+          .eq('invite_type', 'ref_request');
+        if (refDelErr) throw refDelErr;
+
+        if (finalRefId) {
+          const { error: insRefErr } = await supabase.from('beef_invitations').insert({
+            beef_id: beefId,
+            inviter_id: user.id,
+            invitee_id: finalRefId,
+            invite_type: 'ref_request',
+            status: 'sent',
+            expires_at: expiresAtIso,
+          });
+          if (insRefErr) throw insRefErr;
+        }
       }
 
       for (const p of participants) {
@@ -395,7 +574,9 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
     } catch (e: unknown) {
       console.error(e);
       const msg =
-        e && typeof e === 'object' && 'message' in e ? String((e as { message?: string }).message) : 'Erreur lors de l’enregistrement.';
+        e && typeof e === 'object' && 'message' in e
+          ? String((e as { message?: string }).message)
+          : 'Erreur lors de l’enregistrement.';
       toast(msg, 'error');
     } finally {
       setSaving(false);
@@ -435,16 +616,11 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                     Modifier l&apos;affaire
                   </h2>
                   <p className="text-xs text-gray-400">
-                    {intent === 'manifesto' ? 'Manifeste · brouillon Agora' : 'Médiation · avant convocation finale'}
+                    {intent === 'manifesto' ? 'Manifeste · brouillon Agora' : 'Médiation · ajustements'}
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-lg p-2 transition-colors hover:bg-white/10"
-                aria-label="Fermer"
-              >
+              <button type="button" onClick={onClose} className="rounded-lg p-2 transition-colors hover:bg-white/10" aria-label="Fermer">
                 <X className="h-5 w-5 text-gray-400" aria-hidden />
               </button>
             </div>
@@ -482,6 +658,23 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                     {fieldErrors.title && <p className="mt-1 text-xs text-red-400">⚠️ {fieldErrors.title}</p>}
                   </div>
 
+                  <div>
+                    <label htmlFor="edit-beef-date" className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+                      <CalendarDays className="h-4 w-4 text-cyan-400" aria-hidden />
+                      Date et heure de l&apos;affrontement
+                    </label>
+                    <input
+                      id="edit-beef-date"
+                      type="datetime-local"
+                      value={scheduledAt}
+                      onChange={(e) => setScheduledAt(e.target.value)}
+                      className="w-full rounded-[2rem] border border-white/[0.06] bg-white/[0.04] px-4 py-3 text-sm text-white placeholder-gray-500 transition-colors focus:border-brand-500 focus:outline-none"
+                    />
+                    <p className="mt-1 pl-2 text-xs text-gray-500">
+                      Laisse vide si le combat doit commencer dès que tout le monde est prêt.
+                    </p>
+                  </div>
+
                   <div className="space-y-2">
                     <label className="flex items-center gap-2 px-1 text-[10px] font-bold uppercase tracking-widest text-white/40">
                       <Film className="h-3.5 w-3.5 shrink-0 text-brand-400" aria-hidden />
@@ -490,37 +683,23 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => document.getElementById('edit-beef-teaser-upload')?.click()}
-                      onKeyDown={(ev) => {
-                        if (ev.key === 'Enter' || ev.key === ' ') {
-                          ev.preventDefault();
-                          document.getElementById('edit-beef-teaser-upload')?.click();
-                        }
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') document.getElementById('edit-beef-teaser-upload')?.click();
                       }}
+                      onClick={() => document.getElementById('edit-beef-teaser-upload')?.click()}
                       className="relative flex aspect-video w-full cursor-pointer items-center justify-center overflow-hidden rounded-[1.5rem] border-2 border-dashed border-white/10 bg-white/5 transition-all hover:border-brand-500/50 hover:bg-white/10"
                     >
                       {teaserPreview ? (
-                        (teaserFile ? teaserFile.type.startsWith('video/') : remotePreviewIsVideo) ? (
+                        teaserFile?.type.startsWith('video/') || (!teaserFile && remotePreviewIsVideo) ? (
                           <div className="relative h-full w-full">
-                            <video
-                              src={teaserPreview}
-                              className="h-full w-full object-contain bg-black"
-                              muted
-                              loop
-                              autoPlay
-                              playsInline
-                            />
+                            <video src={teaserPreview} className="h-full w-full bg-black object-contain" muted loop autoPlay playsInline />
                             <div className="absolute bottom-2 right-2 rounded-full bg-black/50 p-1.5 backdrop-blur-sm">
                               <Film className="h-3.5 w-3.5 text-brand-400" aria-hidden />
                             </div>
                           </div>
                         ) : (
-                          // eslint-disable-next-line @next/next/no-img-element -- aperçu distant ou blob
-                          <img
-                            src={teaserPreview}
-                            className="h-full w-full object-contain bg-black"
-                            alt="Aperçu teaser"
-                          />
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={teaserPreview} className="h-full w-full bg-black object-contain" alt="Aperçu teaser" />
                         )
                       ) : (
                         <div className="flex flex-col items-center gap-3 text-white/40">
@@ -531,13 +710,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                           <span className="text-[10px] font-medium uppercase tracking-tighter">Photo ou vidéo</span>
                         </div>
                       )}
-                      <input
-                        id="edit-beef-teaser-upload"
-                        type="file"
-                        accept="video/*,image/*"
-                        className="hidden"
-                        onChange={handleFileChange}
-                      />
+                      <input id="edit-beef-teaser-upload" type="file" accept="video/*,image/*" className="hidden" onChange={handleFileChange} />
                     </div>
                   </div>
 
@@ -564,11 +737,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                       }`}
                     />
                     <div className="mt-2 flex justify-between text-xs">
-                      <span
-                        className={
-                          description.trim().length < 50 ? 'font-semibold text-red-400' : 'font-semibold text-green-400'
-                        }
-                      >
+                      <span className={description.trim().length < 50 ? 'font-semibold text-red-400' : 'font-semibold text-green-400'}>
                         {description.trim().length < 50
                           ? `⚠️ Minimum 50 caractères (${50 - description.trim().length} restants)`
                           : `✓ ${description.length} caractères`}
@@ -579,8 +748,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
 
                   <div>
                     <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                      <span className="text-lg text-brand-400">#</span>
-                      Tags (max 10)
+                      <span className="text-lg text-brand-400">#</span> Tags (max 10)
                     </label>
                     <div className="relative">
                       <div className="flex gap-2">
@@ -593,11 +761,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                               className="flex items-center gap-1 rounded-full brand-gradient px-2 py-1 text-xs font-bold text-black"
                             >
                               <span>#{tag}</span>
-                              <button
-                                type="button"
-                                onClick={() => removeTag(tag)}
-                                className="rounded-full p-0.5 transition-colors hover:bg-black/20"
-                              >
+                              <button type="button" onClick={() => removeTag(tag)} className="rounded-full p-0.5 transition-colors hover:bg-black/20">
                                 <X className="h-3 w-3" />
                               </button>
                             </motion.div>
@@ -608,14 +772,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                                 type="text"
                                 value={tagInput}
                                 onChange={(e) => handleTagInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if ((e.key === 'Tab' || e.key === 'ArrowRight') && suggestedTags[0] && tagInput) {
-                                    e.preventDefault();
-                                    addTag(suggestedTags[0]);
-                                    return;
-                                  }
-                                  handleTagKeyDown(e);
-                                }}
+                                onKeyDown={handleTagKeyDown}
                                 onFocus={handleTagFocus}
                                 onBlur={handleTagBlur}
                                 placeholder={tags.length === 0 ? 'Tape un mot…' : 'Ajouter…'}
@@ -627,16 +784,12 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                       </div>
                       {suggestedTags.length > 0 && tags.length < 10 && (
                         <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar">
-                          {suggestedTags.map((tag, i) => (
+                          {suggestedTags.map((tag) => (
                             <button
                               key={tag}
                               type="button"
                               onMouseDown={() => addTag(tag)}
-                              className={`flex flex-shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all ${
-                                i === 0 && tagInput
-                                  ? 'border border-brand-500/50 bg-brand-500/25 text-brand-300'
-                                  : 'border border-gray-700 bg-gray-800 text-gray-300 hover:border-brand-500/40 hover:text-brand-300'
-                              }`}
+                              className={`flex shrink-0 items-center gap-1 rounded-full border border-gray-700 bg-gray-800 px-2.5 py-1 text-xs font-semibold text-gray-300 transition-all hover:border-brand-500/40 hover:text-brand-300`}
                             >
                               <span className="text-brand-400/70">#</span>
                               {tag}
@@ -644,18 +797,17 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                           ))}
                         </div>
                       )}
-                      {fieldErrors.tags && <p className="mt-1 text-xs text-red-400">⚠️ {fieldErrors.tags}</p>}
                     </div>
                   </div>
 
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-white">
-                      {intent === 'manifesto' ? 'Parties convoquées' : 'Convoquer / ajuster les parties'}
+                      {intent === 'manifesto' ? 'Convoquer des Combattants ou un Arbitre' : 'Convoquer / ajuster les parties'}
                     </label>
                     <p className="mb-3 text-xs text-gray-400">
                       {intent === 'mediation'
                         ? 'Exactement 2 participants avec le badge Principal.'
-                        : 'Tu restes partie prenante ; tu peux retirer ou ajouter des adversaires ciblés.'}
+                        : 'Tu peux convoquer tes adversaires ou réclamer un Arbitre.'}
                     </p>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -676,37 +828,67 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                       )}
                     </div>
                     {searchResults.length > 0 && (
-                      <div className="mt-2 max-h-48 overflow-y-auto overflow-hidden rounded-[2rem] border border-gray-700 bg-black/60">
+                      <div className="mt-2 max-h-48 overflow-y-auto overflow-hidden rounded-[2rem] border border-gray-700 bg-black/60 p-1">
                         {searchResults.map((result) => (
-                          <button
-                            key={String(result.id)}
-                            type="button"
-                            onClick={() => addParticipant(result, participants.length < 2)}
-                            className="flex w-full items-center gap-2 p-2 text-left transition-colors hover:bg-white/5"
-                          >
-                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full brand-gradient text-sm font-bold text-white">
-                              {String(result.display_name || result.username || '?')[0]?.toUpperCase() ?? '?'}
+                          <div key={result.id} className="flex items-center justify-between rounded-xl p-2 transition-colors hover:bg-white/5">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full brand-gradient text-sm font-bold text-white">
+                                {(result.display_name || result.username || '?')[0]?.toUpperCase() ?? '?'}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-white">{String(result.display_name || result.username)}</p>
+                                <p className="truncate text-xs text-gray-400">@{String(result.username)}</p>
+                              </div>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-semibold text-white">
-                                {String(result.display_name || result.username)}
-                              </p>
-                              <p className="truncate text-xs text-gray-400">@{String(result.username)}</p>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => addParticipant(result, participants.length < 2)}
+                                className="rounded-lg bg-brand-500/20 p-2 text-xs font-bold text-brand-400 transition-colors hover:bg-brand-500 hover:text-black"
+                                title="Ajouter comme combattant"
+                              >
+                                <UserPlus className="h-4 w-4" />
+                              </button>
+                              {intent === 'manifesto' && !mediator && (
+                                <button
+                                  type="button"
+                                  onClick={() => addMediator(result)}
+                                  className="rounded-lg bg-yellow-500/20 p-2 text-xs font-bold text-yellow-500 transition-colors hover:bg-yellow-500 hover:text-black"
+                                  title="Demander comme Arbitre"
+                                >
+                                  <Scale className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
-                            <UserPlus className="h-4 w-4 flex-shrink-0 text-brand-400" />
-                          </button>
+                          </div>
                         ))}
                       </div>
                     )}
 
+                    {mediator && (
+                      <div className="mt-4">
+                        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-yellow-500">Arbitre convoqué</p>
+                        <div className="flex items-center gap-2 rounded-[2rem] border border-yellow-500/30 bg-yellow-500/10 p-2">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-yellow-500 text-sm font-bold text-black">
+                            {(mediator.display_name || mediator.username || '?')[0]?.toUpperCase() ?? '?'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-white">{mediator.display_name}</p>
+                            <p className="truncate text-xs text-yellow-500/70">@{mediator.username || '…'}</p>
+                          </div>
+                          <button type="button" onClick={() => setMediator(null)} className="shrink-0 rounded-lg p-1 transition-colors hover:bg-red-500/20">
+                            <X className="h-4 w-4 text-red-400" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {participants.length > 0 && (
-                      <div className="mt-3 space-y-2">
+                      <div className="mt-4 space-y-2">
+                        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">Combattants / Témoins</p>
                         {participants.map((participant) => (
-                          <div
-                            key={participant.user_id}
-                            className="flex items-center gap-2 rounded-[2rem] border border-gray-700 bg-black/40 p-2"
-                          >
-                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full brand-gradient text-sm font-bold text-white">
+                          <div key={participant.user_id} className="flex items-center gap-2 rounded-[2rem] border border-gray-700 bg-black/40 p-2">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full brand-gradient text-sm font-bold text-white">
                               {(participant.display_name || participant.username || '?')[0]?.toUpperCase() ?? '?'}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -716,34 +898,26 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                             <button
                               type="button"
                               onClick={() => toggleMainParticipant(participant.user_id)}
-                              className={`flex-shrink-0 rounded-full px-2 py-1 text-xs font-bold transition-all ${
-                                participant.is_main ? 'bg-brand-500 text-black' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                              }`}
+                              className={`shrink-0 rounded-full px-2 py-1 text-xs font-bold transition-all ${participant.is_main ? 'bg-brand-500 text-black' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}
                             >
                               {participant.is_main ? '🔥 Principal' : 'Témoin'}
                             </button>
                             {canRemoveParticipant(participant.user_id) ? (
-                              <button
-                                type="button"
-                                onClick={() => removeParticipant(participant.user_id)}
-                                className="flex-shrink-0 rounded-lg p-1 transition-colors hover:bg-red-500/20"
-                              >
+                              <button type="button" onClick={() => removeParticipant(participant.user_id)} className="shrink-0 rounded-lg p-1 transition-colors hover:bg-red-500/20">
                                 <X className="h-4 w-4 text-red-400" />
                               </button>
                             ) : (
-                              <span className="flex-shrink-0 px-2 text-[10px] font-bold uppercase text-white/35">Créateur</span>
+                              <span className="shrink-0 px-2 text-[10px] font-bold uppercase text-white/35">Créateur</span>
                             )}
                           </div>
                         ))}
                         {intent === 'mediation' && mainParticipants.length !== 2 && (
                           <p className="flex items-center gap-1 text-xs text-yellow-400">
-                            <AlertTriangle className="h-3 w-3" />
-                            Il faut exactement 2 participants principaux.
+                            <AlertTriangle className="h-3 w-3 shrink-0" />
+                            Exactement 2 participants principaux requis.
                           </p>
                         )}
-                        {fieldErrors.participants && (
-                          <p className="text-xs text-red-400">⚠️ {fieldErrors.participants}</p>
-                        )}
+                        {fieldErrors.participants && <p className="text-xs text-red-400">⚠️ {fieldErrors.participants}</p>}
                       </div>
                     )}
                   </div>
@@ -753,18 +927,14 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
 
             {!loading && (
               <div className="mt-4 flex gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 rounded-[2rem] border border-white/10 bg-white/[0.06] py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
-                >
+                <button type="button" onClick={onClose} className="flex-1 rounded-[2rem] border border-white/10 bg-white/[0.06] py-3 text-sm font-bold text-white transition-colors hover:bg-white/10">
                   Annuler
                 </button>
                 <button
                   type="button"
                   disabled={saving}
                   onClick={() => void handleSave()}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-[2rem] py-3 text-sm font-bold text-white shadow-glow transition-all brand-gradient hover:opacity-90 disabled:opacity-60"
+                  className="brand-gradient flex flex-1 items-center justify-center gap-2 rounded-[2rem] py-3 text-sm font-bold text-white shadow-glow transition-all hover:opacity-90 disabled:opacity-60"
                 >
                   {saving ? (
                     <>
