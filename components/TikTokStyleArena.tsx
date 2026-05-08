@@ -3601,53 +3601,41 @@ export function TikTokStyleArena({
           </div>
         )}
 
-        {/* HEADER GLOBAL FLOTTANT */}
+        {/* INDICATEURS SYSTÈME DISCRETS (Haut Droite) */}
         {!isCinematicMode && (
-          <div
-            data-cinema-stay
-            className={`absolute inset-x-0 z-[200] flex justify-between items-start p-4 pointer-events-none ${arenaHasAnnouncement ? 'top-7 lg:top-6' : 'top-0'}`}
-          >
-          {!beefEnded && !isLeaving && (
+          <div className="pointer-events-none absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[500] flex items-center gap-2 sm:right-4 sm:top-4">
+            <div className="flex items-center rounded-full border border-white/10 bg-black/40 px-2 py-1 shadow-lg backdrop-blur-md">
+              <div className={`mr-1.5 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'animate-pulse bg-red-500' : 'bg-amber-400'}`} />
+              <span className="font-mono text-[9px] font-black uppercase tracking-wider text-white">Live</span>
+            </div>
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowArenaMenu(true);
-              }}
-              className="lg:hidden pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-white/10"
-              aria-label="Menu navigation"
+              onClick={() => setShowViewerList(true)}
+              className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-2.5 py-1 shadow-lg backdrop-blur-md transition-colors hover:bg-white/10"
             >
-              <Menu className="h-5 w-5" strokeWidth={1.5} />
+              <Eye className="h-3 w-3 text-white" />
+              <span className="font-mono text-[10px] font-bold text-white">{liveViewerCount > 0 ? liveViewerCount : '—'}</span>
             </button>
-          )}
-          
-          <div className="pointer-events-auto ml-auto flex shrink-0 flex-col items-end gap-2 bg-transparent">
-            <div className="flex items-center gap-2">
-              <div className={`flex items-center rounded-full bg-black/40 backdrop-blur-sm px-2 py-1`}>
-                <div className={`mr-1.5 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}`} />
-                <span className="font-mono text-[10px] font-bold text-white">LIVE</span>
-              </div>
-              <button onClick={() => setShowViewerList(true)} className="flex items-center gap-1 rounded-full bg-black/40 px-2 py-1"><Eye className="h-3.5 w-3.5 text-white" /><span className="text-[10px] text-white">{liveViewerCount > 0 ? liveViewerCount : '—'}</span></button>
-              <button onClick={onShare} className="flex h-7 w-7 items-center justify-center rounded-full bg-black/40"><Share2 className="h-3.5 w-3.5 text-white" /></button>
-              {isHost && (
-                <button
-                  type="button"
-                  data-mediator-sidebar-toggle
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMediatorSidebarOpen((o) => !o);
-                  }}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-amber-300 hover:bg-black/60 shadow-lg"
-                >
-                  <Sliders className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            {isJoined && timerActive && (
-              <div className="flex items-center gap-1 text-xs text-white bg-black/40 px-2 py-1 rounded-full">{timerPaused ? <Pause className="h-3 w-3 text-amber-200" /> : <Timer className="h-3 w-3" />}{formatBeefTime(beefTimeRemaining)}</div>
+            <button
+              type="button"
+              onClick={onShare}
+              className="pointer-events-auto hidden h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-white/10 sm:flex"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+            </button>
+            {!beefEnded && !isLeaving && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowArenaMenu(true);
+                }}
+                className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-white/10 lg:hidden"
+              >
+                <Menu className="h-3.5 w-3.5" />
+              </button>
             )}
           </div>
-        </div>
         )}
 
         {/* === ARÈNE EMPEREUR === */}
@@ -3666,12 +3654,12 @@ export function TikTokStyleArena({
               cellClass: expectedCount === 3 && idx === 2 ? 'col-span-2' : '',
               uiPos:
                 idx === 0
-                  ? 'top-3 left-3 sm:top-5 sm:left-5 items-start text-left'
+                  ? 'top-2 left-2 sm:top-4 sm:left-4 items-start text-left'
                   : idx === 1
-                    ? 'top-3 right-3 sm:top-5 sm:right-5 items-end text-right'
+                    ? 'top-2 right-2 sm:top-4 sm:right-4 items-end text-right'
                     : idx === 2
-                      ? 'bottom-3 left-3 sm:bottom-5 sm:left-5 items-start text-left'
-                      : 'bottom-3 right-3 sm:bottom-5 sm:right-5 items-end text-right',
+                      ? 'bottom-2 left-2 sm:bottom-4 sm:left-4 items-start text-left'
+                      : 'bottom-2 right-2 sm:bottom-4 sm:right-4 items-end text-right',
             }));
 
             return (
@@ -3783,32 +3771,29 @@ export function TikTokStyleArena({
                   })}
                 </div>
 
-                {/* LE RÉFÉRENT EMPEREUR (CENTRE ABSOLU AVEC UI COMPLÈTE) */}
+                {/* LE RÉFÉRENT EMPEREUR (HALO BLINDÉ & PILULE INLINE) */}
                 <div
                   data-cinema-stay
-                  className="pointer-events-none absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
+                  className="pointer-events-none absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
                 >
-                  {/* Masque central anti-vide noir */}
-                  <div className="absolute left-1/2 top-1/2 h-[141px] w-[141px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08080a] sm:h-[201px] sm:w-[201px]" />
-
+                  {/* La vidéo (Agrandie avec bordure d'étanchéité absolue de 10px/12px) */}
                   <motion.div
                     animate={{
-                      boxShadow:
-                        auraMed > 0 ? `0 0 40px ${getMediatorDynamicColor(auraMed)}` : '0 0 0 4px rgba(255,255,255,0.05)',
+                      boxShadow: auraMed > 0 ? `0 0 50px ${getMediatorDynamicColor(auraMed)}` : '0 0 0 1px rgba(255,255,255,0.1)',
                     }}
                     style={{ filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})` }}
-                    className="pointer-events-auto relative h-[140px] w-[140px] overflow-hidden rounded-full border-2 border-white/20 bg-black sm:h-[200px] sm:w-[200px]"
+                    className="pointer-events-auto relative h-[155px] w-[155px] overflow-hidden rounded-full border-[10px] border-[#08080a] bg-black sm:h-[220px] sm:w-[220px] sm:border-[12px]"
                   >
                     {/* Bouton Réactiver (Médiateur local) */}
                     {mediatorIsLocal && isCameraInterrupted && !isViewer && (
-                      <div className="pointer-events-auto absolute inset-0 z-[150] flex items-center justify-center bg-black/60 p-2">
+                      <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/60 p-2 backdrop-blur-sm">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             void recoverMediaDevices();
                           }}
-                          className="rounded-xl border border-plasma-500/50 bg-black/80 px-3 py-2 text-[9px] font-black text-white shadow-[0_0_15px_rgba(162,0,255,0.5)] backdrop-blur-md"
+                          className="rounded-full bg-plasma-500 px-3 py-1.5 text-[9px] font-black text-white shadow-glow-plasma"
                         >
                           📡 RÉACTIVER
                         </button>
@@ -3824,16 +3809,11 @@ export function TikTokStyleArena({
                         preferSide('M');
                       }}
                       onDoubleClick={(e) => e.stopPropagation()}
-                      className="flex h-full w-full touch-manipulation overflow-hidden rounded-full border-transparent bg-transparent outline-none active:scale-95"
+                      className="flex h-full w-full touch-manipulation overflow-hidden rounded-full border-none bg-transparent outline-none active:scale-95"
                     >
                       {isWaitingForMediator ? (
                         <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/60 p-4">
                           <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-brand-400 border-t-transparent sm:h-10 sm:w-10" />
-                          <span className="mt-2 text-center text-[9px] font-black uppercase tracking-tighter text-white sm:text-[10px]">
-                            Attente
-                            <br />
-                            Ref
-                          </span>
                         </div>
                       ) : mediatorParticipant?.videoTrack ? (
                         <ParticipantVideo
@@ -3843,26 +3823,49 @@ export function TikTokStyleArena({
                         />
                       ) : mediatorGraceActive ? (
                         <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/80 p-4">
-                          <div className="mb-1 h-8 w-8 animate-pulse rounded-full border-[3px] border-red-500 border-t-transparent sm:h-10 sm:w-10" />
-                          <span className="text-center text-[10px] font-black leading-tight text-red-500 sm:text-[11px]">
-                            DÉCONNECTÉ
-                            <br />
-                            {mediatorGraceSeconds}s
-                          </span>
+                          <span className="text-[12px] font-black text-red-500 sm:text-[14px]">{mediatorGraceSeconds}s</span>
                         </div>
                       ) : (
-                        <span className="m-auto text-4xl opacity-40 sm:text-5xl">⚖️</span>
+                        <span className="m-auto text-4xl opacity-30 sm:text-5xl">⚖️</span>
                       )}
                     </button>
                   </motion.div>
 
-                  <button
-                    type="button"
-                    onClick={() => void openProfile(mediatorName, host.id)}
-                    className="pointer-events-auto relative z-10 mt-1.5 rounded-full border border-white/10 bg-black/80 px-4 py-1 text-[10px] font-black text-white shadow-lg hover:bg-black sm:text-[11px]"
-                  >
-                    @{mediatorName}
-                  </button>
+                  {/* LA PILULE INLINE : [ @Ref | 🎛️ ] */}
+                  <div className="pointer-events-auto mt-1 flex items-center overflow-hidden rounded-full border border-white/10 bg-black/80 shadow-2xl backdrop-blur-xl">
+                    <button
+                      type="button"
+                      onClick={() => void openProfile(mediatorName, host.id)}
+                      className={`px-4 py-1.5 text-[10px] font-black text-white transition-colors hover:bg-white/10 sm:text-[11px] ${isHost ? 'pr-3' : ''}`}
+                    >
+                      @{mediatorName}
+                    </button>
+                    {isHost && (
+                      <div className="flex h-full items-center">
+                        <div className="h-4 w-px bg-white/20" />
+                        <button
+                          type="button"
+                          data-mediator-sidebar-toggle
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMediatorSidebarOpen((o) => !o);
+                          }}
+                          className="flex h-full min-h-[28px] items-center justify-center bg-amber-500/10 px-3 py-1.5 text-amber-400 transition-colors hover:bg-amber-500/20 active:bg-amber-500/30"
+                          title="Command Deck"
+                        >
+                          <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Chrono déporté */}
+                  {isJoined && timerActive && (
+                    <div className="pointer-events-auto mt-1 flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-600/10 px-3 py-1 text-[10px] font-black text-red-500 backdrop-blur-sm tabular-nums">
+                      {timerPaused ? <Pause className="h-3 w-3 text-amber-200" /> : <Timer className="h-3 w-3" />}
+                      {formatBeefTime(beefTimeRemaining)}
+                    </div>
+                  )}
                 </div>
               </>
             );
