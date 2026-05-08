@@ -74,17 +74,12 @@ type MediatorSidebarProps = {
   /** IDs déjà sur le ring / à exclure de la recherche (dont l’hôte courant) */
   inviteExcludeParticipantIds?: string[];
   inviteCurrentUserId?: string | null;
+  networkHealthy?: boolean;
 };
 
 const TOOLS_GLASS_CARD =
   'flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 mb-4 backdrop-blur-xl shadow-lg';
 
-const VERDICT_BTN_RESOLVED =
-  'w-full rounded-[1.5rem] border border-emerald-500/40 bg-emerald-500/10 py-3 text-[11px] font-black uppercase tracking-widest text-emerald-400 transition-colors hover:bg-emerald-500/20';
-const VERDICT_BTN_CLOSED =
-  'w-full rounded-[1.5rem] border border-white/20 bg-white/5 py-3 text-[11px] font-black uppercase tracking-widest text-white/90 transition-colors hover:bg-white/10';
-const VERDICT_BTN_REMATCH =
-  'w-full rounded-[1.5rem] border border-amber-500/40 bg-amber-500/10 py-3 text-[11px] font-black uppercase tracking-widest text-amber-400 transition-colors hover:bg-amber-500/20';
 const TILE = 'flex flex-col items-center justify-center gap-1.5 rounded-[2.5rem] border border-white/10 bg-white/5 px-3 py-4 backdrop-blur-3xl transition-all active:scale-[0.97]';
 const TILE_WIDE = `${TILE} col-span-2`;
 const TILE_ICON = 'h-5 w-5';
@@ -132,7 +127,13 @@ export function MediatorSidebar({
   onInviteParticipant,
   inviteExcludeParticipantIds = [],
   inviteCurrentUserId = null,
+  networkHealthy,
 }: MediatorSidebarProps) {
+  const [confirmVerdict, setConfirmVerdict] = useState<'resolved' | 'closed' | 'rematch' | null>(null);
+  useEffect(() => {
+    if (!open) setConfirmVerdict(null);
+  }, [open]);
+
   const [announceDraft, setAnnounceDraft] = useState('');
   const [announceDurationSec, setAnnounceDurationSec] = useState(120);
   const [speakingTurnSec, setSpeakingTurnSec] = useState(60);
@@ -181,20 +182,20 @@ export function MediatorSidebar({
                   {/* Drag handle */}
                   <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-white/20" />
 
-                  {/* Header */}
+                  {/* Header avec Indicateur Réseau */}
                   <div className="relative z-10 flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
-                    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-xs font-bold tracking-tight text-white/90">
-                      Tableau de bord
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClose();
-                      }}
-                      className="relative z-20 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/10 text-white shadow-sm backdrop-blur-3xl hover:bg-white/15"
-                      aria-label="Fermer"
-                    >
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-xs font-bold tracking-tight text-white/90">
+                        Tableau de bord
+                      </span>
+                      {networkHealthy !== undefined && (
+                        <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-2 py-1 border border-white/5" title={networkHealthy ? "Signal Broadcast OK" : "Perte de signal"}>
+                          <div className={`h-2 w-2 rounded-full ${networkHealthy ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]'}`} />
+                          <span className="text-[8px] font-mono font-bold uppercase text-white/60 hidden sm:inline-block">{networkHealthy ? 'En ligne' : 'Hors ligne'}</span>
+                        </div>
+                      )}
+                    </div>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); onClose(); }} className="relative z-20 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white hover:bg-white/15">
                       <X className="h-4 w-4" strokeWidth={1} />
                     </button>
                   </div>
@@ -593,36 +594,28 @@ export function MediatorSidebar({
                   <div className={TOOLS_GLASS_CARD}>
                     <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/55">Verdict &amp; fin</h3>
                     <div className="flex flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onVerdict('resolved');
-                          onClose();
-                        }}
-                        className={VERDICT_BTN_RESOLVED}
-                      >
-                        Résolu
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onVerdict('closed');
-                          onClose();
-                        }}
-                        className={VERDICT_BTN_CLOSED}
-                      >
-                        Clôture
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onVerdict('rematch');
-                          onClose();
-                        }}
-                        className={VERDICT_BTN_REMATCH}
-                      >
-                        Rematch
-                      </button>
+                      {confirmVerdict ? (
+                        <div className="flex flex-col items-center gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-center">
+                          <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-white">Confirmer le Décret ?</span>
+                          <p className="text-[10px] text-white/60">Cette action mettra fin au direct pour toute l'Agora.</p>
+                          <div className="flex w-full gap-2">
+                            <button type="button" onClick={() => setConfirmVerdict(null)} className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2 font-mono text-[10px] font-bold uppercase text-white hover:bg-white/10">Annuler</button>
+                            <button type="button" onClick={() => { onVerdict(confirmVerdict); setConfirmVerdict(null); onClose(); }} className="flex-1 rounded-xl bg-red-600 py-2 font-mono text-[10px] font-bold uppercase text-white shadow-[0_0_15px_rgba(220,38,38,0.5)] hover:bg-red-500">Exécuter</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <button type="button" onClick={() => setConfirmVerdict('resolved')} className="w-full rounded-[1.5rem] border border-emerald-500/40 bg-emerald-500/10 py-3 text-[11px] font-black uppercase tracking-widest text-emerald-400 transition-colors hover:bg-emerald-500/20">
+                            🕊️ Proclamer la Paix
+                          </button>
+                          <button type="button" onClick={() => setConfirmVerdict('rematch')} className="w-full rounded-[1.5rem] border border-amber-500/40 bg-amber-500/10 py-3 text-[11px] font-black uppercase tracking-widest text-amber-400 transition-colors hover:bg-amber-500/20">
+                            ⚡ Ordonner une Revanche
+                          </button>
+                          <button type="button" onClick={() => setConfirmVerdict('closed')} className="w-full rounded-[1.5rem] border border-white/20 bg-white/5 py-3 text-[11px] font-black uppercase tracking-widest text-white/90 transition-colors hover:bg-white/10">
+                            🛑 Sceller l'Arène
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </TabsContent>

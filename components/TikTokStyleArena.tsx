@@ -1991,7 +1991,6 @@ export function TikTokStyleArena({
         if (dA || dB) setGlobalHeat((v) => Math.min(100, v + 2));
       })
       .on('broadcast', { event: 'announcement_banner' }, ({ payload }: { payload?: { text?: string; durationSec?: number } }) => {
-        if (isHostRef.current) return;
         const raw = String(payload?.text ?? '').trim();
         if (announcementClearTimerRef.current) {
           clearTimeout(announcementClearTimerRef.current);
@@ -2191,19 +2190,7 @@ export function TikTokStyleArena({
       setLiveConnected(false);
       supabase.removeChannel(channel);
     };
-  }, [
-    roomId,
-    addRemoteMessage,
-    addRemoteReaction,
-    addPulseVoices,
-    userRole,
-    userId,
-    toast,
-    setVerdictConfetti,
-    setRematchSequence,
-    router,
-    leave,
-  ]);
+  }, [roomId, addRemoteMessage, addRemoteReaction, addPulseVoices, userRole, userId]);
 
   useEffect(() => {
     if (!liveConnected || !isHost || !timerActive) return;
@@ -3654,12 +3641,12 @@ export function TikTokStyleArena({
               cellClass: expectedCount === 3 && idx === 2 ? 'col-span-2' : '',
               uiPos:
                 idx === 0
-                  ? 'bottom-2 left-2 sm:bottom-4 sm:left-4 items-start text-left'
+                  ? 'bottom-2 left-2 sm:bottom-4 sm:left-4 flex-row items-center'
                   : idx === 1
-                    ? 'bottom-2 right-2 sm:bottom-4 sm:right-4 items-end text-right'
+                    ? 'bottom-2 right-2 sm:bottom-4 sm:right-4 flex-row-reverse items-center'
                     : idx === 2
-                      ? 'top-2 left-2 sm:top-4 sm:left-4 items-start text-left'
-                      : 'top-2 right-2 sm:top-4 sm:right-4 items-end text-right',
+                      ? 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-center'
+                      : 'top-2 right-2 sm:top-4 sm:right-4 flex-row-reverse items-center',
             }));
 
             return (
@@ -3713,56 +3700,19 @@ export function TikTokStyleArena({
                           />
                         )}
 
-                        <div
-                          data-cinema-stay
-                          className={`pointer-events-auto absolute z-[140] flex flex-col gap-1.5 ${cfg.uiPos}`}
-                        >
-                          <div className="flex max-w-[9rem] sm:max-w-[14rem] items-center gap-2 rounded-xl border border-white/10 bg-black/60 px-3 py-2 shadow-lg backdrop-blur-md">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null);
-                              }}
-                              className="truncate text-[10px] sm:text-[11px] font-black tracking-wide text-white hover:text-plasma-400"
-                            >
+                        {/* INTERFACE CHALLENGER ALIGNÉE HORIZONTALEMENT */}
+                        <div data-cinema-stay className={`pointer-events-auto absolute z-[140] flex gap-2 ${cfg.uiPos}`}>
+                          <div className="flex max-w-[8rem] sm:max-w-[12rem] items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 shadow-lg backdrop-blur-md">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null); }} className="truncate text-[10px] sm:text-[11px] font-black tracking-wide text-white hover:text-plasma-400">
                               @{cfg.name}
                             </button>
-                            {!cfg.panel && (
-                              <span className="shrink-0 rounded border border-red-500/20 bg-red-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase text-red-400">
-                                Absent
-                              </span>
-                            )}
+                            {!cfg.panel && <span className="shrink-0 rounded bg-red-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-red-400">Abs</span>}
                           </div>
-                          {isSpeaking && (
-                            <div className="w-fit animate-pulse rounded bg-red-600 px-2 py-0.5 text-[9px] font-black text-white shadow-[0_0_10px_rgba(220,38,38,0.6)]">
-                              DIRECT
-                            </div>
-                          )}
+                          {isSpeaking && <div className="flex shrink-0 items-center justify-center animate-pulse rounded-full bg-red-600 px-2.5 py-1 text-[9px] font-black text-white shadow-[0_0_10px_rgba(220,38,38,0.6)]">DIRECT</div>}
                           {isLocal && (
-                            <div
-                              className={`mt-1 flex shrink-0 gap-2 ${cfg.uiPos.includes('items-end') ? 'self-end' : 'self-start'}`}
-                            >
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleMic();
-                                }}
-                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 shadow-lg backdrop-blur-xl ${micEnabled ? 'text-white' : 'bg-red-500 text-white'}`}
-                              >
-                                <Mic className="h-4 w-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleCam();
-                                }}
-                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 shadow-lg backdrop-blur-xl ${camEnabled ? 'text-white' : 'bg-red-500 text-white'}`}
-                              >
-                                <Video className="h-4 w-4" />
-                              </button>
+                            <div className="flex shrink-0 items-center gap-1.5">
+                              <button type="button" onClick={(e) => { e.stopPropagation(); toggleMic(); }} className={`flex h-8 w-8 items-center justify-center rounded-full border border-white/10 shadow-lg backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/40 text-white hover:bg-black/60' : 'bg-red-500 text-white'}`}><Mic className="h-3.5 w-3.5" /></button>
+                              <button type="button" onClick={(e) => { e.stopPropagation(); toggleCam(); }} className={`flex h-8 w-8 items-center justify-center rounded-full border border-white/10 shadow-lg backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/40 text-white hover:bg-black/60' : 'bg-red-500 text-white'}`}><Video className="h-3.5 w-3.5" /></button>
                             </div>
                           )}
                         </div>
@@ -3776,38 +3726,20 @@ export function TikTokStyleArena({
                   data-cinema-stay
                   className="pointer-events-none absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
                 >
-                  {/* La vidéo (Agrandie agressivement pour boucher le vide noir) */}
+                  {/* HALO PURIFIÉ (Sans bordure noire, avec ombre portée) */}
                   <motion.div
-                    animate={{
-                      boxShadow: auraMed > 0 ? `0 0 50px ${getMediatorDynamicColor(auraMed)}` : '0 0 0 1px rgba(255,255,255,0.1)',
-                    }}
+                    animate={{ boxShadow: auraMed > 0 ? `0 0 50px ${getMediatorDynamicColor(auraMed)}` : '0 0 40px rgba(0,0,0,0.7)' }}
                     style={{ filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})` }}
-                    className="pointer-events-auto relative h-[170px] w-[170px] overflow-hidden rounded-full border-[10px] border-[#08080a] bg-black shadow-glow-mediator sm:h-[240px] sm:w-[240px] sm:border-[12px]"
+                    className="pointer-events-auto relative h-[150px] w-[150px] overflow-hidden rounded-full border-[3px] border-white/10 bg-[#08080a] sm:h-[210px] sm:w-[210px]"
                   >
-                    {/* Bouton Réactiver (Médiateur local) */}
                     {mediatorIsLocal && isCameraInterrupted && !isViewer && (
                       <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/60 p-2 backdrop-blur-sm">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void recoverMediaDevices();
-                          }}
-                          className="rounded-full bg-plasma-500 px-3 py-1.5 text-[9px] font-black text-white shadow-glow-plasma"
-                        >
-                          📡 RÉACTIVER
-                        </button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); void recoverMediaDevices(); }} className="rounded-full bg-plasma-500 px-3 py-1.5 text-[9px] font-black text-white shadow-glow-plasma">📡 RÉACTIVER</button>
                       </div>
                     )}
-
                     <button
                       type="button"
-                      onPointerDown={(e) => {
-                        e.stopPropagation();
-                        if (isWaitingForMediator) return;
-                        emitTapSupport('M');
-                        preferSide('M');
-                      }}
+                      onPointerDown={(e) => { e.stopPropagation(); if (isWaitingForMediator) return; emitTapSupport('M'); preferSide('M'); }}
                       onDoubleClick={(e) => e.stopPropagation()}
                       className="flex h-full w-full touch-manipulation overflow-hidden rounded-full border-none bg-transparent outline-none active:scale-95"
                     >
@@ -3816,11 +3748,7 @@ export function TikTokStyleArena({
                           <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-brand-400 border-t-transparent sm:h-10 sm:w-10" />
                         </div>
                       ) : mediatorParticipant?.videoTrack ? (
-                        <ParticipantVideo
-                          videoTrack={mediatorParticipant.videoTrack}
-                          muted={mediatorIsLocal}
-                          className="h-full w-full object-cover"
-                        />
+                        <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="h-full w-full object-cover" />
                       ) : mediatorGraceActive ? (
                         <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/80 p-4">
                           <span className="text-[12px] font-black text-red-500 sm:text-[14px]">{mediatorGraceSeconds}s</span>
@@ -3832,27 +3760,14 @@ export function TikTokStyleArena({
                   </motion.div>
 
                   {/* LA PILULE INLINE TRANSPARENTE : [ @Ref | 🎛️ ] */}
-                  <div className="pointer-events-auto flex items-center overflow-hidden rounded-full border border-white/20 bg-transparent shadow-lg backdrop-blur-md">
-                    <button
-                      type="button"
-                      onClick={() => void openProfile(mediatorName, host.id)}
-                      className={`px-4 py-1.5 text-[10px] font-black text-white drop-shadow-md transition-colors hover:bg-white/10 sm:text-[11px] ${isHost ? 'pr-3.5' : ''}`}
-                    >
+                  <div className="pointer-events-auto flex items-center overflow-hidden rounded-full border border-white/20 bg-black/30 shadow-lg backdrop-blur-md mt-1">
+                    <button type="button" onClick={() => void openProfile(mediatorName, host.id)} className={`px-4 py-1.5 text-[10px] font-bold tracking-wide text-white drop-shadow-md transition-colors hover:bg-white/10 sm:text-[11px] ${isHost ? 'pr-3.5' : ''}`}>
                       @{mediatorName}
                     </button>
                     {isHost && (
                       <div className="flex h-full items-center">
                         <div className="h-4 w-px bg-white/30" />
-                        <button
-                          type="button"
-                          data-mediator-sidebar-toggle
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMediatorSidebarOpen((o) => !o);
-                          }}
-                          className="flex h-full min-h-[30px] items-center justify-center px-3.5 text-white/90 drop-shadow-md transition-colors hover:bg-white/20 active:bg-white/30 active:text-white"
-                          title="Command Deck"
-                        >
+                        <button type="button" data-mediator-sidebar-toggle onClick={(e) => { e.stopPropagation(); setMediatorSidebarOpen((o) => !o); }} className="flex h-full min-h-[30px] items-center justify-center px-3.5 text-white/90 drop-shadow-md transition-colors hover:bg-white/20 active:bg-white/30" title="Command Deck">
                           <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </button>
                       </div>
@@ -4017,6 +3932,7 @@ export function TikTokStyleArena({
           onInviteParticipant={handleInviteFromModal}
           inviteExcludeParticipantIds={inviteExcludeParticipantIds}
           inviteCurrentUserId={userId}
+          networkHealthy={liveConnected}
         />
       )}
 
