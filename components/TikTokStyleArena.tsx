@@ -254,6 +254,7 @@ export function TikTokStyleArena({
     return false;
   });
   const [showPreJoin, setShowPreJoin] = useState(true);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
 
   useEffect(() => {
     if (isViewer) setShowPreJoin(false);
@@ -649,6 +650,10 @@ export function TikTokStyleArena({
 
   // Participant roles from DB — maps Daily.co userNames to beef roles
   const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});
+
+  useEffect(() => {
+    if (Object.keys(participantRoles).length > 0) setRolesLoaded(true);
+  }, [participantRoles]);
 
   const loadParticipants = useCallback(async () => {
     const { data } = await supabase
@@ -3257,11 +3262,11 @@ export function TikTokStyleArena({
       }}
       className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row"
     >
-      {/* 1. ÉCRAN VS (Priorité Absolue, masque tout) */}
+      {/* --- COUCHE 1 : ÉCRAN VS (Priorité 1) --- */}
       <AnimatePresence>
         {showVsScreen && (
-          Object.keys(participantRoles).length > 0 ? (
-            <div key="vs-layer" className="absolute inset-0 z-[9999]">
+          <div className="absolute inset-0 z-[9999] bg-[#08080a]">
+            {rolesLoaded ? (
               <VsTransition
                 challengers={
                   [
@@ -3277,29 +3282,21 @@ export function TikTokStyleArena({
                   if (isViewer) setShowPreJoin(false);
                 }}
               />
-            </div>
-          ) : (
-            <div
-              key="vs-loading"
-              className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#08080a]"
-            >
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-plasma-500 border-t-transparent" />
-            </div>
-          )
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-plasma-500 border-t-transparent" />
+              </div>
+            )}
+          </div>
         )}
       </AnimatePresence>
 
-      {/* 2. ÉCRAN PRE-JOIN (Tests Micros - Masque l'Arène) */}
+      {/* --- COUCHE 2 : PRE-JOIN (Priorité 2) --- */}
       {!showVsScreen && !hasJoined && showPreJoin && (
         <div className="absolute inset-0 z-[8000] bg-[#08080a]">
-          <PreJoinScreen
-            userName={userName}
-            onJoin={handleJoin}
-            viewerMode={isViewer}
-            mediatorName={mediatorName}
-          />
+          <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer} mediatorName={mediatorName} />
           {!effectiveDailyRoomUrl && (
-            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/80 px-4 py-2 text-xs font-semibold text-brand-400 backdrop-blur-sm">
+            <div className="absolute bottom-10 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/80 px-4 py-2 text-xs font-semibold text-brand-400 backdrop-blur-sm">
               <div className="h-3 w-3 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" />
               Préparation de la room vidéo...
             </div>
@@ -3786,35 +3783,83 @@ export function TikTokStyleArena({
                   })}
                 </div>
 
-                {/* LE RÉFÉRENT EMPEREUR (MASQUE CENTRAL CALIBRÉ SANS VIDE NOIR) */}
+                {/* LE RÉFÉRENT EMPEREUR (CENTRE ABSOLU AVEC UI COMPLÈTE) */}
                 <div
                   data-cinema-stay
                   className="pointer-events-none absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
                 >
-                  <div className="absolute left-1/2 top-1/2 h-[142px] w-[142px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08080a] sm:h-[202px] sm:w-[202px]" />
+                  {/* Masque central anti-vide noir */}
+                  <div className="absolute left-1/2 top-1/2 h-[141px] w-[141px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08080a] sm:h-[201px] sm:w-[201px]" />
+
                   <motion.div
                     animate={{
                       boxShadow:
-                        auraMed > 0
-                          ? `0 0 40px ${getMediatorDynamicColor(auraMed)}`
-                          : '0 0 0 4px rgba(255,255,255,0.05)',
+                        auraMed > 0 ? `0 0 40px ${getMediatorDynamicColor(auraMed)}` : '0 0 0 4px rgba(255,255,255,0.05)',
                     }}
-                    className="pointer-events-auto relative h-[140px] w-[140px] overflow-hidden rounded-full border-2 border-white/10 bg-black sm:h-[200px] sm:w-[200px]"
+                    style={{ filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})` }}
+                    className="pointer-events-auto relative h-[140px] w-[140px] overflow-hidden rounded-full border-2 border-white/20 bg-black sm:h-[200px] sm:w-[200px]"
                   >
-                    {mediatorParticipant?.videoTrack ? (
-                      <ParticipantVideo
-                        videoTrack={mediatorParticipant.videoTrack}
-                        muted={mediatorIsLocal}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="m-auto flex h-full items-center justify-center text-4xl sm:text-5xl opacity-40">⚖️</div>
+                    {/* Bouton Réactiver (Médiateur local) */}
+                    {mediatorIsLocal && isCameraInterrupted && !isViewer && (
+                      <div className="pointer-events-auto absolute inset-0 z-[150] flex items-center justify-center bg-black/60 p-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void recoverMediaDevices();
+                          }}
+                          className="rounded-xl border border-plasma-500/50 bg-black/80 px-3 py-2 text-[9px] font-black text-white shadow-[0_0_15px_rgba(162,0,255,0.5)] backdrop-blur-md"
+                        >
+                          📡 RÉACTIVER
+                        </button>
+                      </div>
                     )}
+
+                    <button
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        if (isWaitingForMediator) return;
+                        emitTapSupport('M');
+                        preferSide('M');
+                      }}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      className="flex h-full w-full touch-manipulation overflow-hidden rounded-full border-transparent bg-transparent outline-none active:scale-95"
+                    >
+                      {isWaitingForMediator ? (
+                        <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/60 p-4">
+                          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-brand-400 border-t-transparent sm:h-10 sm:w-10" />
+                          <span className="mt-2 text-center text-[9px] font-black uppercase tracking-tighter text-white sm:text-[10px]">
+                            Attente
+                            <br />
+                            Ref
+                          </span>
+                        </div>
+                      ) : mediatorParticipant?.videoTrack ? (
+                        <ParticipantVideo
+                          videoTrack={mediatorParticipant.videoTrack}
+                          muted={mediatorIsLocal}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : mediatorGraceActive ? (
+                        <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/80 p-4">
+                          <div className="mb-1 h-8 w-8 animate-pulse rounded-full border-[3px] border-red-500 border-t-transparent sm:h-10 sm:w-10" />
+                          <span className="text-center text-[10px] font-black leading-tight text-red-500 sm:text-[11px]">
+                            DÉCONNECTÉ
+                            <br />
+                            {mediatorGraceSeconds}s
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="m-auto text-4xl opacity-40 sm:text-5xl">⚖️</span>
+                      )}
+                    </button>
                   </motion.div>
+
                   <button
                     type="button"
                     onClick={() => void openProfile(mediatorName, host.id)}
-                    className="pointer-events-auto relative z-10 mt-1 rounded-full border border-white/10 bg-black/80 px-4 py-1 text-[10px] sm:text-[11px] font-black text-white shadow-lg hover:bg-black"
+                    className="pointer-events-auto relative z-10 mt-1.5 rounded-full border border-white/10 bg-black/80 px-4 py-1 text-[10px] font-black text-white shadow-lg hover:bg-black sm:text-[11px]"
                   >
                     @{mediatorName}
                   </button>
