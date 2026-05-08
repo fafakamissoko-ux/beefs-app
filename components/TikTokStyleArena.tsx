@@ -253,6 +253,16 @@ export function TikTokStyleArena({
     }
     return false;
   });
+  const [showPreJoin, setShowPreJoin] = useState(true);
+
+  useEffect(() => {
+    if (isViewer) setShowPreJoin(false);
+  }, [isViewer]);
+
+  useEffect(() => {
+    if (hasJoined) setShowPreJoin(false);
+  }, [hasJoined]);
+
   /** MediaStream du pré-joint (médiateur / challenger) — réutilisé par Daily pour éviter un 2ᵉ getUserMedia bloqué sur mobile. */
   const [preJoinMediaStream, setPreJoinMediaStream] = useState<MediaStream | null>(null);
   const [chatInput, setChatInput] = useState('');
@@ -3155,6 +3165,7 @@ export function TikTokStyleArena({
   const handleJoin = (preAcquired: MediaStream | null) => {
     setPreJoinMediaStream(preAcquired);
     setHasJoined(true);
+    setShowPreJoin(false);
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.setItem(`arena_joined_${roomId}_${userId || 'anon'}`, 'true');
@@ -3216,16 +3227,6 @@ export function TikTokStyleArena({
   }
 
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
-
-  const finalChallengerA =
-    !leftPanelName || leftPanelName.trim().startsWith('En attente') || leftPanelName === 'Challenger 1'
-      ? expectedChallengers[0] || 'Challenger 1'
-      : leftPanelName;
-
-  const finalChallengerB =
-    !rightPanelName || rightPanelName.trim().startsWith('En attente') || rightPanelName === 'Challenger 2'
-      ? expectedChallengers[1] || 'Challenger 2'
-      : rightPanelName;
 
   const getMediatorDynamicColor = (val: number) => {
     const progress = Math.min(1, val / 200);
@@ -3296,30 +3297,34 @@ export function TikTokStyleArena({
       )}
 
       <AnimatePresence>
-        {showVsScreen && (
-          <div data-cinema-stay className="contents">
-            <VsTransition
-              challengers={
-                expectedUids.length > 0
-                  ? expectedUids.slice(0, 4).map(
-                      (uid, i) =>
-                        participantRoles[uid]?.name?.trim() ||
-                        displayPanelsFixed[i]?.userName?.trim() ||
-                        expectedChallengers[i] ||
-                        `Participant ${i + 1}`,
-                    )
-                  : [
-                      finalChallengerA,
-                      finalChallengerB,
-                      challengerRemoteSlots[2]?.userName,
-                      challengerRemoteSlots[3]?.userName,
-                    ].filter((n): n is string => typeof n === 'string' && n.trim().length > 0)
-              }
-              debateTitle={debateTitle}
-              onComplete={() => setShowVsScreen(false)}
-            />
-          </div>
-        )}
+        {showVsScreen ? (
+          Object.keys(participantRoles).length > 0 ? (
+            <div data-cinema-stay key="vs-transition-wrap" className="contents">
+              <VsTransition
+                challengers={
+                  [
+                    participantRoles[expectedUids[0]]?.name,
+                    participantRoles[expectedUids[1]]?.name,
+                    expectedUids[2] ? participantRoles[expectedUids[2]]?.name : null,
+                    expectedUids[3] ? participantRoles[expectedUids[3]]?.name : null,
+                  ].filter(Boolean) as string[]
+                }
+                debateTitle={debateTitle}
+                onComplete={() => {
+                  setShowVsScreen(false);
+                  setShowPreJoin(false);
+                }}
+              />
+            </div>
+          ) : (
+            <div
+              key="vs-loading"
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-obsidian-950"
+            >
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-plasma-500 border-t-transparent" />
+            </div>
+          )
+        ) : null}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -3655,6 +3660,18 @@ export function TikTokStyleArena({
         <div className="absolute inset-0 z-0 bg-[#08080a] p-1 sm:p-2">
           {(() => {
             type EmperorSlot = 'A' | 'B' | 'C' | 'D';
+            type ArenaCellPanel = (typeof displayPanelsFixed)[number];
+            type LayoutCell = {
+              id: string;
+              name: string;
+              panel: ArenaCellPanel;
+              slot: EmperorSlot;
+              aura: number;
+              color: string;
+              cellClass: string;
+              uiPos: string;
+            };
+
             const expectedCount = Math.min(
               4,
               Math.max(
@@ -3663,27 +3680,77 @@ export function TikTokStyleArena({
               ),
             );
             const gridClass = expectedCount <= 2 ? 'grid-cols-2 grid-rows-1' : 'grid-cols-2 grid-rows-2';
-            const auraByIdx = [auraA, auraB, auraC, auraD];
 
-            const slotForIndex = (idx: number): EmperorSlot =>
-              idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D';
-
-            const layoutConfigs = displayPanelsFixed.slice(0, expectedCount).map((panel, idx) => {
-              const uid = expectedUids[idx];
-              const slot = slotForIndex(idx);
-              return {
-                id: `grid-${slot}`,
-                name:
-                  (uid && participantRoles[uid]?.name?.trim()) ||
-                  panel?.userName?.trim() ||
-                  `Participant ${idx + 1}`,
-                panel,
-                slot,
-                color: idx === 0 ? '168,85,247' : idx === 1 ? '16,185,129' : idx === 2 ? '234,179,8' : '59,130,246',
-                aura: auraByIdx[idx] ?? 0,
-                cellClass: expectedCount === 3 && idx === 2 ? 'col-span-2' : '',
-              };
-            });
+            const layoutConfigs: LayoutCell[] =
+              expectedCount >= 3
+                ? [
+                    {
+                      id: 'grid-A',
+                      name: participantRoles[expectedUids[0]]?.name || 'Challenger 1',
+                      panel: displayPanelsFixed[0],
+                      slot: 'A',
+                      aura: auraA,
+                      color: '168,85,247',
+                      cellClass: '',
+                      uiPos: 'top-3 left-3 sm:top-4 sm:left-4 items-start text-left',
+                    },
+                    {
+                      id: 'grid-B',
+                      name: participantRoles[expectedUids[1]]?.name || 'Challenger 2',
+                      panel: displayPanelsFixed[1],
+                      slot: 'B',
+                      aura: auraB,
+                      color: '16,185,129',
+                      cellClass: '',
+                      uiPos: 'top-3 right-3 sm:top-4 sm:right-4 items-end text-right',
+                    },
+                    {
+                      id: 'grid-C',
+                      name: participantRoles[expectedUids[2]]?.name || 'Témoin 1',
+                      panel: displayPanelsFixed[2],
+                      slot: 'C',
+                      aura: auraC,
+                      color: '234,179,8',
+                      cellClass: expectedCount === 3 ? 'col-span-2' : '',
+                      uiPos: 'bottom-3 left-3 sm:bottom-4 sm:left-4 items-start text-left',
+                    },
+                    ...(expectedCount === 4
+                      ? ([
+                          {
+                            id: 'grid-D',
+                            name: participantRoles[expectedUids[3]]?.name || 'Témoin 2',
+                            panel: displayPanelsFixed[3],
+                            slot: 'D' as const,
+                            aura: auraD,
+                            color: '59,130,246',
+                            cellClass: '',
+                            uiPos: 'bottom-3 right-3 sm:bottom-4 sm:right-4 items-end text-right',
+                          },
+                        ] satisfies LayoutCell[])
+                      : []),
+                  ]
+                : [
+                    {
+                      id: 'grid-A',
+                      name: participantRoles[expectedUids[0]]?.name || 'Challenger 1',
+                      panel: displayPanelsFixed[0],
+                      slot: 'A',
+                      aura: auraA,
+                      color: '168,85,247',
+                      cellClass: '',
+                      uiPos: 'top-3 left-3 sm:top-4 sm:left-4 items-start text-left',
+                    },
+                    {
+                      id: 'grid-B',
+                      name: participantRoles[expectedUids[1]]?.name || 'Challenger 2',
+                      panel: displayPanelsFixed[1],
+                      slot: 'B',
+                      aura: auraB,
+                      color: '16,185,129',
+                      cellClass: '',
+                      uiPos: 'top-3 right-3 sm:top-4 sm:right-4 items-end text-right',
+                    },
+                  ];
 
             return (
               <>
@@ -3762,53 +3829,57 @@ export function TikTokStyleArena({
                             </button>
                           </div>
                         )}
-                        <div className="absolute bottom-2 left-2 flex max-w-[min(100%,14rem)] flex-col gap-1 rounded-lg border border-white/10 bg-black/60 px-2 py-1 backdrop-blur-md">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null);
-                            }}
-                            className="flex min-w-0 items-center gap-1.5 text-left"
-                          >
-                            <span className="truncate text-[10px] font-black text-white">@{cfg.name}</span>
-                            {!cfg.panel && <span className="shrink-0 text-[8px] font-bold uppercase text-red-500">Absent</span>}
-                          </button>
+                        <div
+                          data-cinema-stay
+                          className={`pointer-events-auto absolute z-[140] flex flex-col gap-1.5 ${cfg.uiPos}`}
+                        >
+                          <div className="flex max-w-[10rem] items-center gap-2 rounded-xl border border-white/10 bg-black/50 px-3 py-2 shadow-lg backdrop-blur-md sm:max-w-[14rem]">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null);
+                              }}
+                              className="truncate text-[11px] font-black tracking-wide text-white transition-colors hover:text-plasma-400 sm:text-xs"
+                            >
+                              @{cfg.name}
+                            </button>
+                            {!cfg.panel && (
+                              <span className="shrink-0 rounded border border-red-500/20 bg-red-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase text-red-400">
+                                Absent
+                              </span>
+                            )}
+                          </div>
                           {isSpeaking && (
-                            <div className="text-[10px] font-black tabular-nums text-plasma-300">
-                              {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                            <div className="w-fit animate-pulse rounded bg-red-600 px-2 py-0.5 text-[10px] font-black text-white shadow-[0_0_10px_rgba(220,38,38,0.6)]">
+                              DIRECT
+                            </div>
+                          )}
+                          {isLocal && !isViewer && (
+                            <div className={`mt-1 flex shrink-0 gap-2 ${cfg.uiPos.includes('items-end') ? 'self-end' : 'self-start'}`}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleMic();
+                                }}
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 shadow-lg backdrop-blur-xl transition-colors hover:bg-black/80 ${micEnabled ? 'text-white' : 'bg-red-500 text-white hover:bg-red-600'}`}
+                              >
+                                <Mic className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleCam();
+                                }}
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 shadow-lg backdrop-blur-xl transition-colors hover:bg-black/80 ${camEnabled ? 'text-white' : 'bg-red-500 text-white hover:bg-red-600'}`}
+                              >
+                                <Video className="h-4 w-4" />
+                              </button>
                             </div>
                           )}
                         </div>
-                        {isSpeaking && (
-                          <div className="absolute left-2 top-2 z-[40] animate-pulse rounded bg-red-600 px-2 py-0.5 text-[9px] font-black uppercase text-white">
-                            Direct
-                          </div>
-                        )}
-                        {isLocal && !isViewer && (
-                          <div className="absolute bottom-2 right-2 z-[140] flex gap-1.5">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleMic();
-                              }}
-                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}
-                            >
-                              <Mic className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleCam();
-                              }}
-                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}
-                            >
-                              <Video className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        )}
                       </motion.div>
                     );
                   })}
