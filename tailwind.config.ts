@@ -56,6 +56,8 @@ const config: Config = {
       },
       boxShadow: {
         "glow-plasma": "0 0 20px rgba(162, 0, 255, 0.4)",
+        "glow-mediator":
+          "0 0 32px rgba(162, 0, 255, 0.12), 0 0 16px rgba(255, 255, 255, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.06)",
         "glow-cyan": "0 0 20px rgba(0, 240, 255, 0.4)",
         "glow-blood": "0 0 20px rgba(255, 0, 60, 0.6)",
         card: "0 1px 0 rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.5)",

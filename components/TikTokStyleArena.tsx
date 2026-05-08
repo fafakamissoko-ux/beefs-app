@@ -3654,12 +3654,12 @@ export function TikTokStyleArena({
               cellClass: expectedCount === 3 && idx === 2 ? 'col-span-2' : '',
               uiPos:
                 idx === 0
-                  ? 'top-2 left-2 sm:top-4 sm:left-4 items-start text-left'
+                  ? 'bottom-2 left-2 sm:bottom-4 sm:left-4 items-start text-left'
                   : idx === 1
-                    ? 'top-2 right-2 sm:top-4 sm:right-4 items-end text-right'
+                    ? 'bottom-2 right-2 sm:bottom-4 sm:right-4 items-end text-right'
                     : idx === 2
-                      ? 'bottom-2 left-2 sm:bottom-4 sm:left-4 items-start text-left'
-                      : 'bottom-2 right-2 sm:bottom-4 sm:right-4 items-end text-right',
+                      ? 'top-2 left-2 sm:top-4 sm:left-4 items-start text-left'
+                      : 'top-2 right-2 sm:top-4 sm:right-4 items-end text-right',
             }));
 
             return (
@@ -3771,18 +3771,18 @@ export function TikTokStyleArena({
                   })}
                 </div>
 
-                {/* LE RÉFÉRENT EMPEREUR (HALO BLINDÉ & PILULE INLINE) */}
+                {/* LE RÉFÉRENT EMPEREUR (HALO BLINDÉ AGRESSIF & PILULE TRANSPARENTE) */}
                 <div
                   data-cinema-stay
-                  className="pointer-events-none absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                  className="pointer-events-none absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5"
                 >
-                  {/* La vidéo (Agrandie avec bordure d'étanchéité absolue de 10px/12px) */}
+                  {/* La vidéo (Agrandie agressivement pour boucher le vide noir) */}
                   <motion.div
                     animate={{
                       boxShadow: auraMed > 0 ? `0 0 50px ${getMediatorDynamicColor(auraMed)}` : '0 0 0 1px rgba(255,255,255,0.1)',
                     }}
                     style={{ filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})` }}
-                    className="pointer-events-auto relative h-[155px] w-[155px] overflow-hidden rounded-full border-[10px] border-[#08080a] bg-black sm:h-[220px] sm:w-[220px] sm:border-[12px]"
+                    className="pointer-events-auto relative h-[170px] w-[170px] overflow-hidden rounded-full border-[10px] border-[#08080a] bg-black shadow-glow-mediator sm:h-[240px] sm:w-[240px] sm:border-[12px]"
                   >
                     {/* Bouton Réactiver (Médiateur local) */}
                     {mediatorIsLocal && isCameraInterrupted && !isViewer && (
@@ -3831,18 +3831,18 @@ export function TikTokStyleArena({
                     </button>
                   </motion.div>
 
-                  {/* LA PILULE INLINE : [ @Ref | 🎛️ ] */}
-                  <div className="pointer-events-auto mt-1 flex items-center overflow-hidden rounded-full border border-white/10 bg-black/80 shadow-2xl backdrop-blur-xl">
+                  {/* LA PILULE INLINE TRANSPARENTE : [ @Ref | 🎛️ ] */}
+                  <div className="pointer-events-auto flex items-center overflow-hidden rounded-full border border-white/20 bg-transparent shadow-lg backdrop-blur-md">
                     <button
                       type="button"
                       onClick={() => void openProfile(mediatorName, host.id)}
-                      className={`px-4 py-1.5 text-[10px] font-black text-white transition-colors hover:bg-white/10 sm:text-[11px] ${isHost ? 'pr-3' : ''}`}
+                      className={`px-4 py-1.5 text-[10px] font-black text-white drop-shadow-md transition-colors hover:bg-white/10 sm:text-[11px] ${isHost ? 'pr-3.5' : ''}`}
                     >
                       @{mediatorName}
                     </button>
                     {isHost && (
                       <div className="flex h-full items-center">
-                        <div className="h-4 w-px bg-white/20" />
+                        <div className="h-4 w-px bg-white/30" />
                         <button
                           type="button"
                           data-mediator-sidebar-toggle
@@ -3850,7 +3850,7 @@ export function TikTokStyleArena({
                             e.stopPropagation();
                             setMediatorSidebarOpen((o) => !o);
                           }}
-                          className="flex h-full min-h-[28px] items-center justify-center bg-amber-500/10 px-3 py-1.5 text-amber-400 transition-colors hover:bg-amber-500/20 active:bg-amber-500/30"
+                          className="flex h-full min-h-[30px] items-center justify-center px-3.5 text-white/90 drop-shadow-md transition-colors hover:bg-white/20 active:bg-white/30 active:text-white"
                           title="Command Deck"
                         >
                           <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
