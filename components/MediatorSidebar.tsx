@@ -259,8 +259,12 @@ export function MediatorSidebar({
                               <div className="flex gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => void onSetChallengerMuted(row.sessionId, row.debaterId, row.audioOn)}
-                                  className={`flex w-[80px] items-center justify-center gap-1 rounded-xl border py-2 font-mono text-[9px] font-bold uppercase transition-colors ${
+                                  disabled={!row.sessionId}
+                                  onClick={() => {
+                                    if (!row.sessionId) return;
+                                    void onSetChallengerMuted(row.sessionId, row.debaterId, row.audioOn);
+                                  }}
+                                  className={`flex w-[80px] items-center justify-center gap-1 rounded-xl border py-2 font-mono text-[9px] font-bold uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                                     muted
                                       ? 'border-brand-500/40 bg-brand-500/10 text-brand-400'
                                       : 'border-white/10 bg-white/5 text-white/60'
@@ -270,8 +274,12 @@ export function MediatorSidebar({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => void onEjectParticipant(row.sessionId)}
-                                  className="flex items-center justify-center rounded-xl border border-ember-500/30 bg-ember-500/10 px-3 py-2 text-ember-400 hover:bg-ember-500/20"
+                                  disabled={!row.sessionId}
+                                  onClick={() => {
+                                    if (!row.sessionId) return;
+                                    void onEjectParticipant(row.sessionId);
+                                  }}
+                                  className="flex items-center justify-center rounded-xl border border-ember-500/30 bg-ember-500/10 px-3 py-2 text-ember-400 hover:bg-ember-500/20 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                   <UserX className="h-3.5 w-3.5" />
                                 </button>
@@ -391,29 +399,9 @@ export function MediatorSidebar({
                             onHotMic(row.slot, speakingTurnSec);
                             onClose();
                           }}
-                          className={`flex flex-col items-center gap-1 rounded-[1.5rem] border py-4 transition-all hover:bg-white/5 active:scale-95 ${
-                            row.slot === 'A'
-                              ? 'border-purple-500/30 bg-purple-500/10'
-                              : row.slot === 'B'
-                                ? 'border-emerald-500/30 bg-emerald-500/10'
-                                : row.slot === 'C'
-                                  ? 'border-yellow-500/30 bg-yellow-500/10'
-                                  : 'border-blue-500/30 bg-blue-500/10'
-                          }`}
+                          className="flex flex-col items-center gap-1 rounded-2xl border border-white/10 bg-white/5 py-4 transition-all active:scale-95"
                         >
-                          <span
-                            className={`w-full truncate px-2 text-center text-[10px] font-bold uppercase tracking-widest ${
-                              row.slot === 'A'
-                                ? 'text-purple-400'
-                                : row.slot === 'B'
-                                  ? 'text-emerald-400'
-                                  : row.slot === 'C'
-                                    ? 'text-yellow-400'
-                                    : 'text-blue-400'
-                            }`}
-                          >
-                            @{row.label}
-                          </span>
+                          <span className="text-[10px] font-black uppercase tracking-tighter text-white/90">@{row.label}</span>
                         </button>
                       ))}
                     </div>

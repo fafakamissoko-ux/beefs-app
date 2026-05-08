@@ -1532,6 +1532,33 @@ export function TikTokStyleArena({
     localParticipant?.sessionId,
   ]);
 
+  const expectedUids = useMemo(() => {
+    return Object.entries(participantRoles)
+      .filter(([uid]) => uid !== host.id)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map((e) => e[0]);
+  }, [participantRoles, host.id]);
+
+  type ChallengerArenaPanel = (typeof challengerRemoteSlots)[number];
+
+  const displayPanelsFixed = useMemo((): Array<ChallengerArenaPanel | null> => {
+    const panels: Array<ChallengerArenaPanel | null> = [null, null, null, null];
+    if (expectedUids.length > 0) {
+      expectedUids.forEach((uid, idx) => {
+        if (idx > 3) return;
+        if (localParticipant?.arenaUserId === uid) panels[idx] = localParticipant as ChallengerArenaPanel;
+        else panels[idx] = challengerRemoteSlots.find((p) => p.arenaUserId === uid) ?? null;
+      });
+      return panels;
+    }
+    challengerRemoteSlots.slice(0, 4).forEach((p, idx) => {
+      if (localParticipant?.sessionId && p.sessionId === localParticipant.sessionId) {
+        panels[idx] = localParticipant as ChallengerArenaPanel;
+      } else panels[idx] = p;
+    });
+    return panels;
+  }, [expectedUids, localParticipant, challengerRemoteSlots]);
+
   const leftPanel = isHost
     ? challengerRemoteSlots[0] ?? null
     : isViewer
@@ -1565,13 +1592,20 @@ export function TikTokStyleArena({
   const getSlotForUser = useCallback(
     (uid?: string | null): 'A' | 'B' | 'C' | 'D' => {
       if (!uid) return 'A';
-      const idx = challengerRemoteSlots.findIndex((p) => p.arenaUserId === uid);
+      const idx = expectedUids.indexOf(uid);
+      if (idx < 0) {
+        const j = challengerRemoteSlots.findIndex((p) => p.arenaUserId === uid);
+        if (j === 1) return 'B';
+        if (j === 2) return 'C';
+        if (j === 3) return 'D';
+        return 'A';
+      }
       if (idx === 1) return 'B';
       if (idx === 2) return 'C';
       if (idx === 3) return 'D';
       return 'A';
     },
-    [challengerRemoteSlots],
+    [expectedUids, challengerRemoteSlots],
   );
 
   const leftSlot = 'A';
@@ -1637,14 +1671,34 @@ export function TikTokStyleArena({
 
   const mediatorRemoteRows = useMemo((): MediatorRemoteRow[] => {
     if (!isHost || !effectiveDailyRoomUrl) return [];
-    return challengerRemoteSlots.slice(0, 4).map((p, idx) => ({
-      sessionId: p.sessionId,
-      label: p.userName || `Participant ${idx + 1}`,
-      slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as 'A' | 'B' | 'C' | 'D',
-      debaterId: p.arenaUserId ?? null,
-      audioOn: p.audioOn,
-    }));
-  }, [isHost, effectiveDailyRoomUrl, challengerRemoteSlots]);
+    if (expectedUids.length === 0) {
+      return challengerRemoteSlots.slice(0, 4).map((p, idx) => ({
+        sessionId: p.sessionId,
+        label: p.userName || `Participant ${idx + 1}`,
+        slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as 'A' | 'B' | 'C' | 'D',
+        debaterId: p.arenaUserId ?? null,
+        audioOn: p.audioOn,
+      }));
+    }
+    return expectedUids.slice(0, 4).map((uid, idx) => {
+      const panel = displayPanelsFixed[idx];
+      const slot = (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as 'A' | 'B' | 'C' | 'D';
+      return {
+        sessionId: panel?.sessionId ?? '',
+        label: participantRoles[uid]?.name?.trim() || panel?.userName || `Participant ${idx + 1}`,
+        slot,
+        debaterId: uid,
+        audioOn: panel?.audioOn ?? false,
+      };
+    });
+  }, [
+    isHost,
+    effectiveDailyRoomUrl,
+    expectedUids,
+    displayPanelsFixed,
+    participantRoles,
+    challengerRemoteSlots,
+  ]);
 
   const leftPanelRef = useRef(leftPanel);
   const rightPanelRef = useRef(rightPanel);
@@ -3246,12 +3300,20 @@ export function TikTokStyleArena({
           <div data-cinema-stay className="contents">
             <VsTransition
               challengers={
-                [
-                  finalChallengerA,
-                  finalChallengerB,
-                  challengerRemoteSlots[2]?.userName,
-                  challengerRemoteSlots[3]?.userName,
-                ].filter(Boolean) as string[]
+                expectedUids.length > 0
+                  ? expectedUids.slice(0, 4).map(
+                      (uid, i) =>
+                        participantRoles[uid]?.name?.trim() ||
+                        displayPanelsFixed[i]?.userName?.trim() ||
+                        expectedChallengers[i] ||
+                        `Participant ${i + 1}`,
+                    )
+                  : [
+                      finalChallengerA,
+                      finalChallengerB,
+                      challengerRemoteSlots[2]?.userName,
+                      challengerRemoteSlots[3]?.userName,
+                    ].filter((n): n is string => typeof n === 'string' && n.trim().length > 0)
               }
               debateTitle={debateTitle}
               onComplete={() => setShowVsScreen(false)}
@@ -3589,95 +3651,39 @@ export function TikTokStyleArena({
         </div>
         )}
 
-        {/* === ARÈNE GRILLE SÉCURISÉE (CÔTE À CÔTE & 2x2) === */}
+        {/* === ARÈNE EMPEREUR (GRILLE 2x2 PAR RÔLE — GRAND RÉFÉRENT) === */}
         <div className="absolute inset-0 z-0 bg-[#08080a] p-1 sm:p-2">
           {(() => {
-            const displayPanels = challengerRemoteSlots.slice(0, 4);
-            const mode = Math.max(2, displayPanels.length);
-            const gridClass = mode <= 2 ? 'grid-cols-2 grid-rows-1' : 'grid-cols-2 grid-rows-2';
+            type EmperorSlot = 'A' | 'B' | 'C' | 'D';
+            const expectedCount = Math.min(
+              4,
+              Math.max(
+                2,
+                expectedUids.length > 0 ? expectedUids.length : Math.max(challengerRemoteSlots.length, 2),
+              ),
+            );
+            const gridClass = expectedCount <= 2 ? 'grid-cols-2 grid-rows-1' : 'grid-cols-2 grid-rows-2';
+            const auraByIdx = [auraA, auraB, auraC, auraD];
 
-            type GridSlot = 'A' | 'B' | 'C' | 'D';
-            interface GridCellCfg {
-              id: string;
-              name: string;
-              panel: (typeof challengerRemoteSlots)[number] | null | undefined;
-              slot: GridSlot;
-              aura: number;
-              color: string;
-              cellClass: string;
-              uiPos: string;
-            }
+            const slotForIndex = (idx: number): EmperorSlot =>
+              idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D';
 
-            const layoutConfigs: GridCellCfg[] =
-              mode >= 3
-                ? [
-                    {
-                      id: 'grid-A',
-                      name: displayPanels[0]?.userName || 'Challenger 1',
-                      panel: displayPanels[0],
-                      slot: 'A',
-                      aura: auraA,
-                      color: '168,85,247',
-                      cellClass: '',
-                      uiPos: 'top-3 left-3 items-start text-left',
-                    },
-                    {
-                      id: 'grid-B',
-                      name: displayPanels[1]?.userName || 'Challenger 2',
-                      panel: displayPanels[1],
-                      slot: 'B',
-                      aura: auraB,
-                      color: '16,185,129',
-                      cellClass: '',
-                      uiPos: 'top-3 right-3 items-end text-right',
-                    },
-                    {
-                      id: 'grid-C',
-                      name: displayPanels[2]?.userName || 'Témoin 1',
-                      panel: displayPanels[2],
-                      slot: 'C',
-                      aura: auraC,
-                      color: '234,179,8',
-                      cellClass: mode === 3 ? 'col-span-2' : '',
-                      uiPos: 'bottom-3 left-3 items-start text-left',
-                    },
-                    ...(mode === 4
-                      ? [
-                          {
-                            id: 'grid-D',
-                            name: displayPanels[3]?.userName || 'Témoin 2',
-                            panel: displayPanels[3],
-                            slot: 'D' as GridSlot,
-                            aura: auraD,
-                            color: '59,130,246',
-                            cellClass: '',
-                            uiPos: 'bottom-3 right-3 items-end text-right',
-                          },
-                        ]
-                      : []),
-                  ]
-                : [
-                    {
-                      id: 'grid-A',
-                      name: leftPanelName,
-                      panel: leftPanel,
-                      slot: 'A',
-                      aura: auraA,
-                      color: '168,85,247',
-                      cellClass: '',
-                      uiPos: 'top-4 left-4 items-start text-left sm:top-6 sm:left-6',
-                    },
-                    {
-                      id: 'grid-B',
-                      name: rightPanelName,
-                      panel: rightPanel,
-                      slot: 'B',
-                      aura: auraB,
-                      color: '16,185,129',
-                      cellClass: '',
-                      uiPos: 'top-4 right-4 items-end text-right sm:top-6 sm:right-6',
-                    },
-                  ];
+            const layoutConfigs = displayPanelsFixed.slice(0, expectedCount).map((panel, idx) => {
+              const uid = expectedUids[idx];
+              const slot = slotForIndex(idx);
+              return {
+                id: `grid-${slot}`,
+                name:
+                  (uid && participantRoles[uid]?.name?.trim()) ||
+                  panel?.userName?.trim() ||
+                  `Participant ${idx + 1}`,
+                panel,
+                slot,
+                color: idx === 0 ? '168,85,247' : idx === 1 ? '16,185,129' : idx === 2 ? '234,179,8' : '59,130,246',
+                aura: auraByIdx[idx] ?? 0,
+                cellClass: expectedCount === 3 && idx === 2 ? 'col-span-2' : '',
+              };
+            });
 
             return (
               <>
@@ -3690,10 +3696,9 @@ export function TikTokStyleArena({
                       effectiveHotMicSpeakerSlot &&
                       effectiveHotMicSpeakerSlot !== cfg.slot &&
                       (['A', 'B', 'C', 'D'] as const).includes(cfg.slot);
-
                     const auraShadow =
                       cfg.aura > 0
-                        ? `0 0 ${10 + Math.min(cfg.aura, 100) * 0.4}px rgba(${cfg.color}, ${Math.min(1, 0.4 + cfg.aura / 100)})`
+                        ? `0 0 ${15 + Math.min(cfg.aura, 100) * 0.5}px rgba(${cfg.color}, 0.8)`
                         : 'none';
                     const filterVal = isMutedByFocus
                       ? 'grayscale(0.6) blur(3px)'
@@ -3702,12 +3707,12 @@ export function TikTokStyleArena({
                     return (
                       <motion.div
                         key={cfg.id}
-                        className={`relative overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-all duration-500 sm:rounded-2xl ${cfg.cellClass}`}
+                        className={`relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 ${cfg.cellClass}`}
                         style={{
-                          opacity: isMutedByFocus ? 0.3 : 1,
-                          filter: filterVal,
                           boxShadow: auraShadow,
                           zIndex: cfg.aura > 0 ? 10 : 1,
+                          opacity: isMutedByFocus ? 0.35 : 1,
+                          filter: filterVal,
                         }}
                       >
                         <AnimatePresence mode="wait">
@@ -3724,13 +3729,11 @@ export function TikTokStyleArena({
                                 className="absolute inset-0 h-full w-full object-cover"
                               />
                             ) : (
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-5xl opacity-30">👤</span>
-                              </div>
+                              <div className="absolute inset-0 flex items-center justify-center text-4xl opacity-20">👤</div>
                             )}
                           </motion.div>
                         </AnimatePresence>
-                        {!isLocal && ['A', 'B', 'C', 'D'].includes(cfg.slot) && (
+                        {!isLocal && (
                           <motion.button
                             type="button"
                             data-cinema-stay
@@ -3759,73 +3762,71 @@ export function TikTokStyleArena({
                             </button>
                           </div>
                         )}
-                        <div data-cinema-stay className={`pointer-events-auto absolute z-[140] flex flex-col gap-0.5 ${cfg.uiPos}`}>
-                          <div className="flex max-w-[min(100%,12rem)] flex-col gap-0.5 rounded-xl border border-white/10 bg-black/50 px-3 py-1.5 shadow-sm backdrop-blur-md">
+                        <div className="absolute bottom-2 left-2 flex max-w-[min(100%,14rem)] flex-col gap-1 rounded-lg border border-white/10 bg-black/60 px-2 py-1 backdrop-blur-md">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null);
+                            }}
+                            className="flex min-w-0 items-center gap-1.5 text-left"
+                          >
+                            <span className="truncate text-[10px] font-black text-white">@{cfg.name}</span>
+                            {!cfg.panel && <span className="shrink-0 text-[8px] font-bold uppercase text-red-500">Absent</span>}
+                          </button>
+                          {isSpeaking && (
+                            <div className="text-[10px] font-black tabular-nums text-plasma-300">
+                              {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
+                            </div>
+                          )}
+                        </div>
+                        {isSpeaking && (
+                          <div className="absolute left-2 top-2 z-[40] animate-pulse rounded bg-red-600 px-2 py-0.5 text-[9px] font-black uppercase text-white">
+                            Direct
+                          </div>
+                        )}
+                        {isLocal && !isViewer && (
+                          <div className="absolute bottom-2 right-2 z-[140] flex gap-1.5">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null);
+                                toggleMic();
                               }}
-                              className="truncate text-[10px] font-black tracking-wide text-white hover:underline sm:text-xs"
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}
                             >
-                              @{cfg.name.trim().startsWith('En attente') ? `Challenger ${cfg.slot}` : cfg.name}
+                              <Mic className="h-3.5 w-3.5" />
                             </button>
-                            {isSpeaking && (
-                              <div className="text-[10px] font-black tabular-nums text-white/90">
-                                {Math.floor(speakingTurnRemaining / 60)}:{(speakingTurnRemaining % 60).toString().padStart(2, '0')}
-                              </div>
-                            )}
-                            {!cfg.panel && (
-                              <div className="mt-0.5 animate-pulse text-[8px] font-bold uppercase tracking-widest text-red-400">Absent</div>
-                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCam();
+                              }}
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}
+                            >
+                              <Video className="h-3.5 w-3.5" />
+                            </button>
                           </div>
-                          {isLocal && !isViewer && (
-                            <div className={`mt-1 flex shrink-0 gap-1.5 ${cfg.uiPos.includes('items-end') ? 'self-end' : 'self-start'}`}>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleMic();
-                                }}
-                                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${micEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}
-                              >
-                                <Mic className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleCam();
-                                }}
-                                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition-colors ${camEnabled ? 'bg-black/50 text-white' : 'bg-red-500 text-white'}`}
-                              >
-                                <Video className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </motion.div>
                     );
                   })}
                 </div>
 
-                {/* LE MÉDIATEUR AU CENTRE ABSOLU (INVARIABLE) */}
+                {/* LE RÉFÉRENT EMPEREUR (CENTRE ABSOLU) */}
                 <div
                   data-cinema-stay
-                  className="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
-                  style={{ zIndex: 100 }}
+                  className="pointer-events-none absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
                 >
-                  <div className="absolute left-1/2 top-1/2 h-[90px] w-[90px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08080a] sm:h-[130px] sm:w-[130px]" />
+                  <div className="absolute left-1/2 top-1/2 h-[145px] w-[145px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08080a] sm:h-[220px] sm:w-[220px]" />
                   <motion.div
                     animate={{
                       boxShadow:
-                        auraMed > 0
-                          ? `0 0 ${20 + Math.min(auraMed, 100) * 0.5}px ${getMediatorDynamicColor(auraMed)}, 0 0 0 ${auraMed > 150 ? 4 : 2}px ${getMediatorDynamicColor(auraMed)}`
-                          : '0 0 0 4px rgba(255,255,255,0.05)',
+                        auraMed > 0 ? `0 0 40px ${getMediatorDynamicColor(auraMed)}` : '0 0 0 4px rgba(255,255,255,0.1)',
                     }}
                     style={{ filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})` }}
-                    className="pointer-events-auto relative h-20 w-20 overflow-hidden rounded-full border-2 border-white/10 bg-black transition-shadow duration-300 sm:h-28 sm:w-28"
+                    className="pointer-events-auto relative h-[100px] w-[100px] overflow-hidden rounded-full border-2 border-white/20 bg-black sm:h-[180px] sm:w-[180px]"
                   >
                     {mediatorIsLocal && isCameraInterrupted && !isViewer && (
                       <div className="pointer-events-auto absolute inset-0 z-[150] flex items-center justify-center p-2">
@@ -3853,8 +3854,8 @@ export function TikTokStyleArena({
                       className="flex h-full w-full touch-manipulation overflow-hidden rounded-full border-transparent bg-black outline-none active:scale-95"
                     >
                       {isWaitingForMediator ? (
-                        <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/40 p-4">
-                          <div className="h-6 w-6 shrink-0 animate-spin rounded-full border-[3px] border-brand-400 border-t-transparent opacity-80 sm:h-8 sm:w-8" />
+                        <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/40 p-3 sm:p-4">
+                          <div className="h-6 w-6 shrink-0 animate-spin rounded-full border-[3px] border-brand-400 border-t-transparent opacity-80 sm:h-10 sm:w-10" />
                           <span className="mt-2 text-center text-[8px] font-black uppercase leading-none tracking-tighter text-white sm:text-[10px]">
                             Attente
                             <br />
@@ -3864,16 +3865,16 @@ export function TikTokStyleArena({
                       ) : mediatorParticipant?.videoTrack ? (
                         <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="h-full w-full object-cover" />
                       ) : mediatorGraceActive ? (
-                        <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/60 p-4">
-                          <div className="mb-2 h-10 w-10 animate-pulse rounded-full border-[3px] border-red-500 border-t-transparent" />
-                          <span className="text-center text-[12px] font-black leading-none text-red-500">
+                        <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/60 p-3 sm:p-4">
+                          <div className="mb-2 h-8 w-8 animate-pulse rounded-full border-[3px] border-red-500 border-t-transparent sm:h-10 sm:w-10" />
+                          <span className="text-center text-[10px] font-black leading-none text-red-500 sm:text-xs">
                             DÉCONNECTÉ
                             <br />
                             {mediatorGraceSeconds}s
                           </span>
                         </div>
                       ) : (
-                        <span className="m-auto text-3xl text-white/30 sm:text-5xl">👤</span>
+                        <span className="m-auto text-3xl text-white/40 sm:text-5xl">⚖️</span>
                       )}
                     </button>
                   </motion.div>
@@ -3883,16 +3884,16 @@ export function TikTokStyleArena({
                       if (!isWaitingForMediator) void openProfile(mediatorName, host.id);
                     }}
                     disabled={isWaitingForMediator}
-                    className="pointer-events-auto relative z-10 mt-1 rounded-full border border-white/10 bg-black/80 px-3 py-1 shadow-lg hover:bg-black disabled:pointer-events-none disabled:opacity-90"
+                    className="pointer-events-auto relative z-10 mt-2 rounded-full border border-white/10 bg-black/80 px-3 py-1 text-[10px] font-black text-white shadow-lg hover:bg-black disabled:pointer-events-none disabled:opacity-90 sm:px-4 sm:text-[11px]"
                   >
-                    <span className="text-[10px] font-bold text-white sm:text-[11px]">{isWaitingForMediator ? 'En attente...' : `@${mediatorName}`}</span>
+                    <span>@{mediatorName}</span>
                   </button>
                 </div>
               </>
             );
           })()}
         </div>
-        {/* === FIN ARÈNE GRILLE === */}
+        {/* === FIN ARÈNE EMPEREUR === */}
 
         {/* OVERLAY CHAT MOBILE (Intégré à la vidéo, invisible sur PC) */}
         {!isCinematicMode && (
