@@ -601,28 +601,6 @@ export function TikTokStyleArena({
     void fetchPendingInvites();
   }, [isHost, mediatorSidebarOpen, fetchPendingInvites]);
 
-  useEffect(() => {
-    if (!isHost || !roomId) return;
-    const ch = supabase
-      .channel(`beef_participants_live_${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'beef_participants',
-          filter: `beef_id=eq.${roomId}`,
-        },
-        () => {
-          void fetchPendingInvites();
-        },
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(ch);
-    };
-  }, [isHost, roomId, fetchPendingInvites]);
-
   /** Spectateurs : détecte l’acceptation médiateur sur leur ligne beef_participants. */
   useEffect(() => {
     if (!isViewer || !roomId || !userId) return;
@@ -671,6 +649,62 @@ export function TikTokStyleArena({
 
   // Participant roles from DB — maps Daily.co userNames to beef roles
   const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});
+
+  const loadParticipants = useCallback(async () => {
+    const { data } = await supabase
+      .from('beef_participants')
+      .select('user_id, role, is_main')
+      .eq('beef_id', roomId);
+    if (!data?.length) {
+      setParticipantRoles({});
+      return;
+    }
+    const { fetchUserPublicByIds } = await import('@/lib/fetch-user-public-profile');
+    const ids = data.map((p) => p.user_id).filter(Boolean);
+    const pubMap = await fetchUserPublicByIds(supabase, ids, 'id, username, display_name');
+    const roles: Record<string, BeefParticipantRowMeta> = {};
+    data.forEach((p) => {
+      const row = p as { user_id: string; role: string };
+      const u = pubMap.get(row.user_id);
+      const dn = (u?.display_name ?? '').trim();
+      const un = (u?.username ?? '').trim();
+      const name = dn || un || 'Participant';
+      roles[row.user_id] = {
+        role: row.role,
+        name,
+        matchAliases: buildParticipantAliasSet(u?.display_name, u?.username, name),
+      };
+    });
+    setParticipantRoles(roles);
+  }, [roomId]);
+
+  useEffect(() => {
+    void loadParticipants();
+  }, [loadParticipants]);
+
+  useEffect(() => {
+    if (!roomId) return;
+    const ch = supabase
+      .channel(`beef_participants_live_${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'beef_participants',
+          filter: `beef_id=eq.${roomId}`,
+        },
+        () => {
+          if (isHost) void fetchPendingInvites();
+          void loadParticipants();
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [isHost, roomId, fetchPendingInvites, loadParticipants]);
+
   const [liveViewerCount, setLiveViewerCount] = useState(viewerCount);
   const liveViewerCountRef = useRef(liveViewerCount);
   useEffect(() => {
@@ -1151,41 +1185,6 @@ export function TikTokStyleArena({
       await endBeef('Le médiateur a mis fin au beef');
     }
   }, [isHost, endBeef]);
-
-  // Load beef participants from Supabase to map roles (noms via user_public_profile, pas users)
-  useEffect(() => {
-    const loadParticipants = async () => {
-      const { data } = await supabase
-        .from('beef_participants')
-        .select('user_id, role, is_main')
-        .eq('beef_id', roomId);
-
-      if (!data?.length) {
-        setParticipantRoles({});
-        return;
-      }
-
-      const { fetchUserPublicByIds } = await import('@/lib/fetch-user-public-profile');
-      const ids = data.map((p) => p.user_id).filter(Boolean);
-      const pubMap = await fetchUserPublicByIds(supabase, ids, 'id, username, display_name');
-
-      const roles: Record<string, BeefParticipantRowMeta> = {};
-      data.forEach((p) => {
-        const row = p as { user_id: string; role: string };
-        const u = pubMap.get(row.user_id);
-        const dn = (u?.display_name ?? '').trim();
-        const un = (u?.username ?? '').trim();
-        const name = dn || un || 'Participant';
-        roles[row.user_id] = {
-          role: row.role,
-          name,
-          matchAliases: buildParticipantAliasSet(u?.display_name, u?.username, name),
-        };
-      });
-      setParticipantRoles(roles);
-    };
-    loadParticipants();
-  }, [roomId]);
 
   // Load user points
   useEffect(() => {
@@ -3205,27 +3204,6 @@ export function TikTokStyleArena({
     }
   }, [leave, router, isHost, endBeef, roomId, userId]);
 
-  // Show pre-join screen before entering
-  if (!hasJoined) {
-    return (
-      <div className="w-full h-full relative">
-        <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer} />
-        {/* Waiting for Daily.co room to be ready */}
-        {!effectiveDailyRoomUrl && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm text-brand-400 text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2">
-            <div className="w-3 h-3 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
-            Préparation de la room vidéo...
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Waiting for join to complete (dailyRoomUrl just became available)
-  if (hasJoined && effectiveDailyRoomUrl && !isJoined && isJoining) {
-    // We're in the process of joining — show arena but with a connecting overlay
-  }
-
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
   const getMediatorDynamicColor = (val: number) => {
@@ -3279,6 +3257,56 @@ export function TikTokStyleArena({
       }}
       className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden bg-black lg:flex-row"
     >
+      {/* 1. ÉCRAN VS (Priorité Absolue, masque tout) */}
+      <AnimatePresence>
+        {showVsScreen && (
+          Object.keys(participantRoles).length > 0 ? (
+            <div key="vs-layer" className="absolute inset-0 z-[9999]">
+              <VsTransition
+                challengers={
+                  [
+                    participantRoles[expectedUids[0]]?.name,
+                    participantRoles[expectedUids[1]]?.name,
+                    expectedUids[2] ? participantRoles[expectedUids[2]]?.name : null,
+                    expectedUids[3] ? participantRoles[expectedUids[3]]?.name : null,
+                  ].filter(Boolean) as string[]
+                }
+                debateTitle={debateTitle}
+                onComplete={() => {
+                  setShowVsScreen(false);
+                  if (isViewer) setShowPreJoin(false);
+                }}
+              />
+            </div>
+          ) : (
+            <div
+              key="vs-loading"
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#08080a]"
+            >
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-plasma-500 border-t-transparent" />
+            </div>
+          )
+        )}
+      </AnimatePresence>
+
+      {/* 2. ÉCRAN PRE-JOIN (Tests Micros - Masque l'Arène) */}
+      {!showVsScreen && !hasJoined && showPreJoin && (
+        <div className="absolute inset-0 z-[8000] bg-[#08080a]">
+          <PreJoinScreen
+            userName={userName}
+            onJoin={handleJoin}
+            viewerMode={isViewer}
+            mediatorName={mediatorName}
+          />
+          {!effectiveDailyRoomUrl && (
+            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/80 px-4 py-2 text-xs font-semibold text-brand-400 backdrop-blur-sm">
+              <div className="h-3 w-3 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" />
+              Préparation de la room vidéo...
+            </div>
+          )}
+        </div>
+      )}
+
       {!isCinematicMode && arenaHasAnnouncement && (
         <div
           className="pointer-events-none fixed left-0 right-0 top-0 z-[500] hidden h-6 min-h-6 flex-col justify-center overflow-hidden border-b border-white/10 bg-black/40 backdrop-blur-md lg:flex lg:flex-col"
@@ -3295,37 +3323,6 @@ export function TikTokStyleArena({
           </div>
         </div>
       )}
-
-      <AnimatePresence>
-        {showVsScreen ? (
-          Object.keys(participantRoles).length > 0 ? (
-            <div data-cinema-stay key="vs-transition-wrap" className="contents">
-              <VsTransition
-                challengers={
-                  [
-                    participantRoles[expectedUids[0]]?.name,
-                    participantRoles[expectedUids[1]]?.name,
-                    expectedUids[2] ? participantRoles[expectedUids[2]]?.name : null,
-                    expectedUids[3] ? participantRoles[expectedUids[3]]?.name : null,
-                  ].filter(Boolean) as string[]
-                }
-                debateTitle={debateTitle}
-                onComplete={() => {
-                  setShowVsScreen(false);
-                  setShowPreJoin(false);
-                }}
-              />
-            </div>
-          ) : (
-            <div
-              key="vs-loading"
-              className="fixed inset-0 z-[9999] flex items-center justify-center bg-obsidian-950"
-            >
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-plasma-500 border-t-transparent" />
-            </div>
-          )
-        ) : null}
-      </AnimatePresence>
 
       <AnimatePresence>
         {isCinematicMode && (
@@ -3656,120 +3653,45 @@ export function TikTokStyleArena({
         </div>
         )}
 
-        {/* === ARÈNE EMPEREUR (GRILLE 2x2 PAR RÔLE — GRAND RÉFÉRENT) === */}
+        {/* === ARÈNE EMPEREUR === */}
         <div className="absolute inset-0 z-0 bg-[#08080a] p-1 sm:p-2">
           {(() => {
             type EmperorSlot = 'A' | 'B' | 'C' | 'D';
-            type ArenaCellPanel = (typeof displayPanelsFixed)[number];
-            type LayoutCell = {
-              id: string;
-              name: string;
-              panel: ArenaCellPanel;
-              slot: EmperorSlot;
-              aura: number;
-              color: string;
-              cellClass: string;
-              uiPos: string;
-            };
-
-            const expectedCount = Math.min(
-              4,
-              Math.max(
-                2,
-                expectedUids.length > 0 ? expectedUids.length : Math.max(challengerRemoteSlots.length, 2),
-              ),
-            );
+            const expectedCount = Math.max(2, expectedUids.length);
             const gridClass = expectedCount <= 2 ? 'grid-cols-2 grid-rows-1' : 'grid-cols-2 grid-rows-2';
-
-            const layoutConfigs: LayoutCell[] =
-              expectedCount >= 3
-                ? [
-                    {
-                      id: 'grid-A',
-                      name: participantRoles[expectedUids[0]]?.name || 'Challenger 1',
-                      panel: displayPanelsFixed[0],
-                      slot: 'A',
-                      aura: auraA,
-                      color: '168,85,247',
-                      cellClass: '',
-                      uiPos: 'top-3 left-3 sm:top-4 sm:left-4 items-start text-left',
-                    },
-                    {
-                      id: 'grid-B',
-                      name: participantRoles[expectedUids[1]]?.name || 'Challenger 2',
-                      panel: displayPanelsFixed[1],
-                      slot: 'B',
-                      aura: auraB,
-                      color: '16,185,129',
-                      cellClass: '',
-                      uiPos: 'top-3 right-3 sm:top-4 sm:right-4 items-end text-right',
-                    },
-                    {
-                      id: 'grid-C',
-                      name: participantRoles[expectedUids[2]]?.name || 'Témoin 1',
-                      panel: displayPanelsFixed[2],
-                      slot: 'C',
-                      aura: auraC,
-                      color: '234,179,8',
-                      cellClass: expectedCount === 3 ? 'col-span-2' : '',
-                      uiPos: 'bottom-3 left-3 sm:bottom-4 sm:left-4 items-start text-left',
-                    },
-                    ...(expectedCount === 4
-                      ? ([
-                          {
-                            id: 'grid-D',
-                            name: participantRoles[expectedUids[3]]?.name || 'Témoin 2',
-                            panel: displayPanelsFixed[3],
-                            slot: 'D' as const,
-                            aura: auraD,
-                            color: '59,130,246',
-                            cellClass: '',
-                            uiPos: 'bottom-3 right-3 sm:bottom-4 sm:right-4 items-end text-right',
-                          },
-                        ] satisfies LayoutCell[])
-                      : []),
-                  ]
-                : [
-                    {
-                      id: 'grid-A',
-                      name: participantRoles[expectedUids[0]]?.name || 'Challenger 1',
-                      panel: displayPanelsFixed[0],
-                      slot: 'A',
-                      aura: auraA,
-                      color: '168,85,247',
-                      cellClass: '',
-                      uiPos: 'top-3 left-3 sm:top-4 sm:left-4 items-start text-left',
-                    },
-                    {
-                      id: 'grid-B',
-                      name: participantRoles[expectedUids[1]]?.name || 'Challenger 2',
-                      panel: displayPanelsFixed[1],
-                      slot: 'B',
-                      aura: auraB,
-                      color: '16,185,129',
-                      cellClass: '',
-                      uiPos: 'top-3 right-3 sm:top-4 sm:right-4 items-end text-right',
-                    },
-                  ];
+            const layoutConfigs = displayPanelsFixed.slice(0, expectedCount).map((panel, idx) => ({
+              id: `grid-${idx}`,
+              name: participantRoles[expectedUids[idx]]?.name || `Participant ${idx + 1}`,
+              panel,
+              slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as EmperorSlot,
+              color: idx === 0 ? '168,85,247' : idx === 1 ? '16,185,129' : idx === 2 ? '234,179,8' : '59,130,246',
+              aura: [auraA, auraB, auraC, auraD][idx],
+              cellClass: expectedCount === 3 && idx === 2 ? 'col-span-2' : '',
+              uiPos:
+                idx === 0
+                  ? 'top-3 left-3 sm:top-5 sm:left-5 items-start text-left'
+                  : idx === 1
+                    ? 'top-3 right-3 sm:top-5 sm:right-5 items-end text-right'
+                    : idx === 2
+                      ? 'bottom-3 left-3 sm:bottom-5 sm:left-5 items-start text-left'
+                      : 'bottom-3 right-3 sm:bottom-5 sm:right-5 items-end text-right',
+            }));
 
             return (
               <>
                 <div className={`relative h-full w-full grid gap-1 sm:gap-2 ${gridClass}`}>
                   {layoutConfigs.map((cfg) => {
-                    const isLocal = cfg.panel?.sessionId === localParticipant?.sessionId && !isViewer;
                     const isSpeaking = speakingTurnActive && effectiveHotMicSpeakerSlot === cfg.slot;
+                    const isLocal = cfg.panel?.sessionId === localParticipant?.sessionId && !isViewer;
                     const isMutedByFocus =
-                      speakingTurnActive &&
-                      effectiveHotMicSpeakerSlot &&
-                      effectiveHotMicSpeakerSlot !== cfg.slot &&
-                      (['A', 'B', 'C', 'D'] as const).includes(cfg.slot);
+                      speakingTurnActive && Boolean(effectiveHotMicSpeakerSlot) && effectiveHotMicSpeakerSlot !== cfg.slot;
                     const auraShadow =
                       cfg.aura > 0
                         ? `0 0 ${15 + Math.min(cfg.aura, 100) * 0.5}px rgba(${cfg.color}, 0.8)`
                         : 'none';
                     const filterVal = isMutedByFocus
                       ? 'grayscale(0.6) blur(3px)'
-                      : `brightness(${1 + (cfg.aura / 300) * 0.4}) saturate(${1 + (cfg.aura / 300) * 0.4})`;
+                      : `brightness(${1 + (cfg.aura / 300) * 0.4})`;
 
                     return (
                       <motion.div
@@ -3778,28 +3700,20 @@ export function TikTokStyleArena({
                         style={{
                           boxShadow: auraShadow,
                           zIndex: cfg.aura > 0 ? 10 : 1,
-                          opacity: isMutedByFocus ? 0.35 : 1,
+                          opacity: isMutedByFocus ? 0.4 : 1,
                           filter: filterVal,
                         }}
                       >
-                        <AnimatePresence mode="wait">
-                          <motion.div
-                            key={cfg.panel?.sessionId ? cfg.panel.sessionId + (cfg.panel.videoTrack?.id || '') : 'empty'}
-                            className="absolute inset-0"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                          >
-                            {cfg.panel?.videoTrack ? (
-                              <ParticipantVideo
-                                videoTrack={cfg.panel.videoTrack}
-                                muted={isLocal}
-                                className="absolute inset-0 h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="absolute inset-0 flex items-center justify-center text-4xl opacity-20">👤</div>
-                            )}
-                          </motion.div>
-                        </AnimatePresence>
+                        {cfg.panel?.videoTrack ? (
+                          <ParticipantVideo
+                            videoTrack={cfg.panel.videoTrack}
+                            muted={isLocal}
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-4xl opacity-20">👤</div>
+                        )}
+
                         {!isLocal && (
                           <motion.button
                             type="button"
@@ -3810,37 +3724,22 @@ export function TikTokStyleArena({
                               emitTapSupport(cfg.slot);
                               preferSide(cfg.slot);
                             }}
-                            onDoubleClick={(e) => e.stopPropagation()}
                             className="absolute inset-0 z-[28] h-full w-full touch-manipulation outline-none"
-                            aria-label={`Soutenir ${cfg.name}`}
                           />
                         )}
-                        {isLocal && isCameraInterrupted && !isViewer && (
-                          <div className="pointer-events-auto absolute inset-0 z-[150] flex items-center justify-center p-2">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void recoverMediaDevices();
-                              }}
-                              className="pointer-events-auto rounded-[1rem] border border-plasma-500/50 bg-black/80 px-3 py-2 text-[10px] font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl"
-                            >
-                              📡 Réactiver
-                            </button>
-                          </div>
-                        )}
+
                         <div
                           data-cinema-stay
                           className={`pointer-events-auto absolute z-[140] flex flex-col gap-1.5 ${cfg.uiPos}`}
                         >
-                          <div className="flex max-w-[10rem] items-center gap-2 rounded-xl border border-white/10 bg-black/50 px-3 py-2 shadow-lg backdrop-blur-md sm:max-w-[14rem]">
+                          <div className="flex max-w-[9rem] sm:max-w-[14rem] items-center gap-2 rounded-xl border border-white/10 bg-black/60 px-3 py-2 shadow-lg backdrop-blur-md">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null);
                               }}
-                              className="truncate text-[11px] font-black tracking-wide text-white transition-colors hover:text-plasma-400 sm:text-xs"
+                              className="truncate text-[10px] sm:text-[11px] font-black tracking-wide text-white hover:text-plasma-400"
                             >
                               @{cfg.name}
                             </button>
@@ -3851,19 +3750,21 @@ export function TikTokStyleArena({
                             )}
                           </div>
                           {isSpeaking && (
-                            <div className="w-fit animate-pulse rounded bg-red-600 px-2 py-0.5 text-[10px] font-black text-white shadow-[0_0_10px_rgba(220,38,38,0.6)]">
+                            <div className="w-fit animate-pulse rounded bg-red-600 px-2 py-0.5 text-[9px] font-black text-white shadow-[0_0_10px_rgba(220,38,38,0.6)]">
                               DIRECT
                             </div>
                           )}
-                          {isLocal && !isViewer && (
-                            <div className={`mt-1 flex shrink-0 gap-2 ${cfg.uiPos.includes('items-end') ? 'self-end' : 'self-start'}`}>
+                          {isLocal && (
+                            <div
+                              className={`mt-1 flex shrink-0 gap-2 ${cfg.uiPos.includes('items-end') ? 'self-end' : 'self-start'}`}
+                            >
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleMic();
                                 }}
-                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 shadow-lg backdrop-blur-xl transition-colors hover:bg-black/80 ${micEnabled ? 'text-white' : 'bg-red-500 text-white hover:bg-red-600'}`}
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 shadow-lg backdrop-blur-xl ${micEnabled ? 'text-white' : 'bg-red-500 text-white'}`}
                               >
                                 <Mic className="h-4 w-4" />
                               </button>
@@ -3873,7 +3774,7 @@ export function TikTokStyleArena({
                                   e.stopPropagation();
                                   toggleCam();
                                 }}
-                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 shadow-lg backdrop-blur-xl transition-colors hover:bg-black/80 ${camEnabled ? 'text-white' : 'bg-red-500 text-white hover:bg-red-600'}`}
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 shadow-lg backdrop-blur-xl ${camEnabled ? 'text-white' : 'bg-red-500 text-white'}`}
                               >
                                 <Video className="h-4 w-4" />
                               </button>
@@ -3885,86 +3786,43 @@ export function TikTokStyleArena({
                   })}
                 </div>
 
-                {/* LE RÉFÉRENT EMPEREUR (CENTRE ABSOLU) */}
+                {/* LE RÉFÉRENT EMPEREUR (MASQUE CENTRAL CALIBRÉ SANS VIDE NOIR) */}
                 <div
                   data-cinema-stay
                   className="pointer-events-none absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
                 >
-                  <div className="absolute left-1/2 top-1/2 h-[145px] w-[145px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08080a] sm:h-[220px] sm:w-[220px]" />
+                  <div className="absolute left-1/2 top-1/2 h-[142px] w-[142px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#08080a] sm:h-[202px] sm:w-[202px]" />
                   <motion.div
                     animate={{
                       boxShadow:
-                        auraMed > 0 ? `0 0 40px ${getMediatorDynamicColor(auraMed)}` : '0 0 0 4px rgba(255,255,255,0.1)',
+                        auraMed > 0
+                          ? `0 0 40px ${getMediatorDynamicColor(auraMed)}`
+                          : '0 0 0 4px rgba(255,255,255,0.05)',
                     }}
-                    style={{ filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})` }}
-                    className="pointer-events-auto relative h-[100px] w-[100px] overflow-hidden rounded-full border-2 border-white/20 bg-black sm:h-[180px] sm:w-[180px]"
+                    className="pointer-events-auto relative h-[140px] w-[140px] overflow-hidden rounded-full border-2 border-white/10 bg-black sm:h-[200px] sm:w-[200px]"
                   >
-                    {mediatorIsLocal && isCameraInterrupted && !isViewer && (
-                      <div className="pointer-events-auto absolute inset-0 z-[150] flex items-center justify-center p-2">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void recoverMediaDevices();
-                          }}
-                          className="pointer-events-auto rounded-[1rem] border border-plasma-500/50 bg-black/80 px-3 py-2 text-[10px] font-bold text-white shadow-[0_0_25px_rgba(162,0,255,0.4)] backdrop-blur-xl"
-                        >
-                          📡
-                        </button>
-                      </div>
+                    {mediatorParticipant?.videoTrack ? (
+                      <ParticipantVideo
+                        videoTrack={mediatorParticipant.videoTrack}
+                        muted={mediatorIsLocal}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="m-auto flex h-full items-center justify-center text-4xl sm:text-5xl opacity-40">⚖️</div>
                     )}
-                    <button
-                      type="button"
-                      onPointerDown={(e) => {
-                        e.stopPropagation();
-                        if (isWaitingForMediator) return;
-                        emitTapSupport('M');
-                        preferSide('M');
-                      }}
-                      onDoubleClick={(e) => e.stopPropagation()}
-                      className="flex h-full w-full touch-manipulation overflow-hidden rounded-full border-transparent bg-black outline-none active:scale-95"
-                    >
-                      {isWaitingForMediator ? (
-                        <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/40 p-3 sm:p-4">
-                          <div className="h-6 w-6 shrink-0 animate-spin rounded-full border-[3px] border-brand-400 border-t-transparent opacity-80 sm:h-10 sm:w-10" />
-                          <span className="mt-2 text-center text-[8px] font-black uppercase leading-none tracking-tighter text-white sm:text-[10px]">
-                            Attente
-                            <br />
-                            Ref
-                          </span>
-                        </div>
-                      ) : mediatorParticipant?.videoTrack ? (
-                        <ParticipantVideo videoTrack={mediatorParticipant.videoTrack} muted={mediatorIsLocal} className="h-full w-full object-cover" />
-                      ) : mediatorGraceActive ? (
-                        <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-black/60 p-3 sm:p-4">
-                          <div className="mb-2 h-8 w-8 animate-pulse rounded-full border-[3px] border-red-500 border-t-transparent sm:h-10 sm:w-10" />
-                          <span className="text-center text-[10px] font-black leading-none text-red-500 sm:text-xs">
-                            DÉCONNECTÉ
-                            <br />
-                            {mediatorGraceSeconds}s
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="m-auto text-3xl text-white/40 sm:text-5xl">⚖️</span>
-                      )}
-                    </button>
                   </motion.div>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (!isWaitingForMediator) void openProfile(mediatorName, host.id);
-                    }}
-                    disabled={isWaitingForMediator}
-                    className="pointer-events-auto relative z-10 mt-2 rounded-full border border-white/10 bg-black/80 px-3 py-1 text-[10px] font-black text-white shadow-lg hover:bg-black disabled:pointer-events-none disabled:opacity-90 sm:px-4 sm:text-[11px]"
+                    onClick={() => void openProfile(mediatorName, host.id)}
+                    className="pointer-events-auto relative z-10 mt-1 rounded-full border border-white/10 bg-black/80 px-4 py-1 text-[10px] sm:text-[11px] font-black text-white shadow-lg hover:bg-black"
                   >
-                    <span>@{mediatorName}</span>
+                    @{mediatorName}
                   </button>
                 </div>
               </>
             );
           })()}
         </div>
-        {/* === FIN ARÈNE EMPEREUR === */}
 
         {/* OVERLAY CHAT MOBILE (Intégré à la vidéo, invisible sur PC) */}
         {!isCinematicMode && (
