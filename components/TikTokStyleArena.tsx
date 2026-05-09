@@ -577,6 +577,16 @@ export function TikTokStyleArena({
         participantId: inviteUserId,
       });
       if (!r.ok) return;
+
+      setEjectedUids((prev) => prev.filter((id) => id !== inviteUserId));
+      if (channelRef.current) {
+        void channelRef.current.send({
+          type: 'broadcast',
+          event: 'participant_rejoined',
+          payload: { userId: inviteUserId },
+        });
+      }
+
       toast('Challenger accepté !', 'success');
       void fetchPendingInvites();
     },
@@ -2093,6 +2103,11 @@ export function TikTokStyleArena({
           setEjectedUids((prev) => [...prev, payload.userId]);
         }
       })
+      .on('broadcast', { event: 'participant_rejoined' }, ({ payload }: any) => {
+        if (payload?.userId) {
+          setEjectedUids((prev) => prev.filter((id) => id !== payload.userId));
+        }
+      })
       .on('broadcast', { event: 'beef_verdict' }, ({ payload }: any) => {
         const v = payload?.verdict as string | undefined;
         if (v !== 'resolved' && v !== 'closed' && v !== 'rematch') return;
@@ -2691,8 +2706,8 @@ export function TikTokStyleArena({
 
   /** Micro challengers : hot mic (tour actif) même hors débat structuré ; sinon règles structurées. */
   useEffect(() => {
-    const isLocalOnRing = !!localParticipant?.arenaUserId && Object.keys(participantRoles).includes(localParticipant.arenaUserId);
-    if (!isLocalOnRing || isHost || !isJoined) return;
+    const isLocalOnRing = Object.keys(participantRoles).includes(userId);
+    if (!isLocalOnRing || isHost || isViewer || !isJoined) return;
     if (micMutedByMediator) {
       setLocalAudioEnabled(false);
       return;
@@ -2717,6 +2732,7 @@ export function TikTokStyleArena({
   }, [
     participantRoles,
     isHost,
+    isViewer,
     isJoined,
     micMutedByMediator,
     mediatorHoldingFloor,
@@ -2810,6 +2826,15 @@ export function TikTokStyleArena({
       participantId: invitedUserId,
     });
     if (!inv.ok) return;
+
+    setEjectedUids((prev) => prev.filter((id) => id !== invitedUserId));
+    if (channelRef.current) {
+      void channelRef.current.send({
+        type: 'broadcast',
+        event: 'participant_rejoined',
+        payload: { userId: invitedUserId },
+      });
+    }
 
     // Fetch user info for local debaters list
     const { data: invitedUser } = await supabase
