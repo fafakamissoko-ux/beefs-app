@@ -33,7 +33,11 @@ export type BeefManageAction =
       endReason?: string;
       /** Surcharge optionnelle pour REMATCH_MEDIATION_SUMMARY */
       mediationSummary?: string;
-    };
+    }
+  | { action: 'CLAIM_MANIFESTO'; beefId: string }
+  | { action: 'APPROVE_MANIFESTO'; beefId: string }
+  | { action: 'REJECT_MANIFESTO'; beefId: string }
+  | { action: 'WITHDRAW_MANIFESTO'; beefId: string };
 
 export type BeefManageResult =
   | { ok: true; data?: unknown }

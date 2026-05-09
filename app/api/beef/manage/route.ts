@@ -76,6 +76,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'beefId invalide' }, { status: 400 });
     }
 
+    const action = body.action;
+
     const { data: beef, error: beefErr } = await supabaseAdmin
       .from('beefs')
       .select('id, mediator_id, created_by, status')
@@ -86,11 +88,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
     }
 
+    if (action === 'CLAIM_MANIFESTO') {
+      const { error } = await supabaseAdmin
+        .from('beefs')
+        .update({ mediator_id: user.id })
+        .eq('id', beefId)
+        .eq('intent', 'manifesto')
+        .is('mediator_id', null)
+        .neq('created_by', user.id);
+      if (error) return NextResponse.json({ error: 'Candidature impossible' }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'APPROVE_MANIFESTO') {
+      const { error } = await supabaseAdmin
+        .from('beefs')
+        .update({ status: 'scheduled' })
+        .eq('id', beefId)
+        .eq('created_by', user.id)
+        .eq('intent', 'manifesto')
+        .eq('status', 'pending');
+      if (error) return NextResponse.json({ error: 'Validation impossible' }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'REJECT_MANIFESTO') {
+      const { error } = await supabaseAdmin
+        .from('beefs')
+        .update({ mediator_id: null })
+        .eq('id', beefId)
+        .eq('created_by', user.id)
+        .eq('intent', 'manifesto')
+        .eq('status', 'pending');
+      if (error) return NextResponse.json({ error: 'Refus impossible' }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'WITHDRAW_MANIFESTO') {
+      const { error } = await supabaseAdmin
+        .from('beefs')
+        .update({ mediator_id: null, status: 'pending' })
+        .eq('id', beefId)
+        .eq('intent', 'manifesto')
+        .eq('mediator_id', user.id);
+      if (error) return NextResponse.json({ error: 'Désistement impossible' }, { status: 500 });
+      return NextResponse.json({ success: true });
+    }
+
     if (!isMediatorOfBeef(beef, user.id)) {
       return NextResponse.json({ error: 'Réservé au médiateur de ce beef' }, { status: 403 });
     }
-
-    const action = body.action;
 
     if (action === 'ACCEPT_PARTICIPANT') {
       const participantId = typeof body.participantId === 'string' ? body.participantId.trim() : '';

@@ -12,6 +12,7 @@ import { EditBeefModal } from '@/components/EditBeefModal';
 import dynamic from 'next/dynamic';
 import { submitNewBeef } from '@/lib/submitNewBeef';
 import type { SubmitBeefPayload } from '@/lib/submitNewBeef';
+import { postBeefManage } from '@/lib/beef-manage-client';
 import { hrefWithFrom } from '@/lib/navigation-return';
 import { useClientArenaOnboardingGuard } from '@/lib/client-arena-onboarding-guard';
 
@@ -274,7 +275,12 @@ export default function FeedPage() {
         .limit(fetchLimit);
 
       if (feedType === 'manifestes') {
-        query = query.eq('intent', 'manifesto').is('mediator_id', null);
+        query = query.eq('intent', 'manifesto');
+        if (user?.id) {
+          query = query.or(`mediator_id.is.null,created_by.eq.${user.id}`);
+        } else {
+          query = query.is('mediator_id', null);
+        }
       }
 
       if (feedType === 'pour-vous') {
@@ -538,78 +544,50 @@ export default function FeedPage() {
     }
   }, [fetchLimit, selectedStatus, selectedTags, feedType, followingIds, user?.id]);
 
-  const handleClaimManifesto = useCallback(
-    async (beefId: string) => {
-      if (!user?.id) return;
-      const { error } = await supabase
-        .from('beefs')
-        .update({ mediator_id: user.id })
-        .eq('id', beefId)
-        .eq('intent', 'manifesto')
-        .is('mediator_id', null)
-        .neq('created_by', user.id);
-      if (error) {
-        toast(error.message || 'Impossible de postuler', 'error');
-        return;
-      }
-      toast('Candidature envoyée ! En attente de l’initiateur.', 'success');
-      void loadBeefs();
-    },
-    [user?.id, toast, loadBeefs],
-  );
+  const getSessionToken = async () => {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token;
+  };
+
+  const handleClaimManifesto = useCallback(async (beefId: string) => {
+    if (!user?.id) return;
+    const token = await getSessionToken();
+    if (!token) return;
+    const res = await postBeefManage(token, { action: 'CLAIM_MANIFESTO', beefId });
+    if (!res.ok) { toast('Impossible de postuler', 'error'); return; }
+    toast('Candidature envoyée ! En attente de l’initiateur.', 'success');
+    void loadBeefs();
+  }, [user?.id, toast, loadBeefs]);
 
   const handleApproveRef = useCallback(async (beefId: string) => {
     if (!user?.id) return;
-    const { error } = await supabase
-      .from('beefs')
-      .update({ status: 'scheduled' })
-      .eq('id', beefId)
-      .eq('created_by', user.id)
-      .eq('intent', 'manifesto')
-      .eq('status', 'pending');
-    if (error) {
-      toast('Erreur lors de la validation', 'error');
-      return;
-    }
+    const token = await getSessionToken();
+    if (!token) return;
+    const res = await postBeefManage(token, { action: 'APPROVE_MANIFESTO', beefId });
+    if (!res.ok) { toast('Erreur lors de la validation', 'error'); return; }
     toast("Ref validé ! L'affaire est programmée.", 'success');
     void loadBeefs();
   }, [user?.id, toast, loadBeefs]);
 
   const handleRejectRef = useCallback(async (beefId: string) => {
     if (!user?.id) return;
-    const { error } = await supabase
-      .from('beefs')
-      .update({ mediator_id: null })
-      .eq('id', beefId)
-      .eq('created_by', user.id)
-      .eq('intent', 'manifesto')
-      .eq('status', 'pending');
-    if (error) {
-      toast('Erreur lors du refus', 'error');
-      return;
-    }
+    const token = await getSessionToken();
+    if (!token) return;
+    const res = await postBeefManage(token, { action: 'REJECT_MANIFESTO', beefId });
+    if (!res.ok) { toast('Erreur lors du refus', 'error'); return; }
     toast('Candidature refusée.', 'info');
     void loadBeefs();
   }, [user?.id, toast, loadBeefs]);
 
-  const handleWithdrawManifesto = useCallback(
-    async (beefId: string) => {
-      if (!user?.id) return;
-      const { error } = await supabase
-        .from('beefs')
-        .update({ mediator_id: null, status: 'pending' })
-        .eq('id', beefId)
-        .eq('intent', 'manifesto')
-        .eq('mediator_id', user.id);
-      if (error) {
-        toast(error.message || 'Impossible de te désister', 'error');
-        return;
-      }
-      toast('Tu n’es plus médiateur sur cette affaire.', 'success');
-      void loadBeefs();
-    },
-    [user?.id, toast, loadBeefs]
-  );
+  const handleWithdrawManifesto = useCallback(async (beefId: string) => {
+    if (!user?.id) return;
+    const token = await getSessionToken();
+    if (!token) return;
+    const res = await postBeefManage(token, { action: 'WITHDRAW_MANIFESTO', beefId });
+    if (!res.ok) { toast('Impossible de te désister', 'error'); return; }
+    toast('Tu n’es plus médiateur sur cette affaire.', 'success');
+    void loadBeefs();
+  }, [user?.id, toast, loadBeefs]);
 
   const confirmDelete = async () => {
     if (!beefToDelete || !user?.id) return;
