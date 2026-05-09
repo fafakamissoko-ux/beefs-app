@@ -602,7 +602,7 @@ export function TikTokStyleArena({
     void fetchPendingInvites();
   }, [isHost, mediatorSidebarOpen, fetchPendingInvites]);
 
-  /** Spectateurs : détecte l’acceptation médiateur sur leur ligne beef_participants. */
+  /** Spectateurs : détecte les invitations directes et les acceptations sur leur ligne beef_participants. */
   useEffect(() => {
     if (!isViewer || !roomId || !userId) return;
 
@@ -611,7 +611,7 @@ export function TikTokStyleArena({
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'beef_participants',
           filter: `beef_id=eq.${roomId}`,
@@ -619,13 +619,14 @@ export function TikTokStyleArena({
         (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
           const newRow = payload.new;
           const oldRow = payload.old;
+          if (!newRow) return;
           const rawUid = newRow.user_id;
           const rowUserStr =
             typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
           const myId = String(userId);
           if (rowUserStr === myId) {
-            if (newRow.invite_status === 'accepted') {
-              if (oldRow?.invite_status === 'accepted') {
+            if (newRow.invite_status === 'accepted' || newRow.invite_status === 'pending') {
+              if (oldRow?.invite_status === newRow.invite_status) {
                 return;
               }
               setAcceptedInviteAlert(true);
@@ -2684,7 +2685,8 @@ export function TikTokStyleArena({
 
   /** Micro challengers : hot mic (tour actif) même hors débat structuré ; sinon règles structurées. */
   useEffect(() => {
-    if (isHost || !isJoined) return;
+    const isLocalOnRing = !!localParticipant?.arenaUserId && Object.keys(participantRoles).includes(localParticipant.arenaUserId);
+    if (!isLocalOnRing || isHost || !isJoined) return;
     if (micMutedByMediator) {
       setLocalAudioEnabled(false);
       return;
@@ -2707,6 +2709,7 @@ export function TikTokStyleArena({
     }
     setLocalAudioEnabled(false);
   }, [
+    participantRoles,
     isHost,
     isJoined,
     micMutedByMediator,
@@ -3638,11 +3641,11 @@ export function TikTokStyleArena({
               aura: [auraA, auraB, auraC, auraD][idx],
               cellClass: expectedCount === 3 && idx === 2 ? 'col-span-2' : '',
               uiPos: expectedCount <= 2
-                ? (idx === 0 ? 'bottom-2 left-2 sm:bottom-4 sm:left-4 flex-row items-center' : 'bottom-2 right-2 sm:bottom-4 sm:right-4 flex-row-reverse items-center')
+                ? (idx === 0 ? 'bottom-[120px] left-2 sm:bottom-4 sm:left-4 flex-row items-center' : 'bottom-[120px] right-2 sm:bottom-4 sm:right-4 flex-row-reverse items-center')
                 : (idx === 0 ? 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-center'
                   : idx === 1 ? 'top-2 right-2 sm:top-4 sm:right-4 flex-row-reverse items-center'
-                  : idx === 2 ? 'bottom-2 left-2 sm:bottom-4 sm:left-4 flex-row items-center'
-                  : 'bottom-2 right-2 sm:bottom-4 sm:right-4 flex-row-reverse items-center'),
+                  : idx === 2 ? 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-center'
+                  : 'top-2 right-2 sm:top-4 sm:right-4 flex-row-reverse items-center'),
             }));
 
             return (
