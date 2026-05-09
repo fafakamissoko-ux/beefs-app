@@ -182,8 +182,8 @@ export function useDailyCall(
 
       const co = DailyIframe.createCallObject({
         userData,
-        videoSource: preAcquiredStream ? preAcquiredStream.getVideoTracks()[0] : false,
-        audioSource: preAcquiredStream ? preAcquiredStream.getAudioTracks()[0] : false,
+        videoSource: preAcquiredStream === null ? false : (preAcquiredStream ? preAcquiredStream.getVideoTracks()[0] : undefined),
+        audioSource: preAcquiredStream === null ? false : (preAcquiredStream ? preAcquiredStream.getAudioTracks()[0] : undefined),
         subscribeToTracksAutomatically: true,
       });
       callRef.current = co;
