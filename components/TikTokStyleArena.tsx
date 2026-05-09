@@ -3733,6 +3733,12 @@ export function TikTokStyleArena({
                           <div className="absolute inset-0 flex items-center justify-center text-4xl opacity-20">👤</div>
                         )}
 
+                        {isLocal && isCameraInterrupted && (
+                          <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/60 p-2 backdrop-blur-sm">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); void recoverMediaDevices(); }} className="rounded-full bg-plasma-500 px-3 py-1.5 text-[9px] font-black text-white shadow-glow-plasma">📡 RÉACTIVER</button>
+                          </div>
+                        )}
+
                         {!isLocal && (
                           <motion.button
                             type="button"
