@@ -293,6 +293,7 @@ export function TikTokStyleArena({
   const [parolePresetSec, setParolePresetSec] = useState(60);
   const [announcementTicker, setAnnouncementTicker] = useState('');
   const [gloryChallengerSlot, setGloryChallengerSlot] = useState<null | 'A' | 'B'>(null);
+  const [ejectedUids, setEjectedUids] = useState<string[]>([]);
 
   // ── END-OF-BEEF STATE ──
   const [beefEnded, setBeefEnded] = useState(false);
@@ -1549,10 +1550,10 @@ export function TikTokStyleArena({
 
   const expectedUids = useMemo(() => {
     return Object.entries(participantRoles)
-      .filter(([uid]) => uid !== host.id)
+      .filter(([uid]) => uid !== host.id && !ejectedUids.includes(uid))
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map((e) => e[0]);
-  }, [participantRoles, host.id]);
+  }, [participantRoles, host.id, ejectedUids]);
 
   type ChallengerArenaPanel = (typeof challengerRemoteSlots)[number];
 
@@ -2086,6 +2087,11 @@ export function TikTokStyleArena({
         const uid = payload?.targetUserId as string | undefined;
         if (!uid || uid !== userId) return;
         setMicMutedByMediator(!!payload?.muted);
+      })
+      .on('broadcast', { event: 'participant_ejected' }, ({ payload }: any) => {
+        if (payload?.userId) {
+          setEjectedUids((prev) => [...prev, payload.userId]);
+        }
       })
       .on('broadcast', { event: 'beef_verdict' }, ({ payload }: any) => {
         const v = payload?.verdict as string | undefined;
@@ -3914,11 +3920,19 @@ export function TikTokStyleArena({
           onSetChallengerMuted={handleMediatorChallengerMute}
           onEjectParticipant={async (sid) => {
             const panel = challengerRemoteSlots.find((p) => p.sessionId === sid);
-            if (panel?.arenaUserId) {
-              await runBeefManage({ action: 'REMOVE_PARTICIPANT', beefId: roomId, participantId: panel.arenaUserId, removeKind: 'kick' });
+            const uid = panel?.arenaUserId;
+            if (uid) {
+              if (channelRef.current) {
+                void channelRef.current.send({
+                  type: 'broadcast',
+                  event: 'participant_ejected',
+                  payload: { userId: uid },
+                });
+              }
+              setEjectedUids((prev) => [...prev, uid]);
             }
             const ok = await ejectRemoteParticipant(sid);
-            if (ok) toast('Participant expulsé définitivement', 'success');
+            if (ok) toast('Participant expulsé de la vidéo', 'success');
             else toast('Expulsion impossible.', 'error');
           }}
           onAdjustTime={adjustBeefTime}
@@ -4345,7 +4359,7 @@ export function TikTokStyleArena({
               </p>
               <button
                 type="button"
-                onClick={() => window.location.reload()}
+                onClick={() => { window.location.href = window.location.pathname + '?join=' + Date.now(); }}
                 className="w-full rounded-full bg-cobalt-500 py-3.5 font-mono text-sm font-black uppercase tracking-wider text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-transform hover:bg-cobalt-400 active:scale-95"
               >
                 Prendre place
