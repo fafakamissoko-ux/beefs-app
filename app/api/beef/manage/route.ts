@@ -101,6 +101,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'APPROVE_MANIFESTO') {
+      const { data: beef } = await supabaseAdmin
+        .from('beefs')
+        .select('title, mediator_id')
+        .eq('id', beefId)
+        .single();
+
       const { error } = await supabaseAdmin
         .from('beefs')
         .update({ status: 'scheduled' })
@@ -109,6 +115,18 @@ export async function POST(request: NextRequest) {
         .eq('intent', 'manifesto')
         .eq('status', 'pending');
       if (error) return NextResponse.json({ error: 'Validation impossible' }, { status: 500 });
+
+      if (beef?.mediator_id) {
+        const msg = `Tu as été choisi comme médiateur pour l'affaire : ${beef.title ?? ''}`;
+        await supabaseAdmin.from('notifications').insert({
+          user_id: beef.mediator_id,
+          type: 'system',
+          title: 'Candidature validée !',
+          body: msg,
+          link: `/arena/${beefId}`,
+          metadata: { subtype: 'manifesto_approved', related_id: beefId },
+        });
+      }
       return NextResponse.json({ success: true });
     }
 

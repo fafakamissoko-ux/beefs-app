@@ -177,21 +177,14 @@ export function useDailyCall(
         callRef.current = null;
       }
 
-      /** Flux déjà obtenu sur l’écran pré-joint : même geste utilisateur → évite le blocage iOS/Safari/Brave après await fetchMeetingToken(). */
-      let videoSource: boolean | MediaStreamTrack = !viewerMode;
-      let audioSource: boolean | MediaStreamTrack = !viewerMode;
-      if (!viewerMode && preAcquiredStream) {
-        const vt = preAcquiredStream.getVideoTracks()[0];
-        const at = preAcquiredStream.getAudioTracks()[0];
-        if (vt) videoSource = vt;
-        else videoSource = false;
-        if (at) audioSource = at;
-        else audioSource = false;
-      }
+
+      const userData = buildDailyJoinUserData(arenaUserId);
 
       const co = DailyIframe.createCallObject({
-        audioSource,
-        videoSource,
+        userData,
+        videoSource: preAcquiredStream ? preAcquiredStream.getVideoTracks()[0] : false,
+        audioSource: preAcquiredStream ? preAcquiredStream.getAudioTracks()[0] : false,
+        subscribeToTracksAutomatically: true,
       });
       callRef.current = co;
 
@@ -248,7 +241,6 @@ export function useDailyCall(
         setIsCameraInterrupted(true);
       });
 
-      const userData = buildDailyJoinUserData(arenaUserId);
       /** Jeton : priorité au token `beef/access`, sinon émission legacy `daily/meeting-token`. */
       let token: string | undefined;
       const accessTok = accessMeetingTokenRef.current;

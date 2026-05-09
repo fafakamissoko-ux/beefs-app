@@ -68,6 +68,16 @@ import { playRematchThunderSfx } from '@/lib/playVerdictSfx';
 import { MediatorSidebar, type MediatorRemoteRow } from './MediatorSidebar';
 import { FullscreenGiftAnimation, type ArenaBigGiftPayload } from './Arena/FullscreenGiftAnimation';
 
+function RemoteAudio({ track }: { track: MediaStreamTrack | null }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  useEffect(() => {
+    if (audioRef.current && track) {
+      audioRef.current.srcObject = new MediaStream([track]);
+    }
+  }, [track]);
+  return <audio ref={audioRef} autoPlay playsInline className="hidden" />;
+}
+
 const SFX_MAP: Record<string, string> = {
   horn: '/sounds/horn.mp3',
   laugh: '/sounds/laugh.mp3',
@@ -231,8 +241,6 @@ export function TikTokStyleArena({
     [toast],
   );
 
-  const isViewer = userRole === 'viewer' || userRole === 'spectator';
-
   // ── AUTH HOOK (Conversion des anonymes) ──
   const [authHook, setAuthHook] = useState<{ title: string; subtitle: string } | null>(null);
   const requireAuth = useCallback((title: string, subtitle: string) => {
@@ -255,10 +263,11 @@ export function TikTokStyleArena({
   });
   const [showPreJoin, setShowPreJoin] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
+  const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});
 
   useEffect(() => {
-    if (isViewer) setShowPreJoin(false);
-  }, [isViewer]);
+    if (Object.keys(participantRoles).length > 0) setRolesLoaded(true);
+  }, [participantRoles]);
 
   useEffect(() => {
     if (hasJoined) setShowPreJoin(false);
@@ -535,6 +544,16 @@ export function TikTokStyleArena({
   // Moderator controls — check if current user is the beef creator
   const isHost = userId === host.id;
 
+  const isViewer = useMemo(() => {
+    if (isHost) return false;
+    if (typeof window !== 'undefined' && window.location.search.includes('join=')) return false;
+    return !Object.keys(participantRoles).includes(userId);
+  }, [isHost, participantRoles, userId]);
+
+  useEffect(() => {
+    if (isViewer) setShowPreJoin(false);
+  }, [isViewer]);
+
   const fetchPendingInvites = useCallback(async () => {
     if (!isHost) return;
     type ParticipantPendingRow = {
@@ -659,13 +678,6 @@ export function TikTokStyleArena({
   const goBuyPoints = useCallback(() => {
     openBuyPointsPage(router);
   }, [router]);
-
-  // Participant roles from DB — maps Daily.co userNames to beef roles
-  const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});
-
-  useEffect(() => {
-    if (Object.keys(participantRoles).length > 0) setRolesLoaded(true);
-  }, [participantRoles]);
 
   const loadParticipants = useCallback(async () => {
     const { data } = await supabase
@@ -3981,6 +3993,16 @@ export function TikTokStyleArena({
           networkHealthy={liveConnected}
         />
       )}
+
+      {/* GESTION AUDIO GLOBALE */}
+      <div className="hidden">
+        {remoteParticipants.map((p) => (
+          p.audioTrack && <RemoteAudio key={p.sessionId} track={p.audioTrack} />
+        ))}
+        {!isHost && mediatorParticipant?.audioTrack && (
+          <RemoteAudio track={mediatorParticipant.audioTrack} />
+        )}
+      </div>
 
       {dockPickersMounted && (showAllReactions || showGiftPicker) && dockPickerPos && typeof document !== 'undefined' && createPortal(
         <div
