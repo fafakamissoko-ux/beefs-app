@@ -473,8 +473,8 @@ export function useDailyCall(
         callRef.current = null;
 
         const newCo = DailyIframe.createCallObject({
-          audioSource: !viewerMode,
-          videoSource: !viewerMode,
+          audioSource: viewerModeRef.current ? false : undefined,
+          videoSource: viewerModeRef.current ? false : undefined,
         });
         callRef.current = newCo;
 

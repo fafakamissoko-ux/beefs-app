@@ -73,9 +73,11 @@ function RemoteAudio({ track }: { track: MediaStreamTrack | null }) {
   useEffect(() => {
     if (audioRef.current && track) {
       audioRef.current.srcObject = new MediaStream([track]);
+      audioRef.current.play().catch(e => console.warn('[Audio] Autoplay bloqué', e));
     }
   }, [track]);
-  return <audio ref={audioRef} autoPlay playsInline className="hidden" />;
+  // On évite "display: none" (hidden) qui bloque l'autoplay sur Safari iOS
+  return <audio ref={audioRef} autoPlay playsInline style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} />;
 }
 
 const SFX_MAP: Record<string, string> = {
@@ -264,10 +266,6 @@ export function TikTokStyleArena({
   const [showPreJoin, setShowPreJoin] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
   const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});
-
-  useEffect(() => {
-    if (Object.keys(participantRoles).length > 0) setRolesLoaded(true);
-  }, [participantRoles]);
 
   useEffect(() => {
     if (hasJoined) setShowPreJoin(false);
@@ -546,9 +544,10 @@ export function TikTokStyleArena({
 
   const isViewer = useMemo(() => {
     if (isHost) return false;
+    if (!rolesLoaded) return true; // Sécurité de transition
     if (typeof window !== 'undefined' && window.location.search.includes('join=')) return false;
     return !Object.keys(participantRoles).includes(userId);
-  }, [isHost, participantRoles, userId]);
+  }, [isHost, participantRoles, userId, rolesLoaded]);
 
   useEffect(() => {
     if (isViewer) setShowPreJoin(false);
@@ -680,31 +679,35 @@ export function TikTokStyleArena({
   }, [router]);
 
   const loadParticipants = useCallback(async () => {
-    const { data } = await supabase
-      .from('beef_participants')
-      .select('user_id, role, is_main')
-      .eq('beef_id', roomId);
-    if (!data?.length) {
-      setParticipantRoles({});
-      return;
+    try {
+      const { data } = await supabase
+        .from('beef_participants')
+        .select('user_id, role, is_main')
+        .eq('beef_id', roomId);
+      if (!data?.length) {
+        setParticipantRoles({});
+        return;
+      }
+      const { fetchUserPublicByIds } = await import('@/lib/fetch-user-public-profile');
+      const ids = data.map((p) => p.user_id).filter(Boolean);
+      const pubMap = await fetchUserPublicByIds(supabase, ids, 'id, username, display_name');
+      const roles: Record<string, BeefParticipantRowMeta> = {};
+      data.forEach((p) => {
+        const row = p as { user_id: string; role: string };
+        const u = pubMap.get(row.user_id);
+        const dn = (u?.display_name ?? '').trim();
+        const un = (u?.username ?? '').trim();
+        const name = dn || un || 'Participant';
+        roles[row.user_id] = {
+          role: row.role,
+          name,
+          matchAliases: buildParticipantAliasSet(u?.display_name, u?.username, name),
+        };
+      });
+      setParticipantRoles(roles);
+    } finally {
+      setRolesLoaded(true);
     }
-    const { fetchUserPublicByIds } = await import('@/lib/fetch-user-public-profile');
-    const ids = data.map((p) => p.user_id).filter(Boolean);
-    const pubMap = await fetchUserPublicByIds(supabase, ids, 'id, username, display_name');
-    const roles: Record<string, BeefParticipantRowMeta> = {};
-    data.forEach((p) => {
-      const row = p as { user_id: string; role: string };
-      const u = pubMap.get(row.user_id);
-      const dn = (u?.display_name ?? '').trim();
-      const un = (u?.username ?? '').trim();
-      const name = dn || un || 'Participant';
-      roles[row.user_id] = {
-        role: row.role,
-        name,
-        matchAliases: buildParticipantAliasSet(u?.display_name, u?.username, name),
-      };
-    });
-    setParticipantRoles(roles);
   }, [roomId]);
 
   useEffect(() => {
@@ -1441,6 +1444,7 @@ export function TikTokStyleArena({
 
   // Auto-join quand « Rejoindre » + URL Daily ; spectateur : attendre GET access (jeton).
   useEffect(() => {
+    if (!rolesLoaded) return;
     if (!hasJoined || !effectiveDailyRoomUrl || isJoined || isJoining) return;
     if (isViewer && !viewerAccessReady) return;
     if (
@@ -1454,6 +1458,7 @@ export function TikTokStyleArena({
     }
     void join(preJoinMediaStream);
   }, [
+    rolesLoaded,
     hasJoined,
     effectiveDailyRoomUrl,
     isJoined,
