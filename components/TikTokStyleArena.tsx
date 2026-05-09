@@ -2082,7 +2082,6 @@ export function TikTokStyleArena({
         }
       })
       .on('broadcast', { event: 'mediator_mute_challenger' }, ({ payload }: any) => {
-        if (userRole !== 'challenger') return;
         const uid = payload?.targetUserId as string | undefined;
         if (!uid || uid !== userId) return;
         setMicMutedByMediator(!!payload?.muted);
@@ -2685,7 +2684,7 @@ export function TikTokStyleArena({
 
   /** Micro challengers : hot mic (tour actif) même hors débat structuré ; sinon règles structurées. */
   useEffect(() => {
-    if (isViewer || isHost || !isJoined) return;
+    if (isHost || !isJoined) return;
     if (micMutedByMediator) {
       setLocalAudioEnabled(false);
       return;
@@ -2708,7 +2707,6 @@ export function TikTokStyleArena({
     }
     setLocalAudioEnabled(false);
   }, [
-    isViewer,
     isHost,
     isJoined,
     micMutedByMediator,
@@ -3639,14 +3637,12 @@ export function TikTokStyleArena({
               color: idx === 0 ? '168,85,247' : idx === 1 ? '16,185,129' : idx === 2 ? '234,179,8' : '59,130,246',
               aura: [auraA, auraB, auraC, auraD][idx],
               cellClass: expectedCount === 3 && idx === 2 ? 'col-span-2' : '',
-              uiPos:
-                idx === 0
-                  ? 'bottom-2 left-2 sm:bottom-4 sm:left-4 flex-row items-center'
-                  : idx === 1
-                    ? 'bottom-2 right-2 sm:bottom-4 sm:right-4 flex-row-reverse items-center'
-                    : idx === 2
-                      ? 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-center'
-                      : 'top-2 right-2 sm:top-4 sm:right-4 flex-row-reverse items-center',
+              uiPos: expectedCount <= 2
+                ? (idx === 0 ? 'bottom-2 left-2 sm:bottom-4 sm:left-4 flex-row items-center' : 'bottom-2 right-2 sm:bottom-4 sm:right-4 flex-row-reverse items-center')
+                : (idx === 0 ? 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-center'
+                  : idx === 1 ? 'top-2 right-2 sm:top-4 sm:right-4 flex-row-reverse items-center'
+                  : idx === 2 ? 'bottom-2 left-2 sm:bottom-4 sm:left-4 flex-row items-center'
+                  : 'bottom-2 right-2 sm:bottom-4 sm:right-4 flex-row-reverse items-center'),
             }));
 
             return (
@@ -3913,7 +3909,15 @@ export function TikTokStyleArena({
           onRestartSpeakingTurn={restartSpeakingTurn}
           beefTimeFormatted={formatBeefTime(beefTimeRemaining)}
           onSetChallengerMuted={handleMediatorChallengerMute}
-          onEjectParticipant={async (sid) => { const ok = await ejectRemoteParticipant(sid); if (ok) toast('Participant expulsé', 'success'); else toast('Expulsion impossible.', 'error'); }}
+          onEjectParticipant={async (sid) => {
+            const panel = challengerRemoteSlots.find((p) => p.sessionId === sid);
+            if (panel?.arenaUserId) {
+              await runBeefManage({ action: 'REMOVE_PARTICIPANT', beefId: roomId, participantId: panel.arenaUserId, removeKind: 'kick' });
+            }
+            const ok = await ejectRemoteParticipant(sid);
+            if (ok) toast('Participant expulsé définitivement', 'success');
+            else toast('Expulsion impossible.', 'error');
+          }}
           onAdjustTime={adjustBeefTime}
           mediatorMicEnabled={micEnabled}
           mediatorCamEnabled={camEnabled}

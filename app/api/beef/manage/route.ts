@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       action?: string;
       beefId?: string;
       participantId?: string;
-      removeKind?: 'decline' | 'purge';
+      removeKind?: 'decline' | 'purge' | 'kick';
       toggle?: string;
       endReason?: string;
       mediationSummary?: string;
@@ -118,7 +118,8 @@ export async function POST(request: NextRequest) {
       if (!participantId) {
         return NextResponse.json({ error: 'participantId requis' }, { status: 400 });
       }
-      const kind = body.removeKind === 'purge' ? 'purge' : 'decline';
+      const kind =
+        body.removeKind === 'purge' || body.removeKind === 'kick' ? 'purge' : 'decline';
       if (kind === 'purge') {
         const { error: delInv } = await supabaseAdmin
           .from('beef_invitations')

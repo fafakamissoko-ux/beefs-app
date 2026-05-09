@@ -13,8 +13,8 @@ export type BeefManageAction =
       action: 'REMOVE_PARTICIPANT';
       beefId: string;
       participantId: string;
-      /** decline = refus invitation ; purge = suppression de la ligne (retrait ring) */
-      removeKind?: 'decline' | 'purge';
+      /** decline = refus invitation ; purge | kick = suppression de la ligne (retrait ring / expulsion) */
+      removeKind?: 'decline' | 'purge' | 'kick';
     }
   | {
       action: 'INVITE_PARTICIPANT';
