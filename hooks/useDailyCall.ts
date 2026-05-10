@@ -153,13 +153,20 @@ export function useDailyCall(
 
         const userData = buildDailyJoinUserData(arenaUserId);
 
-        // LE CŒUR DE LA REFONTE : Transmission propre du flux pour contourner iOS sans lock hardware
-        const co = DailyIframe.createCallObject({
+        // CONFIGURATION DYNAMIQUE : On omet totalement les clés matérielles si la piste n'existe pas (Fix du crash)
+        const callOptions: any = {
           userData,
           subscribeToTracksAutomatically: true,
-          audioSource: preAcquiredStream ? preAcquiredStream.getAudioTracks()[0] : undefined,
-          videoSource: preAcquiredStream ? preAcquiredStream.getVideoTracks()[0] : undefined,
-        });
+        };
+
+        if (preAcquiredStream) {
+          const audioTrack = preAcquiredStream.getAudioTracks()[0];
+          const videoTrack = preAcquiredStream.getVideoTracks()[0];
+          if (audioTrack) callOptions.audioSource = audioTrack;
+          if (videoTrack) callOptions.videoSource = videoTrack;
+        }
+
+        const co = DailyIframe.createCallObject(callOptions);
         callRef.current = co;
 
         co.on('joined-meeting', () => {
