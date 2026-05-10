@@ -3210,11 +3210,8 @@ export function TikTokStyleArena({
   }, [contextMenuMsg]);
 
 
-  // Join: stop preview ; Daily ouvre cam/mic avec join(startCam, startMic)
-  const handleJoin = (previewStream: MediaStream | null, startCam = true, startMic = true) => {
-    if (previewStream) {
-      previewStream.getTracks().forEach((t) => t.stop());
-    }
+  // Join: intentions cam/mic uniquement — Daily ouvre le matériel via join(startCam, startMic)
+  const handleJoin = (startCam: boolean, startMic: boolean) => {
     setPreJoinStartCam(startCam);
     setPreJoinStartMic(startMic);
     setHasJoined(true);

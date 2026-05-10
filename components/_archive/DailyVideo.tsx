@@ -16,7 +16,7 @@ export function DailyVideo({ roomUrl, userName = 'User' }: DailyVideoProps) {
 
   if (phase === 'prejoin') {
     return (
-      <PreJoinScreen userName={userName} onJoin={(_stream) => setPhase('joined')} />
+      <PreJoinScreen userName={userName} onJoin={(_cam, _mic) => setPhase('joined')} />
     );
   }
 
