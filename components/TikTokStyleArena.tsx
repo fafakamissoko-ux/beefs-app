@@ -3247,7 +3247,8 @@ export function TikTokStyleArena({
     }
 
     if (effectiveDailyRoomUrl && isViewer === false) {
-      void join(camEnabled, micEnabled, prefetchedToken);
+      // Frappe synchrone avec filet de sécurité : prefetchedToken en priorité, sinon le token serveur, sinon undefined
+      void join(camEnabled, micEnabled, prefetchedToken || meetingTokenForDaily || undefined);
     }
   };
 
