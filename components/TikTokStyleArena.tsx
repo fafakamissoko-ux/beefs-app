@@ -271,9 +271,9 @@ export function TikTokStyleArena({
     if (hasJoined) setShowPreJoin(false);
   }, [hasJoined]);
 
-  /** MediaStream du pré-joint (médiateur / challenger) — réutilisé par Daily pour éviter un 2ᵉ getUserMedia bloqué sur mobile. */
-  const [preJoinStartCam, setPreJoinStartCam] = useState(true);
-  const [preJoinStartMic, setPreJoinStartMic] = useState(true);
+  /** Choix cam/mic du sas pré-join (passés à Daily via join). */
+  const [initialCam, setInitialCam] = useState(true);
+  const [initialMic, setInitialMic] = useState(true);
   const [chatInput, setChatInput] = useState('');
   /** Chat en overlay bas-gauche (pas de sidebar) */
   const [mediatorSidebarOpen, setMediatorSidebarOpen] = useState(false);
@@ -1457,7 +1457,7 @@ export function TikTokStyleArena({
     ) {
       return;
     }
-    void join(preJoinStartCam, preJoinStartMic);
+    void join(initialCam, initialMic);
   }, [
     rolesLoaded,
     hasJoined,
@@ -1465,8 +1465,8 @@ export function TikTokStyleArena({
     isJoined,
     isJoining,
     join,
-    preJoinStartCam,
-    preJoinStartMic,
+    initialCam,
+    initialMic,
     isViewer,
     viewerAccessReady,
     serverAccess,
@@ -3210,10 +3210,9 @@ export function TikTokStyleArena({
   }, [contextMenuMsg]);
 
 
-  // Join: intentions cam/mic uniquement — Daily ouvre le matériel via join(startCam, startMic)
-  const handleJoin = (startCam: boolean, startMic: boolean) => {
-    setPreJoinStartCam(startCam);
-    setPreJoinStartMic(startMic);
+  const handleJoin = (camEnabled: boolean, micEnabled: boolean) => {
+    setInitialCam(camEnabled);
+    setInitialMic(micEnabled);
     setHasJoined(true);
     setShowPreJoin(false);
     if (typeof window !== 'undefined') {
