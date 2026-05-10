@@ -272,7 +272,8 @@ export function TikTokStyleArena({
   }, [hasJoined]);
 
   /** MediaStream du pré-joint (médiateur / challenger) — réutilisé par Daily pour éviter un 2ᵉ getUserMedia bloqué sur mobile. */
-  const [preJoinMediaStream, setPreJoinMediaStream] = useState<MediaStream | null>(null);
+  const [preJoinStartCam, setPreJoinStartCam] = useState(true);
+  const [preJoinStartMic, setPreJoinStartMic] = useState(true);
   const [chatInput, setChatInput] = useState('');
   /** Chat en overlay bas-gauche (pas de sidebar) */
   const [mediatorSidebarOpen, setMediatorSidebarOpen] = useState(false);
@@ -1456,7 +1457,7 @@ export function TikTokStyleArena({
     ) {
       return;
     }
-    void join(preJoinMediaStream);
+    void join(preJoinStartCam, preJoinStartMic);
   }, [
     rolesLoaded,
     hasJoined,
@@ -1464,7 +1465,8 @@ export function TikTokStyleArena({
     isJoined,
     isJoining,
     join,
-    preJoinMediaStream,
+    preJoinStartCam,
+    preJoinStartMic,
     isViewer,
     viewerAccessReady,
     serverAccess,
@@ -3208,9 +3210,13 @@ export function TikTokStyleArena({
   }, [contextMenuMsg]);
 
 
-  // Join: enregistre le flux pré-acquis puis lance join() via l’effet ci-dessus
-  const handleJoin = (preAcquired: MediaStream | null) => {
-    setPreJoinMediaStream(preAcquired);
+  // Join: stop preview ; Daily ouvre cam/mic avec join(startCam, startMic)
+  const handleJoin = (previewStream: MediaStream | null, startCam = true, startMic = true) => {
+    if (previewStream) {
+      previewStream.getTracks().forEach((t) => t.stop());
+    }
+    setPreJoinStartCam(startCam);
+    setPreJoinStartMic(startMic);
     setHasJoined(true);
     setShowPreJoin(false);
     if (typeof window !== 'undefined') {

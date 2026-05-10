@@ -15,7 +15,9 @@ export function DailyVideo({ roomUrl, userName = 'User' }: DailyVideoProps) {
   const dailyUrl = `${roomUrl}?name=${encodeURIComponent(userName)}&showLeaveButton=true&showFullscreenButton=true`;
 
   if (phase === 'prejoin') {
-    return <PreJoinScreen userName={userName} onJoin={() => setPhase('joined')} />;
+    return (
+      <PreJoinScreen userName={userName} onJoin={(_stream) => setPhase('joined')} />
+    );
   }
 
   return (

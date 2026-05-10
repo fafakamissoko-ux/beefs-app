@@ -6,8 +6,10 @@ import { MutinyProtocol } from './MutinyProtocol';
 
 interface PreJoinScreenProps {
   userName: string;
-  /** Flux déjà autorisé par l’utilisateur — transmis à Daily pour éviter un 2ᵉ getUserMedia sans geste (iOS / Brave). */
-  onJoin: (preAcquiredMedia: MediaStream | null) => void;
+  /**
+   * Flux de prévisualisation (le parent arrête les pistes) ; `startCam` / `startMic` passent dans `join(...)`.
+   */
+  onJoin: (previewStream: MediaStream | null, startCam?: boolean, startMic?: boolean) => void;
   viewerMode?: boolean;
   mediatorName?: string;
   currentUserSlot?: 'A' | 'B';
@@ -129,8 +131,7 @@ export function PreJoinScreen({
     const acquired = streamRef.current ?? stream;
     cancelAnimationFrame(animFrameRef.current);
     if (videoRef.current) videoRef.current.srcObject = null;
-    /** Ne pas arrêter les pistes ici : Daily réutilise le même MediaStream (évite getUserMedia après await token). */
-    onJoin(acquired);
+    onJoin(acquired, camEnabled, micEnabled);
   };
 
   const ambientLayer = (

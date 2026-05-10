@@ -17,7 +17,7 @@ export interface CallParticipant {
 }
 
 export interface UseDailyCallReturn {
-  join: (preAcquiredStream?: MediaStream | null) => Promise<void>;
+  join: (camEnabled?: boolean, micEnabled?: boolean) => Promise<void>;
   leave: () => Promise<void>;
   stopCamera: () => void;
   toggleMic: () => void;
@@ -47,7 +47,7 @@ function resolveDailySessionId(co: DailyCall, hint: string): string | null {
       const uid = typeof dp.user_id === 'string' ? dp.user_id : '';
       if (uid && uid === hint) return key;
     }
-  } catch {}
+  } catch (_) {}
   return null;
 }
 
@@ -79,6 +79,16 @@ export function useDailyCall(
   const [isJoining, setIsJoining] = useState(false);
   const [micEnabled, setMicEnabled] = useState(!viewerMode);
   const [camEnabled, setCamEnabled] = useState(!viewerMode);
+
+  const camEnabledRef = useRef(camEnabled);
+  const micEnabledRef = useRef(micEnabled);
+  useEffect(() => {
+    camEnabledRef.current = camEnabled;
+  }, [camEnabled]);
+  useEffect(() => {
+    micEnabledRef.current = micEnabled;
+  }, [micEnabled]);
+
   const [localParticipant, setLocalParticipant] = useState<CallParticipant | null>(null);
   const [remoteParticipants, setRemoteParticipants] = useState<CallParticipant[]>([]);
   const [activeSpeakerPeerId, setActiveSpeakerPeerId] = useState<string | null>(null);
@@ -95,12 +105,15 @@ export function useDailyCall(
   const beefIdRef = useRef(beefId);
   const viewerModeRef = useRef(viewerMode);
   const accessMeetingTokenRef = useRef(accessMeetingToken);
-  roomUrlRef.current = roomUrl;
-  userNameRef.current = userName;
-  arenaUserIdRef.current = arenaUserId;
-  beefIdRef.current = beefId;
-  viewerModeRef.current = viewerMode;
-  accessMeetingTokenRef.current = accessMeetingToken;
+
+  useEffect(() => {
+    roomUrlRef.current = roomUrl;
+    userNameRef.current = userName;
+    arenaUserIdRef.current = arenaUserId;
+    beefIdRef.current = beefId;
+    viewerModeRef.current = viewerMode;
+    accessMeetingTokenRef.current = accessMeetingToken;
+  }, [roomUrl, userName, arenaUserId, beefId, viewerMode, accessMeetingToken]);
 
   const fetchMeetingToken = useCallback(async (): Promise<string> => {
     const bid = beefIdRef.current;
@@ -136,11 +149,14 @@ export function useDailyCall(
   }, []);
 
   const join = useCallback(
-    async (preAcquiredStream?: MediaStream | null) => {
+    async (startCam: boolean = true, startMic: boolean = true) => {
       if (!roomUrl || isJoining || isJoined) return;
       setIsJoining(true);
       setError(null);
       clearJoinWatchdog();
+
+      setCamEnabled(startCam);
+      setMicEnabled(startMic);
 
       try {
         if (callRef.current) {
@@ -152,19 +168,10 @@ export function useDailyCall(
         }
 
         const userData = buildDailyJoinUserData(arenaUserId);
-
-        // CONFIGURATION DYNAMIQUE : On omet totalement les clés matérielles si la piste n'existe pas (Fix du crash)
-        const callOptions: any = {
+        const callOptions: Record<string, unknown> = {
           userData,
           subscribeToTracksAutomatically: true,
         };
-
-        if (preAcquiredStream) {
-          const audioTrack = preAcquiredStream.getAudioTracks()[0];
-          const videoTrack = preAcquiredStream.getVideoTracks()[0];
-          if (audioTrack) callOptions.audioSource = audioTrack;
-          if (videoTrack) callOptions.videoSource = videoTrack;
-        }
 
         const co = DailyIframe.createCallObject(callOptions);
         callRef.current = co;
@@ -240,8 +247,8 @@ export function useDailyCall(
           ...(token ? { token } : {}),
           userName,
           ...(userData ? { userData } : {}),
-          startVideoOff: viewerMode,
-          startAudioOff: viewerMode,
+          startVideoOff: viewerMode ? true : !startCam,
+          startAudioOff: viewerMode ? true : !startMic,
         });
       } catch (err: any) {
         clearJoinWatchdog();
@@ -263,13 +270,6 @@ export function useDailyCall(
       co.setLocalAudio(false);
     } catch (_) {}
     try {
-      const local = Object.values(co.participants()).find((p: any) => p.local);
-      if (local) {
-        (local as any).tracks?.video?.persistentTrack?.stop();
-        (local as any).tracks?.audio?.persistentTrack?.stop();
-      }
-    } catch (_) {}
-    try {
       await co.destroy();
     } catch (_) {}
     setIsJoined(false);
@@ -283,11 +283,7 @@ export function useDailyCall(
   const stopCamera = useCallback(() => {
     if (!callRef.current) return;
     try {
-      const local = Object.values(callRef.current.participants()).find((p: any) => p.local);
-      if (local) {
-        (local as any).tracks?.video?.persistentTrack?.stop();
-        (local as any).tracks?.audio?.persistentTrack?.stop();
-      }
+      callRef.current.setLocalVideo(false);
     } catch (_) {}
   }, []);
 
@@ -409,9 +405,7 @@ export function useDailyCall(
         } catch (_) {}
         callRef.current = null;
 
-        const newCo = DailyIframe.createCallObject({
-          subscribeToTracksAutomatically: true,
-        });
+        const newCo = DailyIframe.createCallObject({ subscribeToTracksAutomatically: true });
         callRef.current = newCo;
 
         newCo.on('joined-meeting', () => {
@@ -442,8 +436,8 @@ export function useDailyCall(
             ...(token ? { token } : {}),
             userName: userNameRef.current,
             ...(userData ? { userData } : {}),
-            startVideoOff: viewerModeRef.current,
-            startAudioOff: viewerModeRef.current,
+            startVideoOff: viewerModeRef.current ? true : !camEnabledRef.current,
+            startAudioOff: viewerModeRef.current ? true : !micEnabledRef.current,
           });
         }
       } catch {
@@ -476,7 +470,6 @@ export function useDailyCall(
     };
   }, [dailyAttachKey]);
 
-  // NETTOYAGE PURIFIÉ : Ne détruit plus tout le DOM aveuglément
   useEffect(() => {
     return () => {
       if (callRef.current) {
@@ -487,13 +480,6 @@ export function useDailyCall(
         } catch (_) {}
         try {
           co.setLocalAudio(false);
-        } catch (_) {}
-        try {
-          const local = Object.values(co.participants()).find((p: any) => p.local);
-          if (local) {
-            (local as any).tracks?.video?.persistentTrack?.stop();
-            (local as any).tracks?.audio?.persistentTrack?.stop();
-          }
         } catch (_) {}
         co.leave().catch(() => {});
         co.destroy().catch(() => {});
