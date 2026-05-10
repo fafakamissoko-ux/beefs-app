@@ -8,7 +8,6 @@ import { buildDailyJoinUserData, extractArenaUserIdFromDailyParticipant } from '
 export interface CallParticipant {
   sessionId: string;
   userName: string;
-  /** UUID arena (session Supabase), extrait de userData Daily si valide. */
   arenaUserId: string | null;
   isLocal: boolean;
   videoTrack: MediaStreamTrack | null;
@@ -23,11 +22,8 @@ export interface UseDailyCallReturn {
   stopCamera: () => void;
   toggleMic: () => void;
   toggleCam: () => void;
-  /** Force le micro local (hors mode viewer) — ex. tours de parole imposés par le médiateur */
   setLocalAudioEnabled: (enabled: boolean) => void;
-  /** Médiateur / owner Daily : coupe ou réactive le micro d'un participant distant. */
   setRemoteParticipantAudio: (sessionId: string, enabled: boolean) => void;
-  /** Expulsion de la salle (`is_owner` sur le token Daily). Résout `true` si l'appel a été émis. */
   ejectRemoteParticipant: (sessionId: string) => Promise<boolean>;
   isJoined: boolean;
   isJoining: boolean;
@@ -35,16 +31,12 @@ export interface UseDailyCallReturn {
   camEnabled: boolean;
   localParticipant: CallParticipant | null;
   remoteParticipants: CallParticipant[];
-  /** `session_id` Daily du participant actuellement détecté comme parlant (active-speaker-change). */
   activeSpeakerPeerId: string | null;
   error: string | null;
-  /** Caméra / micro interrompus par l'OS (ex. appel entrant) — reprise via `recoverMediaDevices`. */
   isCameraInterrupted: boolean;
-  /** Réacquisition caméra + micro sur la salle courante (sans recharger). */
   recoverMediaDevices: () => Promise<void>;
 }
 
-/** Clé utilisée par `participants()` — alignée sur `session_id` pour `updateParticipant`. */
 function resolveDailySessionId(co: DailyCall, hint: string): string | null {
   try {
     const parts = co.participants();
@@ -55,9 +47,7 @@ function resolveDailySessionId(co: DailyCall, hint: string): string | null {
       const uid = typeof dp.user_id === 'string' ? dp.user_id : '';
       if (uid && uid === hint) return key;
     }
-  } catch {
-    /* ignore */
-  }
+  } catch {}
   return null;
 }
 
@@ -71,7 +61,6 @@ function toCallParticipant(p: DailyParticipant): CallParticipant {
     isLocal: p.local,
     videoTrack: p.tracks?.video?.persistentTrack ?? null,
     audioTrack: p.tracks?.audio?.persistentTrack ?? null,
-    // Show video element as soon as track exists (even in 'loading' state)
     videoOn: !!p.tracks?.video?.persistentTrack && videoState !== 'off' && videoState !== 'blocked',
     audioOn: !!p.tracks?.audio?.persistentTrack && audioState !== 'off' && audioState !== 'blocked',
   };
@@ -83,12 +72,6 @@ export function useDailyCall(
   viewerMode = false,
   arenaUserId: string | null = null,
   beefId: string | null = null,
-  /**
-   * Jeton Daily issu de `GET /api/beef/access` (prioritaire).
-   * - `undefined` : comportement historique → `POST /api/daily/meeting-token` si `beefId` est défini.
-   * - `string` : utilisé tel quel pour `join({ token })`.
-   * - `null` : spectateur sans droit vidéo (ex. accès verrouillé) → join refusé côté client.
-   */
   accessMeetingToken: string | null | undefined = undefined,
 ): UseDailyCallReturn {
   const callRef = useRef<DailyCall | null>(null);
@@ -99,13 +82,13 @@ export function useDailyCall(
   const [localParticipant, setLocalParticipant] = useState<CallParticipant | null>(null);
   const [remoteParticipants, setRemoteParticipants] = useState<CallParticipant[]>([]);
   const [activeSpeakerPeerId, setActiveSpeakerPeerId] = useState<string | null>(null);
-  /** Incrémenté à chaque `joined-meeting` pour rattacher les listeners au bon `DailyCall`. */
   const [dailyAttachKey, setDailyAttachKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isCameraInterrupted, setIsCameraInterrupted] = useState(false);
   const reconnectingRef = useRef(false);
   const intentionalActionRef = useRef(false);
   const joinWatchdogRef = useRef<number | null>(null);
+
   const roomUrlRef = useRef(roomUrl);
   const userNameRef = useRef(userName);
   const arenaUserIdRef = useRef(arenaUserId);
@@ -121,35 +104,26 @@ export function useDailyCall(
 
   const fetchMeetingToken = useCallback(async (): Promise<string> => {
     const bid = beefIdRef.current;
-    if (!bid) {
-      throw new Error('Identifiant beef manquant pour le token Daily');
-    }
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      throw new Error('Session requise pour rejoindre la visio');
-    }
+    if (!bid) throw new Error('Identifiant beef manquant pour le token Daily');
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error('Session requise pour rejoindre la visio');
     const res = await fetch('/api/daily/meeting-token', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ beefId: bid }),
     });
     const data: { error?: string; token?: string } = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Impossible d’obtenir le token Daily');
-    }
-    if (!data.token) {
-      throw new Error('Token Daily manquant');
-    }
+    if (!res.ok) throw new Error(data.error || 'Impossible d’obtenir le token Daily');
+    if (!data.token) throw new Error('Token Daily manquant');
     return data.token;
   }, []);
 
   const refreshParticipants = useCallback((co: DailyCall) => {
     const all = Object.values(co.participants());
-    const local = all.find(p => p.local);
-    const remotes = all.filter(p => !p.local);
+    const local = all.find((p) => p.local);
+    const remotes = all.filter((p) => !p.local);
     setLocalParticipant(local ? toCallParticipant(local) : null);
     setRemoteParticipants(remotes.map(toCallParticipant));
   }, []);
@@ -161,153 +135,136 @@ export function useDailyCall(
     }
   }, []);
 
-  const join = useCallback(async (_preAcquiredStream?: MediaStream | null) => {
-    if (!roomUrl || isJoining || isJoined) return;
-    setIsJoining(true);
-    setError(null);
-    clearJoinWatchdog();
+  const join = useCallback(
+    async (preAcquiredStream?: MediaStream | null) => {
+      if (!roomUrl || isJoining || isJoined) return;
+      setIsJoining(true);
+      setError(null);
+      clearJoinWatchdog();
 
-    try {
-      // Destroy our own previous instance if any (safe approach)
-      if (callRef.current) {
-        try {
-          await callRef.current.leave();
-          await callRef.current.destroy();
-        } catch (_) {}
-        callRef.current = null;
-      }
-
-
-      const userData = buildDailyJoinUserData(arenaUserId);
-
-      const co = DailyIframe.createCallObject({
-        userData,
-        subscribeToTracksAutomatically: true,
-      });
-      callRef.current = co;
-
-      co.on('joined-meeting', () => {
-        clearJoinWatchdog();
-        setIsJoined(true);
-        setIsJoining(false);
-        setIsCameraInterrupted(false);
-        refreshParticipants(co);
-        setDailyAttachKey((k) => k + 1);
-      });
-      co.on('participant-joined', () => refreshParticipants(co));
-      co.on('participant-updated', () => refreshParticipants(co));
-      co.on('participant-left', () => refreshParticipants(co));
-      // Fired when a track becomes active — crucial to detect when camera is ready
-      co.on('track-started', (evt: any) => {
-        refreshParticipants(co);
-        if (evt.participant?.local) setIsCameraInterrupted(false);
-      });
-      co.on('track-stopped', (evt: any) => {
-        refreshParticipants(co);
-        if (evt.participant && evt.participant.local && evt.track) {
-          const isScreenShare =
-            evt.track.label?.toLowerCase().includes('screen') ||
-            (evt.track.kind === 'video' && evt.participant.screen);
-
-          if (!isScreenShare && !intentionalActionRef.current) {
-            setIsCameraInterrupted(true);
-          }
+      try {
+        if (callRef.current) {
+          try {
+            await callRef.current.leave();
+            await callRef.current.destroy();
+          } catch (_) {}
+          callRef.current = null;
         }
-      });
-      co.on('left-meeting', () => {
-        setIsJoined(false);
-        setLocalParticipant(null);
-        setRemoteParticipants([]);
-        setActiveSpeakerPeerId(null);
-        setIsCameraInterrupted(false);
-        setDailyAttachKey(0);
-      });
-      co.on('error', (e: any) => {
-        clearJoinWatchdog();
-        console.error('Daily.co error');
-        setError(e?.errorMsg || 'Erreur de connexion');
-        setIsJoining(false);
-      });
-      co.on('load-attempt-failed', (e: any) => {
-        clearJoinWatchdog();
-        console.error('Daily load-attempt-failed');
-        setError(e?.errorMsg || 'Impossible de charger la salle Daily (token, réseau ou salle expirée).');
-        setIsJoining(false);
-      });
-      co.on('camera-error', (e: any) => {
-        console.warn('Daily camera-error (interruption possible)', e?.errorMsg);
-        setIsCameraInterrupted(true);
-      });
 
-      /** Jeton : priorité au token `beef/access`, sinon émission legacy `daily/meeting-token`. */
-      let token: string | undefined;
-      const accessTok = accessMeetingTokenRef.current;
-      if (typeof accessTok === 'string' && accessTok.length > 0) {
-        token = accessTok;
-      } else if (accessTok === null && viewerModeRef.current && beefIdRef.current) {
-        clearJoinWatchdog();
-        setError('Accès vidéo refusé : jeton de réunion manquant (droits spectateur).');
-        setIsJoining(false);
-        return;
-      } else if (beefIdRef.current) {
-        token = await fetchMeetingToken();
-      }
+        const userData = buildDailyJoinUserData(arenaUserId);
 
-      joinWatchdogRef.current = window.setTimeout(() => {
-        joinWatchdogRef.current = null;
-        const c = callRef.current;
-        if (!c) return;
-        try {
-          const st = c.meetingState();
-          if (st !== 'joined-meeting') {
-            setError(
-              'Connexion trop lente ou bloquée. Vérifie le réseau, autorise micro/caméra, ou désactive le bouclier Brave sur ce site.',
-            );
+        // LE CŒUR DE LA REFONTE : Transmission propre du flux pour contourner iOS sans lock hardware
+        const co = DailyIframe.createCallObject({
+          userData,
+          subscribeToTracksAutomatically: true,
+          audioSource: preAcquiredStream ? preAcquiredStream.getAudioTracks()[0] : undefined,
+          videoSource: preAcquiredStream ? preAcquiredStream.getVideoTracks()[0] : undefined,
+        });
+        callRef.current = co;
+
+        co.on('joined-meeting', () => {
+          clearJoinWatchdog();
+          setIsJoined(true);
+          setIsJoining(false);
+          setIsCameraInterrupted(false);
+          refreshParticipants(co);
+          setDailyAttachKey((k) => k + 1);
+        });
+        co.on('participant-joined', () => refreshParticipants(co));
+        co.on('participant-updated', () => refreshParticipants(co));
+        co.on('participant-left', () => refreshParticipants(co));
+        co.on('track-started', (evt: any) => {
+          refreshParticipants(co);
+          if (evt.participant?.local) setIsCameraInterrupted(false);
+        });
+        co.on('track-stopped', (evt: any) => {
+          refreshParticipants(co);
+          if (evt.participant?.local && evt.track && !intentionalActionRef.current) {
+            const isScreen = evt.track.label?.toLowerCase().includes('screen') || evt.participant.screen;
+            if (!isScreen) setIsCameraInterrupted(true);
+          }
+        });
+        co.on('left-meeting', () => {
+          setIsJoined(false);
+          setLocalParticipant(null);
+          setRemoteParticipants([]);
+          setActiveSpeakerPeerId(null);
+          setIsCameraInterrupted(false);
+          setDailyAttachKey(0);
+        });
+        co.on('error', (e: any) => {
+          clearJoinWatchdog();
+          setError(e?.errorMsg || 'Erreur de connexion');
+          setIsJoining(false);
+        });
+        co.on('load-attempt-failed', (e: any) => {
+          clearJoinWatchdog();
+          setError(e?.errorMsg || 'Impossible de charger la salle Daily.');
+          setIsJoining(false);
+        });
+        co.on('camera-error', (e: any) => {
+          console.warn('Daily camera-error', e?.errorMsg);
+          setIsCameraInterrupted(true);
+        });
+
+        let token: string | undefined;
+        const accessTok = accessMeetingTokenRef.current;
+        if (typeof accessTok === 'string' && accessTok.length > 0) {
+          token = accessTok;
+        } else if (accessTok === null && viewerModeRef.current && beefIdRef.current) {
+          clearJoinWatchdog();
+          setError('Accès vidéo refusé : jeton de réunion manquant.');
+          setIsJoining(false);
+          return;
+        } else if (beefIdRef.current) {
+          token = await fetchMeetingToken();
+        }
+
+        joinWatchdogRef.current = window.setTimeout(() => {
+          joinWatchdogRef.current = null;
+          if (callRef.current?.meetingState() !== 'joined-meeting') {
+            setError('Connexion trop lente ou bloquée. Vérifie ton réseau ou tes permissions.');
             setIsJoining(false);
           }
-        } catch {
-          setIsJoining(false);
-        }
-      }, 50_000);
+        }, 50_000);
 
-      await co.join({
-        url: roomUrl,
-        ...(token ? { token } : {}),
-        userName,
-        ...(userData ? { userData } : {}),
-        startVideoOff: viewerMode,
-        startAudioOff: viewerMode,
-      });
-    } catch (err: any) {
-      clearJoinWatchdog();
-      setError(err.message || 'Impossible de rejoindre');
-      setIsJoining(false);
-    }
-  }, [roomUrl, userName, isJoining, isJoined, refreshParticipants, viewerMode, arenaUserId, fetchMeetingToken, clearJoinWatchdog]);
+        await co.join({
+          url: roomUrl,
+          ...(token ? { token } : {}),
+          userName,
+          ...(userData ? { userData } : {}),
+          startVideoOff: viewerMode,
+          startAudioOff: viewerMode,
+        });
+      } catch (err: any) {
+        clearJoinWatchdog();
+        setError(err.message || 'Impossible de rejoindre');
+        setIsJoining(false);
+      }
+    },
+    [roomUrl, userName, isJoining, isJoined, refreshParticipants, viewerMode, arenaUserId, fetchMeetingToken, clearJoinWatchdog],
+  );
 
   const leave = useCallback(async () => {
     if (!callRef.current) return;
     const co = callRef.current;
     callRef.current = null;
-
-    // ── STEP 1: Tell Daily.co to stop camera/mic first ──
-    try { co.setLocalVideo(false); } catch (_) {}
-    try { co.setLocalAudio(false); } catch (_) {}
-
-    // ── STEP 2: Stop Daily.co persistent tracks ──
     try {
-      const parts = co.participants();
-      const local = Object.values(parts).find((p: any) => p.local);
+      co.setLocalVideo(false);
+    } catch (_) {}
+    try {
+      co.setLocalAudio(false);
+    } catch (_) {}
+    try {
+      const local = Object.values(co.participants()).find((p: any) => p.local);
       if (local) {
         (local as any).tracks?.video?.persistentTrack?.stop();
         (local as any).tracks?.audio?.persistentTrack?.stop();
       }
     } catch (_) {}
-
-    // ── STEP 3: Destroy directly (skipping leave() avoids the leave handshake
-    // which can briefly re-enable camera tracks via Daily.co internals) ──
-    try { await co.destroy(); } catch (_) {}
-
+    try {
+      await co.destroy();
+    } catch (_) {}
     setIsJoined(false);
     setLocalParticipant(null);
     setRemoteParticipants([]);
@@ -316,12 +273,10 @@ export function useDailyCall(
     setDailyAttachKey(0);
   }, []);
 
-  // Expose a stopCamera helper for external use
   const stopCamera = useCallback(() => {
     if (!callRef.current) return;
     try {
-      const parts = callRef.current.participants();
-      const local = Object.values(parts).find((p: any) => p.local);
+      const local = Object.values(callRef.current.participants()).find((p: any) => p.local);
       if (local) {
         (local as any).tracks?.video?.persistentTrack?.stop();
         (local as any).tracks?.audio?.persistentTrack?.stop();
@@ -335,7 +290,9 @@ export function useDailyCall(
     const next = !micEnabled;
     callRef.current.setLocalAudio(next);
     setMicEnabled(next);
-    setTimeout(() => { intentionalActionRef.current = false; }, 1000);
+    setTimeout(() => {
+      intentionalActionRef.current = false;
+    }, 1000);
   }, [micEnabled, viewerMode]);
 
   const toggleCam = useCallback(() => {
@@ -344,7 +301,9 @@ export function useDailyCall(
     const next = !camEnabled;
     callRef.current.setLocalVideo(next);
     setCamEnabled(next);
-    setTimeout(() => { intentionalActionRef.current = false; }, 1000);
+    setTimeout(() => {
+      intentionalActionRef.current = false;
+    }, 1000);
   }, [camEnabled, viewerMode]);
 
   const setLocalAudioEnabled = useCallback((enabled: boolean) => {
@@ -364,20 +323,14 @@ export function useDailyCall(
         const co = callRef.current;
         if (!co) return;
         const id = resolveDailySessionId(co, sessionId);
-        if (!id) {
-          console.warn('[Daily] setRemoteParticipantAudio: session introuvable');
-          return;
-        }
+        if (!id) return;
         co.updateParticipant(id, { setAudio: enabled });
-      } catch (e) {
-        console.warn('[Daily] setRemoteParticipantAudio échoué');
+      } catch {
+        /* ignore */
       }
     };
-    // Double rAF : meilleure prise en charge après gestes tactiles (iOS / WebView).
     if (typeof requestAnimationFrame !== 'undefined') {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(run);
-      });
+      requestAnimationFrame(() => requestAnimationFrame(run));
     } else {
       run();
     }
@@ -388,17 +341,13 @@ export function useDailyCall(
     try {
       const co = callRef.current;
       const id = resolveDailySessionId(co, sessionId);
-      if (!id) {
-        console.warn('[Daily] ejectRemoteParticipant: session introuvable');
-        return false;
-      }
+      if (!id) return false;
       const out = co.updateParticipant(id, { eject: true }) as unknown;
       if (out != null && typeof (out as Promise<unknown>).then === 'function') {
         await (out as Promise<unknown>);
       }
       return true;
     } catch {
-      console.warn('[Daily] ejectRemoteParticipant échoué');
       return false;
     }
   }, []);
@@ -408,8 +357,7 @@ export function useDailyCall(
     try {
       intentionalActionRef.current = true;
       setIsCameraInterrupted(false);
-      const shouldEnable = !viewerModeRef.current;
-      if (shouldEnable) {
+      if (!viewerModeRef.current) {
         await callRef.current.setLocalVideo(false);
         await callRef.current.setLocalAudio(false);
         await callRef.current.setLocalVideo(true);
@@ -417,46 +365,41 @@ export function useDailyCall(
         setCamEnabled(true);
         setMicEnabled(true);
       }
-      setTimeout(() => { intentionalActionRef.current = false; }, 1500);
-    } catch (err) {
-      console.warn('Echec de la reprise matérielle', err);
+      setTimeout(() => {
+        intentionalActionRef.current = false;
+      }, 1500);
+    } catch {
       setIsCameraInterrupted(true);
       intentionalActionRef.current = false;
     }
   }, []);
 
   useEffect(() => {
-    const onVisibilityChange = () => {
+    const onVis = () => {
       if (document.visibilityState === 'visible' && isJoined && !viewerModeRef.current) {
         void recoverMediaDevices();
       }
     };
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
   }, [isJoined, recoverMediaDevices]);
 
-  // ── AUTO-RECONNECT on network loss ──
   useEffect(() => {
     if (!isJoined) return;
-
     const handleOffline = () => {
       reconnectingRef.current = true;
     };
-
     const handleOnline = async () => {
       if (!reconnectingRef.current || !callRef.current) return;
-
       try {
         const co = callRef.current;
-        const state = co.meetingState();
-
-        if (state === 'joined-meeting') {
+        if (co.meetingState() === 'joined-meeting') {
           reconnectingRef.current = false;
           return;
         }
-
-        // Destroy old instance and rejoin
-        try { await co.destroy(); } catch (_) {}
+        try {
+          await co.destroy();
+        } catch (_) {}
         callRef.current = null;
 
         const newCo = DailyIframe.createCallObject({
@@ -475,38 +418,6 @@ export function useDailyCall(
         newCo.on('participant-joined', () => refreshParticipants(newCo));
         newCo.on('participant-updated', () => refreshParticipants(newCo));
         newCo.on('participant-left', () => refreshParticipants(newCo));
-        newCo.on('track-started', (evt: any) => {
-          refreshParticipants(newCo);
-          if (evt.participant?.local) setIsCameraInterrupted(false);
-        });
-        newCo.on('track-stopped', (evt: any) => {
-          refreshParticipants(newCo);
-          if (evt.participant && evt.participant.local && evt.track) {
-            const isScreenShare =
-              evt.track.label?.toLowerCase().includes('screen') ||
-              (evt.track.kind === 'video' && evt.participant.screen);
-
-            if (!isScreenShare && !intentionalActionRef.current) {
-              setIsCameraInterrupted(true);
-            }
-          }
-        });
-        newCo.on('left-meeting', () => {
-          setIsJoined(false);
-          setLocalParticipant(null);
-          setRemoteParticipants([]);
-          setActiveSpeakerPeerId(null);
-          setIsCameraInterrupted(false);
-          setDailyAttachKey(0);
-        });
-        newCo.on('camera-error', (e: any) => {
-          console.warn('Daily camera-error (interruption possible)', e?.errorMsg);
-          setIsCameraInterrupted(true);
-        });
-        newCo.on('error', (e: any) => {
-          setError(e?.errorMsg || 'Erreur de reconnexion');
-          reconnectingRef.current = false;
-        });
 
         if (roomUrlRef.current && beefIdRef.current) {
           const accessTok = accessMeetingTokenRef.current;
@@ -515,11 +426,9 @@ export function useDailyCall(
             return;
           }
           let token: string | undefined;
-          if (typeof accessTok === 'string' && accessTok.length > 0) {
-            token = accessTok;
-          } else {
-            token = await fetchMeetingToken();
-          }
+          if (typeof accessTok === 'string' && accessTok.length > 0) token = accessTok;
+          else token = await fetchMeetingToken();
+
           const userData = buildDailyJoinUserData(arenaUserIdRef.current);
           await newCo.join({
             url: roomUrlRef.current,
@@ -531,26 +440,21 @@ export function useDailyCall(
           });
         }
       } catch {
-        console.error('Auto-reconnect failed');
         reconnectingRef.current = false;
       }
     };
-
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
-
     return () => {
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
     };
   }, [isJoined, refreshParticipants, fetchMeetingToken]);
 
-  /** Daily.co — qui parle maintenant (pour halos UI). Un seul listener par instance, retiré au cleanup. */
   useEffect(() => {
     if (!dailyAttachKey) return;
     const co = callRef.current;
     if (!co) return;
-
     const handler = (event: { activeSpeaker?: { peerId?: string } }) => {
       const next = event?.activeSpeaker?.peerId ?? null;
       setActiveSpeakerPeerId((prev) => (prev === next ? prev : next));
@@ -560,27 +464,30 @@ export function useDailyCall(
       try {
         co.off('active-speaker-change', handler);
       } catch {
-        /* call déjà détruit */
+        /* ignore */
       }
     };
   }, [dailyAttachKey]);
 
-  // Cleanup on unmount: only Daily.co
+  // NETTOYAGE PURIFIÉ : Ne détruit plus tout le DOM aveuglément
   useEffect(() => {
     return () => {
       if (callRef.current) {
         const co = callRef.current;
         callRef.current = null;
         try {
-          const parts = co.participants();
-          const local = Object.values(parts).find((p: any) => p.local);
+          co.setLocalVideo(false);
+        } catch (_) {}
+        try {
+          co.setLocalAudio(false);
+        } catch (_) {}
+        try {
+          const local = Object.values(co.participants()).find((p: any) => p.local);
           if (local) {
             (local as any).tracks?.video?.persistentTrack?.stop();
             (local as any).tracks?.audio?.persistentTrack?.stop();
           }
         } catch (_) {}
-        try { co.setLocalVideo(false); } catch (_) {}
-        try { co.setLocalAudio(false); } catch (_) {}
         co.leave().catch(() => {});
         co.destroy().catch(() => {});
       }
