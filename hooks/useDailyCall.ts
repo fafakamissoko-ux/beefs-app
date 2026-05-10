@@ -53,15 +53,17 @@ function resolveDailySessionId(co: DailyCall, hint: string): string | null {
 function toCallParticipant(p: DailyParticipant): CallParticipant {
   const videoState = p.tracks?.video?.state;
   const audioState = p.tracks?.audio?.state;
+  const vTrack = p.tracks?.video?.persistentTrack ?? p.tracks?.video?.track ?? null;
+  const aTrack = p.tracks?.audio?.persistentTrack ?? p.tracks?.audio?.track ?? null;
   return {
     sessionId: p.session_id,
     userName: (p.user_name as string) || 'Participant',
     arenaUserId: extractArenaUserIdFromDailyParticipant(p),
     isLocal: p.local,
-    videoTrack: p.tracks?.video?.persistentTrack ?? null,
-    audioTrack: p.tracks?.audio?.persistentTrack ?? null,
-    videoOn: !!p.tracks?.video?.persistentTrack && videoState !== 'off' && videoState !== 'blocked',
-    audioOn: !!p.tracks?.audio?.persistentTrack && audioState !== 'off' && audioState !== 'blocked',
+    videoTrack: vTrack,
+    audioTrack: aTrack,
+    videoOn: !!vTrack && videoState !== 'off' && videoState !== 'blocked',
+    audioOn: !!aTrack && audioState !== 'off' && audioState !== 'blocked',
   };
 }
 
