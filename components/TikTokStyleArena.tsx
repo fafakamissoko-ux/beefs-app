@@ -1615,7 +1615,11 @@ export function TikTokStyleArena({
         if (localMatchesThisChallenger) {
           panels[idx] = localParticipant as ChallengerArenaPanel;
         } else {
-          panels[idx] = challengerRemoteSlots.find((p) => p.arenaUserId === uid) ?? null;
+          panels[idx] = challengerRemoteSlots.find((p) => {
+            if (p.arenaUserId === uid) return true;
+            const match = matchRemoteToExpectedBeefParticipant(p, host.id, host.name, participantRoles);
+            return match?.userId === uid;
+          }) ?? null;
         }
       });
       return panels;
@@ -1626,7 +1630,7 @@ export function TikTokStyleArena({
       } else panels[idx] = p;
     });
     return panels;
-  }, [expectedUids, localParticipant, challengerRemoteSlots, userId]);
+  }, [expectedUids, localParticipant, challengerRemoteSlots, userId, host.id, host.name, participantRoles]);
 
   const leftPanel = isHost
     ? challengerRemoteSlots[0] ?? null
