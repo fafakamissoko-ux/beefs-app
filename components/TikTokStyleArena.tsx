@@ -1342,7 +1342,7 @@ export function TikTokStyleArena({
     error: callError,
     isCameraInterrupted,
     recoverMediaDevices,
-  } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer, userId, roomId, meetingTokenForDaily);
+  } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer, userId);
 
   useEffect(() => {
     leaveRef.current = leave;
@@ -1457,7 +1457,11 @@ export function TikTokStyleArena({
     ) {
       return;
     }
-    void join(initialCam, initialMic);
+    const joinToken =
+      typeof meetingTokenForDaily === 'string' && meetingTokenForDaily.length > 0
+        ? meetingTokenForDaily
+        : undefined;
+    void join(initialCam, initialMic, joinToken);
   }, [
     rolesLoaded,
     hasJoined,
@@ -1467,6 +1471,7 @@ export function TikTokStyleArena({
     join,
     initialCam,
     initialMic,
+    meetingTokenForDaily,
     isViewer,
     viewerAccessReady,
     serverAccess,
