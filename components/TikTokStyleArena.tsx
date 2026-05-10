@@ -545,14 +545,40 @@ export function TikTokStyleArena({
 
   const isViewer = useMemo(() => {
     if (isHost) return false;
-    if (!rolesLoaded) return true; // Sécurité de transition
+    if (!rolesLoaded) return null; // Sécurité : état neutre au chargement
     if (typeof window !== 'undefined' && window.location.search.includes('join=')) return false;
     return !Object.keys(participantRoles).includes(userId);
   }, [isHost, participantRoles, userId, rolesLoaded]);
 
   useEffect(() => {
-    if (isViewer) setShowPreJoin(false);
+    if (isViewer === true) setShowPreJoin(false);
   }, [isViewer]);
+
+  const [prefetchedToken, setPrefetchedToken] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!roomId || isViewer !== false) return;
+    const fetchToken = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        const res = await fetch('/api/daily/meeting-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ beefId: roomId }),
+        });
+        const data = (await res.json()) as { token?: string };
+        if (res.ok && data.token) setPrefetchedToken(data.token);
+      } catch {
+        /* ignore prefetch errors */
+      }
+    };
+    void fetchToken();
+  }, [roomId, isViewer]);
 
   const fetchPendingInvites = useCallback(async () => {
     if (!isHost) return;
@@ -1314,11 +1340,11 @@ export function TikTokStyleArena({
   }, [isViewer, fetchViewerAccess]);
 
   const effectiveDailyRoomUrl =
-    isViewer && viewerAccessReady && serverAccess?.dailyRoomUrl
+    isViewer === true && viewerAccessReady && serverAccess?.dailyRoomUrl
       ? serverAccess.dailyRoomUrl
       : (dailyRoomUrl ?? null);
 
-  const meetingTokenForDaily: string | null | undefined = isViewer
+  const meetingTokenForDaily: string | null | undefined = isViewer === true
     ? viewerAccessReady && serverAccess !== null
       ? (serverAccess.dailyToken !== undefined ? serverAccess.dailyToken : dailyMeetingToken)
       : undefined
@@ -1342,7 +1368,7 @@ export function TikTokStyleArena({
     error: callError,
     isCameraInterrupted,
     recoverMediaDevices,
-  } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer, userId);
+  } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer === true, userId);
 
   useEffect(() => {
     leaveRef.current = leave;
@@ -1443,38 +1469,24 @@ export function TikTokStyleArena({
     }
   }, [remoteParticipants, isJoined, isHost, host.id, host.name, participantRoles, mediatorGraceActive, toast]);
 
-  // Auto-join quand « Rejoindre » + URL Daily ; spectateur : attendre GET access (jeton).
+  // Les challengers utilisent handleJoin ; seuls les spectateurs utilisent l'auto-join.
   useEffect(() => {
-    if (!rolesLoaded) return;
-    if (!hasJoined || !effectiveDailyRoomUrl || isJoined || isJoining) return;
-    if (isViewer && !viewerAccessReady) return;
-    if (
-      isViewer &&
-      viewerAccessReady &&
-      serverAccess &&
-      serverAccess.dailyToken === null &&
-      serverAccess.viewerAccess === 'not_live'
-    ) {
-      return;
-    }
-    const joinToken =
-      typeof meetingTokenForDaily === 'string' && meetingTokenForDaily.length > 0
-        ? meetingTokenForDaily
-        : undefined;
-    void join(initialCam, initialMic, joinToken);
+    if (isViewer !== true || !hasJoined || isJoined || isJoining || !effectiveDailyRoomUrl) return;
+    if (!viewerAccessReady || (serverAccess && serverAccess.viewerAccess === 'not_live')) return;
+
+    void join(initialCam, initialMic, meetingTokenForDaily || undefined);
   }, [
-    rolesLoaded,
     hasJoined,
-    effectiveDailyRoomUrl,
     isJoined,
     isJoining,
+    effectiveDailyRoomUrl,
+    isViewer,
+    viewerAccessReady,
+    serverAccess,
     join,
     initialCam,
     initialMic,
     meetingTokenForDaily,
-    isViewer,
-    viewerAccessReady,
-    serverAccess,
   ]);
 
   const handleRaiseHand = useCallback(async () => {
@@ -3215,9 +3227,15 @@ export function TikTokStyleArena({
   }, [contextMenuMsg]);
 
 
-  const handleJoin = (camEnabled: boolean, micEnabled: boolean) => {
+  const handleJoin = async (camEnabled: boolean, micEnabled: boolean) => {
     setInitialCam(camEnabled);
     setInitialMic(micEnabled);
+
+    if (isViewer === false && !effectiveDailyRoomUrl) {
+      toast("La salle n'est pas encore prête.", 'error');
+      return;
+    }
+
     setHasJoined(true);
     setShowPreJoin(false);
     if (typeof window !== 'undefined') {
@@ -3226,6 +3244,10 @@ export function TikTokStyleArena({
       } catch {
         /* ignore */
       }
+    }
+
+    if (effectiveDailyRoomUrl && isViewer === false) {
+      void join(camEnabled, micEnabled, prefetchedToken);
     }
   };
 
@@ -3344,7 +3366,7 @@ export function TikTokStyleArena({
       {/* --- COUCHE 2 : PRE-JOIN (Priorité 2) --- */}
       {!showVsScreen && !hasJoined && showPreJoin && rolesLoaded && (
         <div className="absolute inset-0 z-[8000] bg-[#08080a]">
-          <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer} mediatorName={mediatorName} />
+          <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer === true} mediatorName={mediatorName} />
           {!effectiveDailyRoomUrl && (
             <div className="absolute bottom-10 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/80 px-4 py-2 text-xs font-semibold text-brand-400 backdrop-blur-sm">
               <div className="h-3 w-3 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" />
@@ -4020,7 +4042,7 @@ export function TikTokStyleArena({
       )}
 
       {/* GESTION AUDIO GLOBALE */}
-      <div className="hidden">
+      <div className="absolute w-px h-px opacity-0 pointer-events-none overflow-hidden">
         {remoteParticipants.map((p) => (
           p.audioTrack && <RemoteAudio key={p.sessionId} track={p.audioTrack} />
         ))}
