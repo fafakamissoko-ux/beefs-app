@@ -1,11 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Video, VideoOff } from 'lucide-react';
+import { prefetchDailyMeetingTokenForBeef } from '@/lib/daily-meeting-token-prefetch';
+import { supabase } from '@/lib/supabase/client';
 import { MutinyProtocol } from './MutinyProtocol';
 
 interface PreJoinScreenProps {
   userName: string;
+  /** Meeting Daily : prefetch partagé (cache in-flight avec l’Arena). */
+  beefId?: string | null;
+  onMeetingTokenPrefetched?: (token: string | undefined) => void;
   onJoin: (camEnabled: boolean, micEnabled: boolean) => void;
   viewerMode?: boolean;
   mediatorName?: string;
@@ -18,6 +23,8 @@ interface PreJoinScreenProps {
 
 export function PreJoinScreen({
   userName,
+  beefId,
+  onMeetingTokenPrefetched,
   onJoin,
   viewerMode = false,
   mediatorName,
@@ -29,6 +36,22 @@ export function PreJoinScreen({
 }: PreJoinScreenProps) {
   const [camEnabled, setCamEnabled] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
+  const [accessSyncPending, setAccessSyncPending] = useState(false);
+  const onTokenPrefetchedRef = useRef(onMeetingTokenPrefetched);
+  onTokenPrefetchedRef.current = onMeetingTokenPrefetched;
+
+  useEffect(() => {
+    if (viewerMode || !beefId) return;
+    setAccessSyncPending(true);
+    void prefetchDailyMeetingTokenForBeef(beefId, async () =>
+      (await supabase.auth.getSession()).data.session?.access_token ?? null,
+    )
+      .then((token) => {
+        if (typeof token === 'string') onTokenPrefetchedRef.current?.(token);
+        else onTokenPrefetchedRef.current?.(undefined);
+      })
+      .finally(() => setAccessSyncPending(false));
+  }, [viewerMode, beefId]);
 
   const handleJoin = () => {
     onJoin(camEnabled, micEnabled);
@@ -168,6 +191,18 @@ export function PreJoinScreen({
                 onRefuse={onMutinyRefuse}
               />
             </div>
+          )}
+
+          {accessSyncPending ? (
+            <p className="text-center font-mono text-[9px] font-bold uppercase tracking-widest text-white/35">
+              Synchronisation du salon sécurisé…
+            </p>
+          ) : (
+            beefId && (
+              <p className="text-center font-mono text-[9px] font-bold uppercase tracking-widest text-emerald-500/40">
+                Caméra uniquement après « Entrer » — aucun pré-verrouillage
+              </p>
+            )
           )}
 
           <button

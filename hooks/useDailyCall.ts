@@ -36,6 +36,16 @@ export interface UseDailyCallReturn {
   recoverMediaDevices: () => Promise<void>;
 }
 
+async function disposeCallSafely(co: DailyCall | null): Promise<void> {
+  if (!co) return;
+  try {
+    co.setLocalVideo(false);
+    co.setLocalAudio(false);
+  } catch (_) {}
+  await co.leave().catch(() => {});
+  await co.destroy().catch(() => {});
+}
+
 function resolveDailySessionId(co: DailyCall, hint: string): string | null {
   try {
     const parts = co.participants();
@@ -109,7 +119,10 @@ export function useDailyCall(
   const setupListeners = useCallback(
     (co: DailyCall) => {
       co.on('joined-meeting', () => {
-        if (joinWatchdogRef.current != null) window.clearTimeout(joinWatchdogRef.current);
+        if (joinWatchdogRef.current != null) {
+          window.clearTimeout(joinWatchdogRef.current);
+          joinWatchdogRef.current = null;
+        }
         setIsJoined(true);
         setIsJoining(false);
         setIsCameraInterrupted(false);
@@ -140,7 +153,10 @@ export function useDailyCall(
         setIsCameraInterrupted(false);
       });
       co.on('error', (e: unknown) => {
-        if (joinWatchdogRef.current != null) window.clearTimeout(joinWatchdogRef.current);
+        if (joinWatchdogRef.current != null) {
+          window.clearTimeout(joinWatchdogRef.current);
+          joinWatchdogRef.current = null;
+        }
         const msg = (e as { errorMsg?: string })?.errorMsg;
         setError(msg || 'Erreur de connexion');
         setIsJoining(false);
@@ -164,8 +180,9 @@ export function useDailyCall(
 
       try {
         if (callRef.current) {
-          await callRef.current.destroy();
+          const prev = callRef.current;
           callRef.current = null;
+          await disposeCallSafely(prev);
         }
 
         const userData = buildDailyJoinUserData(arenaUserId);
@@ -176,6 +193,10 @@ export function useDailyCall(
         callRef.current = co;
         setupListeners(co);
 
+        if (joinWatchdogRef.current != null) {
+          window.clearTimeout(joinWatchdogRef.current);
+          joinWatchdogRef.current = null;
+        }
         joinWatchdogRef.current = window.setTimeout(() => {
           if (callRef.current?.meetingState() !== 'joined-meeting') {
             setError('Connexion trop lente ou bloquée par le navigateur.');
@@ -192,7 +213,13 @@ export function useDailyCall(
           startAudioOff: viewerMode ? true : !startMic,
         });
       } catch (err: unknown) {
-        if (joinWatchdogRef.current != null) window.clearTimeout(joinWatchdogRef.current);
+        if (joinWatchdogRef.current != null) {
+          window.clearTimeout(joinWatchdogRef.current);
+          joinWatchdogRef.current = null;
+        }
+        const dangling = callRef.current;
+        callRef.current = null;
+        await disposeCallSafely(dangling);
         const m = err instanceof Error ? err.message : 'Impossible de rejoindre';
         setError(m);
         setIsJoining(false);
@@ -205,14 +232,7 @@ export function useDailyCall(
     if (!callRef.current) return;
     const co = callRef.current;
     callRef.current = null;
-    try {
-      co.setLocalVideo(false);
-    } catch (_) {}
-    try {
-      co.setLocalAudio(false);
-    } catch (_) {}
-    await co.leave().catch(() => {});
-    await co.destroy().catch(() => {});
+    await disposeCallSafely(co);
     setIsJoined(false);
     setLocalParticipant(null);
     setRemoteParticipants([]);
@@ -303,10 +323,13 @@ export function useDailyCall(
 
   useEffect(() => {
     return () => {
-      if (callRef.current) {
-        void callRef.current.destroy().catch(() => {});
-        callRef.current = null;
+      if (joinWatchdogRef.current != null) {
+        window.clearTimeout(joinWatchdogRef.current);
+        joinWatchdogRef.current = null;
       }
+      const co = callRef.current;
+      callRef.current = null;
+      void disposeCallSafely(co);
     };
   }, []);
 

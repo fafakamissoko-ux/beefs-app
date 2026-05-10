@@ -126,6 +126,29 @@ export function matchRemoteToExpectedBeefParticipant(
   return null;
 }
 
+/**
+ * Le remote Daily correspond au participant beef `expectedUserId` (uuid) ?
+ * Triple voie : 1. arenaUserId strict, 2.–3. résolution métier ({@link matchRemoteToExpectedBeefParticipant} incl. alias pseudos).
+ */
+export function remoteMatchesExpectedBeefParticipantUid(
+  remote: { userName: string; arenaUserId: string | null },
+  expectedUserId: string,
+  mediatorUserId: string,
+  mediatorDisplayName: string,
+  roles: Record<string, BeefParticipantRowMeta>,
+): boolean {
+  const eu = expectedUserId.trim().toLowerCase();
+  const aid = remote.arenaUserId?.trim().toLowerCase() ?? '';
+  if (aid && aid === eu) return true;
+  const match = matchRemoteToExpectedBeefParticipant(
+    remote,
+    mediatorUserId,
+    mediatorDisplayName,
+    roles,
+  );
+  return match?.userId === eu;
+}
+
 export function buildDailyJoinUserData(arenaUserId: string | null | undefined): Record<string, string> | undefined {
   if (!arenaUserId || !isValidArenaUserId(arenaUserId)) return undefined;
   return { [ARENA_USER_DATA_KEY]: arenaUserId.trim().toLowerCase() };

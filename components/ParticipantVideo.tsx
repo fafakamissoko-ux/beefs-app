@@ -59,6 +59,7 @@ export function ParticipantVideo({ videoTrack, audioTrack, muted = false, classN
         ref={videoRef}
         autoPlay
         playsInline
+        controls={false}
         muted={true}
         className={`${className} ${mirror ? 'scale-x-[-1]' : ''}`}
       />

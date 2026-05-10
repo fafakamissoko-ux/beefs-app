@@ -51,9 +51,11 @@ import {
   buildParticipantAliasSet,
   isValidArenaUserId,
   matchRemoteToExpectedBeefParticipant,
+  remoteMatchesExpectedBeefParticipantUid,
   remoteMatchesMediator,
   type BeefParticipantRowMeta,
 } from '@/lib/participant-identity';
+import { prefetchDailyMeetingTokenForBeef } from '@/lib/daily-meeting-token-prefetch';
 import {
   FlyingReactionsLayer,
   createFlyingReactionEntry,
@@ -555,29 +557,17 @@ export function TikTokStyleArena({
   }, [isViewer]);
 
   const [prefetchedToken, setPrefetchedToken] = useState<string | undefined>(undefined);
+  const flushMeetingTokenFromPreJoin = useCallback((token: string | undefined) => {
+    if (token) setPrefetchedToken(token);
+  }, []);
+
   useEffect(() => {
     if (!roomId || isViewer !== false) return;
-    const fetchToken = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!session?.access_token) return;
-        const res = await fetch('/api/daily/meeting-token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ beefId: roomId }),
-        });
-        const data = (await res.json()) as { token?: string };
-        if (res.ok && data.token) setPrefetchedToken(data.token);
-      } catch {
-        /* ignore prefetch errors */
-      }
-    };
-    void fetchToken();
+    void prefetchDailyMeetingTokenForBeef(roomId, async () =>
+      (await supabase.auth.getSession()).data.session?.access_token ?? null,
+    ).then((token) => {
+      if (token) setPrefetchedToken(token);
+    });
   }, [roomId, isViewer]);
 
   const fetchPendingInvites = useCallback(async () => {
@@ -1615,11 +1605,9 @@ export function TikTokStyleArena({
         if (localMatchesThisChallenger) {
           panels[idx] = localParticipant as ChallengerArenaPanel;
         } else {
-          panels[idx] = challengerRemoteSlots.find((p) => {
-            if (p.arenaUserId === uid) return true;
-            const match = matchRemoteToExpectedBeefParticipant(p, host.id, host.name, participantRoles);
-            return match?.userId === uid;
-          }) ?? null;
+          panels[idx] = challengerRemoteSlots.find((p) =>
+            remoteMatchesExpectedBeefParticipantUid(p, uid, host.id, host.name, participantRoles),
+          ) ?? null;
         }
       });
       return panels;
@@ -3371,7 +3359,14 @@ export function TikTokStyleArena({
       {/* --- COUCHE 2 : PRE-JOIN (Priorité 2) --- */}
       {!showVsScreen && !hasJoined && showPreJoin && rolesLoaded && (
         <div className="absolute inset-0 z-[8000] bg-[#08080a]">
-          <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer === true} mediatorName={mediatorName} />
+          <PreJoinScreen
+            userName={userName}
+            beefId={roomId}
+            onMeetingTokenPrefetched={flushMeetingTokenFromPreJoin}
+            onJoin={handleJoin}
+            viewerMode={isViewer === true}
+            mediatorName={mediatorName}
+          />
           {!effectiveDailyRoomUrl && (
             <div className="absolute bottom-10 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/80 px-4 py-2 text-xs font-semibold text-brand-400 backdrop-blur-sm">
               <div className="h-3 w-3 animate-spin rounded-full border-2 border-brand-400 border-t-transparent" />
