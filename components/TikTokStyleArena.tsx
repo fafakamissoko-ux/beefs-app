@@ -1589,8 +1589,15 @@ export function TikTokStyleArena({
     if (expectedUids.length > 0) {
       expectedUids.forEach((uid, idx) => {
         if (idx > 3) return;
-        if (localParticipant?.arenaUserId === uid) panels[idx] = localParticipant as ChallengerArenaPanel;
-        else panels[idx] = challengerRemoteSlots.find((p) => p.arenaUserId === uid) ?? null;
+        const localMatchesThisChallenger =
+          localParticipant &&
+          (localParticipant.arenaUserId === uid ||
+            (localParticipant.arenaUserId == null && userId === uid));
+        if (localMatchesThisChallenger) {
+          panels[idx] = localParticipant as ChallengerArenaPanel;
+        } else {
+          panels[idx] = challengerRemoteSlots.find((p) => p.arenaUserId === uid) ?? null;
+        }
       });
       return panels;
     }
@@ -1600,7 +1607,7 @@ export function TikTokStyleArena({
       } else panels[idx] = p;
     });
     return panels;
-  }, [expectedUids, localParticipant, challengerRemoteSlots]);
+  }, [expectedUids, localParticipant, challengerRemoteSlots, userId]);
 
   const leftPanel = isHost
     ? challengerRemoteSlots[0] ?? null
@@ -3328,7 +3335,7 @@ export function TikTokStyleArena({
       </AnimatePresence>
 
       {/* --- COUCHE 2 : PRE-JOIN (Priorité 2) --- */}
-      {!showVsScreen && !hasJoined && showPreJoin && (
+      {!showVsScreen && !hasJoined && showPreJoin && rolesLoaded && (
         <div className="absolute inset-0 z-[8000] bg-[#08080a]">
           <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer} mediatorName={mediatorName} />
           {!effectiveDailyRoomUrl && (

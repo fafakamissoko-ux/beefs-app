@@ -161,7 +161,7 @@ export function useDailyCall(
     }
   }, []);
 
-  const join = useCallback(async (preAcquiredStream?: MediaStream | null) => {
+  const join = useCallback(async (_preAcquiredStream?: MediaStream | null) => {
     if (!roomUrl || isJoining || isJoined) return;
     setIsJoining(true);
     setError(null);
@@ -182,8 +182,6 @@ export function useDailyCall(
 
       const co = DailyIframe.createCallObject({
         userData,
-        videoSource: viewerMode ? false : (preAcquiredStream ? preAcquiredStream.getVideoTracks()[0] : undefined),
-        audioSource: viewerMode ? false : (preAcquiredStream ? preAcquiredStream.getAudioTracks()[0] : undefined),
         subscribeToTracksAutomatically: true,
       });
       callRef.current = co;
@@ -296,18 +294,7 @@ export function useDailyCall(
     try { co.setLocalVideo(false); } catch (_) {}
     try { co.setLocalAudio(false); } catch (_) {}
 
-    // ── STEP 2: Stop all <video>/<audio> srcObject tracks ──
-    if (typeof document !== 'undefined') {
-      document.querySelectorAll('video, audio').forEach((el) => {
-        const media = el as HTMLVideoElement | HTMLAudioElement;
-        if (media.srcObject) {
-          try { (media.srcObject as MediaStream).getTracks().forEach(t => t.stop()); } catch (_) {}
-          media.srcObject = null;
-        }
-      });
-    }
-
-    // ── STEP 3: Stop Daily.co persistent tracks ──
+    // ── STEP 2: Stop Daily.co persistent tracks ──
     try {
       const parts = co.participants();
       const local = Object.values(parts).find((p: any) => p.local);
@@ -317,7 +304,7 @@ export function useDailyCall(
       }
     } catch (_) {}
 
-    // ── STEP 4: Destroy directly (skipping leave() avoids the leave handshake
+    // ── STEP 3: Destroy directly (skipping leave() avoids the leave handshake
     // which can briefly re-enable camera tracks via Daily.co internals) ──
     try { await co.destroy(); } catch (_) {}
 
@@ -473,8 +460,7 @@ export function useDailyCall(
         callRef.current = null;
 
         const newCo = DailyIframe.createCallObject({
-          audioSource: viewerModeRef.current ? false : undefined,
-          videoSource: viewerModeRef.current ? false : undefined,
+          subscribeToTracksAutomatically: true,
         });
         callRef.current = newCo;
 
