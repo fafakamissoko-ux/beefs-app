@@ -579,19 +579,9 @@ export function useDailyCall(
     };
   }, [dailyAttachKey]);
 
-  // Cleanup on unmount — same order: media elements first, then Daily.co
+  // Cleanup on unmount: only Daily.co
   useEffect(() => {
     return () => {
-      // Stop all video/audio elements immediately
-      if (typeof document !== 'undefined') {
-        document.querySelectorAll('video, audio').forEach((el) => {
-          const media = el as HTMLVideoElement | HTMLAudioElement;
-          if (media.srcObject) {
-            try { (media.srcObject as MediaStream).getTracks().forEach(t => t.stop()); } catch (_) {}
-            media.srcObject = null;
-          }
-        });
-      }
       if (callRef.current) {
         const co = callRef.current;
         callRef.current = null;
