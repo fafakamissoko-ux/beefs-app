@@ -2489,7 +2489,7 @@ export function TikTokStyleArena({
       ),
     );
 
-    const panelMatch = challengerRemoteSlots.find((p) => p.arenaUserId === debaterId);
+    const panelMatch = challengerRemoteSlots.find((p) => p?.arenaUserId === debaterId);
     const slot = panelMatch?.arenaUserId ? getSlotForUser(panelMatch.arenaUserId) : undefined;
     const speakerLabel =
       debaters.find((d) => d.id === debaterId)?.name ??
