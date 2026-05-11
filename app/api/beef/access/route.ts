@@ -71,13 +71,14 @@ async function createDailyMeetingToken(params: {
   user: User;
   userName: string;
   role: DailyTokenRole;
+  ttlSec?: number;
 }): Promise<string | null> {
   const { apiKey, roomName, user, userName, role } = params;
   const uid = user.id.trim();
   if (uid.length < 1 || uid.length > 36) return null;
 
   const now = Math.floor(Date.now() / 1000);
-  const exp = now + MEETING_TOKEN_TTL_SEC;
+  const exp = now + (params.ttlSec || MEETING_TOKEN_TTL_SEC);
 
   const properties: Record<string, unknown> = {
     room_name: roomName,
@@ -116,6 +117,7 @@ async function videoCredentialsForUser(
   user: User,
   beefId: string,
   grantTokenRole: DailyTokenRole | null,
+  ttlSec?: number,
 ): Promise<{ dailyRoomUrl: string | null; dailyToken: string | null }> {
   const apiKey = process.env.DAILY_API_KEY;
   const roomName = beefDailyRoomName(beefId);
@@ -146,6 +148,7 @@ async function videoCredentialsForUser(
     user,
     userName,
     role: grantTokenRole,
+    ttlSec,
   });
 
   return { dailyRoomUrl, dailyToken };
@@ -193,7 +196,10 @@ export async function GET(request: NextRequest) {
       grantTokenRole = null;
     }
 
-    const video = await videoCredentialsForUser(supabaseAdmin, activeUser, beefId, grantTokenRole);
+    const isAnonymous = !user;
+    const tokenTTL = isAnonymous ? 600 : undefined; // 10 minutes pour les anonymes
+
+    const video = await videoCredentialsForUser(supabaseAdmin, activeUser, beefId, grantTokenRole, tokenTTL);
     return NextResponse.json({
       role,
       viewerAccess: beef.status === 'live' ? 'full' : 'not_live',
