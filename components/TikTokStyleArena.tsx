@@ -35,10 +35,12 @@ import { VsTransition } from './VsTransition';
 import { ChatPanel } from './ChatPanel';
 import { PreJoinScreen } from './PreJoinScreen';
 import { ParticipantVideo } from './ParticipantVideo';
+import { MeetingAudioOutlet } from './MeetingAudioOutlet';
 import { FeatureGuide } from './FeatureGuide';
 import { ViewerListModal } from './ViewerListModal';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
-import { useDailyCall } from '@/hooks/useDailyCall';
+import type { CallParticipant } from '@/hooks/useDailyCall';
+import { useDailyMeetingEngine } from '@/hooks/useDailyMeetingEngine';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
@@ -51,9 +53,12 @@ import {
   buildParticipantAliasSet,
   isValidArenaUserId,
   matchRemoteToExpectedBeefParticipant,
-  remoteMatchesExpectedBeefParticipantUid,
+  reconcilePeers,
   remoteMatchesMediator,
   type BeefParticipantRowMeta,
+  type PhysicalPeer,
+  type ReconcileExpectedRoles,
+  type ReconciledPeer,
 } from '@/lib/participant-identity';
 import { prefetchDailyMeetingTokenForBeef } from '@/lib/daily-meeting-token-prefetch';
 import {
@@ -70,16 +75,25 @@ import { playRematchThunderSfx } from '@/lib/playVerdictSfx';
 import { MediatorSidebar, type MediatorRemoteRow } from './MediatorSidebar';
 import { FullscreenGiftAnimation, type ArenaBigGiftPayload } from './Arena/FullscreenGiftAnimation';
 
-function RemoteAudio({ track }: { track: MediaStreamTrack | null }) {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  useEffect(() => {
-    if (audioRef.current && track) {
-      audioRef.current.srcObject = new MediaStream([track]);
-      audioRef.current.play().catch(e => console.warn('[Audio] Autoplay bloqué', e));
-    }
-  }, [track]);
-  // On évite "display: none" (hidden) qui bloque l'autoplay sur Safari iOS
-  return <audio ref={audioRef} autoPlay playsInline style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} />;
+function physicalToCallParticipant(p: PhysicalPeer): CallParticipant {
+  const vs = p.videoTrackState;
+  const as = p.audioTrackState;
+  const videoOn =
+    !!p.videoTrack &&
+    (vs === undefined || (typeof vs === 'string' && vs !== 'off' && vs !== 'blocked'));
+  const audioOn =
+    !!p.audioTrack &&
+    (as === undefined || (typeof as === 'string' && as !== 'off' && as !== 'blocked'));
+  return {
+    sessionId: p.sessionId,
+    userName: p.displayName,
+    arenaUserId: p.arenaUserId,
+    isLocal: p.isLocal,
+    videoTrack: p.videoTrack,
+    audioTrack: p.audioTrack,
+    videoOn,
+    audioOn,
+  };
 }
 
 const SFX_MAP: Record<string, string> = {
@@ -796,7 +810,7 @@ export function TikTokStyleArena({
   }, [beefTimeRemaining]);
 
   const endBeefRef = useRef<(reason: string) => Promise<void>>();
-  /** Rempli après `useDailyCall` — `endBeef` vit au-dessus du hook et ne peut pas fermer sur `leave` en closure directe. */
+  /** Rempli après `useDailyMeetingEngine` — `endBeef` vit au-dessus du hook et ne peut pas fermer sur `leave` en closure directe. */
   const leaveRef = useRef<() => Promise<void>>(async () => {});
 
   // ── VOTE SYSTEM — TikTok-style duel gauge ──
@@ -1341,6 +1355,8 @@ export function TikTokStyleArena({
     : dailyMeetingToken;
 
   const {
+    status,
+    peersBySessionId,
     join,
     leave,
     toggleMic,
@@ -1348,17 +1364,37 @@ export function TikTokStyleArena({
     setLocalAudioEnabled,
     setRemoteParticipantAudio,
     ejectRemoteParticipant,
-    isJoined,
-    isJoining,
     micEnabled,
     camEnabled,
-    localParticipant,
-    remoteParticipants,
     activeSpeakerPeerId,
     error: callError,
     isCameraInterrupted,
     recoverMediaDevices,
-  } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer === true, userId);
+  } = useDailyMeetingEngine({
+    roomUrl: effectiveDailyRoomUrl,
+    userName,
+    viewerMode: isViewer === true,
+    arenaUserId: userId,
+  });
+
+  const isJoined = status === 'joined';
+  const isJoining = status === 'joining';
+
+  const localParticipant = useMemo(
+    () => {
+      const lp = Object.values(peersBySessionId).find((x) => x.isLocal);
+      return lp ? physicalToCallParticipant(lp) : null;
+    },
+    [peersBySessionId],
+  );
+
+  const remoteParticipants = useMemo(
+    () =>
+      Object.values(peersBySessionId)
+        .filter((x) => !x.isLocal)
+        .map(physicalToCallParticipant),
+    [peersBySessionId],
+  );
 
   useEffect(() => {
     leaveRef.current = leave;
@@ -1520,17 +1556,6 @@ export function TikTokStyleArena({
     };
   }, [isJoined, roomId, isViewer]);
 
-  // Sort remote participants: main challengers first based on roles
-  const sortedRemoteParticipants = [...remoteParticipants].sort((a, b) => {
-    const metaA = matchRemoteToExpectedBeefParticipant(a, host.id, host.name, participantRoles);
-    const metaB = matchRemoteToExpectedBeefParticipant(b, host.id, host.name, participantRoles);
-    const roleA = metaA?.role;
-    const roleB = metaB?.role;
-    if (roleA === 'participant' && roleB !== 'participant') return -1;
-    if (roleA !== 'participant' && roleB === 'participant') return 1;
-    return 0;
-  });
-
   const hasExpectedChallengers = useMemo(
     () => Object.keys(participantRoles).some((uid) => uid !== host.id),
     [participantRoles, host.id],
@@ -1559,36 +1584,6 @@ export function TikTokStyleArena({
     ? remoteParticipants.find(p => remoteMatchesMediator(p, host.id, host.name)) ?? null
     : null;
 
-  /**
-   * Remotes qui correspondent à des challengers attendus (beef_participants), pas le médiateur ni un inconnu.
-   * Ordre stable : tri parent (participant d’abord). Slots A/B = [0] et [1].
-   * Exclut le participant local (challenger ou spectateur) pour ne jamais dupliquer le même flux sur les deux dalles.
-   */
-  const challengerRemoteSlots = useMemo(() => {
-    const matched = sortedRemoteParticipants.filter(
-      (p) => matchRemoteToExpectedBeefParticipant(p, host.id, host.name, participantRoles) !== null,
-    );
-    const withoutSelf = !localParticipant?.sessionId
-      ? matched
-      : matched.filter((p) => p.sessionId !== localParticipant.sessionId);
-    if (withoutSelf.length > 0 || Object.keys(participantRoles).length > 0) {
-      return withoutSelf;
-    }
-    /* Rôles beef pas encore hydratés : exclure uniquement le médiateur + le local (évite deux fois le même challenger). */
-    const naive = sortedRemoteParticipants.filter(
-      (p) => !remoteMatchesMediator(p, host.id, host.name),
-    );
-    return !localParticipant?.sessionId
-      ? naive
-      : naive.filter((p) => p.sessionId !== localParticipant.sessionId);
-  }, [
-    sortedRemoteParticipants,
-    host.id,
-    host.name,
-    participantRoles,
-    localParticipant?.sessionId,
-  ]);
-
   const expectedUids = useMemo(() => {
     return Object.entries(participantRoles)
       .filter(([uid]) => uid !== host.id && !ejectedUids.includes(uid))
@@ -1596,52 +1591,63 @@ export function TikTokStyleArena({
       .map((e) => e[0]);
   }, [participantRoles, host.id, ejectedUids]);
 
-  type ChallengerArenaPanel = (typeof challengerRemoteSlots)[number];
+  const expectedRoles = useMemo((): ReconcileExpectedRoles => ({
+    mediatorUserId: host.id,
+    mediatorDisplayName: host.name,
+    challengerUidsOrdered: expectedUids,
+    roles: participantRoles,
+  }), [host.id, host.name, expectedUids, participantRoles]);
 
-  const displayPanelsFixed = useMemo((): Array<ChallengerArenaPanel | null> => {
-    const panels: Array<ChallengerArenaPanel | null> = [null, null, null, null];
-    if (expectedUids.length > 0) {
-      expectedUids.forEach((uid, idx) => {
-        if (idx > 3) return;
-        const localMatchesThisChallenger =
-          localParticipant &&
-          (localParticipant.arenaUserId === uid ||
-            (localParticipant.arenaUserId == null && userId === uid));
-        if (localMatchesThisChallenger) {
-          panels[idx] = localParticipant as ChallengerArenaPanel;
-        } else {
-          panels[idx] = challengerRemoteSlots.find((p) =>
-            remoteMatchesExpectedBeefParticipantUid(p, uid, host.id, host.name, participantRoles),
-          ) ?? null;
-        }
-      });
-      return panels;
+  const reconciledPeers = useMemo(
+    () => reconcilePeers(Object.values(peersBySessionId), expectedRoles),
+    [peersBySessionId, expectedRoles],
+  );
+
+  const localPeer = useMemo(
+    () => reconciledPeers.find((r) => r.physical.isLocal) ?? null,
+    [reconciledPeers],
+  );
+
+  const mediatorPeer = useMemo(
+    () => reconciledPeers.find((r) => r.semantic.expectedSlotIndex === -1) ?? null,
+    [reconciledPeers],
+  );
+
+  const gridPanels = useMemo((): Array<ReconciledPeer | null> => {
+    const slots: Array<ReconciledPeer | null> = [null, null, null, null];
+    for (const r of reconciledPeers) {
+      const i = r.semantic.expectedSlotIndex;
+      if (i >= 0 && i < 4) slots[i] = r;
     }
-    challengerRemoteSlots.slice(0, 4).forEach((p, idx) => {
-      if (localParticipant?.sessionId && p.sessionId === localParticipant.sessionId) {
-        panels[idx] = localParticipant as ChallengerArenaPanel;
-      } else panels[idx] = p;
-    });
-    return panels;
-  }, [expectedUids, localParticipant, challengerRemoteSlots, userId, host.id, host.name, participantRoles]);
+    return slots;
+  }, [reconciledPeers]);
+
+  const gridSlotParticipants = useMemo(
+    () => gridPanels.map((cell) => (cell ? physicalToCallParticipant(cell.physical) : null)),
+    [gridPanels],
+  );
+
+  /** 4 slots A–D (indices 0–3), null si la case est vide — grille Emperor + hot-mic. */
+  const challengerRemoteSlots = gridSlotParticipants;
 
   const leftPanel = isHost
-    ? challengerRemoteSlots[0] ?? null
+    ? gridSlotParticipants[0] ?? null
     : isViewer
-      ? challengerRemoteSlots[0] ?? null
+      ? gridSlotParticipants[0] ?? null
       : localParticipant;
   const leftPanelIsLocal = !isHost && !isViewer;
   const leftPanelName = isHost
-    ? (challengerRemoteSlots[0]?.userName || 'Challenger 1')
+    ? (gridSlotParticipants[0]?.userName || 'Challenger 1')
     : isViewer
-      ? (challengerRemoteSlots[0]?.userName || 'Challenger 1')
+      ? (gridSlotParticipants[0]?.userName || 'Challenger 1')
       : userName;
 
-  const rightPanel = isHost
-    ? challengerRemoteSlots[1] ?? null
-    : isViewer
-      ? challengerRemoteSlots[1] ?? null
-      : challengerRemoteSlots[0] ?? null;
+  const rightPanel =
+    isHost || isViewer
+      ? gridSlotParticipants[1] ?? null
+      : (gridSlotParticipants.find((p) => p && p.sessionId !== localParticipant?.sessionId) ??
+          gridSlotParticipants[0]) ??
+        null;
   /** Si le flux local Daily est mappé sur le panneau droit (rare mais possible selon l’ordre des peers). */
   const rightPanelIsLocal =
     !isHost &&
@@ -1649,18 +1655,17 @@ export function TikTokStyleArena({
     !!localParticipant &&
     !!rightPanel &&
     rightPanel.sessionId === localParticipant.sessionId;
-  const rightPanelName = isHost
-    ? (challengerRemoteSlots[1]?.userName || 'Challenger 2')
-    : isViewer
-      ? (challengerRemoteSlots[1]?.userName || 'Challenger 2')
-      : (challengerRemoteSlots[0]?.userName || 'Challenger 2');
+  const rightPanelName =
+    isHost || isViewer
+      ? (gridSlotParticipants[1]?.userName || 'Challenger 2')
+      : (rightPanel?.userName || 'Challenger 2');
 
   const getSlotForUser = useCallback(
     (uid?: string | null): 'A' | 'B' | 'C' | 'D' => {
       if (!uid) return 'A';
       const idx = expectedUids.indexOf(uid);
       if (idx < 0) {
-        const j = challengerRemoteSlots.findIndex((p) => p.arenaUserId === uid);
+        const j = gridSlotParticipants.findIndex((p) => p?.arenaUserId === uid);
         if (j === 1) return 'B';
         if (j === 2) return 'C';
         if (j === 3) return 'D';
@@ -1671,7 +1676,7 @@ export function TikTokStyleArena({
       if (idx === 3) return 'D';
       return 'A';
     },
-    [expectedUids, challengerRemoteSlots],
+    [expectedUids, gridSlotParticipants],
   );
 
   const leftSlot = 'A';
@@ -1707,7 +1712,20 @@ export function TikTokStyleArena({
   const rightRemoteAudioMuted =
     structuredDebateEnabled && !!rightPanel && (!rightIsSpeaking || mediatorHoldingFloor);
 
-  const mediatorParticipant = isHost ? localParticipant : hostRemoteParticipant;
+  const meetingAudioMutedSessionIds = useMemo(() => {
+    const s = new Set<string>();
+    if (structuredDebateEnabled) {
+      if (leftPanel?.sessionId && leftRemoteAudioMuted) s.add(leftPanel.sessionId);
+      if (rightPanel?.sessionId && rightRemoteAudioMuted) s.add(rightPanel.sessionId);
+    }
+    return s;
+  }, [structuredDebateEnabled, leftPanel, rightPanel, leftRemoteAudioMuted, rightRemoteAudioMuted]);
+
+  const mediatorParticipant = useMemo((): CallParticipant | null => {
+    if (isHost) return localParticipant;
+    const m = mediatorPeer ? physicalToCallParticipant(mediatorPeer.physical) : null;
+    return m ?? hostRemoteParticipant;
+  }, [isHost, localParticipant, mediatorPeer, hostRemoteParticipant]);
   const mediatorIsLocal = isHost;
   const mediatorName = isHost ? userName : host.name;
   /** Micro du médiateur (local ou distant) — bulle prestige « audio-reactive ». */
@@ -1738,16 +1756,22 @@ export function TikTokStyleArena({
   const mediatorRemoteRows = useMemo((): MediatorRemoteRow[] => {
     if (!isHost || !effectiveDailyRoomUrl) return [];
     if (expectedUids.length === 0) {
-      return challengerRemoteSlots.slice(0, 4).map((p, idx) => ({
-        sessionId: p.sessionId,
-        label: p.userName || `Participant ${idx + 1}`,
-        slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as 'A' | 'B' | 'C' | 'D',
-        debaterId: p.arenaUserId ?? null,
-        audioOn: p.audioOn,
-      }));
+      const rows: MediatorRemoteRow[] = [];
+      for (let idx = 0; idx < 4; idx++) {
+        const p = gridSlotParticipants[idx];
+        if (!p) continue;
+        rows.push({
+          sessionId: p.sessionId,
+          label: p.userName || `Participant ${rows.length + 1}`,
+          slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as 'A' | 'B' | 'C' | 'D',
+          debaterId: p.arenaUserId ?? null,
+          audioOn: p.audioOn,
+        });
+      }
+      return rows;
     }
     return expectedUids.slice(0, 4).map((uid, idx) => {
-      const panel = displayPanelsFixed[idx];
+      const panel = gridSlotParticipants[idx];
       const slot = (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as 'A' | 'B' | 'C' | 'D';
       return {
         sessionId: panel?.sessionId ?? '',
@@ -1761,9 +1785,8 @@ export function TikTokStyleArena({
     isHost,
     effectiveDailyRoomUrl,
     expectedUids,
-    displayPanelsFixed,
+    gridSlotParticipants,
     participantRoles,
-    challengerRemoteSlots,
   ]);
 
   const leftPanelRef = useRef(leftPanel);
@@ -1774,6 +1797,7 @@ export function TikTokStyleArena({
   const hotMicSpeakerSlot = useMemo((): 'A' | 'B' | 'C' | 'D' | null => {
     if (!speakingTurnActive || !speakingTurnTarget) return null;
     for (const p of challengerRemoteSlots) {
+      if (!p) continue;
       if (p.arenaUserId === speakingTurnTarget) {
         return getSlotForUser(p.arenaUserId);
       }
@@ -2581,7 +2605,7 @@ export function TikTokStyleArena({
     setFloorAnnouncement(null);
     const endedSpeakerId = speakingTurnTargetRef.current;
     if (isHost && endedSpeakerId) {
-      const p = challengerRemoteSlots.find((x) => x.arenaUserId === endedSpeakerId);
+      const p = challengerRemoteSlots.find((x) => x?.arenaUserId === endedSpeakerId);
       const sid = p?.sessionId;
       if (sid) setRemoteParticipantAudio(sid, false);
       channelRef.current
@@ -3722,9 +3746,12 @@ export function TikTokStyleArena({
             type EmperorSlot = 'A' | 'B' | 'C' | 'D';
             const expectedCount = Math.max(2, expectedUids.length);
             const gridClass = expectedCount <= 2 ? 'grid-cols-2 grid-rows-1' : 'grid-cols-2 grid-rows-2';
-            const layoutConfigs = displayPanelsFixed.slice(0, expectedCount).map((panel, idx) => ({
+            const layoutConfigs = gridPanels.slice(0, expectedCount).map((panel, idx) => ({
               id: `grid-${idx}`,
-              name: participantRoles[expectedUids[idx]]?.name || `Participant ${idx + 1}`,
+              name:
+                participantRoles[expectedUids[idx]]?.name?.trim() ||
+                panel?.physical.displayName ||
+                `Participant ${idx + 1}`,
               panel,
               slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as EmperorSlot,
               color: idx === 0 ? '168,85,247' : idx === 1 ? '16,185,129' : idx === 2 ? '234,179,8' : '59,130,246',
@@ -3743,7 +3770,7 @@ export function TikTokStyleArena({
                 <div className={`relative h-full w-full grid gap-1 sm:gap-2 ${gridClass}`}>
                   {layoutConfigs.map((cfg) => {
                     const isSpeaking = speakingTurnActive && effectiveHotMicSpeakerSlot === cfg.slot;
-                    const isLocal = cfg.panel?.sessionId === localParticipant?.sessionId && !isViewer;
+                    const isLocal = cfg.panel?.physical.sessionId === localParticipant?.sessionId && !isViewer;
                     const isMutedByFocus =
                       speakingTurnActive && Boolean(effectiveHotMicSpeakerSlot) && effectiveHotMicSpeakerSlot !== cfg.slot;
                     const auraShadow =
@@ -3765,10 +3792,9 @@ export function TikTokStyleArena({
                           filter: filterVal,
                         }}
                       >
-                        {cfg.panel?.videoTrack ? (
+                        {cfg.panel?.physical.videoTrack ? (
                           <ParticipantVideo
-                            videoTrack={cfg.panel.videoTrack}
-                            muted={isLocal}
+                            videoTrack={cfg.panel.physical.videoTrack}
                             className="absolute inset-0 h-full w-full object-cover"
                           />
                         ) : (
@@ -3804,7 +3830,7 @@ export function TikTokStyleArena({
                         {/* INTERFACE CHALLENGER ALIGNÉE HORIZONTALEMENT */}
                         <div data-cinema-stay className={`pointer-events-auto absolute z-[140] flex gap-2 ${cfg.uiPos}`}>
                           <div className="flex max-w-[8rem] sm:max-w-[12rem] items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 shadow-lg backdrop-blur-md">
-                            <button type="button" onClick={(e) => { e.stopPropagation(); void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null); }} className="truncate text-[10px] sm:text-[11px] font-black tracking-wide text-white hover:text-plasma-400">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); void openProfile(cfg.name, cfg.panel?.physical.arenaUserId ?? null); }} className="truncate text-[10px] sm:text-[11px] font-black tracking-wide text-white hover:text-plasma-400">
                               @{cfg.name}
                             </button>
                             {!cfg.panel && <span className="shrink-0 rounded bg-red-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-red-400">Abs</span>}
@@ -4015,7 +4041,7 @@ export function TikTokStyleArena({
           beefTimeFormatted={formatBeefTime(beefTimeRemaining)}
           onSetChallengerMuted={handleMediatorChallengerMute}
           onEjectParticipant={async (sid) => {
-            const panel = challengerRemoteSlots.find((p) => p.sessionId === sid);
+            const panel = challengerRemoteSlots.find((p) => p?.sessionId === sid);
             const uid = panel?.arenaUserId;
             if (uid) {
               if (channelRef.current) {
@@ -4053,15 +4079,12 @@ export function TikTokStyleArena({
         />
       )}
 
-      {/* GESTION AUDIO GLOBALE */}
-      <div className="absolute w-px h-px opacity-0 pointer-events-none overflow-hidden">
-        {remoteParticipants.map((p) => (
-          p.audioTrack && <RemoteAudio key={p.sessionId} track={p.audioTrack} />
-        ))}
-        {!isHost && mediatorParticipant?.audioTrack && (
-          <RemoteAudio track={mediatorParticipant.audioTrack} />
-        )}
-      </div>
+      {/* Audio distant centralisé (MeetingAudioOutlet) — pas de pistes dans les tuiles vidéo */}
+      <MeetingAudioOutlet
+        peers={Object.values(peersBySessionId)}
+        localSessionId={localPeer?.physical.sessionId}
+        mutedSessionIds={meetingAudioMutedSessionIds}
+      />
 
       {dockPickersMounted && (showAllReactions || showGiftPicker) && dockPickerPos && typeof document !== 'undefined' && createPortal(
         <div
