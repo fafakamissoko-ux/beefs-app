@@ -134,9 +134,8 @@ export default function ArenaPage() {
       setInitialViewerCount(beef.viewer_count || 0);
       setIsHost(Boolean(userId && beef.mediator_id === userId));
 
-      let currentRole: 'mediator' | 'challenger' | 'viewer' | 'spectator' = 'spectator';
+      // Determine user role
       if (userId && beef.mediator_id === userId) {
-        currentRole = 'mediator';
         setUserRole('mediator');
       } else if (userId) {
         const { data: participation } = await supabase
@@ -147,22 +146,16 @@ export default function ArenaPage() {
           .maybeSingle();
 
         if (participation && participation.invite_status === 'accepted') {
-          currentRole = 'challenger';
           setUserRole('challenger');
         } else {
-          currentRole = 'viewer';
           setUserRole('viewer');
         }
       } else {
-        currentRole = 'spectator';
         setUserRole('spectator');
       }
 
       if (cancelled) return;
-      // Seuls les Créateurs (Médiateurs et Challengers) vérifient/créent l'infrastructure de la room
-      if (currentRole === 'mediator' || currentRole === 'challenger') {
-        await ensureDailyRoom(roomId);
-      }
+      await ensureDailyRoom(roomId);
       if (cancelled) return;
       await syncVideoAccessFromApi(roomId);
       if (cancelled) return;
