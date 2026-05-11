@@ -1505,13 +1505,18 @@ export function TikTokStyleArena({
 
   // Spectateurs uniquement (pas médiateur ni challengers)
   useEffect(() => {
-    if (!isJoined || !isViewer) return;
+    if (!isJoined || isViewer !== true || !roomId) return;
 
-    supabase.rpc('increment_viewer_count', { beef_id: roomId }).then(() => {});
-    setLiveViewerCount((prev) => prev + 1);
+    let isSubscribed = true;
+    void Promise.resolve(supabase.rpc('increment_viewer_count', { beef_id: roomId })).then(() => {
+      if (isSubscribed) setLiveViewerCount((prev) => prev + 1);
+    }).catch(() => {});
 
     return () => {
-      supabase.rpc('decrement_viewer_count', { beef_id: roomId }).then(() => {});
+      isSubscribed = false;
+      void Promise.resolve(supabase.rpc('decrement_viewer_count', { beef_id: roomId })).then(() => {
+        setLiveViewerCount((prev) => Math.max(0, prev - 1));
+      }).catch(() => {});
     };
   }, [isJoined, roomId, isViewer]);
 
@@ -3309,10 +3314,11 @@ export function TikTokStyleArena({
   return (
     <div
       onClick={(e) => {
-        // FORCER LA LECTURE VIDÉO (Contournement Safari iOS)
+        // FORCER LA LECTURE VIDÉO ET AUDIO (Contournement Safari iOS strict)
         if (typeof document !== 'undefined') {
-          document.querySelectorAll('video').forEach((v) => {
-            if (v.paused) void v.play().catch(() => {});
+          document.querySelectorAll('video, audio').forEach((el) => {
+            const media = el as HTMLMediaElement;
+            if (media.paused) void media.play().catch(() => {});
           });
         }
         if (!isCinematicMode) return;
@@ -3780,8 +3786,14 @@ export function TikTokStyleArena({
                             type="button"
                             data-cinema-stay
                             whileTap={{ scale: 0.96 }}
-                            onPointerDown={(e) => {
+                            onTouchStart={(e) => {
                               e.stopPropagation();
+                              emitTapSupport(cfg.slot);
+                              preferSide(cfg.slot);
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Fallback pour desktop
                               emitTapSupport(cfg.slot);
                               preferSide(cfg.slot);
                             }}
@@ -4591,7 +4603,7 @@ export function TikTokStyleArena({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-[12px]"
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 px-4 backdrop-blur-[12px]"
             onClick={() => setAuthHook(null)}
           >
             <motion.div
