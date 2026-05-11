@@ -1,12 +1,11 @@
 /**
- * Identité des participants Daily ↔ profils Supabase (beef_participants / users).
- * - userData.arenaUserId : alignement fort (UUID uniquement, côté client issu de la session).
- * - Noms : normalisation pour limiter les faux négatifs sans ouvrir des matchs arbitraires.
+ * Identité Daily ↔ profils Supabase (beef_participants / users).
+ * Phase Tabula Rasa : couche « PhysicalPeer » (Daily) + « SemanticIdentity » (DB),
+ * réconciliées sans jamais perdre un peer physique.
  */
 
 export const ARENA_USER_DATA_KEY = 'arenaUserId' as const;
 
-/** UUID RFC (versions 1–8), rejet des chaînes arbitraires dans userData. */
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -14,10 +13,6 @@ export function isValidArenaUserId(value: string): boolean {
   return UUID_RE.test(value.trim());
 }
 
-/**
- * Identité arena : priorité au `user_id` Daily issu d’un meeting token serveur (UUID),
- * sinon userData client (rétrocompat / secours).
- */
 export function extractArenaUserIdFromDailyParticipant(p: {
   user_id?: string;
   userData?: unknown;
@@ -45,9 +40,6 @@ export function normalizeParticipantLabel(raw: string): string {
     .toLocaleLowerCase('und');
 }
 
-/**
- * Alias normalisés pour rapprocher user_name Daily de users.display_name / username.
- */
 export function buildParticipantAliasSet(
   displayName: string | null | undefined,
   username: string | null | undefined,
@@ -85,6 +77,172 @@ export interface BeefParticipantRowMeta {
   matchAliases: string[];
 }
 
+// ── Tabula Rasa : Physical vs Semantic ───────────────────────────────
+
+/**
+ * Ce que Daily expose réellement (pistes natives, sans logique Beef).
+ */
+export interface PhysicalPeer {
+  sessionId: string;
+  /** `user_name` Daily ou équivalent brut */
+  displayName: string;
+  videoTrack: MediaStreamTrack | null;
+  audioTrack: MediaStreamTrack | null;
+  isLocal: boolean;
+  /** UUID applicatif si extractible (token / userData) */
+  arenaUserId: string | null;
+  /** Optionnel : états Daily (`off`, `playable`, …) pour dériver videoOn/audioOn côté UI */
+  videoTrackState?: string;
+  audioTrackState?: string;
+}
+
+/**
+ * Ce que la base attend pour une ligne beef_participants.
+ */
+export interface SemanticIdentity {
+  /** UUID beef valide, ou `null` si orphelin / invité non résolu */
+  arenaUserId: string | null;
+  role: string;
+  /** 0 = slot A … 3 = slot D ; `-1` = médiateur / hors grille 4 cases */
+  expectedSlotIndex: number;
+  kind: 'expected' | 'orphan';
+}
+
+export interface ReconciledPeer {
+  physical: PhysicalPeer;
+  semantic: SemanticIdentity;
+}
+
+/** Entrée pour la réconciliation : ordre des challengers + médiateur connu */
+export interface ReconcileExpectedRoles {
+  mediatorUserId: string;
+  mediatorDisplayName: string;
+  /** UUID des challengers attendus, ordre stable → slots 0…n-1 (max 4 typiquement) */
+  challengerUidsOrdered: string[];
+  roles: Record<string, BeefParticipantRowMeta>;
+}
+
+function matchNameToUid(
+  displayName: string,
+  mediatorUserId: string,
+  roles: Record<string, BeefParticipantRowMeta>,
+): string | null {
+  const nu = normalizeParticipantLabel(displayName);
+  if (!nu) return null;
+  const mid = mediatorUserId.trim().toLowerCase();
+  for (const [uid, meta] of Object.entries(roles)) {
+    if (uid === mid) continue;
+    if (meta.matchAliases.includes(nu)) return uid;
+  }
+  return null;
+}
+
+function isMediatorPeer(p: PhysicalPeer, mediatorUserId: string, mediatorDisplayName: string): boolean {
+  const mid = mediatorUserId.trim().toLowerCase();
+  if (p.arenaUserId && p.arenaUserId === mid) return true;
+  const nu = normalizeParticipantLabel(p.displayName);
+  const mn = normalizeParticipantLabel(mediatorDisplayName);
+  return nu.length > 0 && mn.length > 0 && nu === mn;
+}
+
+/**
+ * Règle d'or : la sortie a **exactement** une entrée par `physicalPeers`
+ * (même ordre d’itération que l’entrée ; aucune suppression).
+ */
+export function reconcilePeers(
+  physicalPeers: readonly PhysicalPeer[],
+  expected: ReconcileExpectedRoles,
+): ReconciledPeer[] {
+  const { mediatorUserId, mediatorDisplayName, challengerUidsOrdered, roles } = expected;
+
+  const nSlots = 4;
+  const slotUsed: boolean[] = [false, false, false, false];
+
+  const assigned = new Map<string, SemanticIdentity>();
+  const needPhysical = [...physicalPeers];
+
+  /** Réserve un slot libre pour un orphelin (premier index libre 0..3) */
+  const takeFirstEmptySlot = (): number => {
+    for (let i = 0; i < nSlots; i++) {
+      if (!slotUsed[i]) {
+        slotUsed[i] = true;
+        return i;
+      }
+    }
+    return nSlots - 1;
+  };
+
+  const markSlot = (idx: number) => {
+    if (idx >= 0 && idx < nSlots) slotUsed[idx] = true;
+  };
+
+  /** 1 — Médiateur par UUID ou nom */
+  for (const p of needPhysical) {
+    if (assigned.has(p.sessionId)) continue;
+    if (isMediatorPeer(p, mediatorUserId, mediatorDisplayName)) {
+      const meta = roles[mediatorUserId.trim().toLowerCase()];
+      assigned.set(p.sessionId, {
+        arenaUserId: mediatorUserId.trim().toLowerCase(),
+        role: meta?.role ?? 'mediator',
+        expectedSlotIndex: -1,
+        kind: 'expected',
+      });
+    }
+  }
+
+  /** 2 — UUID direct = challenger attendu */
+  for (const p of needPhysical) {
+    if (assigned.has(p.sessionId)) continue;
+    if (!p.arenaUserId) continue;
+    const uid = p.arenaUserId;
+    if (uid === mediatorUserId.trim().toLowerCase()) continue;
+    const idx = challengerUidsOrdered.indexOf(uid);
+    if (idx >= 0 && idx < nSlots && roles[uid]) {
+      markSlot(idx);
+      assigned.set(p.sessionId, {
+        arenaUserId: uid,
+        role: roles[uid].role,
+        expectedSlotIndex: idx,
+        kind: 'expected',
+      });
+    }
+  }
+
+  /** 3 — Alias pseudo → UID */
+  for (const p of needPhysical) {
+    if (assigned.has(p.sessionId)) continue;
+    const uid = matchNameToUid(p.displayName, mediatorUserId, roles);
+    if (!uid || uid === mediatorUserId.trim().toLowerCase()) continue;
+    const idx = challengerUidsOrdered.indexOf(uid);
+    if (idx >= 0 && idx < nSlots && roles[uid]) {
+      markSlot(idx);
+      assigned.set(p.sessionId, {
+        arenaUserId: uid,
+        role: roles[uid].role,
+        expectedSlotIndex: idx,
+        kind: 'expected',
+      });
+    }
+  }
+
+  /** 4 — Orphelins : identité invitée + premier slot vide parmi 0…3 */
+  for (const p of physicalPeers) {
+    if (assigned.has(p.sessionId)) continue;
+    const slot = takeFirstEmptySlot();
+    assigned.set(p.sessionId, {
+      arenaUserId: p.arenaUserId,
+      role: 'guest',
+      expectedSlotIndex: slot,
+      kind: 'orphan',
+    });
+  }
+
+  return physicalPeers.map((p) => ({
+    physical: p,
+    semantic: assigned.get(p.sessionId)!,
+  }));
+}
+
 /** Remote Daily correspond au médiateur (présence / grâce). */
 export function remoteMatchesMediator(
   remote: { userName: string; arenaUserId: string | null },
@@ -98,10 +256,6 @@ export function remoteMatchesMediator(
   return nu.length > 0 && mn.length > 0 && nu === mn;
 }
 
-/**
- * Remote = challenger (ou témoin) attendu dans beef_participants, pas le médiateur.
- * Priorité : arenaUserId (UUID validé côté join) puis alias de profil uniquement pour les user_id connus.
- */
 export function matchRemoteToExpectedBeefParticipant(
   remote: { userName: string; arenaUserId: string | null },
   mediatorUserId: string,
@@ -126,10 +280,6 @@ export function matchRemoteToExpectedBeefParticipant(
   return null;
 }
 
-/**
- * Le remote Daily correspond au participant beef `expectedUserId` (uuid) ?
- * Triple voie : 1. arenaUserId strict, 2.–3. résolution métier ({@link matchRemoteToExpectedBeefParticipant} incl. alias pseudos).
- */
 export function remoteMatchesExpectedBeefParticipantUid(
   remote: { userName: string; arenaUserId: string | null },
   expectedUserId: string,

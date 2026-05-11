@@ -1,9 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import DailyIframe, { DailyCall, DailyParticipant } from '@daily-co/daily-js';
-import { buildDailyJoinUserData, extractArenaUserIdFromDailyParticipant } from '@/lib/participant-identity';
+import { useMemo } from 'react';
+import { useDailyMeetingEngine } from '@/hooks/useDailyMeetingEngine';
+import type { PhysicalPeer } from '@/lib/participant-identity';
 
+/**
+ * Surface de compatibilité pour `TikTokStyleArena` — délègue à {@link useDailyMeetingEngine}.
+ * L’UI migrera ensuite vers le moteur directement.
+ */
 export interface CallParticipant {
   sessionId: string;
   userName: string;
@@ -36,44 +40,24 @@ export interface UseDailyCallReturn {
   recoverMediaDevices: () => Promise<void>;
 }
 
-async function disposeCallSafely(co: DailyCall | null): Promise<void> {
-  if (!co) return;
-  try {
-    co.setLocalVideo(false);
-    co.setLocalAudio(false);
-  } catch (_) {}
-  await co.leave().catch(() => {});
-  await co.destroy().catch(() => {});
-}
-
-function resolveDailySessionId(co: DailyCall, hint: string): string | null {
-  try {
-    const parts = co.participants();
-    if (parts[hint]) return hint;
-    for (const [key, p] of Object.entries(parts)) {
-      const dp = p as DailyParticipant;
-      if (key === hint || dp.session_id === hint) return key;
-      const uid = typeof dp.user_id === 'string' ? dp.user_id : '';
-      if (uid && uid === hint) return key;
-    }
-  } catch (_) {}
-  return null;
-}
-
-function toCallParticipant(p: DailyParticipant): CallParticipant {
-  const videoState = p.tracks?.video?.state;
-  const audioState = p.tracks?.audio?.state;
-  const vTrack = p.tracks?.video?.persistentTrack ?? p.tracks?.video?.track ?? null;
-  const aTrack = p.tracks?.audio?.persistentTrack ?? p.tracks?.audio?.track ?? null;
+function physicalToCallParticipant(p: PhysicalPeer): CallParticipant {
+  const vs = p.videoTrackState;
+  const as = p.audioTrackState;
+  const videoOn =
+    !!p.videoTrack &&
+    (vs === undefined || (typeof vs === 'string' && vs !== 'off' && vs !== 'blocked'));
+  const audioOn =
+    !!p.audioTrack &&
+    (as === undefined || (typeof as === 'string' && as !== 'off' && as !== 'blocked'));
   return {
-    sessionId: p.session_id,
-    userName: (p.user_name as string) || 'Participant',
-    arenaUserId: extractArenaUserIdFromDailyParticipant(p),
-    isLocal: p.local,
-    videoTrack: vTrack,
-    audioTrack: aTrack,
-    videoOn: !!vTrack && videoState !== 'off' && videoState !== 'blocked',
-    audioOn: !!aTrack && audioState !== 'off' && audioState !== 'blocked',
+    sessionId: p.sessionId,
+    userName: p.displayName,
+    arenaUserId: p.arenaUserId,
+    isLocal: p.isLocal,
+    videoTrack: p.videoTrack,
+    audioTrack: p.audioTrack,
+    videoOn,
+    audioOn,
   };
 }
 
@@ -83,274 +67,36 @@ export function useDailyCall(
   viewerMode = false,
   arenaUserId: string | null = null,
 ): UseDailyCallReturn {
-  const callRef = useRef<DailyCall | null>(null);
-  const [isJoined, setIsJoined] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
-  const [micEnabled, setMicEnabled] = useState(!viewerMode);
-  const [camEnabled, setCamEnabled] = useState(!viewerMode);
+  const engine = useDailyMeetingEngine({ roomUrl, userName, viewerMode, arenaUserId });
 
-  const camEnabledRef = useRef(camEnabled);
-  const micEnabledRef = useRef(micEnabled);
-  useEffect(() => {
-    camEnabledRef.current = camEnabled;
-  }, [camEnabled]);
-  useEffect(() => {
-    micEnabledRef.current = micEnabled;
-  }, [micEnabled]);
-
-  const [localParticipant, setLocalParticipant] = useState<CallParticipant | null>(null);
-  const [remoteParticipants, setRemoteParticipants] = useState<CallParticipant[]>([]);
-  const [activeSpeakerPeerId, setActiveSpeakerPeerId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isCameraInterrupted, setIsCameraInterrupted] = useState(false);
-
-  const reconnectingRef = useRef(false);
-  const intentionalActionRef = useRef(false);
-  const joinWatchdogRef = useRef<number | null>(null);
-
-  const refreshParticipants = useCallback((co: DailyCall) => {
-    const all = Object.values(co.participants());
-    const local = all.find((p) => p.local);
-    const remotes = all.filter((p) => !p.local);
-    setLocalParticipant(local ? toCallParticipant(local) : null);
-    setRemoteParticipants(remotes.map(toCallParticipant));
-  }, []);
-
-  const setupListeners = useCallback(
-    (co: DailyCall) => {
-      co.on('joined-meeting', () => {
-        if (joinWatchdogRef.current != null) {
-          window.clearTimeout(joinWatchdogRef.current);
-          joinWatchdogRef.current = null;
-        }
-        setIsJoined(true);
-        setIsJoining(false);
-        setIsCameraInterrupted(false);
-        reconnectingRef.current = false;
-        refreshParticipants(co);
-      });
-      co.on('participant-joined', () => refreshParticipants(co));
-      co.on('participant-updated', () => refreshParticipants(co));
-      co.on('participant-left', () => refreshParticipants(co));
-      co.on('track-started', (evt: unknown) => {
-        const e = evt as { participant?: { local?: boolean } };
-        refreshParticipants(co);
-        if (e.participant?.local) setIsCameraInterrupted(false);
-      });
-      co.on('track-stopped', (evt: unknown) => {
-        const e = evt as { participant?: { local?: boolean; screen?: boolean }; track?: MediaStreamTrack };
-        refreshParticipants(co);
-        if (e.participant?.local && e.track && !intentionalActionRef.current) {
-          const isScreen = e.track.label?.toLowerCase().includes('screen') || e.participant.screen;
-          if (!isScreen) setIsCameraInterrupted(true);
-        }
-      });
-      co.on('left-meeting', () => {
-        setIsJoined(false);
-        setLocalParticipant(null);
-        setRemoteParticipants([]);
-        setActiveSpeakerPeerId(null);
-        setIsCameraInterrupted(false);
-      });
-      co.on('error', (e: unknown) => {
-        if (joinWatchdogRef.current != null) {
-          window.clearTimeout(joinWatchdogRef.current);
-          joinWatchdogRef.current = null;
-        }
-        const msg = (e as { errorMsg?: string })?.errorMsg;
-        setError(msg || 'Erreur de connexion');
-        setIsJoining(false);
-      });
-      co.on('active-speaker-change', (event: unknown) => {
-        const ev = event as { activeSpeaker?: { peerId?: string } };
-        setActiveSpeakerPeerId(ev?.activeSpeaker?.peerId ?? null);
-      });
-    },
-    [refreshParticipants],
-  );
-
-  const join = useCallback(
-    async (startCam: boolean = true, startMic: boolean = true, token?: string) => {
-      if (!roomUrl || isJoining || isJoined) return;
-      setIsJoining(true);
-      setError(null);
-
-      setCamEnabled(startCam);
-      setMicEnabled(startMic);
-
-      try {
-        if (callRef.current) {
-          const prev = callRef.current;
-          callRef.current = null;
-          await disposeCallSafely(prev);
-        }
-
-        const userData = buildDailyJoinUserData(arenaUserId);
-        const co = DailyIframe.createCallObject({
-          userData,
-          subscribeToTracksAutomatically: true,
-        });
-        callRef.current = co;
-        setupListeners(co);
-
-        if (joinWatchdogRef.current != null) {
-          window.clearTimeout(joinWatchdogRef.current);
-          joinWatchdogRef.current = null;
-        }
-        joinWatchdogRef.current = window.setTimeout(() => {
-          if (callRef.current?.meetingState() !== 'joined-meeting') {
-            setError('Connexion trop lente ou bloquée par le navigateur.');
-            setIsJoining(false);
-          }
-        }, 15_000);
-
-        await co.join({
-          url: roomUrl,
-          ...(token ? { token } : {}),
-          userName,
-          ...(userData ? { userData } : {}),
-          startVideoOff: viewerMode ? true : !startCam,
-          startAudioOff: viewerMode ? true : !startMic,
-        });
-      } catch (err: unknown) {
-        if (joinWatchdogRef.current != null) {
-          window.clearTimeout(joinWatchdogRef.current);
-          joinWatchdogRef.current = null;
-        }
-        const dangling = callRef.current;
-        callRef.current = null;
-        await disposeCallSafely(dangling);
-        const m = err instanceof Error ? err.message : 'Impossible de rejoindre';
-        setError(m);
-        setIsJoining(false);
-      }
-    },
-    [roomUrl, userName, isJoining, isJoined, viewerMode, arenaUserId, setupListeners],
-  );
-
-  const leave = useCallback(async () => {
-    if (!callRef.current) return;
-    const co = callRef.current;
-    callRef.current = null;
-    await disposeCallSafely(co);
-    setIsJoined(false);
-    setLocalParticipant(null);
-    setRemoteParticipants([]);
-    setActiveSpeakerPeerId(null);
-  }, []);
-
-  const stopCamera = useCallback(() => {
-    try {
-      callRef.current?.setLocalVideo(false);
-    } catch (_) {}
-  }, []);
-
-  const toggleMic = useCallback(() => {
-    if (!callRef.current || viewerMode) return;
-    intentionalActionRef.current = true;
-    const next = !micEnabled;
-    callRef.current.setLocalAudio(next);
-    setMicEnabled(next);
-    setTimeout(() => {
-      intentionalActionRef.current = false;
-    }, 1000);
-  }, [micEnabled, viewerMode]);
-
-  const toggleCam = useCallback(() => {
-    if (!callRef.current || viewerMode) return;
-    intentionalActionRef.current = true;
-    const next = !camEnabled;
-    callRef.current.setLocalVideo(next);
-    setCamEnabled(next);
-    setTimeout(() => {
-      intentionalActionRef.current = false;
-    }, 1000);
-  }, [camEnabled, viewerMode]);
-
-  const setLocalAudioEnabled = useCallback((enabled: boolean) => {
-    if (!callRef.current || viewerMode) return;
-    try {
-      callRef.current.setLocalAudio(enabled);
-      setMicEnabled(enabled);
-    } catch {
-      /* ignore */
-    }
-  }, [viewerMode]);
-
-  const setRemoteParticipantAudio = useCallback((sessionId: string, enabled: boolean) => {
-    if (!callRef.current || viewerMode) return;
-    const id = resolveDailySessionId(callRef.current, sessionId);
-    if (id) callRef.current.updateParticipant(id, { setAudio: enabled });
-  }, [viewerMode]);
-
-  const ejectRemoteParticipant = useCallback(async (sessionId: string): Promise<boolean> => {
-    if (!callRef.current || viewerMode) return false;
-    try {
-      const id = resolveDailySessionId(callRef.current, sessionId);
-      if (id) {
-        await callRef.current.updateParticipant(id, { eject: true });
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
-    }
-  }, [viewerMode]);
-
-  const recoverMediaDevices = useCallback(async () => {
-    return Promise.resolve();
-  }, []);
-
-  useEffect(() => {
-    if (!isJoined) return;
-    const handleOffline = () => {
-      reconnectingRef.current = true;
+  const { localParticipant, remoteParticipants } = useMemo(() => {
+    const list = Object.values(engine.peersBySessionId);
+    const local = list.find((x) => x.isLocal) ?? null;
+    const remotes = list.filter((x) => !x.isLocal);
+    return {
+      localParticipant: local ? physicalToCallParticipant(local) : null,
+      remoteParticipants: remotes.map(physicalToCallParticipant),
     };
-    const handleOnline = () => {
-      if (!reconnectingRef.current || !callRef.current) return;
-      const co = callRef.current;
-      if (co.meetingState() === 'joined-meeting') {
-        reconnectingRef.current = false;
-      }
-    };
-    window.addEventListener('offline', handleOffline);
-    window.addEventListener('online', handleOnline);
-    return () => {
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('online', handleOnline);
-    };
-  }, [isJoined]);
-
-  useEffect(() => {
-    return () => {
-      if (joinWatchdogRef.current != null) {
-        window.clearTimeout(joinWatchdogRef.current);
-        joinWatchdogRef.current = null;
-      }
-      const co = callRef.current;
-      callRef.current = null;
-      void disposeCallSafely(co);
-    };
-  }, []);
+  }, [engine.peersBySessionId]);
 
   return {
-    join,
-    leave,
-    stopCamera,
-    toggleMic,
-    toggleCam,
-    setLocalAudioEnabled,
-    setRemoteParticipantAudio,
-    ejectRemoteParticipant,
-    isJoined,
-    isJoining,
-    micEnabled,
-    camEnabled,
+    join: engine.join,
+    leave: engine.leave,
+    stopCamera: engine.stopCamera,
+    toggleMic: engine.toggleMic,
+    toggleCam: engine.toggleCam,
+    setLocalAudioEnabled: engine.setLocalAudioEnabled,
+    setRemoteParticipantAudio: engine.setRemoteParticipantAudio,
+    ejectRemoteParticipant: engine.ejectRemoteParticipant,
+    isJoined: engine.status === 'joined',
+    isJoining: engine.status === 'joining',
+    micEnabled: engine.micEnabled,
+    camEnabled: engine.camEnabled,
     localParticipant,
     remoteParticipants,
-    activeSpeakerPeerId,
-    error,
-    isCameraInterrupted,
-    recoverMediaDevices,
+    activeSpeakerPeerId: engine.activeSpeakerPeerId,
+    error: engine.error,
+    isCameraInterrupted: engine.isCameraInterrupted,
+    recoverMediaDevices: engine.recoverMediaDevices,
   };
 }
