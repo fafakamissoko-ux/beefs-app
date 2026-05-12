@@ -572,9 +572,23 @@ export function TikTokStyleArena({
     return false;
   }, [userRole]);
 
+  /**
+   * Abonnés (spectateur anonyme ou viewer sans ring) : pas d’écran PreJoin —
+   * mais `hasJoined` ne doit pas rester `false`, sinon l’auto-join Daily (effet dédié) ne s’exécute jamais
+   * (`handleJoin` n’est appelé que depuis PreJoin).
+   */
   useEffect(() => {
-    if (isArenaSubscriber) setShowPreJoin(false);
-  }, [isArenaSubscriber]);
+    if (!isArenaSubscriber) return;
+    setShowPreJoin(false);
+    setHasJoined(true);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(`arena_joined_${roomId}_${userId || 'anon'}`, 'true');
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [isArenaSubscriber, roomId, userId]);
 
   const fetchPendingInvites = useCallback(async () => {
     if (!isHost) return;
@@ -1340,11 +1354,20 @@ export function TikTokStyleArena({
       ? serverAccess.dailyRoomUrl
       : (dailyRoomUrl ?? null);
 
-  const meetingTokenForDaily: string | null | undefined = isArenaSubscriber === true
-    ? viewerAccessReady && serverAccess !== null
-      ? (serverAccess.dailyToken !== undefined ? serverAccess.dailyToken : dailyMeetingToken)
-      : undefined
-    : dailyMeetingToken;
+  /**
+   * Jeton Daily pour les abonnés : préférer la dernière réponse `beef/access`,
+   * mais si ce fetch échoue (`serverAccess === null`), ne pas ignorer `dailyMeetingToken` déjà fourni par la page.
+   */
+  const meetingTokenForDaily: string | null | undefined =
+    isArenaSubscriber === true
+      ? !viewerAccessReady
+        ? undefined
+        : serverAccess !== null
+          ? serverAccess.dailyToken !== undefined
+            ? serverAccess.dailyToken
+            : dailyMeetingToken
+          : dailyMeetingToken
+      : dailyMeetingToken;
 
   const {
     status,

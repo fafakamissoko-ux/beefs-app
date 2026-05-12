@@ -197,8 +197,11 @@ export async function GET(request: NextRequest) {
       grantTokenRole = null;
     }
 
+    /** Challengers et médiateur créent la room ; si elle n’existe pas encore, un spectateur « live » peut aussi la créer (clé Daily serveur uniquement). */
     const canProvisionRoom =
-      grantTokenRole === 'mediator' || grantTokenRole === 'participant';
+      grantTokenRole === 'mediator' ||
+      grantTokenRole === 'participant' ||
+      (grantTokenRole === 'spectator' && beef.status === 'live');
     const tokenTtlSec =
       !user && grantTokenRole === 'spectator' ? ANON_SPECTATOR_TTL_SEC : undefined;
 
