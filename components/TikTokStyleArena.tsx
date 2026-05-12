@@ -3516,28 +3516,6 @@ export function TikTokStyleArena({
           </div>
 
           <div id="dock-desktop" className="mt-auto flex w-full shrink-0 items-center gap-2 p-3 border-t border-white/10 bg-black/40">
-            {!isViewer && (
-              <div className="mr-2 flex shrink-0 items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    toggleMic();
-                  }}
-                  className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${micEnabled ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500/80 text-white hover:bg-red-500'}`}
-                >
-                  <Mic className="h-4 w-4" strokeWidth={1.75} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    toggleCam();
-                  }}
-                  className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${camEnabled ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500/80 text-white hover:bg-red-500'}`}
-                >
-                  <Video className="h-4 w-4" strokeWidth={1.75} />
-                </button>
-              </div>
-            )}
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full bg-white/10 px-4 py-2 text-[13px] text-white focus:outline-none" />
             <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg">😀</button>
             <button
@@ -3633,7 +3611,10 @@ export function TikTokStyleArena({
               color: idx === 0 ? '168,85,247' : idx === 1 ? '16,185,129' : idx === 2 ? '234,179,8' : '59,130,246',
               aura: [auraA, auraB, auraC, auraD][idx],
               cellClass: expectedCount === 3 && idx === 2 ? 'col-span-2' : '',
-              uiPos: 'bottom-2 left-2 sm:bottom-4 sm:left-4 items-start text-left',
+              uiPos:
+                idx === 3
+                  ? 'top-2 right-2 sm:top-4 sm:right-4 flex-row-reverse items-start'
+                  : 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-start',
             };
             });
 
@@ -3690,7 +3671,7 @@ export function TikTokStyleArena({
 
                         <div
                           data-cinema-stay
-                          className={`pointer-events-auto absolute z-[140] flex flex-col gap-1.5 ${cfg.uiPos}`}
+                          className={`pointer-events-auto absolute z-[140] flex gap-1.5 ${cfg.uiPos}`}
                         >
                           <div className="flex max-w-[9rem] sm:max-w-[14rem] items-center gap-2 rounded-xl border border-white/10 bg-black/60 px-3 py-2 shadow-lg backdrop-blur-md">
                             <button
@@ -3709,14 +3690,33 @@ export function TikTokStyleArena({
                               </span>
                             )}
                           </div>
-                          {isSpeaking && speakingTurnRemaining > 0 && (
-                            <div className="flex w-fit items-center gap-1.5 rounded bg-red-600 px-2 py-0.5 shadow-[0_0_10px_rgba(220,38,38,0.6)]">
-                              <span className="animate-pulse text-[9px] font-black text-white">
-                                DIRECT
-                              </span>
-                              <span className="font-mono text-[10px] font-bold tabular-nums text-white">
-                                {formatBeefTime(speakingTurnRemaining)}
-                              </span>
+                          {isSpeaking && (
+                            <div className="w-fit animate-pulse rounded bg-red-600 px-2 py-0.5 text-[9px] font-black text-white shadow-[0_0_10px_rgba(220,38,38,0.6)]">
+                              DIRECT
+                            </div>
+                          )}
+                          {isLocal && (
+                            <div className="flex shrink-0 items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleMic();
+                                }}
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 shadow-lg backdrop-blur-xl ${micEnabled ? 'text-white' : 'bg-red-500 text-white'}`}
+                              >
+                                <Mic className="h-4 w-4" strokeWidth={1.75} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleCam();
+                                }}
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 shadow-lg backdrop-blur-xl ${camEnabled ? 'text-white' : 'bg-red-500 text-white'}`}
+                              >
+                                <Video className="h-4 w-4" strokeWidth={1.75} />
+                              </button>
                             </div>
                           )}
                         </div>
@@ -3842,28 +3842,6 @@ export function TikTokStyleArena({
             <div ref={chatMessagesScrollRef} />
           </div>
           <div id="dock-mobile" className="pointer-events-auto mt-auto flex w-full shrink-0 items-center gap-2 px-3 pb-2">
-            {!isViewer && (
-              <div className="mr-2 flex shrink-0 items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    toggleMic();
-                  }}
-                  className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${micEnabled ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500/80 text-white hover:bg-red-500'}`}
-                >
-                  <Mic className="h-4 w-4" strokeWidth={1.75} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    toggleCam();
-                  }}
-                  className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${camEnabled ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500/80 text-white hover:bg-red-500'}`}
-                >
-                  <Video className="h-4 w-4" strokeWidth={1.75} />
-                </button>
-              </div>
-            )}
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} className="flex-1 min-w-0 rounded-full bg-white/15 px-4 py-2 text-[13px] text-white focus:outline-none" placeholder="Message..." />
             <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg">😀</button>
             <button
