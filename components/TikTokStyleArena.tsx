@@ -3612,9 +3612,11 @@ export function TikTokStyleArena({
               aura: [auraA, auraB, auraC, auraD][idx],
               cellClass: expectedCount === 3 && idx === 2 ? 'col-span-2' : '',
               uiPos:
-                idx === 3
-                  ? 'top-2 right-2 sm:top-4 sm:right-4 flex-row-reverse items-start'
-                  : 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-start',
+                idx === 1
+                  ? 'top-[3.5rem] right-2 sm:top-[4.5rem] sm:right-4 flex-row-reverse items-start'
+                  : idx === 3
+                    ? 'top-2 right-2 sm:top-4 sm:right-4 flex-col items-end'
+                    : 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-start',
             };
             });
 
