@@ -83,6 +83,8 @@ export interface UseDailyMeetingEngineResult {
   toggleCam: () => void;
   setLocalAudioEnabled: (enabled: boolean) => void;
   setRemoteParticipantAudio: (sessionId: string, enabled: boolean) => void;
+  /** Coupure micro côté room (token owner Daily) : `muted=true` force la cible muette pour tous. */
+  hardMuteParticipant: (sessionId: string, muted: boolean) => void;
   ejectRemoteParticipant: (sessionId: string) => Promise<boolean>;
   micEnabled: boolean;
   camEnabled: boolean;
@@ -432,6 +434,7 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
     toggleCam,
     setLocalAudioEnabled,
     setRemoteParticipantAudio,
+    hardMuteParticipant,
     ejectRemoteParticipant,
     micEnabled,
     camEnabled,

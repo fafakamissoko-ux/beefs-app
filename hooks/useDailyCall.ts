@@ -23,6 +23,7 @@ export interface UseDailyCallReturn {
   toggleCam: () => void;
   setLocalAudioEnabled: (enabled: boolean) => void;
   setRemoteParticipantAudio: (sessionId: string, enabled: boolean) => void;
+  hardMuteParticipant: (sessionId: string, muted: boolean) => void;
   ejectRemoteParticipant: (sessionId: string) => Promise<boolean>;
   isJoined: boolean;
   isJoining: boolean;
@@ -103,6 +104,7 @@ export function useDailyCall(
     toggleCam: engine.toggleCam,
     setLocalAudioEnabled: engine.setLocalAudioEnabled,
     setRemoteParticipantAudio: engine.setRemoteParticipantAudio,
+    hardMuteParticipant: engine.hardMuteParticipant,
     ejectRemoteParticipant: engine.ejectRemoteParticipant,
     isJoined,
     isJoining,

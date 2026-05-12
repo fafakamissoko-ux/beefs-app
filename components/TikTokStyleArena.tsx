@@ -389,6 +389,15 @@ export function TikTokStyleArena({
   const announcementClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** File d'attente batchée pour particules (évite de marteler le state sur les pics de broadcast) */
   const reactionBufferRef = useRef<FlyingReactionEntry[]>([]);
+  /** Accumulateur d’Aura (réactions / tap intégrés) — flush réseau ~1,5 s pour limiter le flood. */
+  const auraBufferRef = useRef({ A: 0, B: 0, C: 0, D: 0, M: 0 });
+  /** Snapshot pour `aura_master_sync` (intervalle sans recréer la closure). */
+  const auraSnapshotRef = useRef({ A: 0, B: 0, C: 0, D: 0, M: 0 });
+
+  useEffect(() => {
+    auraSnapshotRef.current = { A: auraA, B: auraB, C: auraC, D: auraD, M: auraMed };
+  }, [auraA, auraB, auraC, auraD, auraMed]);
+
   useEffect(() => {
     setDockPickersMounted(true);
   }, []);
@@ -1147,6 +1156,7 @@ export function TikTokStyleArena({
   useEffect(() => { auraFeverRef.current = auraFeverMed; }, [auraFeverMed]);
 
   useEffect(() => {
+    if (!isHost) return;
     const iv = setInterval(() => {
       setAuraA((v) => Math.max(0, v - 3));
       setAuraB((v) => Math.max(0, v - 3));
@@ -1157,7 +1167,7 @@ export function TikTokStyleArena({
       }
     }, 500);
     return () => clearInterval(iv);
-  }, []);
+  }, [isHost]);
 
   useEffect(() => {
     const iv = window.setInterval(() => {
@@ -1223,7 +1233,7 @@ export function TikTokStyleArena({
     toggleMic,
     toggleCam,
     setLocalAudioEnabled,
-    setRemoteParticipantAudio,
+    hardMuteParticipant,
     ejectRemoteParticipant,
     isJoined,
     isJoining,
@@ -1641,7 +1651,7 @@ export function TikTokStyleArena({
 
   const handleMediatorChallengerMute = useCallback(
     (sessionId: string, debaterId: string | null, muted: boolean) => {
-      setRemoteParticipantAudio(sessionId, !muted);
+      hardMuteParticipant(sessionId, muted);
       if (debaterId) {
         setDebaters((prev) =>
           prev.map((d) => (d.id === debaterId ? { ...d, isMuted: muted } : d)),
@@ -1660,16 +1670,16 @@ export function TikTokStyleArena({
         }
       }
     },
-    [setRemoteParticipantAudio],
+    [hardMuteParticipant],
   );
 
   const handleMuteAll = useCallback(() => {
     for (const p of remoteParticipants) {
       if (p.isLocal) continue;
-      setRemoteParticipantAudio(p.sessionId, false);
+      hardMuteParticipant(p.sessionId, true);
     }
     toast('Silence imposé à tous', 'info');
-  }, [remoteParticipants, setRemoteParticipantAudio, toast]);
+  }, [remoteParticipants, hardMuteParticipant, toast]);
 
   // User profiles
   const [showProfile, setShowProfile] = useState(false);
@@ -1810,12 +1820,42 @@ export function TikTokStyleArena({
         else if (target === 'C') setAuraC((v) => Math.min(300, v + boost));
         else if (target === 'D') setAuraD((v) => Math.min(300, v + boost));
       }
-      channelRef.current
-        ?.send({ type: 'broadcast', event: 'reaction', payload: { emoji: '❤️', supportSlot: target } })
-        .catch(() => {});
+      auraBufferRef.current[target] += boost;
     },
     [requireAuth],
   );
+
+  useEffect(() => {
+    const iv = window.setInterval(() => {
+      const b = auraBufferRef.current;
+      if (b.A <= 0 && b.B <= 0 && b.C <= 0 && b.D <= 0 && b.M <= 0) return;
+      const payload = { A: b.A, B: b.B, C: b.C, D: b.D, M: b.M };
+      b.A = 0;
+      b.B = 0;
+      b.C = 0;
+      b.D = 0;
+      b.M = 0;
+      channelRef.current
+        ?.send({ type: 'broadcast', event: 'aura_batch', payload })
+        .catch(() => {});
+    }, 1500);
+    return () => window.clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    if (!isHost || !liveConnected) return;
+    const iv = window.setInterval(() => {
+      const s = auraSnapshotRef.current;
+      channelRef.current
+        ?.send({
+          type: 'broadcast',
+          event: 'aura_master_sync',
+          payload: { A: s.A, B: s.B, C: s.C, D: s.D, M: s.M },
+        })
+        .catch(() => {});
+    }, 3000);
+    return () => window.clearInterval(iv);
+  }, [isHost, liveConnected]);
 
   // 1) Broadcast channel — instant P2P delivery
   useEffect(() => {
@@ -1837,6 +1877,29 @@ export function TikTokStyleArena({
         if (slot === 'D') setAuraD((v) => Math.min(300, v + boost));
         if (slot === 'M') setAuraMed((v) => Math.min(300, v + boost));
         setGlobalHeat((v) => Math.min(100, v + 3));
+      })
+      .on('broadcast', { event: 'aura_batch' }, ({ payload }: any) => {
+        if (!payload || typeof payload !== 'object') return;
+        const dA = Math.max(0, Math.floor(Number(payload.A) || 0));
+        const dB = Math.max(0, Math.floor(Number(payload.B) || 0));
+        const dC = Math.max(0, Math.floor(Number(payload.C) || 0));
+        const dD = Math.max(0, Math.floor(Number(payload.D) || 0));
+        const dM = Math.max(0, Math.floor(Number(payload.M) || 0));
+        if (dA) setAuraA((v) => Math.min(300, v + dA));
+        if (dB) setAuraB((v) => Math.min(300, v + dB));
+        if (dC) setAuraC((v) => Math.min(300, v + dC));
+        if (dD) setAuraD((v) => Math.min(300, v + dD));
+        if (dM) setAuraMed((v) => Math.min(300, v + dM));
+      })
+      .on('broadcast', { event: 'aura_master_sync' }, ({ payload }: any) => {
+        if (isHostRef.current) return;
+        if (!payload || typeof payload !== 'object') return;
+        const cap = (n: unknown) => Math.min(300, Math.max(0, Math.floor(Number(n) || 0)));
+        setAuraA(cap(payload.A));
+        setAuraB(cap(payload.B));
+        setAuraC(cap(payload.C));
+        setAuraD(cap(payload.D));
+        setAuraMed(cap(payload.M));
       })
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
         addRemoteMessage(payload.user_name, payload.content, payload.initial, payload.id);
@@ -2186,6 +2249,7 @@ export function TikTokStyleArena({
         else if (heartTarget === 'C') setAuraC((v) => Math.min(300, v + boost));
         else setAuraD((v) => Math.min(300, v + boost));
       }
+      auraBufferRef.current[heartTarget] += boost;
       const xPercent =
         heartTarget === 'A'
           ? 14 + Math.random() * 16
@@ -2203,7 +2267,13 @@ export function TikTokStyleArena({
       });
       setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
     } else if (integrated) {
+      const boost = getAuraBoost();
       setSupportBurst((prev) => ({ ...prev, [slotPick]: prev[slotPick] + 1 }));
+      if (slotPick === 'A') setAuraA((v) => Math.min(300, v + boost));
+      else if (slotPick === 'B') setAuraB((v) => Math.min(300, v + boost));
+      else if (slotPick === 'C') setAuraC((v) => Math.min(300, v + boost));
+      else if (slotPick === 'D') setAuraD((v) => Math.min(300, v + boost));
+      auraBufferRef.current[slotPick] += boost;
       const entry = createFlyingReactionEntry(emoji);
       setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
     } else {
@@ -2211,17 +2281,12 @@ export function TikTokStyleArena({
       setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
     }
 
-    if (channelRef.current) {
+    if (channelRef.current && !integrated) {
       channelRef.current
         .send({
           type: 'broadcast',
           event: 'reaction',
-          payload:
-            integrated && isHeartEmoji
-              ? { emoji, supportSlot: heartTarget }
-              : integrated
-                ? { emoji, supportSlot: slotPick }
-                : { emoji },
+          payload: { emoji },
         })
         .catch(() => console.warn('[Live] Reaction broadcast failed'));
     }
@@ -2363,7 +2428,7 @@ export function TikTokStyleArena({
       for (const p of challengerRemoteSlots.slice(0, 4)) {
         if (!p?.sessionId || !p.arenaUserId) continue;
         const isSpeaker = p.sessionId === activePanel.sessionId;
-        setRemoteParticipantAudio(p.sessionId, isSpeaker);
+        hardMuteParticipant(p.sessionId, !isSpeaker);
         channelRef.current
           ?.send({
             type: 'broadcast',
@@ -2402,7 +2467,7 @@ export function TikTokStyleArena({
     [
       speakingTurnActive,
       challengerRemoteSlots,
-      setRemoteParticipantAudio,
+      hardMuteParticipant,
       toast,
       debaters,
     ],
@@ -2415,7 +2480,7 @@ export function TikTokStyleArena({
     if (isHost && endedSpeakerId) {
       const p = challengerRemoteSlots.find((x) => x && x.arenaUserId === endedSpeakerId);
       const sid = p?.sessionId;
-      if (sid) setRemoteParticipantAudio(sid, false);
+      if (sid) hardMuteParticipant(sid, true);
       channelRef.current
         ?.send({
           type: 'broadcast',
@@ -2445,7 +2510,7 @@ export function TikTokStyleArena({
         payload: { action: 'stop' },
       }).catch(() => {});
     }
-  }, [isHost, structuredDebateEnabled, setRemoteParticipantAudio, challengerRemoteSlots]);
+  }, [isHost, structuredDebateEnabled, hardMuteParticipant, challengerRemoteSlots]);
 
   const pauseSpeakingTurn = useCallback(() => {
     if (!speakingTurnActive) return;
@@ -2463,7 +2528,7 @@ export function TikTokStyleArena({
       const sid = panel?.sessionId;
       const uid = panel?.arenaUserId ?? null;
       if (sid && uid) {
-        setRemoteParticipantAudio(sid, false);
+        hardMuteParticipant(sid, true);
         channelRef.current
           ?.send({
             type: 'broadcast',
@@ -2481,7 +2546,7 @@ export function TikTokStyleArena({
     isHost,
     hotMicSpeakerSlot,
     challengerRemoteSlots,
-    setRemoteParticipantAudio,
+    hardMuteParticipant,
   ]);
 
   const resumeSpeakingTurn = useCallback(() => {
@@ -2500,7 +2565,7 @@ export function TikTokStyleArena({
       const sid = panel?.sessionId;
       const uid = panel?.arenaUserId ?? null;
       if (sid && uid) {
-        setRemoteParticipantAudio(sid, true);
+        hardMuteParticipant(sid, false);
         channelRef.current
           ?.send({
             type: 'broadcast',
@@ -2518,7 +2583,7 @@ export function TikTokStyleArena({
     isHost,
     hotMicSpeakerSlot,
     challengerRemoteSlots,
-    setRemoteParticipantAudio,
+    hardMuteParticipant,
   ]);
 
   const restartSpeakingTurn = useCallback(() => {
