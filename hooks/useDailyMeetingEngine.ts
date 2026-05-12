@@ -319,6 +319,12 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
     if (id) callRef.current.updateParticipant(id, { setAudio: enabled });
   }, []);
 
+  const hardMuteParticipant = useCallback((sessionId: string, muted: boolean) => {
+    if (!callRef.current || viewerModeRef.current) return;
+    const id = resolveDailySessionId(callRef.current, sessionId);
+    if (id) callRef.current.updateParticipant(id, { setAudio: !muted });
+  }, []);
+
   const ejectRemoteParticipant = useCallback(async (sessionId: string): Promise<boolean> => {
     if (!callRef.current || viewerModeRef.current) return false;
     try {

@@ -13,10 +13,12 @@ import {
   VideoOff,
   UserX,
   Scissors,
+  Pause,
+  RotateCcw,
+  Radio,
 } from 'lucide-react';
 import { TimeWheelPicker } from '@/components/TimeWheelPicker';
 import { MediatorInviteInline } from '@/components/MediatorInviteInline';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/Tabs';
 
 export type MediatorRemoteRow = {
   sessionId: string;
@@ -55,35 +57,24 @@ type MediatorSidebarProps = {
   mediatorCamEnabled?: boolean;
   onMediatorToggleMic?: () => void | Promise<void>;
   onMediatorToggleCam?: () => void | Promise<void>;
-  /** Temps restant chrono beef (secondes) — pour la roulette */
   beefRemainingSec: number;
   maxBeefDurationSec: number;
-  /** Durée du prochain tour de parole (réglée par roulette) */
   parolePresetSec: number;
   onParolePresetSecChange: (sec: number) => void;
   announcementText: string;
   onPublishAnnouncement: (text: string, durationSec: number) => void;
   onClearAnnouncement: () => void;
-  /** Invitations en attente (beef_participants.pending) */
   pendingInvites: Array<{ userId: string; label: string }>;
-  /** Acceptation / refus : le parent doit appeler POST /api/beef/manage (RLS — pas d’UPDATE client). */
   onAcceptPendingInvite?: (userId: string) => void;
   onRejectPendingInvite?: (userId: string) => void;
-  /** Inviter un co-hôte (recherche inline dans le tableau de bord) */
   onInviteParticipant?: (userId: string) => void | Promise<void>;
-  /** IDs déjà sur le ring / à exclure de la recherche (dont l’hôte courant) */
   inviteExcludeParticipantIds?: string[];
   inviteCurrentUserId?: string | null;
   networkHealthy?: boolean;
 };
 
-const TOOLS_GLASS_CARD =
-  'flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 mb-4 backdrop-blur-xl shadow-lg';
-
-const TILE = 'flex flex-col items-center justify-center gap-1.5 rounded-[2.5rem] border border-white/10 bg-white/5 px-3 py-4 backdrop-blur-3xl transition-all active:scale-[0.97]';
-const TILE_WIDE = `${TILE} col-span-2`;
-const TILE_ICON = 'h-5 w-5';
-const TILE_LABEL = 'font-mono text-[9px] font-bold uppercase tracking-widest';
+const SECTION_SHELL =
+  'rounded-2xl border border-white/10 bg-[#121214]/90 p-4 shadow-[0_8px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl';
 
 export function MediatorSidebar({
   open,
@@ -109,7 +100,7 @@ export function MediatorSidebar({
   beefTimeFormatted,
   onSetChallengerMuted,
   onEjectParticipant,
-  onAdjustTime,
+  onAdjustTime: _onAdjustTime,
   mediatorMicEnabled,
   mediatorCamEnabled,
   onMediatorToggleMic,
@@ -129,7 +120,10 @@ export function MediatorSidebar({
   inviteCurrentUserId = null,
   networkHealthy,
 }: MediatorSidebarProps) {
-  const [confirmVerdict, setConfirmVerdict] = useState<'resolved' | 'closed' | 'rematch' | null>(null);
+  void _onAdjustTime;
+  const [confirmVerdict, setConfirmVerdict] = useState<'resolved' | 'closed' | 'rematch' | null>(
+    null,
+  );
   useEffect(() => {
     if (!open) setConfirmVerdict(null);
   }, [open]);
@@ -138,8 +132,16 @@ export function MediatorSidebar({
   const [announceDurationSec, setAnnounceDurationSec] = useState(120);
   const [speakingTurnSec, setSpeakingTurnSec] = useState(60);
   const [matchDurationMin, setMatchDurationMin] = useState(30);
+  const [isSmPanel, setIsSmPanel] = useState(false);
 
-  const pendingInviteCount = pendingInvites.length;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(min-width: 640px)');
+    const apply = () => setIsSmPanel(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -149,479 +151,588 @@ export function MediatorSidebar({
     setSpeakingTurnSec(parolePresetSec);
   }, [open, announcementText, parolePresetSec]);
 
+  const globalChronoDisplay =
+    beefTimeFormatted ||
+    `${Math.floor(beefRemainingSec / 60)}:${(beefRemainingSec % 60).toString().padStart(2, '0')}`;
+
   const deck =
     typeof document !== 'undefined'
       ? createPortal(
           <AnimatePresence>
             {open && (
               <>
-                {/* Backdrop — portail body pour éviter les conflits d’empilement dans l’arène */}
                 <motion.button
                   type="button"
                   aria-label="Fermer le tableau de bord"
-                  className="fixed inset-0 z-[9998] cursor-default bg-black/50 backdrop-blur-[2px]"
+                  className="fixed inset-0 z-[9998] cursor-default bg-black/55 backdrop-blur-[3px]"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   onClick={() => onClose()}
                 />
 
-                {/* Bottom Sheet — stopPropagation : ne pas laisser le clic remonter au reste de l’app */}
                 <motion.aside
                   data-mediator-regie-sheet
                   role="dialog"
-                  aria-label="Tableau de bord"
+                  aria-label="Command Deck"
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
-                  initial={{ y: '100%' }}
-                  animate={{ y: 0 }}
-                  exit={{ y: '100%' }}
-                  transition={{ type: 'spring', damping: 32, stiffness: 380 }}
-                  className="fixed inset-x-0 bottom-0 z-[9999] mx-auto flex max-h-[min(88dvh,720px)] w-full max-w-lg min-h-0 flex-col overflow-hidden rounded-t-[2.5rem] border-t border-white/10 bg-[#08080A]/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-24px_64px_rgba(0,0,0,0.6)] backdrop-blur-3xl"
+                  initial={isSmPanel ? { x: '100%', y: 0 } : { y: '100%', x: 0 }}
+                  animate={{ x: 0, y: 0 }}
+                  exit={isSmPanel ? { x: '100%', y: 0 } : { y: '100%', x: 0 }}
+                  transition={{ type: 'spring', damping: 34, stiffness: 400 }}
+                  className="fixed inset-x-0 bottom-0 z-[9999] flex h-[85dvh] flex-col overflow-hidden rounded-t-[2rem] border-t border-white/10 bg-[#0a0a0c]/95 shadow-2xl backdrop-blur-3xl sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:left-auto sm:ml-0 sm:h-dvh sm:w-[400px] sm:rounded-none sm:border-l sm:border-t-0"
                 >
-                  {/* Drag handle */}
-                  <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-white/20" />
+                  <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-white/25 sm:hidden" />
 
-                  {/* Header avec Indicateur Réseau */}
-                  <div className="relative z-10 flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 font-mono text-xs font-bold tracking-tight text-white/90">
-                        Tableau de bord
-                      </span>
+                  <header className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+                    <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                      <h2 className="truncate font-mono text-sm font-black uppercase tracking-[0.2em] text-white">
+                        Command Deck
+                      </h2>
                       {networkHealthy !== undefined && (
-                        <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-2 py-1 border border-white/5" title={networkHealthy ? "Signal Broadcast OK" : "Perte de signal"}>
-                          <div className={`h-2 w-2 rounded-full ${networkHealthy ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]'}`} />
-                          <span className="text-[8px] font-mono font-bold uppercase text-white/60 hidden sm:inline-block">{networkHealthy ? 'En ligne' : 'Hors ligne'}</span>
-                        </div>
-                      )}
-                    </div>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); onClose(); }} className="relative z-20 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white hover:bg-white/15">
-                      <X className="h-4 w-4" strokeWidth={1} />
-                    </button>
-                  </div>
-
-            <Tabs defaultValue="debate" className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-              <div className="mb-2 flex shrink-0 justify-center px-0.5">
-                <TabsList className="w-full max-w-md justify-stretch">
-                  <TabsTrigger value="debate">
-                    <span className="flex flex-col items-center gap-0.5 text-center">
-                      <span className="leading-tight">⚔️ Débat</span>
-                      <span className="text-[7px] font-semibold uppercase tracking-wider text-white/40">Chrono · Parole</span>
-                    </span>
-                  </TabsTrigger>
-                  <TabsTrigger value="guests">
-                    <span className="inline-flex flex-col items-center justify-center gap-0.5 text-center">
-                      <span className="inline-flex items-center justify-center gap-1.5 leading-tight">
-                        👥 Invités
-                        {pendingInviteCount > 0 && (
-                          <span className="flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-ember-500 px-1 font-mono text-[8px] font-black leading-none text-black">
-                            {pendingInviteCount > 99 ? "99+" : pendingInviteCount}
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-[7px] font-semibold uppercase tracking-wider text-white/40">File d&apos;attente</span>
-                    </span>
-                  </TabsTrigger>
-                  <TabsTrigger value="tools">
-                    <span className="flex flex-col items-center gap-0.5 text-center">
-                      <span className="leading-tight">🛠️ Outils</span>
-                      <span className="text-[7px] font-semibold uppercase tracking-wider text-white/40">Annonce · Verdict</span>
-                    </span>
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-              <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-1 pb-4 overscroll-contain hide-scrollbar">
-                <TabsContent value="debate" className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 hide-scrollbar">
-                  {/* SECT 1: CONTRÔLE VOCAL (Priorité Haute) */}
-                  <section className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lg backdrop-blur-xl">
-                    <div className="mb-2 flex items-center gap-2">
-                      <MicOff className="h-4 w-4 text-red-400" />
-                      <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/60">Contrôle Vocal</h3>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={onMuteAll}
-                      className="flex w-full items-center justify-center gap-2 rounded-[1rem] border border-red-500/50 bg-red-500/15 py-3 text-xs font-black uppercase tracking-widest text-red-400 transition-all hover:bg-red-500/30 active:scale-95"
-                    >
-                      <MicOff className="h-4 w-4" />
-                      Silence Total
-                    </button>
-
-                    {remoteRows.length > 0 ? (
-                      <ul className="mt-2 flex flex-col gap-2">
-                        {remoteRows.map((row) => {
-                          const muted = !row.audioOn;
-                          return (
-                            <li
-                              key={row.sessionId}
-                              className="flex items-center justify-between rounded-2xl border border-white/5 bg-black/20 p-3"
-                            >
-                              <span className="max-w-[100px] truncate font-mono text-[11px] font-bold text-white">@{row.label}</span>
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  disabled={!row.sessionId}
-                                  onClick={() => {
-                                    if (!row.sessionId) return;
-                                    void onSetChallengerMuted(row.sessionId, row.debaterId, row.audioOn);
-                                  }}
-                                  className={`flex w-[80px] items-center justify-center gap-1 rounded-xl border py-2 font-mono text-[9px] font-bold uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                                    muted
-                                      ? 'border-brand-500/40 bg-brand-500/10 text-brand-400'
-                                      : 'border-white/10 bg-white/5 text-white/60'
-                                  }`}
-                                >
-                                  {muted ? 'Réactiver' : 'Couper'}
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={!row.sessionId}
-                                  onClick={() => {
-                                    if (!row.sessionId) return;
-                                    void onEjectParticipant(row.sessionId);
-                                  }}
-                                  className="flex items-center justify-center rounded-xl border border-ember-500/30 bg-ember-500/10 px-3 py-2 text-ember-400 hover:bg-ember-500/20 disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                  <UserX className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    ) : (
-                      <div className="py-2 text-center font-mono text-[10px] uppercase tracking-widest text-white/30">
-                        Aucun participant
-                      </div>
-                    )}
-                  </section>
-
-                  {/* SECT 2: GESTION DU TEMPS */}
-                  <section className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lg backdrop-blur-xl">
-                    <div className="flex items-center gap-2">
-                      <Play className="h-4 w-4 text-brand-400" />
-                      <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/60">Gestion du Temps</h3>
-                    </div>
-                    {!timerActive ? (
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="flex w-full flex-col items-center gap-2 py-1">
-                          <span className="text-center text-[10px] font-bold uppercase tracking-widest text-white/40">Durée (Minutes)</span>
-                          <TimeWheelPicker
-                            valueSec={matchDurationMin * 60}
-                            minSec={60}
-                            maxSec={maxBeefDurationSec}
-                            onChange={(sec) =>
-                              setMatchDurationMin(
-                                Math.max(1, Math.min(Math.floor(maxBeefDurationSec / 60), Math.floor(sec / 60))),
-                              )
-                            }
-                            ariaLabel="Durée du match en minutes"
-                            className="w-full max-w-[200px] rounded-3xl border border-white/10 bg-white/5 py-2"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          disabled={startingBeef}
-                          onClick={() => {
-                            void onStartBeef(matchDurationMin * 60);
-                            onClose();
-                          }}
-                          className="w-full rounded-[1.5rem] bg-gradient-to-r from-purple-600 to-emerald-600 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg transition-transform active:scale-95 disabled:opacity-50"
-                        >
-                          {startingBeef ? 'Lancement...' : 'DÉMARRER LE CLASH'}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-2">
-                        <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-widest text-white/40">Chronomètre Global</h3>
                         <div
-                          className={`font-mono text-4xl font-black ${
-                            beefTimerPaused ? 'animate-pulse text-amber-500' : 'text-white'
-                          }`}
+                          className="flex w-fit shrink-0 items-center gap-2 rounded-full border border-white/10 bg-black/50 px-2.5 py-1"
+                          title={networkHealthy ? 'Signal realtime OK' : 'Signal faible ou perdu'}
                         >
-                          {Math.floor(beefRemainingSec / 60)}:{(beefRemainingSec % 60).toString().padStart(2, '0')}
+                          <div
+                            className={`h-2 w-2 rounded-full ${networkHealthy ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.85)]' : 'animate-pulse bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.85)]'}`}
+                          />
+                          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-white/70">
+                            {networkHealthy ? 'Live sync' : 'Hors ligne'}
+                          </span>
                         </div>
-                        <div className="mt-4 flex w-full gap-2">
-                          {beefTimerPaused ? (
-                            <button
-                              type="button"
-                              onClick={onResumeBeefTimer}
-                              className="flex-1 rounded-xl bg-emerald-500/20 py-2 text-[10px] font-bold uppercase text-emerald-400 hover:bg-emerald-500/30"
-                            >
-                              Reprendre
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={onPauseBeefTimer}
-                              className="flex-1 rounded-xl bg-amber-500/20 py-2 text-[10px] font-bold uppercase text-amber-400 hover:bg-amber-500/30"
-                            >
-                              Pause
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={onResetBeefTimer}
-                            className="flex-1 rounded-xl bg-white/5 py-2 text-[10px] font-bold uppercase text-white/60 hover:bg-white/10"
-                          >
-                            Reset
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </section>
-
-                  {/* SECT 3: TOURS DE PAROLE (Pseudos & couleurs Arène) */}
-                  <section className="flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-4 shadow-lg backdrop-blur-xl">
-                    <div className="flex items-center gap-2">
-                      <Timer className="h-4 w-4 text-orange-400" />
-                      <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/60">Tours de Parole</h3>
-                    </div>
-                    <div className="flex flex-col items-center justify-center rounded-2xl border border-white/5 bg-black/20 p-3">
-                      <span className="mb-2 text-center text-[10px] font-bold uppercase tracking-widest text-white/40">Durée allouée</span>
-                      <TimeWheelPicker
-                        valueSec={speakingTurnSec}
-                        minSec={15}
-                        maxSec={600}
-                        onChange={(sec) => {
-                          setSpeakingTurnSec(sec);
-                          onParolePresetSecChange(sec);
-                        }}
-                        ariaLabel="Durée allouée au tour de parole"
-                        className="w-full max-w-[200px] rounded-3xl border border-white/[0.06] bg-white/[0.02] py-2"
-                      />
-                    </div>
-                    <div className="grid w-full grid-cols-2 gap-2">
-                      {remoteRows.map((row) => (
-                        <button
-                          key={row.slot}
-                          type="button"
-                          onClick={() => {
-                            onHotMic(row.slot, speakingTurnSec);
-                            onClose();
-                          }}
-                          className="flex flex-col items-center gap-1 rounded-2xl border border-white/10 bg-white/5 py-4 transition-all active:scale-95"
-                        >
-                          <span className="text-[10px] font-black uppercase tracking-tighter text-white/90">@{row.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                    {speakingTurnActive && (
-                      <button
-                        type="button"
-                        onClick={onStopSpeakingTurn}
-                        className="w-full rounded-xl bg-white/5 py-3 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:bg-white/10"
-                      >
-                        Interrompre le tour
-                      </button>
-                    )}
-                  </section>
-                </TabsContent>
-                <TabsContent value="guests" className="mt-0 space-y-3">
-                  <div className="flex max-h-[min(52vh,420px)] flex-col gap-3 overflow-y-auto overflow-x-hidden overscroll-contain rounded-[2.5rem] border border-white/12 bg-black/50 p-3 backdrop-blur-xl [-webkit-overflow-scrolling:touch] touch-pan-y">
-                    <div className="flex shrink-0 items-center justify-between gap-2">
-                      <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/80">
-                        File invités
-                      </span>
-                      <span className="shrink-0 font-mono text-[9px] text-white/45">Co-hôtes</span>
-                    </div>
-                    {onInviteParticipant && (
-                      <MediatorInviteInline
-                        excludeParticipantIds={inviteExcludeParticipantIds}
-                        currentUserId={inviteCurrentUserId}
-                        onInvite={onInviteParticipant}
-                      />
-                    )}
-                    <ul className="shrink-0 space-y-2 border-t border-white/10 pt-3">
-                      {pendingInvites.length === 0 ? (
-                        <li className="rounded-3xl border border-dashed border-white/10 px-3 py-4 text-center font-mono text-[10px] text-white/45">
-                          Aucune invitation en attente
-                        </li>
-                      ) : (
-                        pendingInvites.map((inv) => (
-                          <li
-                            key={inv.userId}
-                            className="flex items-start justify-between gap-2 rounded-3xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5"
-                          >
-                            <span className="min-w-0 break-words font-mono text-[11px] text-white/85">
-                              {inv.label}
-                            </span>
-                            <div className="flex shrink-0 items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  onRejectPendingInvite?.(inv.userId);
-                                  onClose();
-                                }}
-                                className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-white/50 hover:bg-red-500/20 hover:text-red-400"
-                                aria-label="Refuser l’invitation"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  onAcceptPendingInvite?.(inv.userId);
-                                  onClose();
-                                }}
-                                className="rounded-full border border-brand-500/30 bg-brand-500/20 px-3 py-1 font-mono text-[9px] font-bold uppercase tracking-wider text-brand-400 hover:bg-brand-500/40"
-                              >
-                                Accepter
-                              </button>
-                            </div>
-                          </li>
-                        ))
                       )}
-                    </ul>
-                  </div>
-                </TabsContent>
-                <TabsContent value="tools" className="mt-0">
-                  {/* BLOC CLIPPER (MACHINE À HIGHLIGHTS) */}
-                  <div className={TOOLS_GLASS_CARD}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Scissors className="h-4 w-4 text-brand-400" />
-                      <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/55">Machine à Highlights</h3>
                     </div>
-                    <p className="text-[10px] text-white/40 mb-3 leading-relaxed">Capturez instantanément les 60 dernières secondes du clash pour alimenter le replay public.</p>
                     <button
                       type="button"
-                      onClick={() => {
-                        // Émission d'un event global pour déclencher un Toast de succès (en attendant le câblage Daily.co)
-                        if (typeof window !== 'undefined') {
-                          const ev = new CustomEvent('beefs:toast', { detail: { title: 'Highlight capturé ✂️', message: 'Les 60 dernières secondes ont été sauvegardées avec succès.', type: 'success' } });
-                          window.dispatchEvent(ev);
-                        }
+                      onClick={(e) => {
+                        e.stopPropagation();
                         onClose();
                       }}
-                      className="flex w-full items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-r from-brand-600 to-orange-500 py-3.5 text-[11px] font-black uppercase tracking-widest text-white shadow-[0_0_15px_rgba(255,107,44,0.3)] transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(255,107,44,0.5)] active:scale-95"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[0.08] text-white transition hover:bg-white/[0.14]"
+                      aria-label="Fermer"
                     >
-                      <Scissors className="h-4 w-4" />
-                      Clipper ce moment (60s)
+                      <X className="h-5 w-5" strokeWidth={1.75} />
                     </button>
-                  </div>
-                  {/* BLOC ANNONCE */}
-                  <div className={TOOLS_GLASS_CARD}>
-                    <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/55">Bannière d&apos;annonce</h3>
-                    <div className="rounded-[1.5rem] border border-white/12 bg-black/25 p-3 backdrop-blur-xl">
-                      <label htmlFor="mediator-announce-input" className="sr-only">
-                        Texte de l&apos;annonce
-                      </label>
-                      <textarea
-                        id="mediator-announce-input"
-                        value={announceDraft}
-                        onChange={(e) => setAnnounceDraft(e.target.value)}
-                        rows={2}
-                        placeholder="Message du bandeau…"
-                        className="mb-2 w-full resize-none rounded-3xl border border-white/10 bg-white/5 px-3 py-2 font-mono text-xs text-white placeholder-white/35 focus:border-amber-400/40 focus:outline-none"
-                      />
-                      <p className="mb-1.5 font-mono text-[8px] font-bold uppercase tracking-wider text-white/40">
-                        Durée d&apos;affichage
+                  </header>
+
+                  <div className="hide-scrollbar flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
+                    {/* Bloc 1 — Urgence */}
+                    <section className={`${SECTION_SHELL} border-red-500/25 bg-gradient-to-b from-red-950/40 to-transparent`}>
+                      <p className="mb-3 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/90">
+                        Contrôle urgence
                       </p>
-                      <div className="mb-3 flex flex-wrap gap-1.5">
-                        {([60, 120, 300, 600] as const).map((sec) => (
+                      <button
+                        type="button"
+                        onClick={onMuteAll}
+                        className="flex min-h-[3.5rem] w-full items-center justify-center gap-3 rounded-2xl border-2 border-red-500/60 bg-red-600/90 px-4 py-4 text-sm font-black uppercase tracking-widest text-white shadow-[0_0_32px_rgba(220,38,38,0.45)] transition hover:bg-red-500 active:scale-[0.98]"
+                      >
+                        <MicOff className="h-6 w-6 shrink-0" strokeWidth={2} />
+                        Silence total — couper tous les micros
+                      </button>
+                    </section>
+
+                    {/* Bloc 2 — Participants */}
+                    <section className={SECTION_SHELL}>
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <h3 className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-white/65">
+                          Ring — participants
+                        </h3>
+                        <span className="rounded-full bg-white/5 px-2 py-0.5 font-mono text-[9px] text-white/45">
+                          {remoteRows.length} lien(s)
+                        </span>
+                      </div>
+                      {remoteRows.length > 0 ? (
+                        <ul className="flex flex-col gap-3">
+                          {remoteRows.map((row) => {
+                            const muted = !row.audioOn;
+                            const hotThis = speakingTurnActive && hotMicSpeakerSlot === row.slot;
+                            return (
+                              <li
+                                key={row.sessionId || row.slot}
+                                className="flex flex-col gap-3 rounded-xl border border-white/[0.08] bg-black/35 p-3 sm:flex-row sm:items-center sm:justify-between"
+                              >
+                                <div className="min-w-0">
+                                  <p className="truncate font-semibold text-white">
+                                    @{row.label}{' '}
+                                    <span className="font-mono text-[11px] font-bold text-brand-400">
+                                      ({row.slot})
+                                    </span>
+                                  </p>
+                                  {hotThis && (
+                                    <p className="mt-1 font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-400/90">
+                                      ● Hot mic actif
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={!row.sessionId}
+                                    onClick={() => {
+                                      if (!row.sessionId) return;
+                                      onSetChallengerMuted(row.sessionId, row.debaterId, row.audioOn);
+                                    }}
+                                    className={`flex min-h-[40px] min-w-[5.5rem] items-center justify-center rounded-xl border px-3 font-mono text-[10px] font-black uppercase tracking-wide transition disabled:cursor-not-allowed disabled:opacity-35 ${
+                                      muted
+                                        ? 'border-emerald-500/50 bg-emerald-600/25 text-emerald-200 hover:bg-emerald-600/35'
+                                        : 'border-red-500/55 bg-red-600/25 text-red-100 hover:bg-red-600/35'
+                                    }`}
+                                  >
+                                    {muted ? (
+                                      <>
+                                        <Mic className="mr-1.5 h-3.5 w-3.5" />
+                                        ON — ouvrir
+                                      </>
+                                    ) : (
+                                      <>
+                                        <MicOff className="mr-1.5 h-3.5 w-3.5" />
+                                        OFF — couper
+                                      </>
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={!row.sessionId}
+                                    onClick={() => {
+                                      if (!row.sessionId) return;
+                                      onHotMic(row.slot, speakingTurnSec);
+                                    }}
+                                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-amber-500/45 bg-amber-500/15 px-3 font-mono text-[10px] font-black uppercase tracking-wide text-amber-200 transition hover:bg-amber-500/25 disabled:cursor-not-allowed disabled:opacity-35"
+                                  >
+                                    <Radio className="h-3.5 w-3.5" />
+                                    Hot mic
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={!row.sessionId}
+                                    onClick={() => void onEjectParticipant(row.sessionId)}
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white/55 transition hover:border-red-500/40 hover:bg-red-950/40 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-35"
+                                    aria-label="Expulser le participant"
+                                    title="Expulser"
+                                  >
+                                    <UserX className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-white/12 py-10 text-center font-mono text-[11px] uppercase tracking-widest text-white/35">
+                          Aucun challenger connecté sur la grille
+                        </div>
+                      )}
+                    </section>
+
+                    {/* Bloc 3 — Chronos & parole */}
+                    <section className={SECTION_SHELL}>
+                      <h3 className="mb-4 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-white/65">
+                        Chronomètres &amp; parole
+                      </h3>
+
+                      <div className="mb-6 rounded-xl border border-white/[0.07] bg-black/40 p-4">
+                        <div className="mb-3 flex items-center gap-2 text-white/50">
+                          <Timer className="h-4 w-4 text-sky-400" strokeWidth={1.5} />
+                          <span className="font-mono text-[10px] font-bold uppercase tracking-wider">
+                            Chronomètre global — beef
+                          </span>
+                        </div>
+                        {!timerActive ? (
+                          <>
+                            <p className="mb-3 text-center text-[11px] text-white/45">
+                              Définissez la durée puis lancez le direct.
+                            </p>
+                            <div className="mb-4 flex justify-center">
+                              <TimeWheelPicker
+                                valueSec={matchDurationMin * 60}
+                                minSec={60}
+                                maxSec={maxBeefDurationSec}
+                                onChange={(sec) =>
+                                  setMatchDurationMin(
+                                    Math.max(
+                                      1,
+                                      Math.min(
+                                        Math.floor(maxBeefDurationSec / 60),
+                                        Math.floor(sec / 60),
+                                      ),
+                                    ),
+                                  )
+                                }
+                                ariaLabel="Durée du match en minutes"
+                                className="w-full max-w-[220px] rounded-3xl border border-white/12 bg-white/[0.06] py-3"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              disabled={startingBeef}
+                              onClick={() => void onStartBeef(matchDurationMin * 60)}
+                              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-teal-500 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg transition hover:brightness-110 active:scale-[0.99] disabled:opacity-45"
+                            >
+                              <Play className="h-4 w-4 fill-current" />
+                              {startingBeef ? 'Ouverture…' : 'Démarrer le chrono LIVE'}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <div
+                              className={`font-mono text-center text-[2.85rem] font-black tabular-nums leading-none tracking-tighter ${beefTimerPaused ? 'animate-pulse text-amber-400' : 'text-white'}`}
+                            >
+                              {globalChronoDisplay}
+                            </div>
+                            <div className="mt-4 grid grid-cols-2 gap-2">
+                              {beefTimerPaused ? (
+                                <button
+                                  type="button"
+                                  onClick={onResumeBeefTimer}
+                                  className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-600/20 py-3 font-mono text-[10px] font-bold uppercase text-emerald-200 hover:bg-emerald-600/30"
+                                >
+                                  <Play className="h-3.5 w-3.5" />
+                                  Reprendre
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={onPauseBeefTimer}
+                                  className="flex items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-600/15 py-3 font-mono text-[10px] font-bold uppercase text-amber-200 hover:bg-amber-600/25"
+                                >
+                                  <Pause className="h-3.5 w-3.5" />
+                                  Pause
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={onResetBeefTimer}
+                                className="flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] py-3 font-mono text-[10px] font-bold uppercase text-white/85 hover:bg-white/[0.1]"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Reset
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="rounded-xl border border-white/[0.07] bg-black/35 p-4">
+                        <p className="mb-3 text-center font-mono text-[10px] font-bold uppercase tracking-widest text-white/45">
+                          Durée allouée au tour / Hot mic (TimeWheelPicker)
+                        </p>
+                        <TimeWheelPicker
+                          valueSec={speakingTurnSec}
+                          minSec={15}
+                          maxSec={600}
+                          onChange={(sec) => {
+                            setSpeakingTurnSec(sec);
+                            onParolePresetSecChange(sec);
+                          }}
+                          ariaLabel="Durée du prochain tour de parole"
+                          className="mx-auto mb-5 w-full max-w-[240px] rounded-3xl border border-white/[0.1] bg-white/[0.04] py-3"
+                        />
+
+                        {speakingTurnActive && (
+                          <div className="space-y-3">
+                            <button
+                              type="button"
+                              onClick={onStopSpeakingTurn}
+                              className="w-full rounded-2xl border-2 border-red-500/60 bg-red-600 py-4 font-mono text-xs font-black uppercase tracking-[0.15em] text-white shadow-[0_0_24px_rgba(220,38,38,0.35)] transition hover:bg-red-500 active:scale-[0.99]"
+                            >
+                              Couper le tour de parole immédiatement
+                            </button>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={speakingTurnPaused ? onResumeSpeakingTurn : onPauseSpeakingTurn}
+                                className="rounded-xl border border-white/15 bg-white/[0.08] py-2.5 font-mono text-[10px] font-bold uppercase tracking-wide text-white/90 hover:bg-white/[0.12]"
+                              >
+                                {speakingTurnPaused ? 'Reprendre timer' : 'Pause timer'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={onRestartSpeakingTurn}
+                                className="rounded-xl border border-sky-500/35 bg-sky-600/15 py-2.5 font-mono text-[10px] font-bold uppercase tracking-wide text-sky-200 hover:bg-sky-600/25"
+                              >
+                                Redémarrer le tour
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+
+                    {/* Bloc 4 — Production */}
+                    <section className={SECTION_SHELL}>
+                      <h3 className="mb-4 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-white/65">
+                        Outils de production
+                      </h3>
+
+                      <div className="mb-5 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void onMediatorToggleMic?.()}
+                          className={`flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-3 transition ${
+                            mediatorMicEnabled
+                              ? 'border-white/12 bg-white/[0.07]'
+                              : 'border-red-500/35 bg-red-950/30'
+                          }`}
+                        >
+                          {mediatorMicEnabled ? (
+                            <Mic className="h-5 w-5 text-white" strokeWidth={1.5} />
+                          ) : (
+                            <MicOff className="h-5 w-5 text-red-400" strokeWidth={1.5} />
+                          )}
+                          <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-white/65">
+                            Mon micro
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void onMediatorToggleCam?.()}
+                          className={`flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-3 transition ${
+                            mediatorCamEnabled
+                              ? 'border-white/12 bg-white/[0.07]'
+                              : 'border-red-500/35 bg-red-950/30'
+                          }`}
+                        >
+                          {mediatorCamEnabled ? (
+                            <Video className="h-5 w-5 text-white" strokeWidth={1.5} />
+                          ) : (
+                            <VideoOff className="h-5 w-5 text-red-400" strokeWidth={1.5} />
+                          )}
+                          <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-white/65">
+                            Ma caméra
+                          </span>
+                        </button>
+                      </div>
+
+                      <div className="rounded-xl border border-white/[0.08] bg-black/40 p-3">
+                        <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wider text-white/50">
+                          Bannière — message public
+                        </p>
+                        <label htmlFor="mediator-announce-input" className="sr-only">
+                          Texte de la bannière
+                        </label>
+                        <textarea
+                          id="mediator-announce-input"
+                          value={announceDraft}
+                          onChange={(e) => setAnnounceDraft(e.target.value)}
+                          rows={3}
+                          placeholder="Message affiché sur l’arène…"
+                          className="mb-3 w-full resize-none rounded-2xl border border-white/12 bg-[#18181c] px-3 py-3 font-sans text-sm text-white placeholder-white/35 focus:border-amber-400/35 focus:outline-none"
+                        />
+                        <p className="mb-2 font-mono text-[9px] font-bold uppercase tracking-wider text-white/40">
+                          Durée d’affichage
+                        </p>
+                        <div className="mb-3 flex flex-wrap gap-1.5">
+                          {([60, 120, 300, 600] as const).map((sec) => (
+                            <button
+                              key={sec}
+                              type="button"
+                              onClick={() => setAnnounceDurationSec(sec)}
+                              className={`rounded-full px-3 py-1.5 font-mono text-[9px] font-black uppercase ${
+                                announceDurationSec === sec
+                                  ? 'bg-amber-500/45 text-black'
+                                  : 'border border-white/12 bg-white/[0.06] text-white/70 hover:bg-white/[0.1]'
+                              }`}
+                            >
+                              {sec >= 60 ? `${sec / 60} min` : `${sec}s`}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
                           <button
-                            key={sec}
                             type="button"
-                            onClick={() => setAnnounceDurationSec(sec)}
-                            className={`rounded-full px-2.5 py-1 font-mono text-[8px] font-black uppercase tracking-wide ${
-                              announceDurationSec === sec
-                                ? 'bg-amber-500/40 text-amber-50'
-                                : 'border border-white/12 bg-white/5 text-white/65 hover:bg-white/10'
-                            }`}
+                            onClick={() => {
+                              onPublishAnnouncement(announceDraft.trim(), announceDurationSec);
+                              onClose();
+                            }}
+                            className="rounded-full bg-amber-500 px-5 py-2.5 font-mono text-[10px] font-black uppercase tracking-wider text-black hover:bg-amber-400"
                           >
-                            {sec >= 60 ? `${sec / 60}m` : `${sec}s`}
+                            Publier la bannière
                           </button>
-                        ))}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onClearAnnouncement();
+                              setAnnounceDraft('');
+                              onClose();
+                            }}
+                            className="rounded-full border border-white/15 px-5 py-2.5 font-mono text-[10px] font-black uppercase tracking-wider text-white/75 hover:bg-white/[0.08]"
+                          >
+                            Effacer bannière
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+
+                      <div className="my-6 border-t border-white/[0.07] pt-5">
+                        <div className="mb-3 flex items-center justify-between">
+                          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/55">
+                            Invités en attente
+                          </span>
+                          <span className="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[9px] text-white/65">
+                            {pendingInvites.length}
+                          </span>
+                        </div>
+                        {onInviteParticipant && (
+                          <MediatorInviteInline
+                            excludeParticipantIds={inviteExcludeParticipantIds}
+                            currentUserId={inviteCurrentUserId}
+                            onInvite={onInviteParticipant}
+                          />
+                        )}
+                        <ul className="mt-4 space-y-2">
+                          {pendingInvites.length === 0 ? (
+                            <li className="rounded-xl border border-dashed border-white/12 py-6 text-center font-mono text-[10px] text-white/38">
+                              Aucune invitation en attente
+                            </li>
+                          ) : (
+                            pendingInvites.map((inv) => (
+                              <li
+                                key={inv.userId}
+                                className="flex flex-col gap-2 rounded-xl border border-white/[0.08] bg-black/30 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                              >
+                                <span className="min-w-0 break-words text-sm font-medium text-white/90">
+                                  {inv.label}
+                                </span>
+                                <div className="flex shrink-0 gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      onRejectPendingInvite?.(inv.userId);
+                                      onClose();
+                                    }}
+                                    className="flex-1 rounded-xl border border-red-500/45 bg-red-600/85 py-2.5 font-mono text-[10px] font-black uppercase tracking-wide text-white hover:bg-red-500 sm:flex-initial sm:px-6"
+                                  >
+                                    Refuser
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      onAcceptPendingInvite?.(inv.userId);
+                                      onClose();
+                                    }}
+                                    className="flex-1 rounded-xl border border-emerald-400/55 bg-emerald-600 py-2.5 font-mono text-[10px] font-black uppercase tracking-wide text-white hover:bg-emerald-500 sm:flex-initial sm:px-6"
+                                  >
+                                    Accepter
+                                  </button>
+                                </div>
+                              </li>
+                            ))
+                          )}
+                        </ul>
+                      </div>
+
+                      <div className="rounded-xl border border-orange-500/25 bg-gradient-to-br from-orange-950/35 to-transparent p-4">
+                        <div className="mb-3 flex items-center gap-2">
+                          <Scissors className="h-4 w-4 text-orange-400" strokeWidth={1.5} />
+                          <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/75">
+                            Machine à highlights
+                          </span>
+                        </div>
+                        <p className="mb-4 text-[12px] leading-relaxed text-white/45">
+                          Clipper environ 60 secondes du direct pour votre replay public.
+                        </p>
                         <button
                           type="button"
                           onClick={() => {
-                            onPublishAnnouncement(announceDraft.trim(), announceDurationSec);
+                            if (typeof window !== 'undefined') {
+                              window.dispatchEvent(
+                                new CustomEvent('beefs:toast', {
+                                  detail: {
+                                    title: 'Highlight capturé',
+                                    message: 'Les 60 dernières secondes ont été marquées pour le clip.',
+                                    type: 'success',
+                                  },
+                                }),
+                              );
+                            }
                             onClose();
                           }}
-                          className="rounded-full border border-amber-500/50 bg-amber-500/20 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-amber-50 hover:bg-amber-500/35"
+                          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-600 to-brand-600 py-3.5 font-mono text-[11px] font-black uppercase tracking-widest text-white shadow-[0_0_20px_rgba(234,88,12,0.35)] hover:brightness-110 active:scale-[0.99]"
                         >
-                          Publier
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            onClearAnnouncement();
-                            setAnnounceDraft('');
-                            onClose();
-                          }}
-                          className="rounded-full border border-white/15 bg-white/5 px-4 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-white/75 hover:bg-white/10"
-                        >
-                          Effacer bannière
+                          <Scissors className="h-4 w-4" />
+                          Clipper 60&nbsp;s
                         </button>
                       </div>
-                    </div>
-                  </div>
+                    </section>
 
-                  {/* BLOC PARAMÈTRES — micro, cam, durée limite (tour de parole) */}
-                  <div className={TOOLS_GLASS_CARD}>
-                    <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/55">Paramètres</h3>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => void onMediatorToggleMic?.()}
-                        className={`${TILE} ${mediatorMicEnabled ? '' : 'border-red-500/30 bg-red-500/10'}`}
-                      >
-                        {mediatorMicEnabled ? (
-                          <Mic className={`${TILE_ICON} text-white`} strokeWidth={1.2} />
-                        ) : (
-                          <MicOff className={`${TILE_ICON} text-red-400`} strokeWidth={1.2} />
-                        )}
-                        <span className={`${TILE_LABEL} text-white/80`}>Mon micro</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void onMediatorToggleCam?.()}
-                        className={`${TILE} ${mediatorCamEnabled ? '' : 'border-red-500/30 bg-red-500/10'}`}
-                      >
-                        {mediatorCamEnabled ? (
-                          <Video className={`${TILE_ICON} text-white`} strokeWidth={1.2} />
-                        ) : (
-                          <VideoOff className={`${TILE_ICON} text-red-400`} strokeWidth={1.2} />
-                        )}
-                        <span className={`${TILE_LABEL} text-white/80`}>Ma cam</span>
-                      </button>
-                    </div>
-                  </div>
+                    {/* Bloc 5 — Verdict (danger) */}
+                    <section
+                      className={`${SECTION_SHELL} border-red-500/30 bg-gradient-to-b from-red-950/25 to-transparent pb-8`}
+                    >
+                      <div className="mb-4 flex items-center gap-2">
+                        <span className="rounded bg-red-600/85 px-2 py-0.5 font-mono text-[9px] font-black uppercase text-white">
+                          Zone critique
+                        </span>
+                        <h3 className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-red-400/95">
+                          Verdict &amp; clôture
+                        </h3>
+                      </div>
 
-                  {/* BLOC VERDICT & FIN */}
-                  <div className={TOOLS_GLASS_CARD}>
-                    <h3 className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/55">Verdict &amp; fin</h3>
-                    <div className="flex flex-col gap-2">
                       {confirmVerdict ? (
-                        <div className="flex flex-col items-center gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-center">
-                          <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-white">Confirmer le Décret ?</span>
-                          <p className="text-[10px] text-white/60">Cette action mettra fin au direct pour toute l'Agora.</p>
-                          <div className="flex w-full gap-2">
-                            <button type="button" onClick={() => setConfirmVerdict(null)} className="flex-1 rounded-xl border border-white/10 bg-white/5 py-2 font-mono text-[10px] font-bold uppercase text-white hover:bg-white/10">Annuler</button>
-                            <button type="button" onClick={() => { onVerdict(confirmVerdict); setConfirmVerdict(null); onClose(); }} className="flex-1 rounded-xl bg-red-600 py-2 font-mono text-[10px] font-bold uppercase text-white shadow-[0_0_15px_rgba(220,38,38,0.5)] hover:bg-red-500">Exécuter</button>
+                        <div
+                          role="alert"
+                          className="space-y-4 rounded-xl border-2 border-red-500 bg-red-950/65 p-4 shadow-[inset_0_0_0_1px_rgba(239,68,68,0.35)]"
+                        >
+                          <p className="text-center font-mono text-[10px] font-black uppercase tracking-widest text-red-200">
+                            Confirmation requise
+                          </p>
+                          <p className="text-center text-[13px] leading-snug text-red-50/95">
+                            {confirmVerdict === 'resolved'
+                              ? 'Proclamer la paix terminera ou marquera le dénouement officiel.'
+                              : confirmVerdict === 'rematch'
+                                ? 'Une revanche restructure le flux — vérifiez avant d’ordonner.'
+                                : 'Sceller définitivement met fin au broadcast pour tous les participants.'}
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setConfirmVerdict(null)}
+                              className="flex-1 rounded-xl border border-white/20 bg-white/10 py-3 font-mono text-[11px] font-bold uppercase text-white hover:bg-white/15"
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onVerdict(confirmVerdict);
+                                setConfirmVerdict(null);
+                                onClose();
+                              }}
+                              className="flex-[1.2] rounded-xl bg-red-600 py-3 font-mono text-[11px] font-black uppercase text-white shadow-[0_0_20px_rgba(220,38,38,0.55)] hover:bg-red-500"
+                            >
+                              Exécuter le verdict
+                            </button>
                           </div>
                         </div>
                       ) : (
-                        <>
-                          <button type="button" onClick={() => setConfirmVerdict('resolved')} className="w-full rounded-[1.5rem] border border-emerald-500/40 bg-emerald-500/10 py-3 text-[11px] font-black uppercase tracking-widest text-emerald-400 transition-colors hover:bg-emerald-500/20">
-                            🕊️ Proclamer la Paix
+                        <div className="flex flex-col gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmVerdict('resolved')}
+                            className="w-full rounded-2xl border border-emerald-500/55 bg-emerald-600/20 py-3.5 font-mono text-[12px] font-black uppercase tracking-widest text-emerald-200 transition hover:bg-emerald-600/35"
+                          >
+                            Proclamer la paix
                           </button>
-                          <button type="button" onClick={() => setConfirmVerdict('rematch')} className="w-full rounded-[1.5rem] border border-amber-500/40 bg-amber-500/10 py-3 text-[11px] font-black uppercase tracking-widest text-amber-400 transition-colors hover:bg-amber-500/20">
-                            ⚡ Ordonner une Revanche
+                          <button
+                            type="button"
+                            onClick={() => setConfirmVerdict('rematch')}
+                            className="w-full rounded-2xl border border-amber-500/50 bg-amber-600/18 py-3.5 font-mono text-[12px] font-black uppercase tracking-widest text-amber-200 transition hover:bg-amber-600/32"
+                          >
+                            Ordonner une revanche
                           </button>
-                          <button type="button" onClick={() => setConfirmVerdict('closed')} className="w-full rounded-[1.5rem] border border-white/20 bg-white/5 py-3 text-[11px] font-black uppercase tracking-widest text-white/90 transition-colors hover:bg-white/10">
-                            🛑 Sceller l'Arène
+                          <button
+                            type="button"
+                            onClick={() => setConfirmVerdict('closed')}
+                            className="w-full rounded-2xl border border-red-400/55 bg-red-950/55 py-3.5 font-mono text-[12px] font-black uppercase tracking-widest text-red-100 transition hover:bg-red-900/65"
+                          >
+                            Sceller l’arène
                           </button>
-                        </>
+                        </div>
                       )}
-                    </div>
+                    </section>
                   </div>
-                </TabsContent>
-              </div>
-            </Tabs>
-          </motion.aside>
+                </motion.aside>
               </>
             )}
           </AnimatePresence>,
