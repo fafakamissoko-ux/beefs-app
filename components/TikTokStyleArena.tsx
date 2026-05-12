@@ -1314,7 +1314,7 @@ export function TikTokStyleArena({
     error: callError,
     isCameraInterrupted,
     recoverMediaDevices,
-  } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer, userId, roomId, meetingTokenForDaily);
+  } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer, userId, meetingTokenForDaily);
 
   useEffect(() => {
     leaveRef.current = leave;
