@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { TikTokStyleArena } from '@/components/TikTokStyleArena';
 import { supabase } from '@/lib/supabase/client';
+import { beefDailyRoomName } from '@/lib/beef-daily-room';
 import { motion } from 'framer-motion';
 import { Clock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { normalizeBeefId } from '@/lib/beef-id';
-import { userIdsEqual } from '@/lib/user-id-equal';
 import { useClientArenaOnboardingGuard } from '@/lib/client-arena-onboarding-guard';
 
 /** Même logique que /arena/[roomId] (état dépôt 35d8aa1), paramètre d’URL `id`. */
@@ -123,11 +123,10 @@ export default function LiveBeefRoomPage() {
 
       setBeefTitle(beef.title || '');
       setInitialViewerCount(beef.viewer_count || 0);
-      setIsHost(userIdsEqual(beef.mediator_id, userId));
+      setIsHost(beef.mediator_id === userId);
 
       let resolvedRole: 'mediator' | 'challenger' | 'viewer' = 'viewer';
-      const uidNorm = userId.trim().toLowerCase();
-      if (userIdsEqual(beef.mediator_id, userId)) {
+      if (beef.mediator_id === userId) {
         resolvedRole = 'mediator';
         setUserRole('mediator');
       } else {
@@ -135,7 +134,7 @@ export default function LiveBeefRoomPage() {
           .from('beef_participants')
           .select('role, invite_status, is_main')
           .eq('beef_id', roomId)
-          .eq('user_id', uidNorm)
+          .eq('user_id', userId)
           .maybeSingle();
 
         if (participation && participation.invite_status === 'accepted') {
@@ -147,6 +146,8 @@ export default function LiveBeefRoomPage() {
         }
       }
 
+      if (cancelled) return;
+      await ensureDailyRoom(roomId);
       if (cancelled) return;
       await syncVideoAccessFromApi(roomId);
       if (cancelled) return;
@@ -180,6 +181,44 @@ export default function LiveBeefRoomPage() {
       }
     } catch {
       /* ignore */
+    }
+  };
+
+  const ensureDailyRoom = async (beefId: string) => {
+    const roomName = beefDailyRoomName(beefId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        authHeaders['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const getRes = await fetch(
+        `/api/daily/rooms?name=${encodeURIComponent(roomName)}&beefId=${encodeURIComponent(beefId)}`,
+        { headers: authHeaders },
+      );
+      const getData = await getRes.json();
+      if (getData.success && getData.room?.url) {
+        setDailyRoomUrl(getData.room.url);
+        return;
+      }
+
+      const createRes = await fetch('/api/daily/rooms', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          beefId,
+          roomName,
+          privacy: 'private',
+          maxParticipants: 50,
+        }),
+      });
+      const createData = await createRes.json();
+      if (createData.success && createData.room?.url) {
+        setDailyRoomUrl(createData.room.url);
+      }
+    } catch (err) {
+      console.error('Error ensuring Daily room:', err);
     }
   };
 

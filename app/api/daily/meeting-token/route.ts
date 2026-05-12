@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { beefDailyRoomName } from '@/lib/beef-daily-room';
 import { normalizeBeefId } from '@/lib/beef-id';
-import { canonicalUserUuid, userIdsEqual } from '@/lib/user-id-equal';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -79,19 +78,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    const profileUid = canonicalUserUuid(user.id) ?? user.id.trim();
-
     const { data: profile } = await supabaseAdmin
       .from('users')
       .select('display_name, username')
-      .eq('id', profileUid)
+      .eq('id', user.id)
       .maybeSingle();
 
     const userName =
       (profile?.display_name?.trim() || profile?.username?.trim() || user.email?.split('@')[0] || 'Utilisateur')
         .slice(0, 120);
 
-    const dailyUserId = profileUid.trim();
+    const dailyUserId = user.id.trim();
     if (dailyUserId.length < 1 || dailyUserId.length > 36) {
       return NextResponse.json({ error: 'Identifiant utilisateur incompatible Daily' }, { status: 400 });
     }
