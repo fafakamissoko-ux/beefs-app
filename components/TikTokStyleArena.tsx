@@ -556,14 +556,18 @@ export function TikTokStyleArena({
     return () => clearTimeout(t);
   }, [gloryChallengerSlot]);
 
-  // Moderator controls — check if current user is the beef creator
-  const isHost = userId === host.id;
+  // Comparaisons UUID case-insensitive (Auth vs Postgres / URLs).
+  const canonId = (v: string) => v.trim().toLowerCase();
+
+  const isHost = !!(userId && host.id && canonId(userId) === canonId(host.id));
 
   const isViewer = useMemo(() => {
     if (isHost) return false;
     if (!rolesLoaded) return null; // Sécurité : état neutre au chargement
     if (typeof window !== 'undefined' && window.location.search.includes('join=')) return false;
-    return !Object.keys(participantRoles).includes(userId);
+    const uid = canonId(userId);
+    const inParticipantSlots = Object.keys(participantRoles).some((k) => canonId(k) === uid);
+    return !inParticipantSlots;
   }, [isHost, participantRoles, userId, rolesLoaded]);
 
   useEffect(() => {
@@ -576,7 +580,8 @@ export function TikTokStyleArena({
   }, []);
 
   useEffect(() => {
-    if (!roomId || isViewer !== false) return;
+    // Tant que pas spectateur explicite (true), on pré-fetch le jeton (host/challenger, y compris pendant rolesLoaded === null).
+    if (!roomId || isViewer === true) return;
     void prefetchDailyMeetingTokenForBeef(roomId, async () =>
       (await supabase.auth.getSession()).data.session?.access_token ?? null,
     ).then((token) => {
@@ -3252,7 +3257,7 @@ export function TikTokStyleArena({
     setInitialCam(camEnabled);
     setInitialMic(micEnabled);
 
-    if (isViewer === false && !effectiveDailyRoomUrl) {
+    if (isViewer !== true && !effectiveDailyRoomUrl) {
       toast("La salle n'est pas encore prête.", 'error');
       return;
     }
@@ -3267,7 +3272,7 @@ export function TikTokStyleArena({
       }
     }
 
-    if (effectiveDailyRoomUrl && isViewer === false) {
+    if (effectiveDailyRoomUrl && isViewer !== true) {
       // Frappe synchrone avec filet de sécurité : prefetchedToken en priorité, sinon le token serveur, sinon undefined
       void join(camEnabled, micEnabled, prefetchedToken || meetingTokenForDaily || undefined);
     }
