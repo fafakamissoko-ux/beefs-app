@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { TikTokStyleArena } from '@/components/TikTokStyleArena';
 import { supabase } from '@/lib/supabase/client';
-import { beefDailyRoomName } from '@/lib/beef-daily-room';
 import { motion } from 'framer-motion';
 import { Clock, ArrowLeft, Camera, Mic, Play, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
@@ -157,8 +156,6 @@ export default function ArenaPage() {
       }
 
       if (cancelled) return;
-      await ensureDailyRoom(roomId);
-      if (cancelled) return;
       await syncVideoAccessFromApi(roomId);
       if (cancelled) return;
       setArenaReady(true);
@@ -192,44 +189,6 @@ export default function ArenaPage() {
       }
     } catch {
       /* ignore */
-    }
-  };
-
-  const ensureDailyRoom = async (beefId: string) => {
-    const roomName = beefDailyRoomName(beefId);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (session?.access_token) {
-        authHeaders['Authorization'] = `Bearer ${session.access_token}`;
-      }
-
-      const getRes = await fetch(
-        `/api/daily/rooms?name=${encodeURIComponent(roomName)}&beefId=${encodeURIComponent(beefId)}`,
-        { headers: authHeaders },
-      );
-      const getData = await getRes.json();
-      if (getData.success && getData.room?.url) {
-        setDailyRoomUrl(getData.room.url);
-        return;
-      }
-
-      const createRes = await fetch('/api/daily/rooms', {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({
-          beefId,
-          roomName,
-          privacy: 'private',
-          maxParticipants: 50,
-        }),
-      });
-      const createData = await createRes.json();
-      if (createData.success && createData.room?.url) {
-        setDailyRoomUrl(createData.room.url);
-      }
-    } catch (err) {
-      console.error('Error ensuring Daily room:', err);
     }
   };
 

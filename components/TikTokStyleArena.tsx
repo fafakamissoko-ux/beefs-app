@@ -60,7 +60,6 @@ import {
   type ReconcileExpectedRoles,
   type ReconciledPeer,
 } from '@/lib/participant-identity';
-import { prefetchDailyMeetingTokenForBeef } from '@/lib/daily-meeting-token-prefetch';
 import {
   FlyingReactionsLayer,
   createFlyingReactionEntry,
@@ -561,33 +560,21 @@ export function TikTokStyleArena({
 
   const isHost = !!(userId && host.id && canonId(userId) === canonId(host.id));
 
-  const isViewer = useMemo(() => {
-    if (isHost) return false;
-    if (!rolesLoaded) return null; // Sécurité : état neutre au chargement
-    if (typeof window !== 'undefined' && window.location.search.includes('join=')) return false;
-    const uid = canonId(userId);
-    const inParticipantSlots = Object.keys(participantRoles).some((k) => canonId(k) === uid);
-    return !inParticipantSlots;
-  }, [isHost, participantRoles, userId, rolesLoaded]);
+  /**
+   * Spectateur (anonyme ou compte sans rôle ring) : décision portée par la page, pas par `participantRoles` (async),
+   * pour éviter les courses et « faux spectateurs » avec micro/cam coupés côté Daily.
+   */
+  const isArenaSubscriber = useMemo(() => {
+    if (userRole === 'spectator' || userRole === 'viewer') {
+      if (typeof window !== 'undefined' && window.location.search.includes('join=')) return false;
+      return true;
+    }
+    return false;
+  }, [userRole]);
 
   useEffect(() => {
-    if (isViewer === true) setShowPreJoin(false);
-  }, [isViewer]);
-
-  const [prefetchedToken, setPrefetchedToken] = useState<string | undefined>(undefined);
-  const flushMeetingTokenFromPreJoin = useCallback((token: string | undefined) => {
-    if (token) setPrefetchedToken(token);
-  }, []);
-
-  useEffect(() => {
-    // Tant que pas spectateur explicite (true), on pré-fetch le jeton (host/challenger, y compris pendant rolesLoaded === null).
-    if (!roomId || isViewer === true) return;
-    void prefetchDailyMeetingTokenForBeef(roomId, async () =>
-      (await supabase.auth.getSession()).data.session?.access_token ?? null,
-    ).then((token) => {
-      if (token) setPrefetchedToken(token);
-    });
-  }, [roomId, isViewer]);
+    if (isArenaSubscriber) setShowPreJoin(false);
+  }, [isArenaSubscriber]);
 
   const fetchPendingInvites = useCallback(async () => {
     if (!isHost) return;
@@ -669,7 +656,7 @@ export function TikTokStyleArena({
 
   /** Spectateurs : détecte les invitations directes et les acceptations sur leur ligne beef_participants. */
   useEffect(() => {
-    if (!isViewer || !roomId || !userId) return;
+    if (!isArenaSubscriber || !roomId || !userId) return;
 
     const ch = supabase
       .channel(`spectator_invite_sync_${roomId}_${userId}`)
@@ -708,7 +695,7 @@ export function TikTokStyleArena({
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [isViewer, roomId, userId]);
+  }, [isArenaSubscriber, roomId, userId]);
 
   const goBuyPoints = useCallback(() => {
     openBuyPointsPage(router);
@@ -1274,7 +1261,7 @@ export function TikTokStyleArena({
   const [viewerAccessReady, setViewerAccessReady] = useState(false);
 
   const fetchViewerAccess = useCallback(async () => {
-    if (!isViewer) return;
+    if (!isArenaSubscriber) return;
     try {
       let { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
@@ -1308,7 +1295,7 @@ export function TikTokStyleArena({
     } finally {
       setViewerAccessReady(true);
     }
-  }, [isViewer, roomId]);
+  }, [isArenaSubscriber, roomId]);
 
   useEffect(() => {
     setViewerAccessReady(false);
@@ -1332,7 +1319,7 @@ export function TikTokStyleArena({
   }, [roomId, fetchViewerAccess]);
 
   useEffect(() => {
-    if (!isViewer) return;
+    if (!isArenaSubscriber) return;
     fetchViewerAccess();
     const id = setInterval(fetchViewerAccess, 30_000);
     const onVis = () => {
@@ -1346,14 +1333,14 @@ export function TikTokStyleArena({
       document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('pageshow', onPageShow);
     };
-  }, [isViewer, fetchViewerAccess]);
+  }, [isArenaSubscriber, fetchViewerAccess]);
 
   const effectiveDailyRoomUrl =
-    isViewer === true && viewerAccessReady && serverAccess?.dailyRoomUrl
+    isArenaSubscriber === true && viewerAccessReady && serverAccess?.dailyRoomUrl
       ? serverAccess.dailyRoomUrl
       : (dailyRoomUrl ?? null);
 
-  const meetingTokenForDaily: string | null | undefined = isViewer === true
+  const meetingTokenForDaily: string | null | undefined = isArenaSubscriber === true
     ? viewerAccessReady && serverAccess !== null
       ? (serverAccess.dailyToken !== undefined ? serverAccess.dailyToken : dailyMeetingToken)
       : undefined
@@ -1378,7 +1365,7 @@ export function TikTokStyleArena({
   } = useDailyMeetingEngine({
     roomUrl: effectiveDailyRoomUrl,
     userName,
-    viewerMode: isViewer === true,
+    viewerMode: isArenaSubscriber === true,
     arenaUserId: userId,
   });
 
@@ -1502,7 +1489,7 @@ export function TikTokStyleArena({
 
   // Les challengers utilisent handleJoin ; seuls les spectateurs utilisent l'auto-join.
   useEffect(() => {
-    if (isViewer !== true || !hasJoined || isJoined || isJoining || !effectiveDailyRoomUrl) return;
+    if (isArenaSubscriber !== true || !hasJoined || isJoined || isJoining || !effectiveDailyRoomUrl) return;
     if (!viewerAccessReady || (serverAccess && serverAccess.viewerAccess === 'not_live')) return;
 
     void join(initialCam, initialMic, meetingTokenForDaily || undefined);
@@ -1511,7 +1498,7 @@ export function TikTokStyleArena({
     isJoined,
     isJoining,
     effectiveDailyRoomUrl,
-    isViewer,
+    isArenaSubscriber,
     viewerAccessReady,
     serverAccess,
     join,
@@ -1546,7 +1533,7 @@ export function TikTokStyleArena({
 
   // Spectateurs uniquement (pas médiateur ni challengers)
   useEffect(() => {
-    if (!isJoined || isViewer !== true || !roomId) return;
+    if (!isJoined || isArenaSubscriber !== true || !roomId) return;
 
     let isSubscribed = true;
     void Promise.resolve(supabase.rpc('increment_viewer_count', { beef_id: roomId })).then(() => {
@@ -1559,7 +1546,7 @@ export function TikTokStyleArena({
         setLiveViewerCount((prev) => Math.max(0, prev - 1));
       }).catch(() => {});
     };
-  }, [isJoined, roomId, isViewer]);
+  }, [isJoined, roomId, isArenaSubscriber]);
 
   const hasExpectedChallengers = useMemo(
     () => Object.keys(participantRoles).some((uid) => uid !== host.id),
@@ -1573,16 +1560,16 @@ export function TikTokStyleArena({
       return matchRemoteToExpectedBeefParticipant(p, host.id, host.name, participantRoles) !== null;
     });
     if (matched) return true;
-    if (!isViewer) return false;
+    if (!isArenaSubscriber) return false;
     const nonMediator = remoteParticipants.filter(
       (p) => !remoteMatchesMediator(p, host.id, host.name),
     );
     if (nonMediator.length === 0) return false;
     if (!hasExpectedChallengers) return true;
     return false;
-  }, [remoteParticipants, host.id, host.name, participantRoles, isViewer, hasExpectedChallengers]);
+  }, [remoteParticipants, host.id, host.name, participantRoles, isArenaSubscriber, hasExpectedChallengers]);
 
-  const liveBadgeHot = isViewer ? challengerOnAir : isJoined;
+  const liveBadgeHot = isArenaSubscriber ? challengerOnAir : isJoined;
 
   // Video layout: determine which participant goes in each slot based on role
   const hostRemoteParticipant = !isHost
@@ -1637,18 +1624,18 @@ export function TikTokStyleArena({
 
   const leftPanel = isHost
     ? gridSlotParticipants[0] ?? null
-    : isViewer
+    : isArenaSubscriber
       ? gridSlotParticipants[0] ?? null
       : localParticipant;
-  const leftPanelIsLocal = !isHost && !isViewer;
+  const leftPanelIsLocal = !isHost && !isArenaSubscriber;
   const leftPanelName = isHost
     ? (gridSlotParticipants[0]?.userName || 'Challenger 1')
-    : isViewer
+    : isArenaSubscriber
       ? (gridSlotParticipants[0]?.userName || 'Challenger 1')
       : userName;
 
   const rightPanel =
-    isHost || isViewer
+    isHost || isArenaSubscriber
       ? gridSlotParticipants[1] ?? null
       : (gridSlotParticipants.find((p) => p && p.sessionId !== localParticipant?.sessionId) ??
           gridSlotParticipants[0]) ??
@@ -1656,12 +1643,12 @@ export function TikTokStyleArena({
   /** Si le flux local Daily est mappé sur le panneau droit (rare mais possible selon l’ordre des peers). */
   const rightPanelIsLocal =
     !isHost &&
-    !isViewer &&
+    !isArenaSubscriber &&
     !!localParticipant &&
     !!rightPanel &&
     rightPanel.sessionId === localParticipant.sessionId;
   const rightPanelName =
-    isHost || isViewer
+    isHost || isArenaSubscriber
       ? (gridSlotParticipants[1]?.userName || 'Challenger 2')
       : (rightPanel?.userName || 'Challenger 2');
 
@@ -2776,7 +2763,7 @@ export function TikTokStyleArena({
   /** Micro challengers : hot mic (tour actif) même hors débat structuré ; sinon règles structurées. */
   useEffect(() => {
     const isLocalOnRing = Object.keys(participantRoles).includes(userId);
-    if (!isLocalOnRing || isHost || isViewer || !isJoined) return;
+    if (!isLocalOnRing || isHost || isArenaSubscriber || !isJoined) return;
     if (micMutedByMediator) {
       setLocalAudioEnabled(false);
       return;
@@ -2801,7 +2788,7 @@ export function TikTokStyleArena({
   }, [
     participantRoles,
     isHost,
-    isViewer,
+    isArenaSubscriber,
     isJoined,
     micMutedByMediator,
     mediatorHoldingFloor,
@@ -3257,7 +3244,7 @@ export function TikTokStyleArena({
     setInitialCam(camEnabled);
     setInitialMic(micEnabled);
 
-    if (isViewer !== true && !effectiveDailyRoomUrl) {
+    if (isArenaSubscriber !== true && !effectiveDailyRoomUrl) {
       toast("La salle n'est pas encore prête.", 'error');
       return;
     }
@@ -3272,9 +3259,8 @@ export function TikTokStyleArena({
       }
     }
 
-    if (effectiveDailyRoomUrl && isViewer !== true) {
-      // Frappe synchrone avec filet de sécurité : prefetchedToken en priorité, sinon le token serveur, sinon undefined
-      void join(camEnabled, micEnabled, prefetchedToken || meetingTokenForDaily || undefined);
+    if (effectiveDailyRoomUrl && isArenaSubscriber !== true) {
+      void join(camEnabled, micEnabled, meetingTokenForDaily || undefined);
     }
   };
 
@@ -3379,7 +3365,7 @@ export function TikTokStyleArena({
                 debateTitle={debateTitle}
                 onComplete={() => {
                   setShowVsScreen(false);
-                  if (isViewer) setShowPreJoin(false);
+                  if (isArenaSubscriber) setShowPreJoin(false);
                 }}
               />
             ) : (
@@ -3397,9 +3383,8 @@ export function TikTokStyleArena({
           <PreJoinScreen
             userName={userName}
             beefId={roomId}
-            onMeetingTokenPrefetched={flushMeetingTokenFromPreJoin}
             onJoin={handleJoin}
-            viewerMode={isViewer === true}
+            viewerMode={isArenaSubscriber === true}
             mediatorName={mediatorName}
           />
           {!effectiveDailyRoomUrl && (
@@ -3775,7 +3760,7 @@ export function TikTokStyleArena({
                 <div className={`relative h-full w-full grid gap-1 sm:gap-2 ${gridClass}`}>
                   {layoutConfigs.map((cfg) => {
                     const isSpeaking = speakingTurnActive && effectiveHotMicSpeakerSlot === cfg.slot;
-                    const isLocal = cfg.panel?.physical.sessionId === localParticipant?.sessionId && !isViewer;
+                    const isLocal = cfg.panel?.physical.sessionId === localParticipant?.sessionId && !isArenaSubscriber;
                     const isMutedByFocus =
                       speakingTurnActive && Boolean(effectiveHotMicSpeakerSlot) && effectiveHotMicSpeakerSlot !== cfg.slot;
                     const auraShadow =
@@ -3864,7 +3849,7 @@ export function TikTokStyleArena({
                     style={{ filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})` }}
                     className="pointer-events-auto relative h-[150px] w-[150px] overflow-hidden rounded-full border-[3px] border-white/10 bg-[#08080a] sm:h-[210px] sm:w-[210px]"
                   >
-                    {mediatorIsLocal && isCameraInterrupted && !isViewer && (
+                    {mediatorIsLocal && isCameraInterrupted && !isArenaSubscriber && (
                       <div className="absolute inset-0 z-[150] flex items-center justify-center bg-black/60 p-2 backdrop-blur-sm">
                         <button type="button" onClick={(e) => { e.stopPropagation(); void recoverMediaDevices(); }} className="rounded-full bg-plasma-500 px-3 py-1.5 text-[9px] font-black text-white shadow-glow-plasma">📡 RÉACTIVER</button>
                       </div>

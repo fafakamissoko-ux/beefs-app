@@ -4,6 +4,7 @@ import type { User } from '@supabase/supabase-js';
 import { normalizeBeefId } from '@/lib/beef-id';
 import { userIdsEqual, canonicalUserUuid } from '@/lib/user-id-equal';
 import { beefDailyRoomName } from '@/lib/beef-daily-room';
+import { ensureDailyRoomUrlForBeef, fetchDailyRoomUrl } from '@/lib/server/daily-room-ensure';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,21 +40,8 @@ function beefIdFromSearchParams(searchParams: URLSearchParams): string | null {
   return null;
 }
 
-const MEETING_TOKEN_TTL_SEC = 2 * 60 * 60; // 2 h
-
-async function fetchDailyRoomUrl(roomName: string, apiKey: string): Promise<string | null> {
-  try {
-    const res = await fetch(`https://api.daily.co/v1/rooms/${encodeURIComponent(roomName)}`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { url?: string };
-    return typeof data.url === 'string' ? data.url : null;
-  } catch {
-    return null;
-  }
-}
+const MEETING_TOKEN_TTL_SEC = 2 * 60 * 60; // roles authentifiés
+const ANON_SPECTATOR_TTL_SEC = 600;
 
 type DailyTokenRole = 'mediator' | 'participant' | 'spectator';
 
@@ -72,13 +60,16 @@ async function createDailyMeetingToken(params: {
   user: User;
   userName: string;
   role: DailyTokenRole;
+  tokenTtlSec?: number;
 }): Promise<string | null> {
   const { apiKey, roomName, user, userName, role } = params;
+  const ttl = params.tokenTtlSec ?? MEETING_TOKEN_TTL_SEC;
   const uid = user.id.trim().toLowerCase();
-  if (uid.length < 1 || uid.length > 36) return null;
+  /** Daily tolère plusieurs formats ; ancien plafond 36 cassait des identifiants valides ou anonymes courts. */
+  if (uid.length < 1 || uid.length > 64) return null;
 
   const now = Math.floor(Date.now() / 1000);
-  const exp = now + MEETING_TOKEN_TTL_SEC;
+  const exp = now + ttl;
 
   const properties: Record<string, unknown> = {
     room_name: roomName,
@@ -117,12 +108,18 @@ async function videoCredentialsForUser(
   user: User,
   beefId: string,
   grantTokenRole: DailyTokenRole | null,
+  opts: { canProvisionRoom: boolean; tokenTtlSec?: number },
 ): Promise<{ dailyRoomUrl: string | null; dailyToken: string | null }> {
   const apiKey = process.env.DAILY_API_KEY;
   const roomName = beefDailyRoomName(beefId);
-  const dailyRoomUrl = apiKey ? await fetchDailyRoomUrl(roomName, apiKey) : null;
+  let dailyRoomUrl = apiKey ? await fetchDailyRoomUrl(roomName, apiKey) : null;
+
+  if (!dailyRoomUrl && apiKey && grantTokenRole && opts.canProvisionRoom) {
+    dailyRoomUrl = await ensureDailyRoomUrlForBeef(beefId);
+  }
 
   const profileUid = canonicalUserUuid(user.id) ?? user.id.trim();
+  const isSyntheticAnonId = /^anon_/i.test(user.id.trim());
 
   const { data: profileRaw } = await supabase
     .from('users')
@@ -133,11 +130,13 @@ async function videoCredentialsForUser(
   const profile = profileRaw as UsersNameFields | null;
 
   const userName =
-    (profile?.display_name?.trim() ||
-      profile?.username?.trim() ||
-      user.email?.split('@')[0] ||
-      'Utilisateur')
-      .slice(0, 120);
+    (isSyntheticAnonId
+      ? 'Visiteur'
+      : profile?.display_name?.trim() ||
+        profile?.username?.trim() ||
+        user.email?.split('@')[0] ||
+        'Utilisateur'
+    ).slice(0, 120);
 
   if (!apiKey || !grantTokenRole || !dailyRoomUrl) {
     return { dailyRoomUrl, dailyToken: null };
@@ -149,6 +148,7 @@ async function videoCredentialsForUser(
     user,
     userName,
     role: grantTokenRole,
+    tokenTtlSec: opts.tokenTtlSec,
   });
 
   return { dailyRoomUrl, dailyToken };
@@ -197,7 +197,15 @@ export async function GET(request: NextRequest) {
       grantTokenRole = null;
     }
 
-    const video = await videoCredentialsForUser(supabaseAdmin, activeUser, beefId, grantTokenRole);
+    const canProvisionRoom =
+      grantTokenRole === 'mediator' || grantTokenRole === 'participant';
+    const tokenTtlSec =
+      !user && grantTokenRole === 'spectator' ? ANON_SPECTATOR_TTL_SEC : undefined;
+
+    const video = await videoCredentialsForUser(supabaseAdmin, activeUser, beefId, grantTokenRole, {
+      canProvisionRoom,
+      tokenTtlSec,
+    });
     return NextResponse.json({
       role,
       viewerAccess: beef.status === 'live' ? 'full' : 'not_live',
