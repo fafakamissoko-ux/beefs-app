@@ -268,7 +268,6 @@ export default function LiveBeefRoomPage() {
       <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black">
         <div className="text-center text-white">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-plasma-500" />
-          <p className="text-sm font-semibold text-white">Préparation du billet vidéo…</p>
         </div>
       </div>
     );

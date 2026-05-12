@@ -3671,13 +3671,13 @@ export function TikTokStyleArena({
                   data-cinema-stay
                   className="pointer-events-none absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
                 >
-                  {/* La vidéo (Agrandie avec bordure d'étanchéité absolue de 10px/12px) */}
+                  {/* La vidéo (centrée, halo directement sur le bord du cercle vidéo) */}
                   <motion.div
                     animate={{
                       boxShadow: auraMed > 0 ? `0 0 50px ${getMediatorDynamicColor(auraMed)}` : '0 0 0 1px rgba(255,255,255,0.1)',
                     }}
                     style={{ filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})` }}
-                    className="pointer-events-auto relative h-[155px] w-[155px] overflow-hidden rounded-full border-[10px] border-[#08080a] bg-black sm:h-[220px] sm:w-[220px] sm:border-[12px]"
+                    className="pointer-events-auto relative h-[155px] w-[155px] overflow-hidden rounded-full sm:h-[220px] sm:w-[220px]"
                   >
                     {/* Bouton Réactiver (Médiateur local) */}
                     {mediatorIsLocal && isCameraInterrupted && !isViewer && (
