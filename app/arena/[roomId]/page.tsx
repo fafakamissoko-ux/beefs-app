@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { Clock, ArrowLeft, Camera, Mic, Play, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { normalizeBeefId } from '@/lib/beef-id';
+import { userIdsEqual } from '@/lib/user-id-equal';
 
 export default function ArenaPage() {
   const params = useParams();
@@ -132,17 +133,18 @@ export default function ArenaPage() {
 
       setBeefTitle(beef.title || '');
       setInitialViewerCount(beef.viewer_count || 0);
-      setIsHost(Boolean(userId && beef.mediator_id === userId));
+      setIsHost(Boolean(userId && userIdsEqual(beef.mediator_id, userId)));
 
       // Determine user role
-      if (userId && beef.mediator_id === userId) {
+      const uidForParticipant = userId.trim().toLowerCase();
+      if (userId && userIdsEqual(beef.mediator_id, userId)) {
         setUserRole('mediator');
       } else if (userId) {
         const { data: participation } = await supabase
           .from('beef_participants')
           .select('role, invite_status, is_main')
           .eq('beef_id', roomId)
-          .eq('user_id', userId)
+          .eq('user_id', uidForParticipant)
           .maybeSingle();
 
         if (participation && participation.invite_status === 'accepted') {

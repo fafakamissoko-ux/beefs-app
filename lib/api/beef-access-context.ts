@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizeBeefId } from '@/lib/beef-id';
+import { canonicalUserUuid, userIdsEqual } from '@/lib/user-id-equal';
 
 /** Contexte minimal pour autoriser une action sur un beef (arène / token / fact-check). */
 export async function userMayActOnBeef(
@@ -26,15 +27,17 @@ export async function userMayActOnBeef(
     return { ok: false, status: 403, error: 'Beef non disponible' };
   }
 
-  if (beef.mediator_id === userId) {
+  if (userIdsEqual(beef.mediator_id, userId)) {
     return { ok: true, beef };
   }
+
+  const participantUid = canonicalUserUuid(userId) ?? userId.trim();
 
   const { data: part } = await supabaseAdmin
     .from('beef_participants')
     .select('id')
     .eq('beef_id', id)
-    .eq('user_id', userId)
+    .eq('user_id', participantUid)
     .eq('invite_status', 'accepted')
     .maybeSingle();
 

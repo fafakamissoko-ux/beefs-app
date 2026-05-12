@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { Clock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { normalizeBeefId } from '@/lib/beef-id';
+import { userIdsEqual } from '@/lib/user-id-equal';
 import { useClientArenaOnboardingGuard } from '@/lib/client-arena-onboarding-guard';
 
 /** Même logique que /arena/[roomId] (état dépôt 35d8aa1), paramètre d’URL `id`. */
@@ -123,10 +124,11 @@ export default function LiveBeefRoomPage() {
 
       setBeefTitle(beef.title || '');
       setInitialViewerCount(beef.viewer_count || 0);
-      setIsHost(beef.mediator_id === userId);
+      setIsHost(userIdsEqual(beef.mediator_id, userId));
 
       let resolvedRole: 'mediator' | 'challenger' | 'viewer' = 'viewer';
-      if (beef.mediator_id === userId) {
+      const uidNorm = userId.trim().toLowerCase();
+      if (userIdsEqual(beef.mediator_id, userId)) {
         resolvedRole = 'mediator';
         setUserRole('mediator');
       } else {
@@ -134,7 +136,7 @@ export default function LiveBeefRoomPage() {
           .from('beef_participants')
           .select('role, invite_status, is_main')
           .eq('beef_id', roomId)
-          .eq('user_id', userId)
+          .eq('user_id', uidNorm)
           .maybeSingle();
 
         if (participation && participation.invite_status === 'accepted') {

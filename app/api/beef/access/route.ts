@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 import { normalizeBeefId } from '@/lib/beef-id';
+import { userIdsEqual, canonicalUserUuid } from '@/lib/user-id-equal';
 import { beefDailyRoomName } from '@/lib/beef-daily-room';
 
 const supabaseAdmin = createClient(
@@ -73,7 +74,7 @@ async function createDailyMeetingToken(params: {
   role: DailyTokenRole;
 }): Promise<string | null> {
   const { apiKey, roomName, user, userName, role } = params;
-  const uid = user.id.trim();
+  const uid = user.id.trim().toLowerCase();
   if (uid.length < 1 || uid.length > 36) return null;
 
   const now = Math.floor(Date.now() / 1000);
@@ -121,10 +122,12 @@ async function videoCredentialsForUser(
   const roomName = beefDailyRoomName(beefId);
   const dailyRoomUrl = apiKey ? await fetchDailyRoomUrl(roomName, apiKey) : null;
 
+  const profileUid = canonicalUserUuid(user.id) ?? user.id.trim();
+
   const { data: profileRaw } = await supabase
     .from('users')
     .select('display_name, username')
-    .eq('id', user.id)
+    .eq('id', profileUid)
     .maybeSingle();
 
   const profile = profileRaw as UsersNameFields | null;
@@ -172,15 +175,16 @@ export async function GET(request: NextRequest) {
     let role: DailyTokenRole = 'spectator';
     let grantTokenRole: DailyTokenRole | null = 'spectator';
 
-    if (user && beef.mediator_id === user.id) {
+    if (user && userIdsEqual(beef.mediator_id, user.id)) {
       role = 'mediator';
       grantTokenRole = 'mediator';
     } else if (user) {
+      const uidForParticipant = canonicalUserUuid(user.id) ?? user.id.trim();
       const { data: part } = await supabaseAdmin
         .from('beef_participants')
         .select('id')
         .eq('beef_id', beefId)
-        .eq('user_id', user.id)
+        .eq('user_id', uidForParticipant)
         .eq('invite_status', 'accepted')
         .maybeSingle();
       if (part) {
