@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { TikTokStyleArena } from '@/components/TikTokStyleArena';
 import { supabase } from '@/lib/supabase/client';
-import { beefDailyRoomName } from '@/lib/beef-daily-room';
 import { motion } from 'framer-motion';
 import { Clock, ArrowLeft, Camera, Mic, Play, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { normalizeBeefId } from '@/lib/beef-id';
+import { userIdsEqual } from '@/lib/user-id-equal';
+import { fetchBeefVideoTicket } from '@/lib/client/fetch-beef-video-ticket';
+
+type EntryPhase = 'FETCH_TICKET' | 'READY';
 
 export default function ArenaPage() {
   const params = useParams();
@@ -20,12 +23,15 @@ export default function ArenaPage() {
   const [userId, setUserId] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
+  const [entryPhase, setEntryPhase] = useState<EntryPhase>('FETCH_TICKET');
+
   const [beefEndedInfo, setBeefEndedInfo] = useState<{
     title: string;
     host_name: string;
     started_at?: string;
     ended_at?: string;
   } | null>(null);
+
   const [isHost, setIsHost] = useState(false);
   const [userRole, setUserRole] = useState<'mediator' | 'challenger' | 'viewer' | 'spectator'>('spectator');
 
@@ -39,16 +45,16 @@ export default function ArenaPage() {
   });
 
   const [dailyRoomUrl, setDailyRoomUrl] = useState<string | null>(null);
-  /** Jeton Daily depuis `GET /api/beef/access` (undefined = pas encore synchronisé). */
-  const [dailyMeetingToken, setDailyMeetingToken] = useState<string | null | undefined>(undefined);
+  const [dailyMeetingToken, setDailyMeetingToken] = useState<string | null>(null);
   const [initialViewerCount, setInitialViewerCount] = useState(0);
   const [beefTitle, setBeefTitle] = useState('');
-  /** Évite de monter l’arène avec rôle « viewer » par défaut + mauvais host.id avant chargement du beef. */
-  const [arenaReady, setArenaReady] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [ticketAttempt, setTicketAttempt] = useState(0);
   const [isStagingPassed, setIsStagingPassed] = useState(false);
 
   useEffect(() => {
     setIsStagingPassed(false);
+    setTicketAttempt(0);
   }, [roomId]);
 
   useEffect(() => {
@@ -57,11 +63,14 @@ export default function ArenaPage() {
     }
   }, [roomIdParam, roomId, router]);
 
+  /** État 1 — WAIT_AUTH : résolution Supabase uniquement. */
   useEffect(() => {
-    const loadUser = async () => {
+    let cancelled = false;
+    (async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      if (cancelled) return;
       if (user) {
         setUserId(user.id);
         const { data: userData } = await supabase
@@ -75,29 +84,32 @@ export default function ArenaPage() {
           setUserName('Utilisateur');
         }
       } else {
-        // Mode Fantôme
         setUserId('');
         setUserName('Visiteur');
       }
       setIsAuthLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
     };
-    loadUser();
   }, []);
 
+  /** État 2 — FETCH_TICKET : contexte beef + appel API billet (aucune room côté client). */
   useEffect(() => {
     if (!isAuthLoaded || !roomId) return;
-    let cancelled = false;
-    setArenaReady(false);
-    setBeefEndedInfo(null);
-    setDailyRoomUrl(null);
-    setDailyMeetingToken(undefined);
 
-    const loadRoomData = async () => {
-      const { data: beef } = await supabase.from('beefs').select('*').eq('id', roomId).single();
+    let cancelled = false;
+    setEntryPhase('FETCH_TICKET');
+    setBeefEndedInfo(null);
+    setAccessError(null);
+    setDailyRoomUrl(null);
+    setDailyMeetingToken(null);
+
+    (async () => {
+      const { data: beef, error: beefErr } = await supabase.from('beefs').select('*').eq('id', roomId).single();
 
       if (cancelled) return;
-
-      if (!beef) {
+      if (beefErr || !beef) {
         window.location.href = '/feed';
         return;
       }
@@ -117,7 +129,7 @@ export default function ArenaPage() {
           started_at: beef.started_at,
           ended_at: beef.ended_at,
         });
-        setArenaReady(false);
+        setEntryPhase('READY');
         return;
       }
 
@@ -132,17 +144,17 @@ export default function ArenaPage() {
 
       setBeefTitle(beef.title || '');
       setInitialViewerCount(beef.viewer_count || 0);
-      setIsHost(Boolean(userId && beef.mediator_id === userId));
+      setIsHost(Boolean(userId && userIdsEqual(beef.mediator_id, userId)));
 
-      // Determine user role
-      if (userId && beef.mediator_id === userId) {
+      if (userId && userIdsEqual(beef.mediator_id, userId)) {
         setUserRole('mediator');
       } else if (userId) {
+        const uidNorm = userId.trim().toLowerCase();
         const { data: participation } = await supabase
           .from('beef_participants')
           .select('role, invite_status, is_main')
           .eq('beef_id', roomId)
-          .eq('user_id', userId)
+          .eq('user_id', uidNorm)
           .maybeSingle();
 
         if (participation && participation.invite_status === 'accepted') {
@@ -154,82 +166,28 @@ export default function ArenaPage() {
         setUserRole('spectator');
       }
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const ticket = await fetchBeefVideoTicket(roomId, session?.access_token ?? null);
+
       if (cancelled) return;
-      await ensureDailyRoom(roomId);
-      if (cancelled) return;
-      await syncVideoAccessFromApi(roomId);
-      if (cancelled) return;
-      setArenaReady(true);
-    };
 
-    loadRoomData();
-    return () => {
-      cancelled = true;
-    };
-  }, [roomId, userId, isAuthLoaded]);
-
-  const syncVideoAccessFromApi = async (beefId: string) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: Record<string, string> = {};
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
-      }
-      const res = await fetch(`/api/beef/access?beefId=${encodeURIComponent(beefId)}`, { headers });
-      const data = (await res.json()) as {
-        dailyRoomUrl?: string | null;
-        dailyToken?: string | null;
-        error?: string;
-      };
-      if (!res.ok) return;
-      if (typeof data.dailyRoomUrl === 'string' && data.dailyRoomUrl) {
-        setDailyRoomUrl(data.dailyRoomUrl);
-      }
-      if ('dailyToken' in data) {
-        setDailyMeetingToken(data.dailyToken ?? null);
-      }
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const ensureDailyRoom = async (beefId: string) => {
-    const roomName = beefDailyRoomName(beefId);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (session?.access_token) {
-        authHeaders['Authorization'] = `Bearer ${session.access_token}`;
-      }
-
-      const getRes = await fetch(
-        `/api/daily/rooms?name=${encodeURIComponent(roomName)}&beefId=${encodeURIComponent(beefId)}`,
-        { headers: authHeaders },
-      );
-      const getData = await getRes.json();
-      if (getData.success && getData.room?.url) {
-        setDailyRoomUrl(getData.room.url);
+      if (!ticket.ok) {
+        setAccessError(ticket.message);
+        setEntryPhase('READY');
         return;
       }
 
-      const createRes = await fetch('/api/daily/rooms', {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({
-          beefId,
-          roomName,
-          privacy: 'private',
-          maxParticipants: 50,
-        }),
-      });
-      const createData = await createRes.json();
-      if (createData.success && createData.room?.url) {
-        setDailyRoomUrl(createData.room.url);
-      }
-    } catch (err) {
-      console.error('Error ensuring Daily room:', err);
-    }
-  };
+      setDailyRoomUrl(ticket.dailyRoomUrl);
+      setDailyMeetingToken(ticket.dailyToken);
+      setEntryPhase('READY');
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthLoaded, roomId, userId, ticketAttempt]);
 
   const handleShare = () => {
     const url = `${window.location.origin}/arena/${roomId}`;
@@ -240,11 +198,19 @@ export default function ArenaPage() {
     }
   };
 
-  // Show ended page instead of redirecting
+  const retryTicket = useCallback(() => {
+    setAccessError(null);
+    setDailyRoomUrl(null);
+    setDailyMeetingToken(null);
+    setTicketAttempt((a) => a + 1);
+  }, []);
+
+  // Beef terminé
   if (beefEndedInfo) {
-    const duration = beefEndedInfo.started_at && beefEndedInfo.ended_at
-      ? Math.floor((new Date(beefEndedInfo.ended_at).getTime() - new Date(beefEndedInfo.started_at).getTime()) / 60000)
-      : 0;
+    const duration =
+      beefEndedInfo.started_at && beefEndedInfo.ended_at
+        ? Math.floor((new Date(beefEndedInfo.ended_at).getTime() - new Date(beefEndedInfo.started_at).getTime()) / 60000)
+        : 0;
 
     return (
       <div className="fixed inset-0 z-40 flex min-h-dvh flex-col items-center justify-center p-6">
@@ -287,27 +253,67 @@ export default function ArenaPage() {
 
   if (!isAuthLoaded) {
     return (
-      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600 mx-auto mb-4" />
-          <p>Chargement...</p>
+      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black">
+        <div className="text-center text-white">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-red-600" />
+          <p className="text-sm text-white/80">Session…</p>
         </div>
       </div>
     );
   }
 
-  if (!beefEndedInfo && !arenaReady) {
+  if (entryPhase === 'FETCH_TICKET') {
     return (
-      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600 mx-auto mb-4" />
-          <p>Chargement de l’arène…</p>
+      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black">
+        <div className="text-center text-white">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-plasma-500" />
+          <p className="text-sm font-semibold text-white">Préparation du billet vidéo…</p>
         </div>
       </div>
     );
   }
 
-  const renderStagingRoom = () => {
+  // READY — erreur billet
+  if (accessError) {
+    return (
+      <div className="fixed inset-0 z-40 flex min-h-dvh flex-col items-center justify-center bg-black p-6">
+        <p className="mb-4 max-w-sm text-center text-sm text-amber-200/90">{accessError}</p>
+        <button
+          type="button"
+          onClick={retryTicket}
+          className="rounded-xl bg-plasma-500 px-6 py-3 text-sm font-bold text-white hover:bg-plasma-400"
+        >
+          Réessayer
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push('/feed')}
+          className="mt-4 text-sm text-white/60 underline"
+        >
+          Retour au feed
+        </button>
+      </div>
+    );
+  }
+
+  // READY — billet + contexte valides ; sas matériel médiateur/challenger uniquement
+  const ticketOk =
+    typeof dailyRoomUrl === 'string' &&
+    dailyRoomUrl.length > 0 &&
+    typeof dailyMeetingToken === 'string' &&
+    dailyMeetingToken.length > 0;
+
+  if (!ticketOk) {
+    return (
+      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black">
+        <p className="text-sm text-white/70">Accès vidéo indisponible.</p>
+      </div>
+    );
+  }
+
+  const needsStaging = userRole === 'mediator' || userRole === 'challenger';
+
+  if (needsStaging && !isStagingPassed) {
     return (
       <div className="fixed inset-0 z-[9999] flex h-dvh w-screen flex-col items-center justify-center bg-[#050505] p-6 text-center">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-plasma-900/20 via-[#050505] to-[#050505]" />
@@ -365,14 +371,9 @@ export default function ArenaPage() {
         </motion.div>
       </div>
     );
-  };
-
-  const needsStaging = userRole === 'mediator' || userRole === 'challenger';
-
-  if (needsStaging && !isStagingPassed) {
-    return renderStagingRoom();
   }
 
+  // État 3 — ARENA_READY : arène avec URL + jeton validés
   return (
     <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-black">
       <TikTokStyleArena

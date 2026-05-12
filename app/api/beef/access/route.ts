@@ -2,12 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 import { normalizeBeefId } from '@/lib/beef-id';
+import { userIdsEqual, canonicalUserUuid } from '@/lib/user-id-equal';
 import { beefDailyRoomName } from '@/lib/beef-daily-room';
+import { ensureDailyRoomExistsForBeef, getDailyRoomUrlByName } from '@/lib/server/daily-rooms';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
+
+const AUTH_MEETING_TOKEN_TTL_SEC = 2 * 60 * 60;
+const ANON_SPECTATOR_TTL_SEC = 600;
+
+/** Statuts où un spectateur peut recevoir un billet (écoute) une fois la room existante. */
+function beefStatusAllowsSpectatorTicket(status: string): boolean {
+  return status === 'pending' || status === 'live' || status === 'scheduled' || status === 'ready';
+}
 
 async function getAuthUser(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -17,7 +27,7 @@ async function getAuthUser(request: NextRequest) {
     const supabaseAuth = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader } } },
     );
     const {
       data: { user },
@@ -38,32 +48,12 @@ function beefIdFromSearchParams(searchParams: URLSearchParams): string | null {
   return null;
 }
 
-const MEETING_TOKEN_TTL_SEC = 2 * 60 * 60; // 2 h
-
-async function fetchDailyRoomUrl(roomName: string, apiKey: string): Promise<string | null> {
-  try {
-    const res = await fetch(`https://api.daily.co/v1/rooms/${encodeURIComponent(roomName)}`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { url?: string };
-    return typeof data.url === 'string' ? data.url : null;
-  } catch {
-    return null;
-  }
-}
-
 type DailyTokenRole = 'mediator' | 'participant' | 'spectator';
 
-/** Ligne `users` pour le nom Daily — cast explicite car le client admin peut inférer `never` sans types DB générés. */
 type UsersNameFields = { display_name: string | null; username: string | null };
 
 /**
- * Crée un meeting token Daily (POST /v1/meeting-tokens).
- * — médiateur : is_owner
- * — spectateur : micro + cam coupés à l’entrée
- * — participant (challenger) : flux média libres (pas de start_* forcés)
+ * POST https://api.daily.co/v1/meeting-tokens — exp = maintenant + tokenTtlSec secondes.
  */
 async function createDailyMeetingToken(params: {
   apiKey: string;
@@ -71,17 +61,17 @@ async function createDailyMeetingToken(params: {
   user: User;
   userName: string;
   role: DailyTokenRole;
+  tokenTtlSec: number;
 }): Promise<string | null> {
-  const { apiKey, roomName, user, userName, role } = params;
-  const uid = user.id.trim();
-  if (uid.length < 1 || uid.length > 36) return null;
+  const { apiKey, roomName, user, userName, role, tokenTtlSec } = params;
+  const uidRaw = user.id.trim().toLowerCase();
+  if (uidRaw.length < 1 || uidRaw.length > 64) return null;
 
-  const now = Math.floor(Date.now() / 1000);
-  const exp = now + MEETING_TOKEN_TTL_SEC;
+  const exp = Math.floor(Date.now() / 1000) + tokenTtlSec;
 
   const properties: Record<string, unknown> = {
     room_name: roomName,
-    user_id: uid,
+    user_id: uidRaw,
     user_name: userName.slice(0, 120),
     exp,
     eject_at_token_exp: true,
@@ -111,51 +101,32 @@ async function createDailyMeetingToken(params: {
   return data.token;
 }
 
-async function videoCredentialsForUser(
+async function resolveDisplayName(
   supabase: typeof supabaseAdmin,
   user: User,
-  beefId: string,
-  grantTokenRole: DailyTokenRole | null,
-): Promise<{ dailyRoomUrl: string | null; dailyToken: string | null }> {
-  const apiKey = process.env.DAILY_API_KEY;
-  const roomName = beefDailyRoomName(beefId);
-  const dailyRoomUrl = apiKey ? await fetchDailyRoomUrl(roomName, apiKey) : null;
-
-  const { data: profileRaw } = await supabase
+  isSyntheticAnon: boolean,
+): Promise<string> {
+  if (isSyntheticAnon) return 'Visiteur';
+  const profileUid = canonicalUserUuid(user.id) ?? user.id.trim();
+  const { data } = await supabase
     .from('users')
     .select('display_name, username')
-    .eq('id', user.id)
+    .eq('id', profileUid)
     .maybeSingle();
-
-  const profile = profileRaw as UsersNameFields | null;
-
-  const userName =
-    (profile?.display_name?.trim() ||
-      profile?.username?.trim() ||
-      user.email?.split('@')[0] ||
-      'Utilisateur')
-      .slice(0, 120);
-
-  if (!apiKey || !grantTokenRole || !dailyRoomUrl) {
-    return { dailyRoomUrl, dailyToken: null };
-  }
-
-  const dailyToken = await createDailyMeetingToken({
-    apiKey,
-    roomName,
-    user,
-    userName,
-    role: grantTokenRole,
-  });
-
-  return { dailyRoomUrl, dailyToken };
+  const profile = data as UsersNameFields | null;
+  return (
+    profile?.display_name?.trim() ||
+    profile?.username?.trim() ||
+    user.email?.split('@')[0] ||
+    'Utilisateur'
+  ).slice(0, 120);
 }
 
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
-    // Création d'un faux utilisateur pour satisfaire la fonction Daily si non connecté
-    const activeUser = user || ({ id: `anon_${Date.now()}` } as unknown as User);
+    const syntheticUser = (!user ? { id: `anon_${Date.now()}` } : null) as unknown as User | null;
+    const activeUser = user ?? syntheticUser!;
 
     const rawId = beefIdFromSearchParams(new URL(request.url).searchParams);
     const beefId = rawId ? normalizeBeefId(rawId) : null;
@@ -163,41 +134,124 @@ export async function GET(request: NextRequest) {
 
     const { data: beef, error: beefErr } = await supabaseAdmin
       .from('beefs')
-      .select('id, mediator_id, created_by, status')
+      .select('id, mediator_id, status')
       .eq('id', beefId)
       .single();
 
     if (beefErr || !beef) return NextResponse.json({ error: 'Beef introuvable' }, { status: 404 });
 
-    let role: DailyTokenRole = 'spectator';
-    let grantTokenRole: DailyTokenRole | null = 'spectator';
+    if (beef.status === 'ended' || beef.status === 'cancelled' || beef.status === 'replay') {
+      return NextResponse.json({ error: 'Beef non disponible', viewerAccess: 'not_live' as const }, { status: 403 });
+    }
 
-    if (user && beef.mediator_id === user.id) {
-      role = 'mediator';
-      grantTokenRole = 'mediator';
+    const apiKey = process.env.DAILY_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Configuration Daily manquante' }, { status: 500 });
+    }
+
+    const roomName = beefDailyRoomName(beefId);
+
+    let tokenRole: DailyTokenRole = 'spectator';
+    let isCreator = false;
+
+    if (user && userIdsEqual(beef.mediator_id, user.id)) {
+      tokenRole = 'mediator';
+      isCreator = true;
     } else if (user) {
+      const uidForParticipant = canonicalUserUuid(user.id) ?? user.id.trim();
       const { data: part } = await supabaseAdmin
         .from('beef_participants')
         .select('id')
         .eq('beef_id', beefId)
-        .eq('user_id', user.id)
+        .eq('user_id', uidForParticipant)
         .eq('invite_status', 'accepted')
         .maybeSingle();
       if (part) {
-        role = 'participant';
-        grantTokenRole = 'participant';
+        tokenRole = 'participant';
+        isCreator = true;
       }
     }
 
-    if (role === 'spectator' && beef.status !== 'live') {
-      grantTokenRole = null;
+    const isSyntheticAnon = !user;
+    const userName = await resolveDisplayName(supabaseAdmin, activeUser, isSyntheticAnon);
+
+    /** ── Créateurs : création de salle obligatoire côté serveur, puis jeton. ── */
+    if (isCreator) {
+      const dailyRoomUrl = await ensureDailyRoomExistsForBeef(beefId);
+      if (!dailyRoomUrl) {
+        return NextResponse.json(
+          { error: 'Impossible de préparer la salle vidéo', code: 'DAILY_ROOM_UNREACHABLE' },
+          { status: 503 },
+        );
+      }
+      const token = await createDailyMeetingToken({
+        apiKey,
+        roomName,
+        user: activeUser,
+        userName,
+        role: tokenRole,
+        tokenTtlSec: AUTH_MEETING_TOKEN_TTL_SEC,
+      });
+      if (!token) {
+        return NextResponse.json({ error: 'Émission du jeton impossible', code: 'TOKEN_FAILED' }, { status: 503 });
+      }
+      return NextResponse.json({
+        ok: true,
+        role: tokenRole,
+        viewerAccess: 'full' as const,
+        dailyRoomUrl,
+        dailyToken: token,
+      });
     }
 
-    const video = await videoCredentialsForUser(supabaseAdmin, activeUser, beefId, grantTokenRole);
+    /** ── Spectateurs / anonymes : jamais de POST room — lookup GET uniquement. ── */
+    if (!beefStatusAllowsSpectatorTicket(beef.status)) {
+      return NextResponse.json({
+        ok: false,
+        role: 'spectator' as const,
+        viewerAccess: 'not_live' as const,
+        dailyRoomUrl: null,
+        dailyToken: null,
+        code: 'BEEF_NOT_WATCHABLE',
+      });
+    }
+
+    const dailyRoomUrl = await getDailyRoomUrlByName(roomName, apiKey);
+    if (!dailyRoomUrl) {
+      return NextResponse.json({
+        ok: false,
+        role: 'spectator' as const,
+        viewerAccess: 'not_live' as const,
+        dailyRoomUrl: null,
+        dailyToken: null,
+        code: 'ROOM_NOT_FOUND',
+      });
+    }
+
+    const ttl = isSyntheticAnon ? ANON_SPECTATOR_TTL_SEC : AUTH_MEETING_TOKEN_TTL_SEC;
+
+    const token = await createDailyMeetingToken({
+      apiKey,
+      roomName,
+      user: activeUser,
+      userName,
+      role: 'spectator',
+      tokenTtlSec: ttl,
+    });
+
+    if (!token) {
+      return NextResponse.json(
+        { ok: false, error: 'Émission du jeton spectateur impossible', code: 'TOKEN_FAILED', dailyRoomUrl, dailyToken: null },
+        { status: 503 },
+      );
+    }
+
     return NextResponse.json({
-      role,
-      viewerAccess: beef.status === 'live' ? 'full' : 'not_live',
-      ...video,
+      ok: true,
+      role: 'spectator' as const,
+      viewerAccess: 'full' as const,
+      dailyRoomUrl,
+      dailyToken: token,
     });
   } catch {
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
