@@ -38,7 +38,7 @@ import { ParticipantVideo } from './ParticipantVideo';
 import { FeatureGuide } from './FeatureGuide';
 import { ViewerListModal } from './ViewerListModal';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
-import { useDailyCall } from '@/hooks/useDailyCall';
+import { physicalPeerToCallParticipant, useDailyCall, type CallParticipant } from '@/hooks/useDailyCall';
 import { supabase } from '@/lib/supabase/client';
 import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
@@ -50,9 +50,11 @@ import { ARENA_QUICK_REACTIONS } from '@/lib/arena-quick-reactions';
 import {
   buildParticipantAliasSet,
   isValidArenaUserId,
-  matchRemoteToExpectedBeefParticipant,
+  ORPHAN_GUEST_LABEL,
+  reconcilePeers,
   remoteMatchesMediator,
   type BeefParticipantRowMeta,
+  type ReconcileExpectedRoles,
 } from '@/lib/participant-identity';
 import {
   FlyingReactionsLayer,
@@ -233,11 +235,15 @@ export function TikTokStyleArena({
 
   const isViewer = userRole === 'viewer' || userRole === 'spectator';
 
-  // ── AUTH HOOK (Conversion des anonymes) ──
-  const [authHook, setAuthHook] = useState<{ title: string; subtitle: string } | null>(null);
+  // ── AUTH HOOK (Conversion des anonymes + mur freemium mandatory) ──
+  const [authHook, setAuthHook] = useState<{
+    title: string;
+    subtitle: string;
+    mandatory?: boolean;
+  } | null>(null);
   const requireAuth = useCallback((title: string, subtitle: string) => {
     if (!userId) {
-      setAuthHook({ title, subtitle });
+      setAuthHook({ title, subtitle, mandatory: false });
       return true;
     }
     return false;
@@ -686,6 +692,13 @@ export function TikTokStyleArena({
   useEffect(() => {
     void loadParticipants();
   }, [loadParticipants]);
+
+  const expectedUids = useMemo(() => {
+    return Object.entries(participantRoles)
+      .filter(([uid]) => uid !== host.id)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map((e) => e[0]);
+  }, [participantRoles, host.id]);
 
   useEffect(() => {
     if (!roomId) return;
@@ -1200,101 +1213,8 @@ export function TikTokStyleArena({
     })();
   }, [userId]);
 
-  type ServerAccessPayload = {
-    role?: string;
-    viewerAccess?: string;
-    dailyRoomUrl?: string | null;
-    dailyToken?: string | null;
-  };
-  const [serverAccess, setServerAccess] = useState<ServerAccessPayload | null>(null);
-  /** True après la 1ʳᵉ tentative GET /api/beef/access (jeton spectateur). */
-  const [viewerAccessReady, setViewerAccessReady] = useState(false);
-
-  const fetchViewerAccess = useCallback(async () => {
-    if (!isViewer) return;
-    try {
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        const { data } = await supabase.auth.refreshSession();
-        session = data.session ?? null;
-      }
-
-      const headers: Record<string, string> = {};
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
-      }
-
-      let res = await fetch(`/api/beef/access?beefId=${encodeURIComponent(roomId)}`, { headers });
-
-      if (res.status === 401) {
-        await supabase.auth.refreshSession();
-        const { data: { session: s2 } } = await supabase.auth.getSession();
-        const h: Record<string, string> = {};
-        if (s2?.access_token) h.Authorization = `Bearer ${s2.access_token}`;
-        res = await fetch(`/api/beef/access?beefId=${encodeURIComponent(roomId)}`, { headers: h });
-      }
-
-      const data = (await res.json()) as ServerAccessPayload & { error?: string };
-      if (!res.ok) {
-        setServerAccess(null);
-        return;
-      }
-      setServerAccess(data);
-    } catch {
-      setServerAccess(null);
-    } finally {
-      setViewerAccessReady(true);
-    }
-  }, [isViewer, roomId]);
-
-  useEffect(() => {
-    setViewerAccessReady(false);
-    setServerAccess(null);
-  }, [roomId]);
-
-  useEffect(() => {
-    const ch = supabase
-      .channel(`beef_preview_${roomId}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'beefs', filter: `id=eq.${roomId}` },
-        () => {
-          void fetchViewerAccess();
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
-  }, [roomId, fetchViewerAccess]);
-
-  useEffect(() => {
-    if (!isViewer) return;
-    fetchViewerAccess();
-    const id = setInterval(fetchViewerAccess, 30_000);
-    const onVis = () => {
-      if (document.visibilityState === 'visible') fetchViewerAccess();
-    };
-    const onPageShow = () => fetchViewerAccess();
-    document.addEventListener('visibilitychange', onVis);
-    window.addEventListener('pageshow', onPageShow);
-    return () => {
-      clearInterval(id);
-      document.removeEventListener('visibilitychange', onVis);
-      window.removeEventListener('pageshow', onPageShow);
-    };
-  }, [isViewer, fetchViewerAccess]);
-
-  const effectiveDailyRoomUrl =
-    isViewer && viewerAccessReady && serverAccess?.dailyRoomUrl
-      ? serverAccess.dailyRoomUrl
-      : (dailyRoomUrl ?? null);
-
-  const meetingTokenForDaily: string | null | undefined = isViewer
-    ? viewerAccessReady && serverAccess !== null
-      ? (serverAccess.dailyToken !== undefined ? serverAccess.dailyToken : dailyMeetingToken)
-      : undefined
-    : dailyMeetingToken;
+  const effectiveDailyRoomUrl = dailyRoomUrl ?? null;
+  const meetingTokenForDaily = dailyMeetingToken ?? null;
 
   const {
     join,
@@ -1308,6 +1228,8 @@ export function TikTokStyleArena({
     isJoining,
     micEnabled,
     camEnabled,
+    physicalPeers,
+    connectionStatus,
     localParticipant,
     remoteParticipants,
     activeSpeakerPeerId,
@@ -1316,9 +1238,61 @@ export function TikTokStyleArena({
     recoverMediaDevices,
   } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer, userId, meetingTokenForDaily);
 
+  const reconcileExpected = useMemo(
+    (): ReconcileExpectedRoles => ({
+      mediatorUserId: host.id,
+      mediatorDisplayName: host.name,
+      challengerUidsOrdered: expectedUids,
+      roles: participantRoles,
+    }),
+    [host.id, host.name, expectedUids, participantRoles],
+  );
+
+  const reconciledPeers = useMemo(
+    () => reconcilePeers(physicalPeers, reconcileExpected),
+    [physicalPeers, reconcileExpected],
+  );
+
+  /** Grille 4 cases : index = slot attribué par reconcilePeers (A=0 … D=3). */
+  const challengerRemoteSlots = useMemo((): Array<CallParticipant | null> => {
+    const panels: Array<CallParticipant | null> = [null, null, null, null];
+    for (const r of reconciledPeers) {
+      const idx = r.semantic.expectedSlotIndex;
+      if (idx >= 0 && idx < 4) {
+        panels[idx] = physicalPeerToCallParticipant(r.physical);
+      }
+    }
+    return panels;
+  }, [reconciledPeers]);
+
+  const displayPanelsFixed = challengerRemoteSlots;
+
+  const hostRemoteParticipant = useMemo((): CallParticipant | null => {
+    if (isHost) return null;
+    const m = reconciledPeers.find((r) => r.semantic.expectedSlotIndex === -1);
+    return m ? physicalPeerToCallParticipant(m.physical) : null;
+  }, [isHost, reconciledPeers]);
+
   useEffect(() => {
     leaveRef.current = leave;
   }, [leave]);
+
+  const freemiumWallArmedRef = useRef(false);
+  useEffect(() => {
+    if (isJoined) freemiumWallArmedRef.current = true;
+  }, [isJoined]);
+
+  useEffect(() => {
+    if (userId) return;
+    if (!isViewer) return;
+    if (!freemiumWallArmedRef.current) return;
+    if (connectionStatus !== 'left' && connectionStatus !== 'error') return;
+    setAuthHook({
+      title: 'Temps écoulé',
+      subtitle: 'Crée un compte gratuit pour continuer à regarder ce Beef en direct !',
+      mandatory: true,
+    });
+  }, [connectionStatus, userId, isViewer]);
 
   /** Pas de bulles « onboarding » quand la salle est déjà active ou pendant la connexion Daily */
   const featureGuideSuppress =
@@ -1343,18 +1317,21 @@ export function TikTokStyleArena({
     }
   }, [isHost, isJoined]);
 
-  // Médiateur : mémoriser qu’un challenger invité est réellement entré dans la room (userData UUID + alias profil)
+  // Médiateur : mémoriser qu’un challenger invité est réellement entré dans la room (réconciliation identité)
   useEffect(() => {
     if (!isHost || !isJoined) return;
-    const expectedChallengerSlots = Object.keys(participantRoles).filter(uid => uid !== host.id);
+    const expectedChallengerSlots = Object.keys(participantRoles).filter((uid) => uid !== host.id);
     if (expectedChallengerSlots.length === 0) return;
-    const anyChallengerPresent = remoteParticipants.some(p =>
-      matchRemoteToExpectedBeefParticipant(p, host.id, host.name, participantRoles) !== null,
+    const anyChallengerPresent = reconciledPeers.some(
+      (r) =>
+        r.semantic.expectedSlotIndex >= 0 &&
+        r.semantic.kind === 'expected' &&
+        !r.physical.isLocal,
     );
     if (anyChallengerPresent) {
       challengersEverJoinedRef.current = true;
     }
-  }, [isHost, isJoined, remoteParticipants, participantRoles, host.id, host.name]);
+  }, [isHost, isJoined, reconciledPeers, participantRoles, host.id]);
 
   // ── AUTO-END: Detect mediator or all challengers leaving ──
   useEffect(() => {
@@ -1415,31 +1392,11 @@ export function TikTokStyleArena({
     }
   }, [remoteParticipants, isJoined, isHost, host.id, host.name, participantRoles, mediatorGraceActive, toast]);
 
-  // Auto-join quand « Rejoindre » + URL Daily ; spectateur : attendre GET access (jeton).
+  // Auto-join quand « Rejoindre » + URL Daily + jeton (fournis par la page parente).
   useEffect(() => {
-    if (!hasJoined || !effectiveDailyRoomUrl || isJoined || isJoining) return;
-    if (isViewer && !viewerAccessReady) return;
-    if (
-      isViewer &&
-      viewerAccessReady &&
-      serverAccess &&
-      serverAccess.dailyToken === null &&
-      serverAccess.viewerAccess === 'not_live'
-    ) {
-      return;
-    }
+    if (!hasJoined || !effectiveDailyRoomUrl || !meetingTokenForDaily || isJoined || isJoining) return;
     void join(preJoinMediaStream);
-  }, [
-    hasJoined,
-    effectiveDailyRoomUrl,
-    isJoined,
-    isJoining,
-    join,
-    preJoinMediaStream,
-    isViewer,
-    viewerAccessReady,
-    serverAccess,
-  ]);
+  }, [hasJoined, effectiveDailyRoomUrl, meetingTokenForDaily, isJoined, isJoining, join, preJoinMediaStream]);
 
   const handleRaiseHand = useCallback(async () => {
     if (!userId || !roomId) return;
@@ -1477,29 +1434,17 @@ export function TikTokStyleArena({
     };
   }, [isJoined, roomId, isViewer]);
 
-  // Sort remote participants: main challengers first based on roles
-  const sortedRemoteParticipants = [...remoteParticipants].sort((a, b) => {
-    const metaA = matchRemoteToExpectedBeefParticipant(a, host.id, host.name, participantRoles);
-    const metaB = matchRemoteToExpectedBeefParticipant(b, host.id, host.name, participantRoles);
-    const roleA = metaA?.role;
-    const roleB = metaB?.role;
-    if (roleA === 'participant' && roleB !== 'participant') return -1;
-    if (roleA !== 'participant' && roleB === 'participant') return 1;
-    return 0;
-  });
-
   const hasExpectedChallengers = useMemo(
     () => Object.keys(participantRoles).some((uid) => uid !== host.id),
     [participantRoles, host.id],
   );
 
-  /** Spectateur : LIVE « chaud » dès qu’un challenger attendu est dans la room ; repli si rôles pas encore chargés. */
+  /** Spectateur : LIVE « chaud » — au moins un slot grille 0–3 avec flux (y compris orphelins). */
   const challengerOnAir = useMemo(() => {
-    const matched = remoteParticipants.some((p) => {
-      if (remoteMatchesMediator(p, host.id, host.name)) return false;
-      return matchRemoteToExpectedBeefParticipant(p, host.id, host.name, participantRoles) !== null;
-    });
-    if (matched) return true;
+    const hasGridVideo = reconciledPeers.some(
+      (r) => r.semantic.expectedSlotIndex >= 0 && r.physical.videoTrack,
+    );
+    if (hasGridVideo) return true;
     if (!isViewer) return false;
     const nonMediator = remoteParticipants.filter(
       (p) => !remoteMatchesMediator(p, host.id, host.name),
@@ -1507,71 +1452,9 @@ export function TikTokStyleArena({
     if (nonMediator.length === 0) return false;
     if (!hasExpectedChallengers) return true;
     return false;
-  }, [remoteParticipants, host.id, host.name, participantRoles, isViewer, hasExpectedChallengers]);
+  }, [reconciledPeers, remoteParticipants, host.id, host.name, isViewer, hasExpectedChallengers]);
 
   const liveBadgeHot = isViewer ? challengerOnAir : isJoined;
-
-  // Video layout: determine which participant goes in each slot based on role
-  const hostRemoteParticipant = !isHost
-    ? remoteParticipants.find(p => remoteMatchesMediator(p, host.id, host.name)) ?? null
-    : null;
-
-  /**
-   * Remotes qui correspondent à des challengers attendus (beef_participants), pas le médiateur ni un inconnu.
-   * Ordre stable : tri parent (participant d’abord). Slots A/B = [0] et [1].
-   * Exclut le participant local (challenger ou spectateur) pour ne jamais dupliquer le même flux sur les deux dalles.
-   */
-  const challengerRemoteSlots = useMemo(() => {
-    const matched = sortedRemoteParticipants.filter(
-      (p) => matchRemoteToExpectedBeefParticipant(p, host.id, host.name, participantRoles) !== null,
-    );
-    const withoutSelf = !localParticipant?.sessionId
-      ? matched
-      : matched.filter((p) => p.sessionId !== localParticipant.sessionId);
-    if (withoutSelf.length > 0 || Object.keys(participantRoles).length > 0) {
-      return withoutSelf;
-    }
-    /* Rôles beef pas encore hydratés : exclure uniquement le médiateur + le local (évite deux fois le même challenger). */
-    const naive = sortedRemoteParticipants.filter(
-      (p) => !remoteMatchesMediator(p, host.id, host.name),
-    );
-    return !localParticipant?.sessionId
-      ? naive
-      : naive.filter((p) => p.sessionId !== localParticipant.sessionId);
-  }, [
-    sortedRemoteParticipants,
-    host.id,
-    host.name,
-    participantRoles,
-    localParticipant?.sessionId,
-  ]);
-
-  const expectedUids = useMemo(() => {
-    return Object.entries(participantRoles)
-      .filter(([uid]) => uid !== host.id)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map((e) => e[0]);
-  }, [participantRoles, host.id]);
-
-  type ChallengerArenaPanel = (typeof challengerRemoteSlots)[number];
-
-  const displayPanelsFixed = useMemo((): Array<ChallengerArenaPanel | null> => {
-    const panels: Array<ChallengerArenaPanel | null> = [null, null, null, null];
-    if (expectedUids.length > 0) {
-      expectedUids.forEach((uid, idx) => {
-        if (idx > 3) return;
-        if (localParticipant?.arenaUserId === uid) panels[idx] = localParticipant as ChallengerArenaPanel;
-        else panels[idx] = challengerRemoteSlots.find((p) => p.arenaUserId === uid) ?? null;
-      });
-      return panels;
-    }
-    challengerRemoteSlots.slice(0, 4).forEach((p, idx) => {
-      if (localParticipant?.sessionId && p.sessionId === localParticipant.sessionId) {
-        panels[idx] = localParticipant as ChallengerArenaPanel;
-      } else panels[idx] = p;
-    });
-    return panels;
-  }, [expectedUids, localParticipant, challengerRemoteSlots]);
 
   const leftPanel = isHost
     ? challengerRemoteSlots[0] ?? null
@@ -1608,7 +1491,7 @@ export function TikTokStyleArena({
       if (!uid) return 'A';
       const idx = expectedUids.indexOf(uid);
       if (idx < 0) {
-        const j = challengerRemoteSlots.findIndex((p) => p.arenaUserId === uid);
+        const j = challengerRemoteSlots.findIndex((p) => p && p.arenaUserId === uid);
         if (j === 1) return 'B';
         if (j === 2) return 'C';
         if (j === 3) return 'D';
@@ -1686,22 +1569,35 @@ export function TikTokStyleArena({
   const mediatorRemoteRows = useMemo((): MediatorRemoteRow[] => {
     if (!isHost || !effectiveDailyRoomUrl) return [];
     if (expectedUids.length === 0) {
-      return challengerRemoteSlots.slice(0, 4).map((p, idx) => ({
-        sessionId: p.sessionId,
-        label: p.userName || `Participant ${idx + 1}`,
-        slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as 'A' | 'B' | 'C' | 'D',
-        debaterId: p.arenaUserId ?? null,
-        audioOn: p.audioOn,
-      }));
+      return challengerRemoteSlots.slice(0, 4).map((p, idx) => {
+        const r = reconciledPeers.find((x) => x.semantic.expectedSlotIndex === idx);
+        const orphan = r?.semantic.kind === 'orphan';
+        return {
+          sessionId: p?.sessionId ?? '',
+          label: orphan
+            ? `@${ORPHAN_GUEST_LABEL}`
+            : p?.userName || `Participant ${idx + 1}`,
+          slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as 'A' | 'B' | 'C' | 'D',
+          debaterId: p?.arenaUserId ?? null,
+          audioOn: p?.audioOn ?? false,
+        };
+      });
     }
     return expectedUids.slice(0, 4).map((uid, idx) => {
       const panel = displayPanelsFixed[idx];
       const slot = (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as 'A' | 'B' | 'C' | 'D';
+      const r = reconciledPeers.find((x) => x.semantic.expectedSlotIndex === idx);
+      const label =
+        r?.semantic.kind === 'orphan'
+          ? `@${ORPHAN_GUEST_LABEL}`
+          : participantRoles[uid]?.name?.trim() || panel?.userName || `Participant ${idx + 1}`;
+      const debaterId =
+        r?.semantic.kind === 'orphan' ? panel?.arenaUserId ?? null : uid;
       return {
         sessionId: panel?.sessionId ?? '',
-        label: participantRoles[uid]?.name?.trim() || panel?.userName || `Participant ${idx + 1}`,
+        label,
         slot,
-        debaterId: uid,
+        debaterId,
         audioOn: panel?.audioOn ?? false,
       };
     });
@@ -1712,6 +1608,7 @@ export function TikTokStyleArena({
     displayPanelsFixed,
     participantRoles,
     challengerRemoteSlots,
+    reconciledPeers,
   ]);
 
   const leftPanelRef = useRef(leftPanel);
@@ -1722,7 +1619,7 @@ export function TikTokStyleArena({
   const hotMicSpeakerSlot = useMemo((): 'A' | 'B' | 'C' | 'D' | null => {
     if (!speakingTurnActive || !speakingTurnTarget) return null;
     for (const p of challengerRemoteSlots) {
-      if (p.arenaUserId === speakingTurnTarget) {
+      if (p && p.arenaUserId === speakingTurnTarget) {
         return getSlotForUser(p.arenaUserId);
       }
     }
@@ -2417,7 +2314,7 @@ export function TikTokStyleArena({
       ),
     );
 
-    const panelMatch = challengerRemoteSlots.find((p) => p.arenaUserId === debaterId);
+    const panelMatch = challengerRemoteSlots.find((p) => p && p.arenaUserId === debaterId);
     const slot = panelMatch?.arenaUserId ? getSlotForUser(panelMatch.arenaUserId) : undefined;
     const speakerLabel =
       debaters.find((d) => d.id === debaterId)?.name ??
@@ -2533,7 +2430,7 @@ export function TikTokStyleArena({
     setFloorAnnouncement(null);
     const endedSpeakerId = speakingTurnTargetRef.current;
     if (isHost && endedSpeakerId) {
-      const p = challengerRemoteSlots.find((x) => x.arenaUserId === endedSpeakerId);
+      const p = challengerRemoteSlots.find((x) => x && x.arenaUserId === endedSpeakerId);
       const sid = p?.sessionId;
       if (sid) setRemoteParticipantAudio(sid, false);
       channelRef.current
@@ -3644,9 +3541,17 @@ export function TikTokStyleArena({
             type EmperorSlot = 'A' | 'B' | 'C' | 'D';
             const expectedCount = Math.max(2, expectedUids.length);
             const gridClass = expectedCount <= 2 ? 'grid-cols-2 grid-rows-1' : 'grid-cols-2 grid-rows-2';
-            const layoutConfigs = displayPanelsFixed.slice(0, expectedCount).map((panel, idx) => ({
+            const layoutConfigs = displayPanelsFixed.slice(0, expectedCount).map((panel, idx) => {
+              const r = reconciledPeers.find((x) => x.semantic.expectedSlotIndex === idx);
+              const name =
+                r?.semantic.kind === 'orphan'
+                  ? `@${ORPHAN_GUEST_LABEL}`
+                  : participantRoles[expectedUids[idx]]?.name ||
+                    panel?.userName?.trim() ||
+                    `Participant ${idx + 1}`;
+              return {
               id: `grid-${idx}`,
-              name: participantRoles[expectedUids[idx]]?.name || `Participant ${idx + 1}`,
+              name,
               panel,
               slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as EmperorSlot,
               color: idx === 0 ? '168,85,247' : idx === 1 ? '16,185,129' : idx === 2 ? '234,179,8' : '59,130,246',
@@ -3660,7 +3565,8 @@ export function TikTokStyleArena({
                     : idx === 2
                       ? 'bottom-2 left-2 sm:bottom-4 sm:left-4 items-start text-left'
                       : 'bottom-2 right-2 sm:bottom-4 sm:right-4 items-end text-right',
-            }));
+            };
+            });
 
             return (
               <>
@@ -4561,7 +4467,9 @@ export function TikTokStyleArena({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 px-4 backdrop-blur-[12px]"
-            onClick={() => setAuthHook(null)}
+            onClick={() => {
+              if (!authHook?.mandatory) setAuthHook(null);
+            }}
           >
             <motion.div
               initial={{ scale: 0.9, y: 30, rotateX: 15 }}
@@ -4595,13 +4503,15 @@ export function TikTokStyleArena({
                 </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setAuthHook(null)}
-                className="mt-6 text-[10px] font-bold uppercase tracking-widest text-white/30 hover:text-white/60"
-              >
-                Rester en mode spectateur
-              </button>
+              {!authHook.mandatory && (
+                <button
+                  type="button"
+                  onClick={() => setAuthHook(null)}
+                  className="mt-6 text-[10px] font-bold uppercase tracking-widest text-white/30 hover:text-white/60"
+                >
+                  Rester en mode spectateur
+                </button>
+              )}
             </motion.div>
           </motion.div>
         )}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useDailyMeetingEngine } from '@/hooks/useDailyMeetingEngine';
+import { useDailyMeetingEngine, type MeetingConnectionStatus } from '@/hooks/useDailyMeetingEngine';
 import type { PhysicalPeer } from '@/lib/participant-identity';
 
 export interface CallParticipant {
@@ -28,6 +28,9 @@ export interface UseDailyCallReturn {
   isJoining: boolean;
   micEnabled: boolean;
   camEnabled: boolean;
+  /** Paires Daily triées (réconciliation identité). */
+  physicalPeers: PhysicalPeer[];
+  connectionStatus: MeetingConnectionStatus;
   localParticipant: CallParticipant | null;
   remoteParticipants: CallParticipant[];
   activeSpeakerPeerId: string | null;
@@ -36,7 +39,8 @@ export interface UseDailyCallReturn {
   recoverMediaDevices: () => Promise<void>;
 }
 
-function physicalToCallParticipant(p: PhysicalPeer): CallParticipant {
+/** Mappe un {@link PhysicalPeer} vers le format affichage arène (pistes Daily). */
+export function physicalPeerToCallParticipant(p: PhysicalPeer): CallParticipant {
   const vBlocked = p.videoTrackState === 'off' || p.videoTrackState === 'blocked';
   const aBlocked = p.audioTrackState === 'off' || p.audioTrackState === 'blocked';
   return {
@@ -70,16 +74,21 @@ export function useDailyCall(
     meetingToken: accessMeetingToken,
   });
 
+  const physicalPeers = useMemo(() => {
+    const list = Object.values(engine.peersBySessionId);
+    return list.slice().sort((a, b) => a.sessionId.localeCompare(b.sessionId));
+  }, [engine.peersBySessionId]);
+
   const localParticipant = useMemo(() => {
     const lp = Object.values(engine.peersBySessionId).find((x) => x.isLocal);
-    return lp ? physicalToCallParticipant(lp) : null;
+    return lp ? physicalPeerToCallParticipant(lp) : null;
   }, [engine.peersBySessionId]);
 
   const remoteParticipants = useMemo(
     () =>
       Object.values(engine.peersBySessionId)
         .filter((x) => !x.isLocal)
-        .map(physicalToCallParticipant),
+        .map(physicalPeerToCallParticipant),
     [engine.peersBySessionId],
   );
 
@@ -99,6 +108,8 @@ export function useDailyCall(
     isJoining,
     micEnabled: engine.micEnabled,
     camEnabled: engine.camEnabled,
+    physicalPeers,
+    connectionStatus: engine.status,
     localParticipant,
     remoteParticipants,
     activeSpeakerPeerId: engine.activeSpeakerPeerId,

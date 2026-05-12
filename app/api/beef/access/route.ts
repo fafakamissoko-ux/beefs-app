@@ -12,7 +12,7 @@ const supabaseAdmin = createClient(
 );
 
 const AUTH_MEETING_TOKEN_TTL_SEC = 2 * 60 * 60;
-const ANON_SPECTATOR_TTL_SEC = 600;
+const ANON_SPECTATOR_TTL_SEC = 300;
 
 /** Statuts où un spectateur peut recevoir un billet (écoute) une fois la room existante. */
 function beefStatusAllowsSpectatorTicket(status: string): boolean {
