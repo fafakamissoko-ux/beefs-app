@@ -40,8 +40,22 @@ function beefIdFromSearchParams(searchParams: URLSearchParams): string | null {
   return null;
 }
 
-const MEETING_TOKEN_TTL_SEC = 2 * 60 * 60; // roles authentifiés
+const MEETING_TOKEN_TTL_SEC = 2 * 60 * 60; // rôles authentifiés
 const ANON_SPECTATOR_TTL_SEC = 600;
+
+/**
+ * États où un spectateur (compte ou visiteur) peut recevoir l’audio/vidéo Daily.
+ * Doit être aligné avec `/api/daily/meeting-token` (`canSpectate`) et avec l’arène avant `SYNC_LIVE`
+ * (`pending` / `ready`), sinon les spectateurs ont `viewerAccess === 'not_live'` et ne joignent jamais la room alors que les acteurs sont déjà là.
+ */
+function beefStatusAllowsSpectatorDaily(status: string): boolean {
+  return (
+    status === 'pending' ||
+    status === 'live' ||
+    status === 'scheduled' ||
+    status === 'ready'
+  );
+}
 
 type DailyTokenRole = 'mediator' | 'participant' | 'spectator';
 
@@ -193,15 +207,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (role === 'spectator' && beef.status !== 'live') {
+    if (role === 'spectator' && !beefStatusAllowsSpectatorDaily(beef.status)) {
       grantTokenRole = null;
     }
 
-    /** Challengers et médiateur créent la room ; si elle n’existe pas encore, un spectateur « live » peut aussi la créer (clé Daily serveur uniquement). */
+    /** Challengers et médiateur créent la room ; un spectateur autorisé peut aussi provisionner tant que la salle permet l’écoute (clé Daily serveur uniquement). */
     const canProvisionRoom =
       grantTokenRole === 'mediator' ||
       grantTokenRole === 'participant' ||
-      (grantTokenRole === 'spectator' && beef.status === 'live');
+      (grantTokenRole === 'spectator' && beefStatusAllowsSpectatorDaily(beef.status));
     const tokenTtlSec =
       !user && grantTokenRole === 'spectator' ? ANON_SPECTATOR_TTL_SEC : undefined;
 
@@ -211,7 +225,7 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json({
       role,
-      viewerAccess: beef.status === 'live' ? 'full' : 'not_live',
+      viewerAccess: beefStatusAllowsSpectatorDaily(beef.status) ? 'full' : 'not_live',
       ...video,
     });
   } catch {
