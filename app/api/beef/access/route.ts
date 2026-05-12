@@ -12,7 +12,6 @@ const supabaseAdmin = createClient(
 );
 
 const AUTH_MEETING_TOKEN_TTL_SEC = 2 * 60 * 60;
-const ANON_SPECTATOR_TTL_SEC = 300;
 
 /** Statuts où un spectateur peut recevoir un billet (écoute) une fois la room existante. */
 function beefStatusAllowsSpectatorTicket(status: string): boolean {
@@ -101,12 +100,7 @@ async function createDailyMeetingToken(params: {
   return data.token;
 }
 
-async function resolveDisplayName(
-  supabase: typeof supabaseAdmin,
-  user: User,
-  isSyntheticAnon: boolean,
-): Promise<string> {
-  if (isSyntheticAnon) return 'Visiteur';
+async function resolveDisplayName(supabase: typeof supabaseAdmin, user: User): Promise<string> {
   const profileUid = canonicalUserUuid(user.id) ?? user.id.trim();
   const { data } = await supabase
     .from('users')
@@ -125,8 +119,12 @@ async function resolveDisplayName(
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
-    const syntheticUser = (!user ? { id: `anon_${Date.now()}` } : null) as unknown as User | null;
-    const activeUser = user ?? syntheticUser!;
+    if (!user) {
+      return NextResponse.json(
+        { ok: false, code: 'AUTH_REQUIRED', error: 'Authentification requise' },
+        { status: 401 },
+      );
+    }
 
     const rawId = beefIdFromSearchParams(new URL(request.url).searchParams);
     const beefId = rawId ? normalizeBeefId(rawId) : null;
@@ -154,10 +152,10 @@ export async function GET(request: NextRequest) {
     let tokenRole: DailyTokenRole = 'spectator';
     let isCreator = false;
 
-    if (user && userIdsEqual(beef.mediator_id, user.id)) {
+    if (userIdsEqual(beef.mediator_id, user.id)) {
       tokenRole = 'mediator';
       isCreator = true;
-    } else if (user) {
+    } else {
       const uidForParticipant = canonicalUserUuid(user.id) ?? user.id.trim();
       const { data: part } = await supabaseAdmin
         .from('beef_participants')
@@ -172,8 +170,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const isSyntheticAnon = !user;
-    const userName = await resolveDisplayName(supabaseAdmin, activeUser, isSyntheticAnon);
+    const userName = await resolveDisplayName(supabaseAdmin, user);
 
     /** ── Créateurs : création de salle obligatoire côté serveur, puis jeton. ── */
     if (isCreator) {
@@ -187,7 +184,7 @@ export async function GET(request: NextRequest) {
       const token = await createDailyMeetingToken({
         apiKey,
         roomName,
-        user: activeUser,
+        user,
         userName,
         role: tokenRole,
         tokenTtlSec: AUTH_MEETING_TOKEN_TTL_SEC,
@@ -204,7 +201,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    /** ── Spectateurs / anonymes : jamais de POST room — lookup GET uniquement. ── */
+    /** ── Spectateurs connectés : jamais de POST room — lookup GET uniquement. ── */
     if (!beefStatusAllowsSpectatorTicket(beef.status)) {
       return NextResponse.json({
         ok: false,
@@ -228,15 +225,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const ttl = isSyntheticAnon ? ANON_SPECTATOR_TTL_SEC : AUTH_MEETING_TOKEN_TTL_SEC;
-
     const token = await createDailyMeetingToken({
       apiKey,
       roomName,
-      user: activeUser,
+      user,
       userName,
       role: 'spectator',
-      tokenTtlSec: ttl,
+      tokenTtlSec: AUTH_MEETING_TOKEN_TTL_SEC,
     });
 
     if (!token) {

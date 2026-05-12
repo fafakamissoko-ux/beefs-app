@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { TikTokStyleArena } from '@/components/TikTokStyleArena';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
-import { Clock, ArrowLeft, Camera, Mic, Play, ShieldAlert } from 'lucide-react';
+import { Clock, ArrowLeft, Camera, LogIn, Mic, Play, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { normalizeBeefId } from '@/lib/beef-id';
 import { userIdsEqual } from '@/lib/user-id-equal';
@@ -85,7 +85,7 @@ export default function ArenaPage() {
         }
       } else {
         setUserId('');
-        setUserName('Visiteur');
+        setUserName('');
       }
       setIsAuthLoaded(true);
     })();
@@ -94,7 +94,7 @@ export default function ArenaPage() {
     };
   }, []);
 
-  /** État 2 — FETCH_TICKET : contexte beef + appel API billet (aucune room côté client). */
+  /** État 2 — contexte beef ; billet vidéo uniquement si session valide (hard auth wall). */
   useEffect(() => {
     if (!isAuthLoaded || !roomId) return;
 
@@ -144,12 +144,19 @@ export default function ArenaPage() {
 
       setBeefTitle(beef.title || '');
       setInitialViewerCount(beef.viewer_count || 0);
-      setIsHost(Boolean(userId && userIdsEqual(beef.mediator_id, userId)));
 
-      if (userId && userIdsEqual(beef.mediator_id, userId)) {
+      const uidTrim = userId.trim();
+      if (!uidTrim) {
+        setEntryPhase('READY');
+        return;
+      }
+
+      setIsHost(userIdsEqual(beef.mediator_id, uidTrim));
+
+      if (userIdsEqual(beef.mediator_id, uidTrim)) {
         setUserRole('mediator');
-      } else if (userId) {
-        const uidNorm = userId.trim().toLowerCase();
+      } else {
+        const uidNorm = uidTrim.toLowerCase();
         const { data: participation } = await supabase
           .from('beef_participants')
           .select('role, invite_status, is_main')
@@ -162,8 +169,6 @@ export default function ArenaPage() {
         } else {
           setUserRole('viewer');
         }
-      } else {
-        setUserRole('spectator');
       }
 
       const {
@@ -269,6 +274,44 @@ export default function ArenaPage() {
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-plasma-500" />
           <p className="text-sm font-semibold text-white">Préparation du billet vidéo…</p>
         </div>
+      </div>
+    );
+  }
+
+  const loginNext = `/arena/${roomId}`;
+
+  // READY — mur d’auth : pas de billet ni d’arène sans compte (beef live uniquement ; ended géré au-dessus)
+  if (entryPhase === 'READY' && !beefEndedInfo && !userId.trim() && !accessError) {
+    return (
+      <div className="fixed inset-0 z-40 flex min-h-dvh flex-col items-center justify-center bg-black p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-sm space-y-6 text-center"
+        >
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+            <LogIn className="h-8 w-8 text-plasma-400" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white">Connexion requise</h1>
+            <p className="mt-2 text-sm text-white/60">
+              Connecte-toi pour accéder au direct et obtenir ton billet vidéo.
+            </p>
+          </div>
+          <Link
+            href={`/login?next=${encodeURIComponent(loginNext)}`}
+            className="block w-full rounded-xl bg-plasma-500 py-3 text-center text-sm font-bold text-white transition-colors hover:bg-plasma-400"
+          >
+            Se connecter
+          </Link>
+          <button
+            type="button"
+            onClick={() => router.push('/feed')}
+            className="w-full text-sm text-white/50 underline transition-colors hover:text-white/80"
+          >
+            Retour au feed
+          </button>
+        </motion.div>
       </div>
     );
   }

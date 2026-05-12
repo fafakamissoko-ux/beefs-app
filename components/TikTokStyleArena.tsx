@@ -69,6 +69,7 @@ import { VerdictConfettiBurst, RematchVerdictOverlay } from './VerdictEffects';
 import { playRematchThunderSfx } from '@/lib/playVerdictSfx';
 import { MediatorSidebar, type MediatorRemoteRow } from './MediatorSidebar';
 import { FullscreenGiftAnimation, type ArenaBigGiftPayload } from './Arena/FullscreenGiftAnimation';
+import { MeetingAudioOutlet } from '@/components/MeetingAudioOutlet';
 
 const SFX_MAP: Record<string, string> = {
   horn: '/sounds/horn.mp3',
@@ -252,7 +253,7 @@ export function TikTokStyleArena({
   const [hasJoined, setHasJoined] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
-        return sessionStorage.getItem(`arena_joined_${roomId}_${userId || 'anon'}`) === 'true';
+        return sessionStorage.getItem(`arena_joined_${roomId}_${userId}`) === 'true';
       } catch {
         return false;
       }
@@ -1014,7 +1015,7 @@ export function TikTokStyleArena({
     if (beefEndedRef.current) return;
     if (typeof window !== 'undefined') {
       try {
-        sessionStorage.removeItem(`arena_joined_${roomId}_${userId || 'anon'}`);
+        sessionStorage.removeItem(`arena_joined_${roomId}_${userId}`);
       } catch {
         /* ignore */
       }
@@ -1229,7 +1230,6 @@ export function TikTokStyleArena({
     micEnabled,
     camEnabled,
     physicalPeers,
-    connectionStatus,
     localParticipant,
     remoteParticipants,
     activeSpeakerPeerId,
@@ -1276,23 +1276,6 @@ export function TikTokStyleArena({
   useEffect(() => {
     leaveRef.current = leave;
   }, [leave]);
-
-  const freemiumWallArmedRef = useRef(false);
-  useEffect(() => {
-    if (isJoined) freemiumWallArmedRef.current = true;
-  }, [isJoined]);
-
-  useEffect(() => {
-    if (userId) return;
-    if (!isViewer) return;
-    if (!freemiumWallArmedRef.current) return;
-    if (connectionStatus !== 'left' && connectionStatus !== 'error') return;
-    setAuthHook({
-      title: 'Temps écoulé',
-      subtitle: 'Crée un compte gratuit pour continuer à regarder ce Beef en direct !',
-      mandatory: true,
-    });
-  }, [connectionStatus, userId, isViewer]);
 
   /** Pas de bulles « onboarding » quand la salle est déjà active ou pendant la connexion Daily */
   const featureGuideSuppress =
@@ -2012,7 +1995,7 @@ export function TikTokStyleArena({
       .on('broadcast', { event: 'beef_ended' }, ({ payload }: any) => {
         if (typeof window !== 'undefined') {
           try {
-            sessionStorage.removeItem(`arena_joined_${roomId}_${userId || 'anon'}`);
+            sessionStorage.removeItem(`arena_joined_${roomId}_${userId}`);
           } catch {
             /* ignore */
           }
@@ -3069,7 +3052,7 @@ export function TikTokStyleArena({
     setShowPreJoin(false);
     if (typeof window !== 'undefined') {
       try {
-        sessionStorage.setItem(`arena_joined_${roomId}_${userId || 'anon'}`, 'true');
+        sessionStorage.setItem(`arena_joined_${roomId}_${userId}`, 'true');
       } catch {
         /* ignore */
       }
@@ -3082,7 +3065,7 @@ export function TikTokStyleArena({
   const handleLeave = useCallback(async () => {
     if (typeof window !== 'undefined') {
       try {
-        sessionStorage.removeItem(`arena_joined_${roomId}_${userId || 'anon'}`);
+        sessionStorage.removeItem(`arena_joined_${roomId}_${userId}`);
       } catch {
         /* ignore */
       }
@@ -3138,15 +3121,21 @@ export function TikTokStyleArena({
     !rightPanel &&
     expectedChallengers.length >= 2;
 
+  const unlockArenaPlayback = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    document.querySelectorAll('audio, video').forEach((el) => {
+      const media = el as HTMLMediaElement;
+      if (media.paused) void media.play().catch(() => {});
+    });
+  }, []);
+
   return (
     <div
+      onPointerDown={() => {
+        unlockArenaPlayback();
+      }}
       onClick={(e) => {
-        // FORCER LA LECTURE VIDÉO (Contournement Safari iOS)
-        if (typeof document !== 'undefined') {
-          document.querySelectorAll('video').forEach((v) => {
-            if (v.paused) void v.play().catch(() => {});
-          });
-        }
+        unlockArenaPlayback();
         if (!isCinematicMode) return;
         if ((e.target as Element).closest?.('[data-cinema-stay]')) return;
         setIsCinematicMode(false);
@@ -4536,6 +4525,8 @@ export function TikTokStyleArena({
           animation: marquee-continuous 8s linear infinite;
         }
       `}</style>
+      <MeetingAudioOutlet peers={physicalPeers} localSessionId={localParticipant?.sessionId ?? null} />
+
       {typeof document !== 'undefined' &&
         createPortal(
           <FullscreenGiftAnimation roomId={roomId} localBigGift={localArenaBigGift} />,
