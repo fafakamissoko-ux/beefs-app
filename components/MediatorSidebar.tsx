@@ -12,7 +12,6 @@ import {
   Video,
   VideoOff,
   UserX,
-  Scissors,
   Pause,
   RotateCcw,
   Radio,
@@ -620,39 +619,6 @@ export function MediatorSidebar({
                             ))
                           )}
                         </ul>
-                      </div>
-
-                      <div className="rounded-xl border border-orange-500/25 bg-gradient-to-br from-orange-950/35 to-transparent p-4">
-                        <div className="mb-3 flex items-center gap-2">
-                          <Scissors className="h-4 w-4 text-orange-400" strokeWidth={1.5} />
-                          <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-white/75">
-                            Machine à highlights
-                          </span>
-                        </div>
-                        <p className="mb-4 text-[12px] leading-relaxed text-white/45">
-                          Clipper environ 60 secondes du direct pour votre replay public.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (typeof window !== 'undefined') {
-                              window.dispatchEvent(
-                                new CustomEvent('beefs:toast', {
-                                  detail: {
-                                    title: 'Highlight capturé',
-                                    message: 'Les 60 dernières secondes ont été marquées pour le clip.',
-                                    type: 'success',
-                                  },
-                                }),
-                              );
-                            }
-                            onClose();
-                          }}
-                          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-orange-600 to-brand-600 py-3.5 font-mono text-[11px] font-black uppercase tracking-widest text-white shadow-[0_0_20px_rgba(234,88,12,0.35)] hover:brightness-110 active:scale-[0.99]"
-                        >
-                          <Scissors className="h-4 w-4" />
-                          Clipper 60&nbsp;s
-                        </button>
                       </div>
                     </section>
 

@@ -60,7 +60,10 @@ self.addEventListener('fetch', (event) => {
   // For ALL pages (/, /profile, /feed, etc.) → Network First, NO cache
   // This ensures fresh data is always loaded
   event.respondWith(
-    fetch(request).catch(() => caches.match('/offline'))
+    fetch(request).catch(async () => {
+      const cached = await caches.match('/offline');
+      return cached || new Response('Réseau indisponible et aucune page hors-ligne en cache.', { status: 503, statusText: 'Service Unavailable' });
+    })
   );
 });
 
