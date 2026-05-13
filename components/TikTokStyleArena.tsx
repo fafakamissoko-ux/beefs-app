@@ -1070,7 +1070,11 @@ export function TikTokStyleArena({
     setEndSummary(summary);
     setBeefEnded(true);
 
-    safeBroadcast('beef_ended', { reason, summary } as Record<string, unknown>);
+    // Broadcast end to all viewers (with stats so they see accurate summary)
+    safeBroadcast('beef_ended', {
+      reason,
+      summary,
+    } as Record<string, unknown>);
 
     // Stop camera/mic
     await leaveRef.current();
@@ -2343,6 +2347,8 @@ export function TikTokStyleArena({
     });
     safeBroadcast('mediator_mute_challenger', { targetUserId: debaterId, muted: false });
 
+  };
+
   const startHotMicTurn = useCallback(
     (slot: 'A' | 'B' | 'C' | 'D', durationSec: number, opts?: { force?: boolean }) => {
       if (speakingTurnActive && !opts?.force) {
@@ -2424,10 +2430,7 @@ export function TikTokStyleArena({
       const p = challengerRemoteSlots.find((x) => x && x.arenaUserId === endedSpeakerId);
       const sid = p?.sessionId;
       if (sid) hardMuteParticipant(sid, true);
-      safeBroadcast('mediator_mute_challenger', {
-        targetUserId: endedSpeakerId,
-        muted: true,
-      });
+      safeBroadcast('mediator_mute_challenger', { targetUserId: endedSpeakerId, muted: true });
     }
 
     setTimerRunning(false);
