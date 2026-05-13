@@ -264,7 +264,10 @@ export function TikTokStyleArena({
   const [rolesLoaded, setRolesLoaded] = useState(false);
 
   useEffect(() => {
-    if (isViewer) setShowPreJoin(false);
+    if (isViewer) {
+      setShowPreJoin(false);
+      setHasJoined(true);
+    }
   }, [isViewer]);
 
   useEffect(() => {
@@ -1842,6 +1845,29 @@ export function TikTokStyleArena({
     return () => window.clearInterval(iv);
   }, [isHost, liveConnected, safeBroadcast]);
 
+  const channelCallbacksRef = useRef({
+    addRemoteMessage,
+    addRemoteReaction,
+    addPulseVoices,
+    toast,
+    setVerdictConfetti,
+    setRematchSequence,
+    router,
+    leave,
+  });
+  useEffect(() => {
+    channelCallbacksRef.current = {
+      addRemoteMessage,
+      addRemoteReaction,
+      addPulseVoices,
+      toast,
+      setVerdictConfetti,
+      setRematchSequence,
+      router,
+      leave,
+    };
+  });
+
   // 1) Broadcast channel — instant P2P delivery
   useEffect(() => {
     const channel = supabase.channel(`live_${roomId}`, {
@@ -1853,7 +1879,7 @@ export function TikTokStyleArena({
         if (payload?.id) playSfx(payload.id);
       })
       .on('broadcast', { event: 'reaction' }, ({ payload }: any) => {
-        addRemoteReaction(payload.emoji, payload.supportSlot);
+        channelCallbacksRef.current.addRemoteReaction(payload.emoji, payload.supportSlot);
         const boost = getAuraBoost();
         const slot = payload?.supportSlot as 'A' | 'B' | 'C' | 'D' | 'M' | undefined;
         if (slot === 'A') setAuraA((v) => Math.min(300, v + boost));
@@ -1887,7 +1913,7 @@ export function TikTokStyleArena({
         setAuraMed(cap(payload.M));
       })
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
-        addRemoteMessage(payload.user_name, payload.content, payload.initial, payload.id);
+        channelCallbacksRef.current.addRemoteMessage(payload.user_name, payload.content, payload.initial, payload.id);
       })
       .on('broadcast', { event: 'delete_message' }, ({ payload }: any) => {
         const msgId = payload?.messageId;
@@ -1914,8 +1940,8 @@ export function TikTokStyleArena({
       .on('broadcast', { event: 'pulse_voice' }, ({ payload }: any) => {
         const dA = Math.max(0, Math.floor(Number(payload?.dA) || 0));
         const dB = Math.max(0, Math.floor(Number(payload?.dB) || 0));
-        if (dA) addPulseVoices('A', dA);
-        if (dB) addPulseVoices('B', dB);
+        if (dA) channelCallbacksRef.current.addPulseVoices('A', dA);
+        if (dB) channelCallbacksRef.current.addPulseVoices('B', dB);
         if (dA || dB) setGlobalHeat((v) => Math.min(100, v + 2));
       })
       .on('broadcast', { event: 'announcement_banner' }, ({ payload }: { payload?: { text?: string; durationSec?: number } }) => {
@@ -1995,7 +2021,7 @@ export function TikTokStyleArena({
       })
       .on('broadcast', { event: 'mediation_toss' }, ({ payload }: any) => {
         if (payload?.firstName && userRole !== 'mediator') {
-          toast(`Tirage : ${payload.firstName} commence`, 'info');
+          channelCallbacksRef.current.toast(`Tirage : ${payload.firstName} commence`, 'info');
         }
       })
       .on('broadcast', { event: 'structured_debate' }, ({ payload }: any) => {
@@ -2021,11 +2047,11 @@ export function TikTokStyleArena({
         if (v !== 'resolved' && v !== 'closed' && v !== 'rematch') return;
         useArenaVerdictStore.getState().setVerdict(v, roomId);
         if (v === 'resolved') {
-          setVerdictConfetti(true);
-          window.setTimeout(() => setVerdictConfetti(false), 2200);
+          channelCallbacksRef.current.setVerdictConfetti(true);
+          window.setTimeout(() => channelCallbacksRef.current.setVerdictConfetti(false), 2200);
         }
         if (v === 'rematch') {
-          setRematchSequence(true);
+          channelCallbacksRef.current.setRematchSequence(true);
           playRematchThunderSfx();
           if (rematchExitTimerRef.current) {
             window.clearTimeout(rematchExitTimerRef.current);
@@ -2033,9 +2059,9 @@ export function TikTokStyleArena({
           }
           rematchExitTimerRef.current = window.setTimeout(() => {
             rematchExitTimerRef.current = null;
-            setRematchSequence(false);
+            channelCallbacksRef.current.setRematchSequence(false);
             if (!beefEndedRef.current) {
-              router.replace(`/beef/${roomId}/summary`);
+              channelCallbacksRef.current.router.replace(`/beef/${roomId}/summary`);
             }
           }, 12000);
         }
@@ -2090,15 +2116,15 @@ export function TikTokStyleArena({
             endReason: payload?.reason || 'Beef terminé',
           });
         }
-        setRematchSequence(false);
+        channelCallbacksRef.current.setRematchSequence(false);
         if (rematchExitTimerRef.current) {
           window.clearTimeout(rematchExitTimerRef.current);
           rematchExitTimerRef.current = null;
         }
         setBeefEnded(true);
-        void leave();
+        void channelCallbacksRef.current.leave();
         if (endSummaryTimerRef.current) clearTimeout(endSummaryTimerRef.current);
-        endSummaryTimerRef.current = setTimeout(() => router.replace('/feed'), 12000);
+        endSummaryTimerRef.current = setTimeout(() => channelCallbacksRef.current.router.replace('/feed'), 12000);
       })
       .subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
@@ -2119,19 +2145,7 @@ export function TikTokStyleArena({
       setLiveConnected(false);
       supabase.removeChannel(channel);
     };
-  }, [
-    roomId,
-    addRemoteMessage,
-    addRemoteReaction,
-    addPulseVoices,
-    userRole,
-    userId,
-    toast,
-    setVerdictConfetti,
-    setRematchSequence,
-    router,
-    leave,
-  ]);
+  }, [roomId, userId, userRole]);
 
   useEffect(() => {
     if (!liveConnected || !isHost || !timerActive) return;
