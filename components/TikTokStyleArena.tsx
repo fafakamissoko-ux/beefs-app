@@ -794,7 +794,7 @@ export function TikTokStyleArena({
         .send({ type: 'broadcast', event, payload })
         .catch((err: unknown) => console.warn(`[Live] Broadcast failed: ${event}`, err));
     } else {
-      console.warn(`[Live] Cannot broadcast ${event} - channel not connected`);
+      // console.warn(`[Live] Cannot broadcast ${event} - channel not connected`);
     }
   }, []);
 
@@ -1822,6 +1822,8 @@ export function TikTokStyleArena({
   );
 
   useEffect(() => {
+    if (!liveConnected) return; // Sécurité : on ne monte pas l'intervalle si le réseau est coupé
+
     const iv = window.setInterval(() => {
       const b = auraBufferRef.current;
       if (b.A <= 0 && b.B <= 0 && b.C <= 0 && b.D <= 0 && b.M <= 0) return;
@@ -1834,7 +1836,7 @@ export function TikTokStyleArena({
       safeBroadcast('aura_batch', payload);
     }, 1500);
     return () => window.clearInterval(iv);
-  }, [safeBroadcast]);
+  }, [safeBroadcast, liveConnected]);
 
   useEffect(() => {
     if (!isHost || !liveConnected) return;
