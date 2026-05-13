@@ -783,9 +783,21 @@ export function TikTokStyleArena({
   /** Sérialise les INSERT chat pour éviter les rafales concurrentes côté RLS. */
   const messageSendChainRef = useRef(Promise.resolve());
 
+  /** Envoi broadcast Realtime sécurisé : lit toujours `channelRef.current` au moment de l’appel. */
+  const safeBroadcast = useCallback((event: string, payload: Record<string, unknown> = {}) => {
+    const ch = channelRef.current;
+    if (ch) {
+      void ch
+        .send({ type: 'broadcast', event, payload })
+        .catch((err: unknown) => console.warn(`[Live] Broadcast failed: ${event}`, err));
+    } else {
+      console.warn(`[Live] Cannot broadcast ${event} - channel not connected`);
+    }
+  }, []);
+
   /** Synchronise le chrono global vers challengers et spectateurs (médiateur uniquement). */
   const broadcastBeefGlobalTimer = useCallback(() => {
-    if (!isHostRef.current || !channelRef.current) return;
+    if (!isHostRef.current) return;
     const active = timerActiveRef.current;
     const paused = timerPausedRef.current;
     let remainingSec = beefTimeRemainingRef.current;
@@ -795,14 +807,8 @@ export function TikTokStyleArena({
     } else {
       endsAtMs = null;
     }
-    channelRef.current
-      .send({
-        type: 'broadcast',
-        event: 'beef_global_timer',
-        payload: { active, paused, remainingSec, endsAtMs },
-      })
-      .catch(() => {});
-  }, []);
+    safeBroadcast('beef_global_timer', { active, paused, remainingSec, endsAtMs });
+  }, [safeBroadcast]);
 
   // Décompte partagé (deadline `beefEndsAtMsRef`) — médiateur + clients synchronisés
   useEffect(() => {
@@ -874,10 +880,8 @@ export function TikTokStyleArena({
     p.A = 0;
     p.B = 0;
     if (dA === 0 && dB === 0) return;
-    channelRef.current
-      ?.send({ type: 'broadcast', event: 'pulse_voice', payload: { dA, dB } })
-      .catch(() => {});
-  }, []);
+    safeBroadcast('pulse_voice', { dA, dB });
+  }, [safeBroadcast]);
 
   const queuePulseBroadcast = useCallback(
     (side: 'A' | 'B') => {
@@ -1066,14 +1070,7 @@ export function TikTokStyleArena({
     setEndSummary(summary);
     setBeefEnded(true);
 
-    // Broadcast end to all viewers (with stats so they see accurate summary)
-    if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'beef_ended',
-        payload: { reason, summary },
-      }).catch(() => {});
-    }
+    safeBroadcast('beef_ended', { reason, summary } as Record<string, unknown>);
 
     // Stop camera/mic
     await leaveRef.current();
@@ -1082,15 +1079,13 @@ export function TikTokStyleArena({
     endSummaryTimerRef.current = setTimeout(() => {
       router.replace('/feed');
     }, 12000);
-  }, [roomId, router, runBeefManage, userId]);
+  }, [roomId, router, runBeefManage, userId, safeBroadcast]);
 
   const handleMediatorVerdict = useCallback(
     async (kind: 'resolved' | 'closed' | 'rematch') => {
       if (!isHost || beefEndedRef.current) return;
       useArenaVerdictStore.getState().setVerdict(kind, roomId);
-      channelRef.current
-        ?.send({ type: 'broadcast', event: 'beef_verdict', payload: { verdict: kind } })
-        .catch(() => {});
+      safeBroadcast('beef_verdict', { verdict: kind });
 
       if (kind === 'resolved') {
         setVerdictConfetti(true);
@@ -1115,7 +1110,7 @@ export function TikTokStyleArena({
         void endBeef('Rematch demandé');
       }, 10000);
     },
-    [isHost, roomId, endBeef, runBeefManage],
+    [isHost, roomId, endBeef, runBeefManage, safeBroadcast],
   );
 
   useEffect(() => {
@@ -1656,13 +1651,7 @@ export function TikTokStyleArena({
         setDebaters((prev) =>
           prev.map((d) => (d.id === debaterId ? { ...d, isMuted: muted } : d)),
         );
-        channelRef.current
-          ?.send({
-            type: 'broadcast',
-            event: 'mediator_mute_challenger',
-            payload: { targetUserId: debaterId, muted },
-          })
-          .catch(() => {});
+        safeBroadcast('mediator_mute_challenger', { targetUserId: debaterId, muted });
         /** Couper le micro du locuteur actif = fin du tour de parole (chrono arrêté) */
         if (muted && debaterId === speakingTurnTargetRef.current) {
           setSpeakingTurnPaused(false);
@@ -1670,7 +1659,7 @@ export function TikTokStyleArena({
         }
       }
     },
-    [hardMuteParticipant],
+    [hardMuteParticipant, safeBroadcast],
   );
 
   const handleMuteAll = useCallback(() => {
@@ -1835,27 +1824,19 @@ export function TikTokStyleArena({
       b.C = 0;
       b.D = 0;
       b.M = 0;
-      channelRef.current
-        ?.send({ type: 'broadcast', event: 'aura_batch', payload })
-        .catch(() => {});
+      safeBroadcast('aura_batch', payload);
     }, 1500);
     return () => window.clearInterval(iv);
-  }, []);
+  }, [safeBroadcast]);
 
   useEffect(() => {
     if (!isHost || !liveConnected) return;
     const iv = window.setInterval(() => {
       const s = auraSnapshotRef.current;
-      channelRef.current
-        ?.send({
-          type: 'broadcast',
-          event: 'aura_master_sync',
-          payload: { A: s.A, B: s.B, C: s.C, D: s.D, M: s.M },
-        })
-        .catch(() => {});
+      safeBroadcast('aura_master_sync', { A: s.A, B: s.B, C: s.C, D: s.D, M: s.M });
     }, 3000);
     return () => window.clearInterval(iv);
-  }, [isHost, liveConnected]);
+  }, [isHost, liveConnected, safeBroadcast]);
 
   // 1) Broadcast channel — instant P2P delivery
   useEffect(() => {
@@ -2281,14 +2262,8 @@ export function TikTokStyleArena({
       setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
     }
 
-    if (channelRef.current && !integrated) {
-      channelRef.current
-        .send({
-          type: 'broadcast',
-          event: 'reaction',
-          payload: { emoji },
-        })
-        .catch(() => console.warn('[Live] Reaction broadcast failed'));
+    if (!integrated) {
+      safeBroadcast('reaction', { emoji });
     }
     supabase.from('beef_reactions').insert({ beef_id: roomId, user_id: userId, emoji }).then(() => {});
   };
@@ -2319,9 +2294,7 @@ export function TikTokStyleArena({
     if (!isHost) return;
     setMediatorHoldingFloor((prev) => {
       const next = !prev;
-      channelRef.current
-        ?.send({ type: 'broadcast', event: 'mediator_floor', payload: { active: next } })
-        .catch(() => {});
+      safeBroadcast('mediator_floor', { active: next });
       return next;
     });
   };
@@ -2333,23 +2306,13 @@ export function TikTokStyleArena({
     }
     const pick = debaters[Math.floor(Math.random() * debaters.length)];
     toast(`${pick.name} parle en premier (tirage au sort).`, 'success');
-    channelRef.current
-      ?.send({
-        type: 'broadcast',
-        event: 'mediation_toss',
-        payload: { firstSpeakerId: pick.id, firstName: pick.name },
-      })
-      .catch(() => {});
+    safeBroadcast('mediation_toss', { firstSpeakerId: pick.id, firstName: pick.name });
   };
 
   const startTimer = (debaterId: string) => {
     setSpeakingTurnPaused(false);
     setMediatorHoldingFloor(false);
-    if (channelRef.current) {
-      channelRef.current
-        .send({ type: 'broadcast', event: 'mediator_floor', payload: { active: false } })
-        .catch(() => {});
-    }
+    safeBroadcast('mediator_floor', { active: false });
     setCurrentSpeaker(debaterId);
     setTimerRunning(true);
     setSpeakingTurnActive(true);
@@ -2371,28 +2334,14 @@ export function TikTokStyleArena({
     if (slot) {
       setFloorAnnouncement({ name: speakerLabel, slot });
     }
-    if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'speaking_turn',
-        payload: {
-          debaterId,
-          duration: speakingTurnDuration,
-          action: 'start',
-          slot,
-          speakerName: speakerLabel,
-        },
-      }).catch(() => {});
-      channelRef.current
-        .send({
-          type: 'broadcast',
-          event: 'mediator_mute_challenger',
-          payload: { targetUserId: debaterId, muted: false },
-        })
-        .catch(() => {});
-    }
-
-  };
+    safeBroadcast('speaking_turn', {
+      debaterId,
+      duration: speakingTurnDuration,
+      action: 'start',
+      slot,
+      speakerName: speakerLabel,
+    });
+    safeBroadcast('mediator_mute_challenger', { targetUserId: debaterId, muted: false });
 
   const startHotMicTurn = useCallback(
     (slot: 'A' | 'B' | 'C' | 'D', durationSec: number, opts?: { force?: boolean }) => {
@@ -2420,22 +2369,15 @@ export function TikTokStyleArena({
       }
       setSpeakingTurnDuration(duration);
       setMediatorHoldingFloor(false);
-      if (channelRef.current) {
-        channelRef.current
-          .send({ type: 'broadcast', event: 'mediator_floor', payload: { active: false } })
-          .catch(() => {});
-      }
+      safeBroadcast('mediator_floor', { active: false });
       for (const p of challengerRemoteSlots.slice(0, 4)) {
         if (!p?.sessionId || !p.arenaUserId) continue;
         const isSpeaker = p.sessionId === activePanel.sessionId;
         hardMuteParticipant(p.sessionId, !isSpeaker);
-        channelRef.current
-          ?.send({
-            type: 'broadcast',
-            event: 'mediator_mute_challenger',
-            payload: { targetUserId: p.arenaUserId, muted: !isSpeaker },
-          })
-          .catch(() => {});
+        safeBroadcast('mediator_mute_challenger', {
+          targetUserId: p.arenaUserId,
+          muted: !isSpeaker,
+        });
       }
 
       setCurrentSpeaker(debaterId);
@@ -2456,13 +2398,13 @@ export function TikTokStyleArena({
         `Challenger ${slot}`;
       setFloorAnnouncement({ name: speakerLabel, slot });
 
-      channelRef.current
-        ?.send({
-          type: 'broadcast',
-          event: 'speaking_turn',
-          payload: { debaterId, duration, action: 'start', slot, speakerName: speakerLabel },
-        })
-        .catch(() => {});
+      safeBroadcast('speaking_turn', {
+        debaterId,
+        duration,
+        action: 'start',
+        slot,
+        speakerName: speakerLabel,
+      });
     },
     [
       speakingTurnActive,
@@ -2470,6 +2412,7 @@ export function TikTokStyleArena({
       hardMuteParticipant,
       toast,
       debaters,
+      safeBroadcast,
     ],
   );
 
@@ -2481,13 +2424,10 @@ export function TikTokStyleArena({
       const p = challengerRemoteSlots.find((x) => x && x.arenaUserId === endedSpeakerId);
       const sid = p?.sessionId;
       if (sid) hardMuteParticipant(sid, true);
-      channelRef.current
-        ?.send({
-          type: 'broadcast',
-          event: 'mediator_mute_challenger',
-          payload: { targetUserId: endedSpeakerId, muted: true },
-        })
-        .catch(() => {});
+      safeBroadcast('mediator_mute_challenger', {
+        targetUserId: endedSpeakerId,
+        muted: true,
+      });
     }
 
     setTimerRunning(false);
@@ -2503,14 +2443,10 @@ export function TikTokStyleArena({
       structuredDebateEnabled ? prev.map((d) => ({ ...d, isMuted: true })) : prev,
     );
 
-    if (channelRef.current && isHost) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'speaking_turn',
-        payload: { action: 'stop' },
-      }).catch(() => {});
+    if (isHost) {
+      safeBroadcast('speaking_turn', { action: 'stop' });
     }
-  }, [isHost, structuredDebateEnabled, hardMuteParticipant, challengerRemoteSlots]);
+  }, [isHost, structuredDebateEnabled, hardMuteParticipant, challengerRemoteSlots, safeBroadcast]);
 
   const pauseSpeakingTurn = useCallback(() => {
     if (!speakingTurnActive) return;
@@ -2529,24 +2465,17 @@ export function TikTokStyleArena({
       const uid = panel?.arenaUserId ?? null;
       if (sid && uid) {
         hardMuteParticipant(sid, true);
-        channelRef.current
-          ?.send({
-            type: 'broadcast',
-            event: 'mediator_mute_challenger',
-            payload: { targetUserId: uid, muted: true },
-          })
-          .catch(() => {});
+        safeBroadcast('mediator_mute_challenger', { targetUserId: uid, muted: true });
       }
     }
-    channelRef.current
-      ?.send({ type: 'broadcast', event: 'speaking_turn', payload: { action: 'pause' } })
-      .catch(() => {});
+    safeBroadcast('speaking_turn', { action: 'pause' });
   }, [
     speakingTurnActive,
     isHost,
     hotMicSpeakerSlot,
     challengerRemoteSlots,
     hardMuteParticipant,
+    safeBroadcast,
   ]);
 
   const resumeSpeakingTurn = useCallback(() => {
@@ -2566,24 +2495,17 @@ export function TikTokStyleArena({
       const uid = panel?.arenaUserId ?? null;
       if (sid && uid) {
         hardMuteParticipant(sid, false);
-        channelRef.current
-          ?.send({
-            type: 'broadcast',
-            event: 'mediator_mute_challenger',
-            payload: { targetUserId: uid, muted: false },
-          })
-          .catch(() => {});
+        safeBroadcast('mediator_mute_challenger', { targetUserId: uid, muted: false });
       }
     }
-    channelRef.current
-      ?.send({ type: 'broadcast', event: 'speaking_turn', payload: { action: 'resume' } })
-      .catch(() => {});
+    safeBroadcast('speaking_turn', { action: 'resume' });
   }, [
     speakingTurnActive,
     isHost,
     hotMicSpeakerSlot,
     challengerRemoteSlots,
     hardMuteParticipant,
+    safeBroadcast,
   ]);
 
   const restartSpeakingTurn = useCallback(() => {
@@ -2683,11 +2605,10 @@ export function TikTokStyleArena({
     setDebaters((prev) => {
       const next = prev.map((d) => (d.id === debaterId ? { ...d, isMuted: !d.isMuted } : d));
       const row = next.find((d) => d.id === debaterId);
-      if (row && channelRef.current) {
-        void channelRef.current.send({
-          type: 'broadcast',
-          event: 'mediator_mute_challenger',
-          payload: { targetUserId: debaterId, muted: row.isMuted },
+      if (row) {
+        safeBroadcast('mediator_mute_challenger', {
+          targetUserId: debaterId,
+          muted: row.isMuted,
         });
       }
       return next;
@@ -2920,16 +2841,10 @@ export function TikTokStyleArena({
       announcementClearTimerRef.current = null;
     }
     setAnnouncementTicker('');
-    if (channelRef.current && isHost) {
-      void channelRef.current
-        .send({
-          type: 'broadcast',
-          event: 'announcement_banner',
-          payload: { text: '', durationSec: 0 },
-        })
-        .catch(() => {});
+    if (isHost) {
+      safeBroadcast('announcement_banner', { text: '', durationSec: 0 });
     }
-  }, [isHost]);
+  }, [isHost, safeBroadcast]);
 
   const publishAnnouncementBanner = useCallback(
     (text: string, durationSec: number) => {
@@ -2948,17 +2863,11 @@ export function TikTokStyleArena({
         setAnnouncementTicker('');
         announcementClearTimerRef.current = null;
       }, d * 1000);
-      if (channelRef.current && isHost) {
-        void channelRef.current
-          .send({
-            type: 'broadcast',
-            event: 'announcement_banner',
-            payload: { text: trimmed, durationSec: d },
-          })
-          .catch(() => {});
+      if (isHost) {
+        safeBroadcast('announcement_banner', { text: trimmed, durationSec: d });
       }
     },
-    [isHost, clearAnnouncementBanner],
+    [isHost, clearAnnouncementBanner, safeBroadcast],
   );
 
   useEffect(
@@ -3038,18 +2947,12 @@ export function TikTokStyleArena({
           window.setTimeout(() => scrollChatToEnd(), 50);
           window.setTimeout(() => scrollChatToEnd(), 200);
         });
-        channelRef.current
-          ?.send({
-            type: 'broadcast',
-            event: 'message',
-            payload: {
-              user_name: userName,
-              content: cleanContent,
-              initial: senderInitial,
-              id: inserted.id,
-            },
-          })
-          .catch(() => console.warn('[Live] Message broadcast failed'));
+        safeBroadcast('message', {
+          user_name: userName,
+          content: cleanContent,
+          initial: senderInitial,
+          id: inserted.id,
+        });
         return;
       }
 
@@ -3088,15 +2991,7 @@ export function TikTokStyleArena({
       return;
     }
     setVisibleMessages((prev) => prev.filter((m) => m.id !== messageId));
-    if (channelRef.current) {
-      channelRef.current
-        .send({
-          type: 'broadcast',
-          event: 'delete_message',
-          payload: { messageId },
-        })
-        .catch(() => {});
-    }
+    safeBroadcast('delete_message', { messageId });
   };
 
   useEffect(() => {
@@ -3901,9 +3796,7 @@ export function TikTokStyleArena({
                     onClick={(e) => {
                       e.stopPropagation();
                       playSfx(sfx.id);
-                      void channelRef.current
-                        ?.send({ type: 'broadcast', event: 'sfx', payload: { id: sfx.id } })
-                        .catch(() => {});
+                      safeBroadcast('sfx', { id: sfx.id });
                       setSoundboardExpanded(false);
                     }}
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/5 bg-white/5 transition-all hover:bg-white/20 active:scale-90"
@@ -4144,18 +4037,12 @@ export function TikTokStyleArena({
                           const msgContent = `a offert ${gift.emoji} ${gift.label} (${gift.cost} Lingots) à ${targetName}`;
                           const initial = userName?.[0]?.toUpperCase() || '?';
                           addRemoteMessage(userName, msgContent, initial, giftKey);
-                          void channelRef.current
-                            ?.send({
-                              type: 'broadcast',
-                              event: 'message',
-                              payload: {
-                                user_name: userName,
-                                content: msgContent,
-                                initial,
-                                id: giftKey,
-                              },
-                            })
-                            .catch(() => {});
+                          safeBroadcast('message', {
+                            user_name: userName,
+                            content: msgContent,
+                            initial,
+                            id: giftKey,
+                          });
                           if (gift.cost >= 500) {
                             const bigPayload: ArenaBigGiftPayload = {
                               cost: gift.cost,
@@ -4165,13 +4052,7 @@ export function TikTokStyleArena({
                               senderName: userName,
                             };
                             setLocalArenaBigGift(bigPayload);
-                            void channelRef.current
-                              ?.send({
-                                type: 'broadcast',
-                                event: 'arena_big_gift',
-                                payload: bigPayload,
-                              })
-                              .catch(() => {});
+                            safeBroadcast('arena_big_gift', bigPayload as Record<string, unknown>);
                           }
                           toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
                         } catch (err: unknown) {
