@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -259,6 +259,11 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
     return () => document.removeEventListener('visibilitychange', onVis);
   }, [user, loadUnreadCounts]);
 
+  const headerCallbacksRef = useRef({ loadUnreadCounts, toast });
+  useEffect(() => {
+    headerCallbacksRef.current = { loadUnreadCounts, toast };
+  }, [loadUnreadCounts, toast]);
+
   useEffect(() => {
     if (!user) return;
 
@@ -268,8 +273,8 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'beef_invitations', filter: `invitee_id=eq.${user.id}` },
         () => {
-          void loadUnreadCounts();
-          toast('Nouvelle invitation reçue !', 'info');
+          void headerCallbacksRef.current.loadUnreadCounts();
+          headerCallbacksRef.current.toast('Nouvelle invitation reçue !', 'info');
         }
       )
       .on(
@@ -289,7 +294,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
           const prefKey = typeMap[n.type || ''];
           if (prefKey && prefs[prefKey] === false) return;
 
-          void loadUnreadCounts();
+          void headerCallbacksRef.current.loadUnreadCounts();
           showBrowserNotification(n.title || 'Beefs', n.body || '');
         }
       )
@@ -297,13 +302,13 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
         () => {
-          loadUnreadCounts();
+          void headerCallbacksRef.current.loadUnreadCounts();
         }
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, pathname, toast, loadUnreadCounts]);
+  }, [user]);
 
   /** Liens masqués jusqu’à xl sur la barre horizontale (shell full) — évite le carambolage laptop. */
   const navSecondaryHrefs = new Set(['/notifications', '/points', '/invitations']);
