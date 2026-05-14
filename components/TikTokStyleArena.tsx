@@ -621,19 +621,30 @@ export function TikTokStyleArena({
     void fetchPendingInvites();
   }, [isHost, mediatorSidebarOpen, fetchPendingInvites]);
 
-  /** Spectateurs : détecte l’acceptation médiateur sur leur ligne beef_participants. */
-  useEffect(() => {
-    if (!isViewer || !roomId || !userId) return;
+  /** Contexte realtime spectateur invite : évite [isViewer] dans les deps (churn identité). */
+  const spectatorInviteRealtimeCtxRef = useRef({ roomId, userId, userRole });
+  spectatorInviteRealtimeCtxRef.current = { roomId, userId, userRole };
+  const spectatorInviteSyncChRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  const syncSpectatorInviteChannel = useCallback(() => {
+    const prev = spectatorInviteSyncChRef.current;
+    if (prev) {
+      void supabase.removeChannel(prev);
+      spectatorInviteSyncChRef.current = null;
+    }
+    const { roomId: r, userId: u, userRole: ur } = spectatorInviteRealtimeCtxRef.current;
+    if (!r || !u) return;
+    if (ur !== 'viewer' && ur !== 'spectator') return;
 
     const ch = supabase
-      .channel(`spectator_invite_sync_${roomId}_${userId}`)
+      .channel(`spectator_invite_sync_${r}_${u}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'beef_participants',
-          filter: `beef_id=eq.${roomId}`,
+          filter: `beef_id=eq.${r}`,
         },
         (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
           const newRow = payload.new;
@@ -641,7 +652,7 @@ export function TikTokStyleArena({
           const rawUid = newRow.user_id;
           const rowUserStr =
             typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
-          const myId = String(userId);
+          const myId = String(u);
           if (rowUserStr === myId) {
             if (newRow.invite_status === 'accepted') {
               if (oldRow?.invite_status === 'accepted') {
@@ -658,10 +669,27 @@ export function TikTokStyleArena({
         }
       });
 
+    spectatorInviteSyncChRef.current = ch;
+  }, []);
+
+  /** Spectateurs : deps [roomId, userId] + resync au changement de rôle — pas de churn `isViewer`. */
+  useEffect(() => {
+    syncSpectatorInviteChannel();
+  }, [roomId, userId, syncSpectatorInviteChannel]);
+
+  useEffect(() => {
+    syncSpectatorInviteChannel();
+  }, [userRole, syncSpectatorInviteChannel]);
+
+  useEffect(() => {
     return () => {
-      void supabase.removeChannel(ch);
+      const ch = spectatorInviteSyncChRef.current;
+      if (ch) {
+        void supabase.removeChannel(ch);
+        spectatorInviteSyncChRef.current = null;
+      }
     };
-  }, [isViewer, roomId, userId]);
+  }, []);
 
   const goBuyPoints = useCallback(() => {
     openBuyPointsPage(router);
@@ -706,6 +734,16 @@ export function TikTokStyleArena({
     void loadParticipants();
   }, [loadParticipants]);
 
+  /** Callbacks hors deps du canal `beef_participants_live_*` (évite churn isHost/fetch/load). */
+  const beefParticipantsLiveSyncRef = useRef({
+    isHost,
+    fetchPendingInvites,
+    loadParticipants,
+  });
+  useEffect(() => {
+    beefParticipantsLiveSyncRef.current = { isHost, fetchPendingInvites, loadParticipants };
+  });
+
   const expectedUids = useMemo(() => {
     return Object.entries(participantRoles)
       .filter(([uid]) => uid !== host.id)
@@ -726,15 +764,16 @@ export function TikTokStyleArena({
           filter: `beef_id=eq.${roomId}`,
         },
         () => {
-          if (isHost) void fetchPendingInvites();
-          void loadParticipants();
+          const s = beefParticipantsLiveSyncRef.current;
+          if (s.isHost) void s.fetchPendingInvites();
+          void s.loadParticipants();
         },
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [isHost, roomId, fetchPendingInvites, loadParticipants]);
+  }, [roomId]);
 
   const [liveViewerCount, setLiveViewerCount] = useState(viewerCount);
   const liveViewerCountRef = useRef(liveViewerCount);
@@ -1856,6 +1895,8 @@ export function TikTokStyleArena({
     setRematchSequence,
     router,
     leave,
+    userId,
+    userRole,
   });
   useEffect(() => {
     channelCallbacksRef.current = {
@@ -1867,6 +1908,8 @@ export function TikTokStyleArena({
       setRematchSequence,
       router,
       leave,
+      userId,
+      userRole,
     };
   });
 
@@ -2022,7 +2065,7 @@ export function TikTokStyleArena({
         if (typeof payload?.active === 'boolean') setMediatorHoldingFloor(payload.active);
       })
       .on('broadcast', { event: 'mediation_toss' }, ({ payload }: any) => {
-        if (payload?.firstName && userRole !== 'mediator') {
+        if (payload?.firstName && channelCallbacksRef.current.userRole !== 'mediator') {
           channelCallbacksRef.current.toast(`Tirage : ${payload.firstName} commence`, 'info');
         }
       })
@@ -2039,9 +2082,10 @@ export function TikTokStyleArena({
         }
       })
       .on('broadcast', { event: 'mediator_mute_challenger' }, ({ payload }: any) => {
-        if (userRole !== 'challenger') return;
+        const { userRole: ur, userId: uidCb } = channelCallbacksRef.current;
+        if (ur !== 'challenger') return;
         const uid = payload?.targetUserId as string | undefined;
-        if (!uid || uid !== userId) return;
+        if (!uid || uid !== uidCb) return;
         setMicMutedByMediator(!!payload?.muted);
       })
       .on('broadcast', { event: 'beef_verdict' }, ({ payload }: any) => {
@@ -2071,7 +2115,7 @@ export function TikTokStyleArena({
       .on('broadcast', { event: 'beef_ended' }, ({ payload }: any) => {
         if (typeof window !== 'undefined') {
           try {
-            sessionStorage.removeItem(`arena_joined_${roomId}_${userId}`);
+            sessionStorage.removeItem(`arena_joined_${roomId}_${channelCallbacksRef.current.userId}`);
           } catch {
             /* ignore */
           }
@@ -2147,7 +2191,7 @@ export function TikTokStyleArena({
       setLiveConnected(false);
       supabase.removeChannel(channel);
     };
-  }, [roomId, userId, userRole]);
+  }, [roomId]);
 
   useEffect(() => {
     if (!liveConnected || !isHost || !timerActive) return;
@@ -3619,7 +3663,7 @@ export function TikTokStyleArena({
                                   e.stopPropagation();
                                   toggleMic();
                                 }}
-                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 shadow-lg backdrop-blur-xl ${micEnabled ? 'text-white' : 'bg-red-500 text-white'}`}
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/60 shadow-lg backdrop-blur-xl ${micEnabled && !micMutedByMediator ? 'text-white' : 'bg-red-500 text-white'}`}
                               >
                                 <Mic className="h-4 w-4" strokeWidth={1.75} />
                               </button>
