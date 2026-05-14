@@ -40,6 +40,7 @@ import { ViewerListModal } from './ViewerListModal';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { physicalPeerToCallParticipant, useDailyCall, type CallParticipant } from '@/hooks/useDailyCall';
 import { supabase } from '@/lib/supabase/client';
+import { userIdsEqual } from '@/lib/user-id-equal';
 import { useToast } from '@/components/Toast';
 import { sanitizeMessage } from '@/lib/security';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
@@ -550,8 +551,8 @@ export function TikTokStyleArena({
     return () => clearTimeout(t);
   }, [gloryChallengerSlot]);
 
-  // Moderator controls — check if current user is the beef creator
-  const isHost = userId === host.id;
+  // Moderator controls — même logique normalisée que les pages arène / live (UUID casse / espaces).
+  const isHost = userIdsEqual(userId, host.id);
 
   const fetchPendingInvites = useCallback(async () => {
     if (!isHost) return;
@@ -817,8 +818,20 @@ export function TikTokStyleArena({
 
   // ── VOTE SYSTEM — TikTok-style duel gauge ──
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const MAX_LIVE_BROADCAST_RETRIES = 5;
+  const liveBroadcastRetryAttemptsRef = useRef(0);
+  const liveBroadcastRetryTimerRef = useRef<number | null>(null);
   /** Sérialise les INSERT chat pour éviter les rafales concurrentes côté RLS. */
   const messageSendChainRef = useRef(Promise.resolve());
+
+  useEffect(() => {
+    setLiveBroadcastRecreateKey(0);
+    liveBroadcastRetryAttemptsRef.current = 0;
+    if (liveBroadcastRetryTimerRef.current) {
+      window.clearTimeout(liveBroadcastRetryTimerRef.current);
+      liveBroadcastRetryTimerRef.current = null;
+    }
+  }, [roomId]);
 
   /** Envoi broadcast Realtime sécurisé : lit toujours `channelRef.current` au moment de l’appel. */
   const safeBroadcast = useCallback((event: string, payload: Record<string, unknown> = {}) => {
@@ -1733,6 +1746,8 @@ export function TikTokStyleArena({
 
   // ── HYBRID LIVE SYNC: Broadcast (instant) + Polling (fallback) ──
   const [liveConnected, setLiveConnected] = useState(false);
+  /** Incrémenté pour recréer le canal `live_*` après échec (reconnexion bornée, anti-saturation). */
+  const [liveBroadcastRecreateKey, setLiveBroadcastRecreateKey] = useState(0);
 
   useEffect(() => {
     if (!isHost || !isJoined || !liveConnected || beefEnded || !roomId) return;
@@ -1946,11 +1961,12 @@ export function TikTokStyleArena({
         if (isHostRef.current) return;
         if (!payload || typeof payload !== 'object') return;
         const cap = (n: unknown) => Math.min(300, Math.max(0, Math.floor(Number(n) || 0)));
-        setAuraA(cap(payload.A));
-        setAuraB(cap(payload.B));
-        setAuraC(cap(payload.C));
-        setAuraD(cap(payload.D));
-        setAuraMed(cap(payload.M));
+        /** Fusion avec l’état local : évite qu’un snapshot médiateur « en retard » n’écrase des `aura_batch` déjà reçus. */
+        setAuraA((prev) => Math.max(cap(payload.A), prev));
+        setAuraB((prev) => Math.max(cap(payload.B), prev));
+        setAuraC((prev) => Math.max(cap(payload.C), prev));
+        setAuraD((prev) => Math.max(cap(payload.D), prev));
+        setAuraMed((prev) => Math.max(cap(payload.M), prev));
       })
       .on('broadcast', { event: 'message' }, ({ payload }: any) => {
         channelCallbacksRef.current.addRemoteMessage(payload.user_name, payload.content, payload.initial, payload.id);
@@ -2171,13 +2187,31 @@ export function TikTokStyleArena({
         if (status === 'SUBSCRIBED') {
           channelRef.current = channel;
           setLiveConnected(true);
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[Live] Broadcast failed — polling fallback active');
+          liveBroadcastRetryAttemptsRef.current = 0;
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[Live] Broadcast channel:', status, '— polling fallback actif, reconnexion si possible');
+          channelRef.current = null;
           setLiveConnected(false);
+          if (liveBroadcastRetryTimerRef.current) {
+            window.clearTimeout(liveBroadcastRetryTimerRef.current);
+            liveBroadcastRetryTimerRef.current = null;
+          }
+          if (liveBroadcastRetryAttemptsRef.current < MAX_LIVE_BROADCAST_RETRIES) {
+            liveBroadcastRetryAttemptsRef.current += 1;
+            const delay = Math.min(2000 * liveBroadcastRetryAttemptsRef.current, 15_000);
+            liveBroadcastRetryTimerRef.current = window.setTimeout(() => {
+              liveBroadcastRetryTimerRef.current = null;
+              setLiveBroadcastRecreateKey((k) => k + 1);
+            }, delay);
+          }
         }
       });
 
     return () => {
+      if (liveBroadcastRetryTimerRef.current) {
+        window.clearTimeout(liveBroadcastRetryTimerRef.current);
+        liveBroadcastRetryTimerRef.current = null;
+      }
       if (rematchExitTimerRef.current) {
         window.clearTimeout(rematchExitTimerRef.current);
         rematchExitTimerRef.current = null;
@@ -2186,7 +2220,7 @@ export function TikTokStyleArena({
       setLiveConnected(false);
       supabase.removeChannel(channel);
     };
-  }, [roomId]);
+  }, [roomId, liveBroadcastRecreateKey]);
 
   useEffect(() => {
     if (!liveConnected || !isHost || !timerActive) return;
