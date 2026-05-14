@@ -2647,7 +2647,7 @@ export function TikTokStyleArena({
           ? Math.max(40, Math.min(600, Math.floor(durationSec)))
           : 40;
       setAnnouncementTicker(raw);
-      announcementClearTimerRef.current = window.setTimeout(() => {
+      announcementClearTimerRef.current = setTimeout(() => {
         setAnnouncementTicker('');
         announcementClearTimerRef.current = null;
       }, d * 1000);
