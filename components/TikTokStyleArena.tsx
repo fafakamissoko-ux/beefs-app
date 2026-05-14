@@ -2764,7 +2764,7 @@ export function TikTokStyleArena({
         endSummaryTimerRef.current = null;
       }
       void leaveRef.current().then(() => {
-        endSummaryTimerRef.current = window.setTimeout(() => {
+        endSummaryTimerRef.current = setTimeout(() => {
           router.replace('/feed');
         }, 12000);
       });
