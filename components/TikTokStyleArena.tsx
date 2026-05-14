@@ -824,14 +824,31 @@ export function TikTokStyleArena({
   /** Sérialise les INSERT chat pour éviter les rafales concurrentes côté RLS. */
   const messageSendChainRef = useRef(Promise.resolve());
 
+  /** Messages à envoyer dès que `live_*` est SUBSCRIBED (annonces tapées trop tôt, etc.). */
+  const broadcastOutboxRef = useRef<Array<{ event: string; payload: Record<string, unknown> }>>([]);
+  const BROADCAST_OUTBOX_CAP = 48;
+
   useEffect(() => {
     setLiveBroadcastRecreateKey(0);
     liveBroadcastRetryAttemptsRef.current = 0;
+    broadcastOutboxRef.current = [];
     if (liveBroadcastRetryTimerRef.current) {
       window.clearTimeout(liveBroadcastRetryTimerRef.current);
       liveBroadcastRetryTimerRef.current = null;
     }
   }, [roomId]);
+
+  const flushBroadcastOutbox = useCallback(() => {
+    const ch = channelRef.current;
+    if (!ch || broadcastOutboxRef.current.length === 0) return;
+    const items = broadcastOutboxRef.current;
+    broadcastOutboxRef.current = [];
+    for (const { event, payload } of items) {
+      void ch
+        .send({ type: 'broadcast', event, payload })
+        .catch((err: unknown) => console.warn(`[Live] Broadcast flush failed: ${event}`, err));
+    }
+  }, []);
 
   /** Envoi broadcast Realtime sécurisé : lit toujours `channelRef.current` au moment de l’appel. */
   const safeBroadcast = useCallback((event: string, payload: Record<string, unknown> = {}) => {
@@ -840,8 +857,15 @@ export function TikTokStyleArena({
       void ch
         .send({ type: 'broadcast', event, payload })
         .catch((err: unknown) => console.warn(`[Live] Broadcast failed: ${event}`, err));
-    } else {
-      // console.warn(`[Live] Cannot broadcast ${event} - channel not connected`);
+      return;
+    }
+    /** Pas encore SUBSCRIBED : conserver pour `flushBroadcastOutbox()` au join. */
+    if (event === 'announcement_banner') {
+      broadcastOutboxRef.current = broadcastOutboxRef.current.filter((x) => x.event !== 'announcement_banner');
+    }
+    broadcastOutboxRef.current.push({ event, payload });
+    while (broadcastOutboxRef.current.length > BROADCAST_OUTBOX_CAP) {
+      broadcastOutboxRef.current.shift();
     }
   }, []);
 
@@ -2188,6 +2212,33 @@ export function TikTokStyleArena({
           channelRef.current = channel;
           setLiveConnected(true);
           liveBroadcastRetryAttemptsRef.current = 0;
+          void supabase.auth.getSession().then(({ data: { session } }) => {
+            const tok = session?.access_token;
+            if (tok) {
+              try {
+                supabase.realtime.setAuth(tok);
+              } catch {
+                /* ignore */
+              }
+            }
+          });
+          queueMicrotask(() => {
+            const chNow = channelRef.current;
+            if (!chNow) return;
+            const b = auraBufferRef.current;
+            if (b.A > 0 || b.B > 0 || b.C > 0 || b.D > 0 || b.M > 0) {
+              const payload = { A: b.A, B: b.B, C: b.C, D: b.D, M: b.M };
+              b.A = 0;
+              b.B = 0;
+              b.C = 0;
+              b.D = 0;
+              b.M = 0;
+              void chNow
+                .send({ type: 'broadcast', event: 'aura_batch', payload })
+                .catch((err: unknown) => console.warn('[Live] Broadcast failed: aura_batch (post-join)', err));
+            }
+            flushBroadcastOutbox();
+          });
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.warn('[Live] Broadcast channel:', status, '— polling fallback actif, reconnexion si possible');
           channelRef.current = null;
@@ -2220,7 +2271,7 @@ export function TikTokStyleArena({
       setLiveConnected(false);
       supabase.removeChannel(channel);
     };
-  }, [roomId, liveBroadcastRecreateKey]);
+  }, [roomId, liveBroadcastRecreateKey, flushBroadcastOutbox]);
 
   useEffect(() => {
     if (!liveConnected || !isHost || !timerActive) return;
