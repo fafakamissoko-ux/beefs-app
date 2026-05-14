@@ -71,6 +71,12 @@ import { playRematchThunderSfx } from '@/lib/playVerdictSfx';
 import { MediatorSidebar, type MediatorRemoteRow } from './MediatorSidebar';
 import { FullscreenGiftAnimation, type ArenaBigGiftPayload } from './Arena/FullscreenGiftAnimation';
 import { MeetingAudioOutlet } from '@/components/MeetingAudioOutlet';
+import {
+  useArenaRealtime,
+  type UseArenaRealtimeResult,
+  type ArenaRealtimeCallbacks,
+  type StructuredDebateBroadcastPayload,
+} from '@/hooks/useArenaRealtime';
 
 const SFX_MAP: Record<string, string> = {
   horn: '/sounds/horn.mp3',
@@ -328,8 +334,6 @@ export function TikTokStyleArena({
   const challengersEverJoinedRef = useRef(false);
   /** Évite de spammer le toast « challengers partis » tant que la room reste vide */
   const challengersAllLeftNotifiedRef = useRef(false);
-  /** Sync DB status → live quand la salle est active (sans attendre « Démarrer le chrono »). */
-  const autoLiveSyncedRef = useRef(false);
   const [userPoints, setUserPoints] = useState(0);
   const [profileFollowsTarget, setProfileFollowsTarget] = useState(false);
 
@@ -617,75 +621,113 @@ export function TikTokStyleArena({
     [roomId, fetchPendingInvites, runBeefManage],
   );
 
+  // Use refs for stats so endBeef captures the latest values without stale closures
+  const statsRef = useRef({
+    beefTimeRemaining: DEFAULT_BEEF_DURATION,
+    liveViewerCount: 0,
+    messagesCount: 0,
+    /** Résonance « distante » (réactions reçues en broadcast), cumulée côté client. */
+    votesA: 0,
+    votesB: 0,
+    votesC: 0,
+    votesD: 0,
+  });
+
+  /** Chat temps réel : dédup + insert (réutilisé par `useArenaRealtime`, avant Daily). */
+  const seenMsgKeys = useRef(new Set<string>());
+
+  const addRemoteMessage = useCallback((msgUserName: string, content: string, initial?: string, dbId?: string) => {
+    const key = dbId ? `id:${dbId}` : `${msgUserName}::${content}`;
+    if (seenMsgKeys.current.has(key)) return;
+    seenMsgKeys.current.add(key);
+    const ttlMs = dbId ? 60_000 : 5000;
+    setTimeout(() => seenMsgKeys.current.delete(key), ttlMs);
+    const msgId = dbId || `m_${Date.now()}_${Math.random()}`;
+    const newMsg: VisibleMessage = {
+      id: msgId,
+      user_name: msgUserName,
+      content,
+      timestamp: Date.now(),
+      initial: initial || msgUserName?.[0]?.toUpperCase() || '?',
+    };
+    setVisibleMessages((prev) => {
+      if (dbId && prev.some((m) => m.id === dbId)) return prev;
+      return [...prev, newMsg].slice(-40);
+    });
+    setGlobalHeat((v) => Math.min(100, v + 4));
+  }, []);
+
+  const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | 'C' | 'D' | 'M' | null) => {
+    if (INTEGRATED_SUPPORT_REACTIONS.has(emoji)) {
+      if (supportSlot === 'A') {
+        statsRef.current.votesA += 1;
+        return;
+      }
+      if (supportSlot === 'B') {
+        statsRef.current.votesB += 1;
+        return;
+      }
+      if (supportSlot === 'C') {
+        statsRef.current.votesC += 1;
+        return;
+      }
+      if (supportSlot === 'D') {
+        statsRef.current.votesD += 1;
+        return;
+      }
+      if (supportSlot === 'M') {
+        setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
+        return;
+      }
+    }
+    const entry = createFlyingReactionEntry(emoji);
+    reactionBufferRef.current.push(entry);
+  }, []);
+
+  useEffect(() => {
+    const flushInterval = setInterval(() => {
+      if (reactionBufferRef.current.length > 0) {
+        const newReactions = [...reactionBufferRef.current];
+        reactionBufferRef.current = [];
+        setFlyingReactions((prev) => {
+          let next = prev;
+          newReactions.forEach((r) => {
+            next = pushFlyingReaction(next, r);
+          });
+          return next.slice(-30);
+        });
+      }
+    }, 250);
+    return () => clearInterval(flushInterval);
+  }, []);
+
+  /** Boost par tap / réaction soutenue : fixe 15 (équitable, généreux vs decay −3 / 500 ms). */
+  const getAuraBoost = () => 15;
+
+  const emitTapSupport = useCallback(
+    (target: 'A' | 'B' | 'C' | 'D' | 'M') => {
+      if (requireAuth('Fais grimper l\'Aura', 'Crée un compte gratuit pour tapoter l\'écran et soutenir tes favoris !')) return;
+      const boost = getAuraBoost();
+      setGlobalHeat((v) => Math.min(100, v + 2));
+      if (target === 'M') {
+        setSupportBurst((p) => ({ ...p, M: p.M + 1 }));
+        setAuraMed((v) => Math.min(300, v + boost));
+      } else {
+        setSupportBurst((p) => ({ ...p, [target]: p[target] + 1 }));
+        if (target === 'A') setAuraA((v) => Math.min(300, v + boost));
+        else if (target === 'B') setAuraB((v) => Math.min(300, v + boost));
+        else if (target === 'C') setAuraC((v) => Math.min(300, v + boost));
+        else if (target === 'D') setAuraD((v) => Math.min(300, v + boost));
+      }
+      auraBufferRef.current[target] += boost;
+    },
+    [requireAuth],
+  );
+
   useEffect(() => {
     if (!isHost || !mediatorSidebarOpen) return;
     void fetchPendingInvites();
   }, [isHost, mediatorSidebarOpen, fetchPendingInvites]);
-
-  /** Contexte realtime spectateur invite : évite [isViewer] dans les deps (churn identité). */
-  const spectatorInviteRealtimeCtxRef = useRef({ roomId, userId, userRole });
-  spectatorInviteRealtimeCtxRef.current = { roomId, userId, userRole };
-  const spectatorInviteSyncChRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-
-  const syncSpectatorInviteChannel = useCallback(() => {
-    const prev = spectatorInviteSyncChRef.current;
-    if (prev) {
-      void supabase.removeChannel(prev);
-      spectatorInviteSyncChRef.current = null;
-    }
-    const { roomId: r, userId: u, userRole: ur } = spectatorInviteRealtimeCtxRef.current;
-    if (!r || !u) return;
-    if (ur !== 'viewer' && ur !== 'spectator') return;
-
-    const ch = supabase
-      .channel(`spectator_invite_sync_${r}_${u}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'beef_participants',
-          filter: `beef_id=eq.${r}`,
-        },
-        (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
-          const newRow = payload.new;
-          const oldRow = payload.old;
-          const rawUid = newRow.user_id;
-          const rowUserStr =
-            typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
-          const myId = String(u);
-          if (rowUserStr === myId) {
-            if (newRow.invite_status === 'accepted') {
-              if (oldRow?.invite_status === 'accepted') {
-                return;
-              }
-              setAcceptedInviteAlert(true);
-            }
-          }
-        },
-      )
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn('[Live] spectator_invite_sync canal indisponible');
-        }
-      });
-
-    spectatorInviteSyncChRef.current = ch;
-  }, []);
-
-  useEffect(() => {
-    syncSpectatorInviteChannel();
-  }, [roomId, userId, userRole, syncSpectatorInviteChannel]);
-
-  useEffect(() => {
-    return () => {
-      const ch = spectatorInviteSyncChRef.current;
-      if (ch) {
-        void supabase.removeChannel(ch);
-        spectatorInviteSyncChRef.current = null;
-      }
-    };
-  }, []);
 
   const goBuyPoints = useCallback(() => {
     openBuyPointsPage(router);
@@ -730,46 +772,12 @@ export function TikTokStyleArena({
     void loadParticipants();
   }, [loadParticipants]);
 
-  /** Callbacks hors deps du canal `beef_participants_live_*` (évite churn isHost/fetch/load). */
-  const beefParticipantsLiveSyncRef = useRef({
-    isHost,
-    fetchPendingInvites,
-    loadParticipants,
-  });
-  useEffect(() => {
-    beefParticipantsLiveSyncRef.current = { isHost, fetchPendingInvites, loadParticipants };
-  });
-
   const expectedUids = useMemo(() => {
     return Object.entries(participantRoles)
       .filter(([uid]) => uid !== host.id)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map((e) => e[0]);
   }, [participantRoles, host.id]);
-
-  useEffect(() => {
-    if (!roomId) return;
-    const ch = supabase
-      .channel(`beef_participants_live_${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'beef_participants',
-          filter: `beef_id=eq.${roomId}`,
-        },
-        () => {
-          const s = beefParticipantsLiveSyncRef.current;
-          if (s.isHost) void s.fetchPendingInvites();
-          void s.loadParticipants();
-        },
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(ch);
-    };
-  }, [roomId]);
 
   const [liveViewerCount, setLiveViewerCount] = useState(viewerCount);
   const liveViewerCountRef = useRef(liveViewerCount);
@@ -816,73 +824,15 @@ export function TikTokStyleArena({
   /** Rempli après `useDailyCall` — `endBeef` vit au-dessus du hook et ne peut pas fermer sur `leave` en closure directe. */
   const leaveRef = useRef<() => Promise<void>>(async () => {});
 
-  // ── VOTE SYSTEM — TikTok-style duel gauge ──
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const MAX_LIVE_BROADCAST_RETRIES = 5;
-  const liveBroadcastRetryAttemptsRef = useRef(0);
-  const liveBroadcastRetryTimerRef = useRef<number | null>(null);
+  /** API broadcast issue du hook (remplie à chaque rendu après `useArenaRealtime`). */
+  const arenaOutboundRef = useRef<Partial<UseArenaRealtimeResult>>({});
+  const beefGlobalTimerFlushRef = useRef<(() => void) | null>(null);
+  const scheduleBeefGlobalTimerBroadcast = useCallback(() => {
+    queueMicrotask(() => beefGlobalTimerFlushRef.current?.());
+  }, []);
+
   /** Sérialise les INSERT chat pour éviter les rafales concurrentes côté RLS. */
   const messageSendChainRef = useRef(Promise.resolve());
-
-  /** Messages à envoyer dès que `live_*` est SUBSCRIBED (annonces tapées trop tôt, etc.). */
-  const broadcastOutboxRef = useRef<Array<{ event: string; payload: Record<string, unknown> }>>([]);
-  const BROADCAST_OUTBOX_CAP = 48;
-
-  useEffect(() => {
-    setLiveBroadcastRecreateKey(0);
-    liveBroadcastRetryAttemptsRef.current = 0;
-    broadcastOutboxRef.current = [];
-    if (liveBroadcastRetryTimerRef.current) {
-      window.clearTimeout(liveBroadcastRetryTimerRef.current);
-      liveBroadcastRetryTimerRef.current = null;
-    }
-  }, [roomId]);
-
-  const flushBroadcastOutbox = useCallback(() => {
-    const ch = channelRef.current;
-    if (!ch || broadcastOutboxRef.current.length === 0) return;
-    const items = broadcastOutboxRef.current;
-    broadcastOutboxRef.current = [];
-    for (const { event, payload } of items) {
-      void ch
-        .send({ type: 'broadcast', event, payload })
-        .catch((err: unknown) => console.warn(`[Live] Broadcast flush failed: ${event}`, err));
-    }
-  }, []);
-
-  /** Envoi broadcast Realtime sécurisé : lit toujours `channelRef.current` au moment de l’appel. */
-  const safeBroadcast = useCallback((event: string, payload: Record<string, unknown> = {}) => {
-    const ch = channelRef.current;
-    if (ch) {
-      void ch
-        .send({ type: 'broadcast', event, payload })
-        .catch((err: unknown) => console.warn(`[Live] Broadcast failed: ${event}`, err));
-      return;
-    }
-    /** Pas encore SUBSCRIBED : conserver pour `flushBroadcastOutbox()` au join. */
-    if (event === 'announcement_banner') {
-      broadcastOutboxRef.current = broadcastOutboxRef.current.filter((x) => x.event !== 'announcement_banner');
-    }
-    broadcastOutboxRef.current.push({ event, payload });
-    while (broadcastOutboxRef.current.length > BROADCAST_OUTBOX_CAP) {
-      broadcastOutboxRef.current.shift();
-    }
-  }, []);
-
-  /** Synchronise le chrono global vers challengers et spectateurs (médiateur uniquement). */
-  const broadcastBeefGlobalTimer = useCallback(() => {
-    if (!isHostRef.current) return;
-    const active = timerActiveRef.current;
-    const paused = timerPausedRef.current;
-    let remainingSec = beefTimeRemainingRef.current;
-    let endsAtMs: number | null = beefEndsAtMsRef.current;
-    if (active && !paused && endsAtMs != null) {
-      remainingSec = Math.max(0, Math.floor((endsAtMs - Date.now()) / 1000));
-    } else {
-      endsAtMs = null;
-    }
-    safeBroadcast('beef_global_timer', { active, paused, remainingSec, endsAtMs });
-  }, [safeBroadcast]);
 
   // Décompte partagé (deadline `beefEndsAtMsRef`) — médiateur + clients synchronisés
   useEffect(() => {
@@ -954,8 +904,8 @@ export function TikTokStyleArena({
     p.A = 0;
     p.B = 0;
     if (dA === 0 && dB === 0) return;
-    safeBroadcast('pulse_voice', { dA, dB });
-  }, [safeBroadcast]);
+    arenaOutboundRef.current.broadcastPulseVoice?.(dA, dB);
+  }, []);
 
   const queuePulseBroadcast = useCallback(
     (side: 'A' | 'B') => {
@@ -1012,9 +962,9 @@ export function TikTokStyleArena({
         }
         return next;
       });
-      queueMicrotask(() => broadcastBeefGlobalTimer());
+      queueMicrotask(() => scheduleBeefGlobalTimerBroadcast());
     },
-    [broadcastBeefGlobalTimer],
+    [scheduleBeefGlobalTimerBroadcast],
   );
 
   const resetBeefTimerToFull = useCallback(() => {
@@ -1026,8 +976,8 @@ export function TikTokStyleArena({
     if (timerActiveRef.current && !timerPausedRef.current) {
       beefEndsAtMsRef.current = Date.now() + next * 1000;
     }
-    queueMicrotask(() => broadcastBeefGlobalTimer());
-  }, [broadcastBeefGlobalTimer]);
+    queueMicrotask(() => scheduleBeefGlobalTimerBroadcast());
+  }, [scheduleBeefGlobalTimerBroadcast]);
 
   const pauseBeefTimer = useCallback(() => {
     if (beefEndsAtMsRef.current != null) {
@@ -1037,15 +987,15 @@ export function TikTokStyleArena({
     }
     beefEndsAtMsRef.current = null;
     setTimerPaused(true);
-    queueMicrotask(() => broadcastBeefGlobalTimer());
-  }, [broadcastBeefGlobalTimer]);
+    queueMicrotask(() => scheduleBeefGlobalTimerBroadcast());
+  }, [scheduleBeefGlobalTimerBroadcast]);
 
   const resumeBeefTimer = useCallback(() => {
     const r = beefTimeRemainingRef.current;
     beefEndsAtMsRef.current = Date.now() + r * 1000;
     setTimerPaused(false);
-    queueMicrotask(() => broadcastBeefGlobalTimer());
-  }, [broadcastBeefGlobalTimer]);
+    queueMicrotask(() => scheduleBeefGlobalTimerBroadcast());
+  }, [scheduleBeefGlobalTimerBroadcast]);
 
   const [startingBeef, setStartingBeef] = useState(false);
 
@@ -1075,7 +1025,7 @@ export function TikTokStyleArena({
         setTimerActive(true);
         setTimerPaused(false);
         toast('Le beef a commencé.', 'success');
-        queueMicrotask(() => broadcastBeefGlobalTimer());
+        queueMicrotask(() => scheduleBeefGlobalTimerBroadcast());
       } catch (err) {
         console.error('Start beef error:', err);
         toast('Erreur au lancement du chrono', 'error');
@@ -1083,20 +1033,8 @@ export function TikTokStyleArena({
         setStartingBeef(false);
       }
     },
-    [roomId, startingBeef, broadcastBeefGlobalTimer, runBeefManage, toast],
+    [roomId, startingBeef, scheduleBeefGlobalTimerBroadcast, runBeefManage, toast],
   );
-
-  // Use refs for stats so endBeef captures the latest values without stale closures
-  const statsRef = useRef({
-    beefTimeRemaining: DEFAULT_BEEF_DURATION,
-    liveViewerCount: 0,
-    messagesCount: 0,
-    /** Résonance « distante » (réactions reçues en broadcast), cumulée côté client. */
-    votesA: 0,
-    votesB: 0,
-    votesC: 0,
-    votesD: 0,
-  });
 
   const endBeef = useCallback(async (reason: string = 'Terminé par le médiateur') => {
     if (beefEndedRef.current) return;
@@ -1145,10 +1083,10 @@ export function TikTokStyleArena({
     setBeefEnded(true);
 
     // Broadcast end to all viewers (with stats so they see accurate summary)
-    safeBroadcast('beef_ended', {
+    arenaOutboundRef.current.broadcastBeefEnded?.({
       reason,
       summary,
-    } as Record<string, unknown>);
+    });
 
     // Stop camera/mic
     await leaveRef.current();
@@ -1157,13 +1095,13 @@ export function TikTokStyleArena({
     endSummaryTimerRef.current = setTimeout(() => {
       router.replace('/feed');
     }, 12000);
-  }, [roomId, router, runBeefManage, userId, safeBroadcast]);
+  }, [roomId, router, runBeefManage, userId]);
 
   const handleMediatorVerdict = useCallback(
     async (kind: 'resolved' | 'closed' | 'rematch') => {
       if (!isHost || beefEndedRef.current) return;
       useArenaVerdictStore.getState().setVerdict(kind, roomId);
-      safeBroadcast('beef_verdict', { verdict: kind });
+      arenaOutboundRef.current.broadcastBeefVerdict?.(kind);
 
       if (kind === 'resolved') {
         setVerdictConfetti(true);
@@ -1188,7 +1126,7 @@ export function TikTokStyleArena({
         void endBeef('Rematch demandé');
       }, 10000);
     },
-    [isHost, roomId, endBeef, runBeefManage, safeBroadcast],
+    [isHost, roomId, endBeef, runBeefManage],
   );
 
   useEffect(() => {
@@ -1278,7 +1216,6 @@ export function TikTokStyleArena({
 
   useEffect(() => {
     challengersEverJoinedRef.current = false;
-    autoLiveSyncedRef.current = false;
   }, [roomId]);
 
   // Mediator leaving triggers endBeef
@@ -1729,7 +1666,7 @@ export function TikTokStyleArena({
         setDebaters((prev) =>
           prev.map((d) => (d.id === debaterId ? { ...d, isMuted: muted } : d)),
         );
-        safeBroadcast('mediator_mute_challenger', { targetUserId: debaterId, muted });
+        arenaOutboundRef.current.broadcastMediatorMuteChallenger?.(debaterId, muted);
         /** Couper le micro du locuteur actif = fin du tour de parole (chrono arrêté) */
         if (muted && debaterId === speakingTurnTargetRef.current) {
           setSpeakingTurnPaused(false);
@@ -1737,7 +1674,7 @@ export function TikTokStyleArena({
         }
       }
     },
-    [hardMuteParticipant, safeBroadcast],
+    [hardMuteParticipant],
   );
 
   const handleMuteAll = useCallback(() => {
@@ -1768,585 +1705,12 @@ export function TikTokStyleArena({
     setDebaters((prev) => (prev.length === 0 ? rows : prev));
   }, [participantRoles, host.id]);
 
-  // ── HYBRID LIVE SYNC: Broadcast (instant) + Polling (fallback) ──
-  const [liveConnected, setLiveConnected] = useState(false);
-  /** Incrémenté pour recréer le canal `live_*` après échec (reconnexion bornée, anti-saturation). */
-  const [liveBroadcastRecreateKey, setLiveBroadcastRecreateKey] = useState(0);
-
-  useEffect(() => {
-    if (!isHost || !isJoined || !liveConnected || beefEnded || !roomId) return;
-    if (autoLiveSyncedRef.current) return;
-    if (remoteParticipants.length < 1) return;
-
-    let cancelled = false;
-    void (async () => {
-      const { data: row } = await supabase
-        .from('beefs')
-        .select('status')
-        .eq('id', roomId)
-        .maybeSingle();
-      if (cancelled || !row) return;
-      const s = String((row as { status?: string }).status ?? '');
-      if (s !== 'pending' && s !== 'ready') return;
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
-      const r = await postBeefManage(session.access_token, {
-        action: 'TOGGLE_STATUS',
-        beefId: roomId,
-        toggle: 'SYNC_LIVE',
-      });
-      if (r.ok) autoLiveSyncedRef.current = true;
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isHost, isJoined, liveConnected, beefEnded, roomId, remoteParticipants.length, postBeefManage]);
-
-  const seenMsgKeys = useRef(new Set<string>());
-
-  const addRemoteMessage = useCallback((msgUserName: string, content: string, initial?: string, dbId?: string) => {
-    const key = dbId ? `id:${dbId}` : `${msgUserName}::${content}`;
-    if (seenMsgKeys.current.has(key)) return;
-    seenMsgKeys.current.add(key);
-    const ttlMs = dbId ? 60_000 : 5000;
-    setTimeout(() => seenMsgKeys.current.delete(key), ttlMs);
-    const msgId = dbId || `m_${Date.now()}_${Math.random()}`;
-    const newMsg: VisibleMessage = {
-      id: msgId,
-      user_name: msgUserName,
-      content,
-      timestamp: Date.now(),
-      initial: initial || msgUserName?.[0]?.toUpperCase() || '?',
-    };
-    setVisibleMessages((prev) => {
-      if (dbId && prev.some((m) => m.id === dbId)) return prev;
-      return [...prev, newMsg].slice(-40);
-    });
-    setGlobalHeat((v) => Math.min(100, v + 4));
-  }, []);
-
-  const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | 'C' | 'D' | 'M' | null) => {
-    if (INTEGRATED_SUPPORT_REACTIONS.has(emoji)) {
-      if (supportSlot === 'A') {
-        statsRef.current.votesA += 1;
-        return;
-      }
-      if (supportSlot === 'B') {
-        statsRef.current.votesB += 1;
-        return;
-      }
-      if (supportSlot === 'C') {
-        statsRef.current.votesC += 1;
-        return;
-      }
-      if (supportSlot === 'D') {
-        statsRef.current.votesD += 1;
-        return;
-      }
-      if (supportSlot === 'M') {
-        setSupportBurst((prev) => ({ ...prev, M: prev.M + 1 }));
-        return;
-      }
-    }
-    const entry = createFlyingReactionEntry(emoji);
-    reactionBufferRef.current.push(entry);
-  }, []);
-
-  useEffect(() => {
-    const flushInterval = setInterval(() => {
-      if (reactionBufferRef.current.length > 0) {
-        const newReactions = [...reactionBufferRef.current];
-        reactionBufferRef.current = [];
-        setFlyingReactions((prev) => {
-          let next = prev;
-          newReactions.forEach((r) => {
-            next = pushFlyingReaction(next, r);
-          });
-          return next.slice(-30);
-        });
-      }
-    }, 250);
-    return () => clearInterval(flushInterval);
-  }, []);
-
-  /** Boost par tap / réaction soutenue : fixe 15 (équitable, généreux vs decay −3 / 500 ms). */
-  const getAuraBoost = () => 15;
-
-  const emitTapSupport = useCallback(
-    (target: 'A' | 'B' | 'C' | 'D' | 'M') => {
-      if (requireAuth('Fais grimper l\'Aura', 'Crée un compte gratuit pour tapoter l\'écran et soutenir tes favoris !')) return;
-      const boost = getAuraBoost();
-      setGlobalHeat((v) => Math.min(100, v + 2));
-      if (target === 'M') {
-        setSupportBurst((p) => ({ ...p, M: p.M + 1 }));
-        setAuraMed((v) => Math.min(300, v + boost));
-      } else {
-        setSupportBurst((p) => ({ ...p, [target]: p[target] + 1 }));
-        if (target === 'A') setAuraA((v) => Math.min(300, v + boost));
-        else if (target === 'B') setAuraB((v) => Math.min(300, v + boost));
-        else if (target === 'C') setAuraC((v) => Math.min(300, v + boost));
-        else if (target === 'D') setAuraD((v) => Math.min(300, v + boost));
-      }
-      auraBufferRef.current[target] += boost;
-    },
-    [requireAuth],
-  );
-
-  useEffect(() => {
-    if (!liveConnected) return; // Sécurité : on ne monte pas l'intervalle si le réseau est coupé
-
-    const iv = window.setInterval(() => {
-      const b = auraBufferRef.current;
-      if (b.A <= 0 && b.B <= 0 && b.C <= 0 && b.D <= 0 && b.M <= 0) return;
-      const payload = { A: b.A, B: b.B, C: b.C, D: b.D, M: b.M };
-      b.A = 0;
-      b.B = 0;
-      b.C = 0;
-      b.D = 0;
-      b.M = 0;
-      safeBroadcast('aura_batch', payload);
-    }, 1500);
-    return () => window.clearInterval(iv);
-  }, [safeBroadcast, liveConnected]);
-
-  useEffect(() => {
-    if (!isHost || !liveConnected) return;
-    const iv = window.setInterval(() => {
-      const s = auraSnapshotRef.current;
-      safeBroadcast('aura_master_sync', { A: s.A, B: s.B, C: s.C, D: s.D, M: s.M });
-    }, 3000);
-    return () => window.clearInterval(iv);
-  }, [isHost, liveConnected, safeBroadcast]);
-
-  const channelCallbacksRef = useRef({
-    addRemoteMessage,
-    addRemoteReaction,
-    addPulseVoices,
-    toast,
-    setVerdictConfetti,
-    setRematchSequence,
-    router,
-    leave,
-    userId,
-    userRole,
-  });
-  useEffect(() => {
-    channelCallbacksRef.current = {
-      addRemoteMessage,
-      addRemoteReaction,
-      addPulseVoices,
-      toast,
-      setVerdictConfetti,
-      setRematchSequence,
-      router,
-      leave,
-      userId,
-      userRole,
-    };
-  });
-
-  // 1) Broadcast channel — instant P2P delivery
-  useEffect(() => {
-    const channel = supabase.channel(`live_${roomId}`, {
-      config: { broadcast: { self: false } },
-    });
-
-    channel
-      .on('broadcast', { event: 'sfx' }, ({ payload }: any) => {
-        if (payload?.id) playSfx(payload.id);
-      })
-      .on('broadcast', { event: 'reaction' }, ({ payload }: any) => {
-        channelCallbacksRef.current.addRemoteReaction(payload.emoji, payload.supportSlot);
-        const boost = getAuraBoost();
-        const slot = payload?.supportSlot as 'A' | 'B' | 'C' | 'D' | 'M' | undefined;
-        if (slot === 'A') setAuraA((v) => Math.min(300, v + boost));
-        if (slot === 'B') setAuraB((v) => Math.min(300, v + boost));
-        if (slot === 'C') setAuraC((v) => Math.min(300, v + boost));
-        if (slot === 'D') setAuraD((v) => Math.min(300, v + boost));
-        if (slot === 'M') setAuraMed((v) => Math.min(300, v + boost));
-        setGlobalHeat((v) => Math.min(100, v + 3));
-      })
-      .on('broadcast', { event: 'aura_batch' }, ({ payload }: any) => {
-        if (!payload || typeof payload !== 'object') return;
-        const dA = Math.max(0, Math.floor(Number(payload.A) || 0));
-        const dB = Math.max(0, Math.floor(Number(payload.B) || 0));
-        const dC = Math.max(0, Math.floor(Number(payload.C) || 0));
-        const dD = Math.max(0, Math.floor(Number(payload.D) || 0));
-        const dM = Math.max(0, Math.floor(Number(payload.M) || 0));
-        if (dA) setAuraA((v) => Math.min(300, v + dA));
-        if (dB) setAuraB((v) => Math.min(300, v + dB));
-        if (dC) setAuraC((v) => Math.min(300, v + dC));
-        if (dD) setAuraD((v) => Math.min(300, v + dD));
-        if (dM) setAuraMed((v) => Math.min(300, v + dM));
-      })
-      .on('broadcast', { event: 'aura_master_sync' }, ({ payload }: any) => {
-        if (isHostRef.current) return;
-        if (!payload || typeof payload !== 'object') return;
-        const cap = (n: unknown) => Math.min(300, Math.max(0, Math.floor(Number(n) || 0)));
-        /** Fusion avec l’état local : évite qu’un snapshot médiateur « en retard » n’écrase des `aura_batch` déjà reçus. */
-        setAuraA((prev) => Math.max(cap(payload.A), prev));
-        setAuraB((prev) => Math.max(cap(payload.B), prev));
-        setAuraC((prev) => Math.max(cap(payload.C), prev));
-        setAuraD((prev) => Math.max(cap(payload.D), prev));
-        setAuraMed((prev) => Math.max(cap(payload.M), prev));
-      })
-      .on('broadcast', { event: 'message' }, ({ payload }: any) => {
-        channelCallbacksRef.current.addRemoteMessage(payload.user_name, payload.content, payload.initial, payload.id);
-      })
-      .on('broadcast', { event: 'delete_message' }, ({ payload }: any) => {
-        const msgId = payload?.messageId;
-        if (msgId) {
-          setVisibleMessages((prev) => prev.filter((m) => m.id !== msgId));
-        }
-      })
-      .on('broadcast', { event: 'arena_big_gift' }, ({ payload }: any) => {
-        if (!payload) return;
-
-        setLocalArenaBigGift(payload);
-
-        const cost = Number(payload.cost) || 0;
-        if (cost > 0) {
-          const medBoost = Math.min(25, 4 + Math.floor(cost / 40));
-          setAuraMed((v) => Math.min(300, v + medBoost));
-
-          if (cost >= 50) {
-            setGiftPrestigeFlash((k) => k + 1);
-          }
-          setGlobalHeat((v) => Math.min(100, v + 20));
-        }
-      })
-      .on('broadcast', { event: 'pulse_voice' }, ({ payload }: any) => {
-        const dA = Math.max(0, Math.floor(Number(payload?.dA) || 0));
-        const dB = Math.max(0, Math.floor(Number(payload?.dB) || 0));
-        if (dA) channelCallbacksRef.current.addPulseVoices('A', dA);
-        if (dB) channelCallbacksRef.current.addPulseVoices('B', dB);
-        if (dA || dB) setGlobalHeat((v) => Math.min(100, v + 2));
-      })
-      .on('broadcast', { event: 'announcement_banner' }, ({ payload }: { payload?: { text?: string; durationSec?: number } }) => {
-        if (isHostRef.current) return;
-        const raw = String(payload?.text ?? '').trim();
-        if (announcementClearTimerRef.current) {
-          clearTimeout(announcementClearTimerRef.current);
-          announcementClearTimerRef.current = null;
-        }
-        if (!raw) {
-          setAnnouncementTicker('');
-          return;
-        }
-        const d = Math.max(40, Math.min(600, Math.floor(Number(payload?.durationSec) || 40)));
-        setAnnouncementTicker(raw);
-        announcementClearTimerRef.current = setTimeout(() => {
-          setAnnouncementTicker('');
-          announcementClearTimerRef.current = null;
-        }, d * 1000);
-      })
-      .on('broadcast', { event: 'beef_global_timer' }, ({ payload }: any) => {
-        if (isHostRef.current) return;
-        const active = !!payload?.active;
-        const paused = !!payload?.paused;
-        const remainingSec = Math.max(0, Math.floor(Number(payload?.remainingSec) || 0));
-        const rawEnd = payload?.endsAtMs;
-        const endsAtMs =
-          rawEnd != null && Number.isFinite(Number(rawEnd)) ? Number(rawEnd) : null;
-        setTimerActive(active);
-        setTimerPaused(paused);
-        setBeefTimeRemaining(remainingSec);
-        beefTimeRemainingRef.current = remainingSec;
-        if (active && !paused && endsAtMs != null && endsAtMs > Date.now() - 120_000) {
-          beefEndsAtMsRef.current = endsAtMs;
-        } else {
-          beefEndsAtMsRef.current = null;
-        }
-      })
-      .on('broadcast', { event: 'speaking_turn' }, ({ payload }: any) => {
-        if (isHostRef.current) return;
-        if (payload?.action === 'start') {
-          setSpeakingTurnPaused(false);
-          setSpeakingTurnActive(true);
-          setSpeakingTurnTarget(payload.debaterId);
-          const dur = Math.max(0, Math.floor(Number(payload?.duration) || 0));
-          if (dur > 0) {
-            setSpeakingTurnRemaining(dur);
-            setSpeakingTurnDuration(Math.max(15, Math.min(600, dur)));
-          }
-          setTimerRunning(true);
-          setCurrentSpeaker(payload.debaterId);
-          const sl = payload?.slot as 'A' | 'B' | 'C' | 'D' | undefined;
-          const nm = (payload?.speakerName as string) || (sl ? `Challenger ${sl}` : '');
-          if (sl && nm) {
-            setFloorAnnouncement({ name: nm, slot: sl });
-          }
-        } else if (payload?.action === 'pause') {
-          setSpeakingTurnPaused(true);
-        } else if (payload?.action === 'resume') {
-          setSpeakingTurnPaused(false);
-        } else if (payload?.action === 'stop') {
-          setFloorAnnouncement(null);
-          setSpeakingTurnPaused(false);
-          setSpeakingTurnActive(false);
-          setSpeakingTurnTarget(null);
-          setSpeakingTurnRemaining(0);
-          setTimerRunning(false);
-          setCurrentSpeaker(null);
-          if (speakingTurnIntervalRef.current) {
-            clearInterval(speakingTurnIntervalRef.current);
-            speakingTurnIntervalRef.current = null;
-          }
-        }
-      })
-      .on('broadcast', { event: 'mediator_floor' }, ({ payload }: any) => {
-        if (typeof payload?.active === 'boolean') setMediatorHoldingFloor(payload.active);
-      })
-      .on('broadcast', { event: 'mediation_toss' }, ({ payload }: any) => {
-        if (payload?.firstName && channelCallbacksRef.current.userRole !== 'mediator') {
-          channelCallbacksRef.current.toast(`Tirage : ${payload.firstName} commence`, 'info');
-        }
-      })
-      .on('broadcast', { event: 'structured_debate' }, ({ payload }: any) => {
-        if (payload?.enabled === false) {
-          setStructuredDebateEnabled(false);
-          return;
-        }
-        if (payload?.enabled) {
-          setStructuredDebateEnabled(true);
-          if (typeof payload.budgetSeconds === 'number') {
-            setChallengerBudgetRemaining(payload.budgetSeconds);
-          }
-        }
-      })
-      .on('broadcast', { event: 'mediator_mute_challenger' }, ({ payload }: any) => {
-        const { userRole: ur, userId: uidCb } = channelCallbacksRef.current;
-        if (ur !== 'challenger') return;
-        const uid = payload?.targetUserId as string | undefined;
-        if (!uid || uid !== uidCb) return;
-        setMicMutedByMediator(!!payload?.muted);
-      })
-      .on('broadcast', { event: 'beef_verdict' }, ({ payload }: any) => {
-        const v = payload?.verdict as string | undefined;
-        if (v !== 'resolved' && v !== 'closed' && v !== 'rematch') return;
-        useArenaVerdictStore.getState().setVerdict(v, roomId);
-        if (v === 'resolved') {
-          channelCallbacksRef.current.setVerdictConfetti(true);
-          window.setTimeout(() => channelCallbacksRef.current.setVerdictConfetti(false), 2200);
-        }
-        if (v === 'rematch') {
-          channelCallbacksRef.current.setRematchSequence(true);
-          playRematchThunderSfx();
-          if (rematchExitTimerRef.current) {
-            window.clearTimeout(rematchExitTimerRef.current);
-            rematchExitTimerRef.current = null;
-          }
-          rematchExitTimerRef.current = window.setTimeout(() => {
-            rematchExitTimerRef.current = null;
-            channelCallbacksRef.current.setRematchSequence(false);
-            if (!beefEndedRef.current) {
-              channelCallbacksRef.current.router.replace(`/beef/${roomId}/summary`);
-            }
-          }, 12000);
-        }
-      })
-      .on('broadcast', { event: 'beef_ended' }, ({ payload }: any) => {
-        if (typeof window !== 'undefined') {
-          try {
-            sessionStorage.removeItem(`arena_joined_${roomId}_${channelCallbacksRef.current.userId}`);
-          } catch {
-            /* ignore */
-          }
-        }
-        if (beefEndedRef.current) return;
-        beefEndedRef.current = true;
-        beefEndsAtMsRef.current = null;
-        setTimerActive(false);
-        setTimerPaused(false);
-        if (payload?.summary) {
-          const raw = payload.summary as Record<string, unknown>;
-          const legacyA = typeof raw.votesA === 'number' ? raw.votesA : 0;
-          const legacyB = typeof raw.votesB === 'number' ? raw.votesB : 0;
-          setEndSummary({
-            duration: String(raw.duration ?? ''),
-            viewers: Math.max(0, Math.floor(Number(raw.viewers) || 0)),
-            resonanceA: typeof raw.resonanceA === 'number' ? raw.resonanceA : legacyA,
-            resonanceB: typeof raw.resonanceB === 'number' ? raw.resonanceB : legacyB,
-            resonanceC: typeof raw.resonanceC === 'number' ? raw.resonanceC : 0,
-            resonanceD: typeof raw.resonanceD === 'number' ? raw.resonanceD : 0,
-            resonanceM: typeof raw.resonanceM === 'number' ? raw.resonanceM : 0,
-            messages: Math.max(0, Math.floor(Number(raw.messages) || 0)),
-            endReason: String(raw.endReason ?? payload?.reason ?? 'Beef terminé'),
-          });
-        } else {
-          const s = statsRef.current;
-          const wall = beefWallClockStartedAtRef.current;
-          const elapsed =
-            wall != null
-              ? Math.max(0, Math.floor((Date.now() - wall) / 1000))
-              : Math.max(0, DEFAULT_BEEF_DURATION - s.beefTimeRemaining);
-          const mins = Math.floor(elapsed / 60);
-          const secs = elapsed % 60;
-          const sb = supportBurstRef.current;
-          setEndSummary({
-            duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
-            viewers: s.liveViewerCount,
-            resonanceA: s.votesA + sb.A,
-            resonanceB: s.votesB + sb.B,
-            resonanceC: s.votesC + sb.C,
-            resonanceD: s.votesD + sb.D,
-            resonanceM: sb.M,
-            messages: s.messagesCount,
-            endReason: payload?.reason || 'Beef terminé',
-          });
-        }
-        channelCallbacksRef.current.setRematchSequence(false);
-        if (rematchExitTimerRef.current) {
-          window.clearTimeout(rematchExitTimerRef.current);
-          rematchExitTimerRef.current = null;
-        }
-        setBeefEnded(true);
-        void channelCallbacksRef.current.leave();
-        if (endSummaryTimerRef.current) clearTimeout(endSummaryTimerRef.current);
-        endSummaryTimerRef.current = setTimeout(() => channelCallbacksRef.current.router.replace('/feed'), 12000);
-      })
-      .subscribe((status: string) => {
-        if (status === 'SUBSCRIBED') {
-          channelRef.current = channel;
-          setLiveConnected(true);
-          liveBroadcastRetryAttemptsRef.current = 0;
-          void supabase.auth.getSession().then(({ data: { session } }) => {
-            const tok = session?.access_token;
-            if (tok) {
-              try {
-                supabase.realtime.setAuth(tok);
-              } catch {
-                /* ignore */
-              }
-            }
-          });
-          queueMicrotask(() => {
-            const chNow = channelRef.current;
-            if (!chNow) return;
-            const b = auraBufferRef.current;
-            if (b.A > 0 || b.B > 0 || b.C > 0 || b.D > 0 || b.M > 0) {
-              const payload = { A: b.A, B: b.B, C: b.C, D: b.D, M: b.M };
-              b.A = 0;
-              b.B = 0;
-              b.C = 0;
-              b.D = 0;
-              b.M = 0;
-              void chNow
-                .send({ type: 'broadcast', event: 'aura_batch', payload })
-                .catch((err: unknown) => console.warn('[Live] Broadcast failed: aura_batch (post-join)', err));
-            }
-            flushBroadcastOutbox();
-          });
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[Live] Broadcast channel:', status, '— polling fallback actif, reconnexion si possible');
-          channelRef.current = null;
-          setLiveConnected(false);
-          if (liveBroadcastRetryTimerRef.current) {
-            window.clearTimeout(liveBroadcastRetryTimerRef.current);
-            liveBroadcastRetryTimerRef.current = null;
-          }
-          if (liveBroadcastRetryAttemptsRef.current < MAX_LIVE_BROADCAST_RETRIES) {
-            liveBroadcastRetryAttemptsRef.current += 1;
-            const delay = Math.min(2000 * liveBroadcastRetryAttemptsRef.current, 15_000);
-            liveBroadcastRetryTimerRef.current = window.setTimeout(() => {
-              liveBroadcastRetryTimerRef.current = null;
-              setLiveBroadcastRecreateKey((k) => k + 1);
-            }, delay);
-          }
-        }
-      });
-
-    return () => {
-      if (liveBroadcastRetryTimerRef.current) {
-        window.clearTimeout(liveBroadcastRetryTimerRef.current);
-        liveBroadcastRetryTimerRef.current = null;
-      }
-      if (rematchExitTimerRef.current) {
-        window.clearTimeout(rematchExitTimerRef.current);
-        rematchExitTimerRef.current = null;
-      }
-      channelRef.current = null;
-      setLiveConnected(false);
-      supabase.removeChannel(channel);
-    };
-  }, [roomId, liveBroadcastRecreateKey, flushBroadcastOutbox]);
-
-  useEffect(() => {
-    if (!liveConnected || !isHost || !timerActive) return;
-    broadcastBeefGlobalTimer();
-  }, [liveConnected, isHost, timerActive, broadcastBeefGlobalTimer]);
-
-  useEffect(() => {
-    if (!liveConnected || !isHost || !timerActive || timerPaused) return;
-    const id = window.setInterval(() => broadcastBeefGlobalTimer(), 10_000);
-    return () => window.clearInterval(id);
-  }, [liveConnected, isHost, timerActive, timerPaused, broadcastBeefGlobalTimer]);
-
-  /** Chat : uniquement les messages du live (pas d’historique DB au join). */
+  /** Chat : uniquement les messages du live (pas d'historique DB au join). */
   useEffect(() => {
     if (!roomId) return;
     seenMsgKeys.current.clear();
     setVisibleMessages([]);
   }, [roomId]);
-
-  // 2) Polling fallback — queries DB for new messages every 3s (guaranteed delivery)
-  useEffect(() => {
-    let lastTs = new Date().toISOString();
-
-    const poll = async () => {
-      try {
-        const { data } = await supabase
-          .from('beef_messages')
-          .select('id, username, display_name, content, user_id, created_at')
-          .eq('beef_id', roomId)
-          .eq('is_deleted', false)
-          .gt('created_at', lastTs)
-          .order('created_at', { ascending: true })
-          .limit(10);
-
-        if (data && data.length > 0) {
-          lastTs = data[data.length - 1].created_at;
-          data.forEach((msg) => {
-            if (String(msg.user_id) === String(userId)) return;
-            addRemoteMessage(msg.display_name || msg.username, msg.content, undefined, msg.id);
-          });
-        }
-      } catch {}
-    };
-
-    const interval = setInterval(poll, 8000);
-    return () => clearInterval(interval);
-  }, [roomId, userId, addRemoteMessage]);
-
-  // 3) Reaction polling fallback — requêtes DB (intervalle large pour limiter la charge réseau)
-  useEffect(() => {
-    let lastReactionTs = new Date().toISOString();
-
-    const pollReactions = async () => {
-      try {
-        const { data } = await supabase
-          .from('beef_reactions')
-          .select('id, emoji, user_id, created_at')
-          .eq('beef_id', roomId)
-          .gt('created_at', lastReactionTs)
-          .order('created_at', { ascending: true })
-          .limit(20);
-
-        if (data && data.length > 0) {
-          lastReactionTs = data[data.length - 1].created_at;
-          data.forEach(r => {
-            if (r.user_id === userId) return;
-            addRemoteReaction(r.emoji);
-          });
-        }
-      } catch {}
-    };
-
-    const interval = setInterval(pollReactions, 8000);
-    return () => clearInterval(interval);
-  }, [roomId, userId, addRemoteReaction]);
 
   const handleReaction = (emoji: string) => {
     if (requireAuth('Donne de la force', 'Crée un compte gratuit pour envoyer des réactions.')) return;
@@ -2407,7 +1771,7 @@ export function TikTokStyleArena({
     }
 
     if (!integrated) {
-      safeBroadcast('reaction', { emoji });
+      arenaOutboundRef.current.broadcastReaction?.(emoji);
     }
     supabase.from('beef_reactions').insert({ beef_id: roomId, user_id: userId, emoji }).then(() => {});
   };
@@ -2438,7 +1802,7 @@ export function TikTokStyleArena({
     if (!isHost) return;
     setMediatorHoldingFloor((prev) => {
       const next = !prev;
-      safeBroadcast('mediator_floor', { active: next });
+      arenaOutboundRef.current.broadcastMediatorFloor?.(next);
       return next;
     });
   };
@@ -2450,13 +1814,13 @@ export function TikTokStyleArena({
     }
     const pick = debaters[Math.floor(Math.random() * debaters.length)];
     toast(`${pick.name} parle en premier (tirage au sort).`, 'success');
-    safeBroadcast('mediation_toss', { firstSpeakerId: pick.id, firstName: pick.name });
+    arenaOutboundRef.current.broadcastMediationToss?.(pick.id, pick.name);
   };
 
   const startTimer = (debaterId: string) => {
     setSpeakingTurnPaused(false);
     setMediatorHoldingFloor(false);
-    safeBroadcast('mediator_floor', { active: false });
+    arenaOutboundRef.current.broadcastMediatorFloor?.(false);
     setCurrentSpeaker(debaterId);
     setTimerRunning(true);
     setSpeakingTurnActive(true);
@@ -2478,14 +1842,14 @@ export function TikTokStyleArena({
     if (slot) {
       setFloorAnnouncement({ name: speakerLabel, slot });
     }
-    safeBroadcast('speaking_turn', {
+    arenaOutboundRef.current.broadcastSpeakingTurn?.({
+      action: 'start',
       debaterId,
       duration: speakingTurnDuration,
-      action: 'start',
       slot,
       speakerName: speakerLabel,
     });
-    safeBroadcast('mediator_mute_challenger', { targetUserId: debaterId, muted: false });
+    arenaOutboundRef.current.broadcastMediatorMuteChallenger?.(debaterId, false);
 
   };
 
@@ -2515,15 +1879,15 @@ export function TikTokStyleArena({
       }
       setSpeakingTurnDuration(duration);
       setMediatorHoldingFloor(false);
-      safeBroadcast('mediator_floor', { active: false });
+      arenaOutboundRef.current.broadcastMediatorFloor?.(false);
       for (const p of challengerRemoteSlots.slice(0, 4)) {
         if (!p?.sessionId || !p.arenaUserId) continue;
         const isSpeaker = p.sessionId === activePanel.sessionId;
         hardMuteParticipant(p.sessionId, !isSpeaker);
-        safeBroadcast('mediator_mute_challenger', {
-          targetUserId: p.arenaUserId,
-          muted: !isSpeaker,
-        });
+        arenaOutboundRef.current.broadcastMediatorMuteChallenger?.(
+          p.arenaUserId,
+          !isSpeaker,
+        );
       }
 
       setCurrentSpeaker(debaterId);
@@ -2544,10 +1908,10 @@ export function TikTokStyleArena({
         `Challenger ${slot}`;
       setFloorAnnouncement({ name: speakerLabel, slot });
 
-      safeBroadcast('speaking_turn', {
+      arenaOutboundRef.current.broadcastSpeakingTurn?.({
+        action: 'start',
         debaterId,
         duration,
-        action: 'start',
         slot,
         speakerName: speakerLabel,
       });
@@ -2558,7 +1922,6 @@ export function TikTokStyleArena({
       hardMuteParticipant,
       toast,
       debaters,
-      safeBroadcast,
     ],
   );
 
@@ -2570,7 +1933,7 @@ export function TikTokStyleArena({
       const p = challengerRemoteSlots.find((x) => x && x.arenaUserId === endedSpeakerId);
       const sid = p?.sessionId;
       if (sid) hardMuteParticipant(sid, true);
-      safeBroadcast('mediator_mute_challenger', { targetUserId: endedSpeakerId, muted: true });
+      arenaOutboundRef.current.broadcastMediatorMuteChallenger?.(endedSpeakerId, true);
     }
 
     setTimerRunning(false);
@@ -2587,9 +1950,9 @@ export function TikTokStyleArena({
     );
 
     if (isHost) {
-      safeBroadcast('speaking_turn', { action: 'stop' });
+      arenaOutboundRef.current.broadcastSpeakingTurn?.({ action: 'stop' });
     }
-  }, [isHost, structuredDebateEnabled, hardMuteParticipant, challengerRemoteSlots, safeBroadcast]);
+  }, [isHost, structuredDebateEnabled, hardMuteParticipant, challengerRemoteSlots]);
 
   const pauseSpeakingTurn = useCallback(() => {
     if (!speakingTurnActive) return;
@@ -2608,17 +1971,16 @@ export function TikTokStyleArena({
       const uid = panel?.arenaUserId ?? null;
       if (sid && uid) {
         hardMuteParticipant(sid, true);
-        safeBroadcast('mediator_mute_challenger', { targetUserId: uid, muted: true });
+        arenaOutboundRef.current.broadcastMediatorMuteChallenger?.(uid, true);
       }
     }
-    safeBroadcast('speaking_turn', { action: 'pause' });
+    arenaOutboundRef.current.broadcastSpeakingTurn?.({ action: 'pause' });
   }, [
     speakingTurnActive,
     isHost,
     hotMicSpeakerSlot,
     challengerRemoteSlots,
     hardMuteParticipant,
-    safeBroadcast,
   ]);
 
   const resumeSpeakingTurn = useCallback(() => {
@@ -2638,17 +2000,16 @@ export function TikTokStyleArena({
       const uid = panel?.arenaUserId ?? null;
       if (sid && uid) {
         hardMuteParticipant(sid, false);
-        safeBroadcast('mediator_mute_challenger', { targetUserId: uid, muted: false });
+        arenaOutboundRef.current.broadcastMediatorMuteChallenger?.(uid, false);
       }
     }
-    safeBroadcast('speaking_turn', { action: 'resume' });
+    arenaOutboundRef.current.broadcastSpeakingTurn?.({ action: 'resume' });
   }, [
     speakingTurnActive,
     isHost,
     hotMicSpeakerSlot,
     challengerRemoteSlots,
     hardMuteParticipant,
-    safeBroadcast,
   ]);
 
   const restartSpeakingTurn = useCallback(() => {
@@ -2749,10 +2110,7 @@ export function TikTokStyleArena({
       const next = prev.map((d) => (d.id === debaterId ? { ...d, isMuted: !d.isMuted } : d));
       const row = next.find((d) => d.id === debaterId);
       if (row) {
-        safeBroadcast('mediator_mute_challenger', {
-          targetUserId: debaterId,
-          muted: row.isMuted,
-        });
+        arenaOutboundRef.current.broadcastMediatorMuteChallenger?.(debaterId, row.isMuted);
       }
       return next;
     });
@@ -2985,9 +2343,9 @@ export function TikTokStyleArena({
     }
     setAnnouncementTicker('');
     if (isHost) {
-      safeBroadcast('announcement_banner', { text: '', durationSec: 0 });
+      arenaOutboundRef.current.broadcastAnnouncementBanner?.('', 0);
     }
-  }, [isHost, safeBroadcast]);
+  }, [isHost]);
 
   const publishAnnouncementBanner = useCallback(
     (text: string, durationSec: number) => {
@@ -3007,10 +2365,10 @@ export function TikTokStyleArena({
         announcementClearTimerRef.current = null;
       }, d * 1000);
       if (isHost) {
-        safeBroadcast('announcement_banner', { text: trimmed, durationSec: d });
+        arenaOutboundRef.current.broadcastAnnouncementBanner?.(trimmed, d);
       }
     },
-    [isHost, clearAnnouncementBanner, safeBroadcast],
+    [isHost, clearAnnouncementBanner],
   );
 
   useEffect(
@@ -3090,7 +2448,7 @@ export function TikTokStyleArena({
           window.setTimeout(() => scrollChatToEnd(), 50);
           window.setTimeout(() => scrollChatToEnd(), 200);
         });
-        safeBroadcast('message', {
+        arenaOutboundRef.current.broadcastMessage?.({
           user_name: userName,
           content: cleanContent,
           initial: senderInitial,
@@ -3134,7 +2492,7 @@ export function TikTokStyleArena({
       return;
     }
     setVisibleMessages((prev) => prev.filter((m) => m.id !== messageId));
-    safeBroadcast('delete_message', { messageId });
+    arenaOutboundRef.current.broadcastDeleteMessage?.(messageId);
   };
 
   useEffect(() => {
@@ -3224,8 +2582,271 @@ export function TikTokStyleArena({
     !rightPanel &&
     expectedChallengers.length >= 2;
 
-  const unlockArenaPlayback = useCallback(() => {
-    if (typeof document === 'undefined') return;
+  const arenaRealtimeCallbacks = {
+    getAuraBoost: () => 15,
+    onSfxPlayed: (id: string) => {
+      playSfx(id);
+    },
+    onReactionReceived: (emoji: string, supportSlot?: 'A' | 'B' | 'C' | 'D' | 'M', _source?: 'broadcast' | 'poll') => {
+      addRemoteReaction(emoji, supportSlot ?? undefined);
+    },
+    onReactionAurasFromBroadcast: (summary) => {
+      const A = summary.A ?? 0;
+      const B = summary.B ?? 0;
+      const C = summary.C ?? 0;
+      const D = summary.D ?? 0;
+      const M = summary.M ?? 0;
+      const gh = summary.globalHeatDelta ?? 0;
+      if (A) setAuraA((v) => Math.min(300, v + A));
+      if (B) setAuraB((v) => Math.min(300, v + B));
+      if (C) setAuraC((v) => Math.min(300, v + C));
+      if (D) setAuraD((v) => Math.min(300, v + D));
+      if (M) setAuraMed((v) => Math.min(300, v + M));
+      if (gh) setGlobalHeat((v) => Math.min(100, v + gh));
+    },
+    onAuraBatchDeltas: (d) => {
+      if (d.A) setAuraA((v) => Math.min(300, v + d.A));
+      if (d.B) setAuraB((v) => Math.min(300, v + d.B));
+      if (d.C) setAuraC((v) => Math.min(300, v + d.C));
+      if (d.D) setAuraD((v) => Math.min(300, v + d.D));
+      if (d.M) setAuraMed((v) => Math.min(300, v + d.M));
+    },
+    onAuraMasterSync: (snap) => {
+      setAuraA(snap.A);
+      setAuraB(snap.B);
+      setAuraC(snap.C);
+      setAuraD(snap.D);
+      setAuraMed(snap.M);
+    },
+    onMessageReceived: (uname, content, initialLetter, messageId) => {
+      addRemoteMessage(uname, content, initialLetter, messageId);
+    },
+    onMessageDeleted: (messageId) => {
+      setVisibleMessages((prev) => prev.filter((m) => m.id !== messageId));
+    },
+    onArenaBigGift: (payload) => {
+      setLocalArenaBigGift(payload as ArenaBigGiftPayload);
+    },
+    onPulseVoice: (dA, dB) => {
+      if (dA > 0) addPulseVoices('A', dA);
+      if (dB > 0) addPulseVoices('B', dB);
+      setGlobalHeat((v) => Math.min(100, v + 2));
+    },
+    onAnnouncementBanner: ({ text, durationSec }) => {
+      if (announcementClearTimerRef.current) {
+        clearTimeout(announcementClearTimerRef.current);
+        announcementClearTimerRef.current = null;
+      }
+      const raw = typeof text === 'string' ? text.trim() : '';
+      if (!raw) {
+        setAnnouncementTicker('');
+        return;
+      }
+      const d =
+        typeof durationSec === 'number' && Number.isFinite(durationSec)
+          ? Math.max(40, Math.min(600, Math.floor(durationSec)))
+          : 40;
+      setAnnouncementTicker(raw);
+      announcementClearTimerRef.current = window.setTimeout(() => {
+        setAnnouncementTicker('');
+        announcementClearTimerRef.current = null;
+      }, d * 1000);
+    },
+    onGlobalTimerSync: (payload) => {
+      const endsAtMs =
+        payload.endsAtMs != null && Number.isFinite(Number(payload.endsAtMs))
+          ? Number(payload.endsAtMs)
+          : null;
+      const active = !!payload.active;
+      const paused = !!payload.paused;
+      const rem = Math.max(0, Math.floor(Number(payload.remainingSec) || 0));
+      setTimerActive(active);
+      timerActiveRef.current = active;
+      setTimerPaused(paused);
+      timerPausedRef.current = paused;
+      setBeefTimeRemaining(rem);
+      beefTimeRemainingRef.current = rem;
+      beefEndsAtMsRef.current = endsAtMs;
+    },
+    onSpeakingTurn: (payload) => {
+      if (payload.action === 'start') {
+        const dur = typeof payload.duration === 'number' && payload.duration > 0 ? payload.duration : 60;
+        const debaterId = payload.debaterId;
+        setSpeakingTurnDuration(dur);
+        setSpeakingTurnRemaining(dur);
+        setSpeakingTurnTarget(debaterId);
+        setSpeakingTurnActive(true);
+        setSpeakingTurnPaused(false);
+        setCurrentSpeaker(debaterId);
+        setTimerRunning(true);
+        const slot = payload.slot;
+        const name = typeof payload.speakerName === 'string' ? payload.speakerName : 'Intervenant';
+        if (slot === 'A' || slot === 'B' || slot === 'C' || slot === 'D') {
+          setFloorAnnouncement({ name, slot });
+        } else {
+          setFloorAnnouncement(null);
+        }
+        return;
+      }
+      if (payload.action === 'pause') {
+        setSpeakingTurnPaused(true);
+        return;
+      }
+      if (payload.action === 'resume') {
+        setSpeakingTurnPaused(false);
+        return;
+      }
+      if (payload.action === 'stop') {
+        setSpeakingTurnPaused(false);
+        setFloorAnnouncement(null);
+        setSpeakingTurnActive(false);
+        setSpeakingTurnTarget(null);
+        setTimerRunning(false);
+        setCurrentSpeaker(null);
+        if (speakingTurnIntervalRef.current) {
+          clearInterval(speakingTurnIntervalRef.current);
+          speakingTurnIntervalRef.current = null;
+        }
+      }
+    },
+    onMediatorFloor: (active: boolean) => setMediatorHoldingFloor(active),
+    onMediationToss: (firstName: string) => {
+      toast(`${firstName} parle en premier (tirage au sort décidé par le médiateur).`, 'success');
+    },
+    onStructuredDebate: (p: StructuredDebateBroadcastPayload) => {
+      if (p.enabled) {
+        setStructuredDebateEnabled(true);
+        if (typeof p.budgetSeconds === 'number' && Number.isFinite(p.budgetSeconds)) {
+          const sec = Math.max(60, Math.floor(p.budgetSeconds));
+          setChallengerBudgetRemaining(sec);
+          setDebateBudgetMinutes(Math.max(1, Math.round(sec / 60)));
+        }
+      } else {
+        setStructuredDebateEnabled(false);
+      }
+    },
+    onMediatorMuteChallenger: ({ muted }: { targetUserId: string; muted: boolean }) =>
+      setMicMutedByMediator(muted),
+    onBeefVerdict: ({ verdict }) => {
+      useArenaVerdictStore.getState().setVerdict(verdict, roomId);
+      if (verdict === 'resolved') {
+        setVerdictConfetti(true);
+        window.setTimeout(() => setVerdictConfetti(false), 2200);
+      }
+      if (verdict === 'rematch') {
+        playRematchThunderSfx();
+        setRematchSequence(true);
+      }
+    },
+    onBeefEnded: (payload) => {
+      if (beefEndedRef.current) return;
+      beefEndedRef.current = true;
+      const summaryRaw = payload?.summary;
+      if (summaryRaw && typeof summaryRaw === 'object' && !Array.isArray(summaryRaw)) {
+        const o = summaryRaw as Record<string, unknown>;
+        setEndSummary({
+          duration: String(o.duration ?? ''),
+          viewers: Number(o.viewers) || 0,
+          resonanceA: Number(o.resonanceA) || 0,
+          resonanceB: Number(o.resonanceB) || 0,
+          resonanceC: Number(o.resonanceC) || 0,
+          resonanceD: Number(o.resonanceD) || 0,
+          resonanceM: Number(o.resonanceM) || 0,
+          messages: Number(o.messages) || 0,
+          endReason: String(o.endReason ?? 'Fin du beef'),
+        });
+      } else {
+        setEndSummary(null);
+      }
+      setBeefEnded(true);
+      if (endSummaryTimerRef.current) {
+        clearTimeout(endSummaryTimerRef.current);
+        endSummaryTimerRef.current = null;
+      }
+      void leaveRef.current().then(() => {
+        endSummaryTimerRef.current = window.setTimeout(() => {
+          router.replace('/feed');
+        }, 12000);
+      });
+    },
+    onLiveBroadcastSubscribed: () => {
+      const b = auraBufferRef.current;
+      if (!(b.A || b.B || b.C || b.D || b.M)) return;
+      arenaOutboundRef.current.broadcastAuraBatch?.({ A: b.A, B: b.B, C: b.C, D: b.D, M: b.M });
+      b.A = b.B = b.C = b.D = b.M = 0;
+    },
+    onSpectatorSelfInviteAccepted: () => setAcceptedInviteAlert(true),
+    onBeefParticipantsTableChanged: () => {
+      if (isHost) void fetchPendingInvites();
+      void loadParticipants();
+    },
+  } satisfies ArenaRealtimeCallbacks;
+
+  const arenaRealtime = useArenaRealtime(
+    { roomId, userId, userName, userRole, isHost },
+    arenaRealtimeCallbacks,
+  );
+
+  Object.assign(arenaOutboundRef.current, {
+    broadcastPulseVoice: arenaRealtime.broadcastPulseVoice,
+    broadcastBeefEnded: arenaRealtime.broadcastBeefEnded,
+    broadcastBeefVerdict: arenaRealtime.broadcastBeefVerdict,
+    broadcastMediatorMuteChallenger: arenaRealtime.broadcastMediatorMuteChallenger,
+    broadcastReaction: arenaRealtime.broadcastReaction,
+    broadcastSfx: arenaRealtime.broadcastSfx,
+    broadcastMessage: arenaRealtime.broadcastMessage,
+    broadcastDeleteMessage: arenaRealtime.broadcastDeleteMessage,
+    broadcastArenaBigGift: arenaRealtime.broadcastArenaBigGift,
+    broadcastAnnouncementBanner: arenaRealtime.broadcastAnnouncementBanner,
+    broadcastBeefGlobalTimer: arenaRealtime.broadcastBeefGlobalTimer,
+    broadcastSpeakingTurn: arenaRealtime.broadcastSpeakingTurn,
+    broadcastMediatorFloor: arenaRealtime.broadcastMediatorFloor,
+    broadcastMediationToss: arenaRealtime.broadcastMediationToss,
+    broadcastStructuredDebate: arenaRealtime.broadcastStructuredDebate,
+    broadcastAuraBatch: arenaRealtime.broadcastAuraBatch,
+    broadcastAuraMasterSync: arenaRealtime.broadcastAuraMasterSync,
+  });
+
+  beefGlobalTimerFlushRef.current = () => {
+    if (!isHostRef.current) return;
+    arenaRealtime.broadcastBeefGlobalTimer({
+      active: timerActiveRef.current,
+      paused: timerPausedRef.current,
+      remainingSec: beefTimeRemainingRef.current,
+      endsAtMs: beefEndsAtMsRef.current,
+    });
+  };
+
+  const { liveConnected } = arenaRealtime;
+
+  useEffect(() => {
+    if (!liveConnected || !isHost || beefEnded || !roomId) return;
+    queueMicrotask(() => beefGlobalTimerFlushRef.current?.());
+    const id = window.setInterval(() => beefGlobalTimerFlushRef.current?.(), 10_000);
+    return () => window.clearInterval(id);
+  }, [liveConnected, isHost, beefEnded, roomId]);
+
+  useEffect(() => {
+    if (!isHost || beefEnded || !liveConnected) return;
+    const id = window.setInterval(() => {
+      const b = auraBufferRef.current;
+      if (!(b.A || b.B || b.C || b.D || b.M)) return;
+      arenaOutboundRef.current.broadcastAuraBatch?.({ A: b.A, B: b.B, C: b.C, D: b.D, M: b.M });
+      b.A = b.B = b.C = b.D = b.M = 0;
+    }, 1500);
+    return () => window.clearInterval(id);
+  }, [isHost, beefEnded, liveConnected]);
+
+  useEffect(() => {
+    if (!isHost || beefEnded || !liveConnected) return;
+    const id = window.setInterval(() => {
+      const snap = auraSnapshotRef.current;
+      arenaOutboundRef.current.broadcastAuraMasterSync?.({ ...snap });
+    }, 3000);
+    return () => window.clearInterval(id);
+  }, [isHost, beefEnded, liveConnected]);
+
+  const unlockArenaPlayback = useCallback(() => {    if (typeof document === 'undefined') return;
     document.querySelectorAll('audio, video').forEach((el) => {
       const media = el as HTMLMediaElement;
       if (media.paused) void media.play().catch(() => {});
@@ -3939,7 +3560,7 @@ export function TikTokStyleArena({
                     onClick={(e) => {
                       e.stopPropagation();
                       playSfx(sfx.id);
-                      safeBroadcast('sfx', { id: sfx.id });
+                      arenaOutboundRef.current.broadcastSfx?.(sfx.id);
                       setSoundboardExpanded(false);
                     }}
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/5 bg-white/5 transition-all hover:bg-white/20 active:scale-90"
@@ -4180,7 +3801,7 @@ export function TikTokStyleArena({
                           const msgContent = `a offert ${gift.emoji} ${gift.label} (${gift.cost} Lingots) à ${targetName}`;
                           const initial = userName?.[0]?.toUpperCase() || '?';
                           addRemoteMessage(userName, msgContent, initial, giftKey);
-                          safeBroadcast('message', {
+                          arenaOutboundRef.current.broadcastMessage?.({
                             user_name: userName,
                             content: msgContent,
                             initial,
@@ -4195,7 +3816,7 @@ export function TikTokStyleArena({
                               senderName: userName,
                             };
                             setLocalArenaBigGift(bigPayload);
-                            safeBroadcast('arena_big_gift', bigPayload as Record<string, unknown>);
+                            arenaOutboundRef.current.broadcastArenaBigGift?.(bigPayload);
                           }
                           toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
                         } catch (err: unknown) {
