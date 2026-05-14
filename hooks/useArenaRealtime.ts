@@ -173,8 +173,9 @@ export interface UseArenaRealtimeResult {
  *
  * Contrat churn : **`callbacks`** est reflété dans **`callbacksRef` à chaque rendu**.
  * Le canal **`live_*`** ne dépend que **`roomId`** (et **`flushBroadcastOutbox` stable**).
- * Effets **`spectator_invite_*`** / **`beef_participants_live_*`** et polling secours restent
- * sur leurs deps dédiées (**`roomId`/`userId`/rôle** où pertinent).
+ * **`spectator_invite_*`** : deps **`[roomId, userId]`** ; le filtre viewer/spectateur lit **`identityRef.current.userRole`**.
+ * **`beef_participants_live_*`** : **`[roomId]`** uniquement.
+ * Le polling secours utilise **`[roomId, userId]`**.
  */
 export function useArenaRealtime(
   params: ArenaRealtimeParams,
@@ -186,7 +187,7 @@ export function useArenaRealtime(
   const identityRef = useRef(params);
   identityRef.current = params;
 
-  const { roomId, userId, userRole } = params;
+  const { roomId, userId } = params;
 
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const liveBroadcastRetryAttemptsRef = useRef(0);
@@ -341,7 +342,8 @@ export function useArenaRealtime(
     }
 
     if (!roomId || !userId) return undefined;
-    if (userRole !== 'viewer' && userRole !== 'spectator') return undefined;
+    const currentRole = identityRef.current.userRole;
+    if (currentRole !== 'viewer' && currentRole !== 'spectator') return undefined;
 
     const ch = supabase
       .channel(`spectator_invite_sync_${roomId}_${userId}`)
@@ -381,9 +383,7 @@ export function useArenaRealtime(
         spectatorInviteSyncChRef.current = null;
       }
     };
-  }, [roomId, userId, userRole, params.isHost]);
-
-  /** `beef_participants` live pour ce beef. */
+  }, [roomId, userId]);
   useEffect(() => {
     if (!roomId) return undefined;
 
@@ -406,7 +406,7 @@ export function useArenaRealtime(
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [roomId, userId, userRole, params.isHost]);
+  }, [roomId]);
 
   /** ── Canal broadcast `live_${roomId}` + reconnexion bornée (sans clé dans les deps React). ── */
   useEffect(() => {
