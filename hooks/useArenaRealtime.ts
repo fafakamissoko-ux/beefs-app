@@ -1,0 +1,816 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
+
+/** ───────────────── Types identité & payloads broadcast ───────────────── */
+
+export type ArenaRealtimeUserRole = 'mediator' | 'challenger' | 'viewer' | 'spectator';
+
+export type ArenaRealtimeParams = {
+  roomId: string;
+  userId: string;
+  userName: string;
+  userRole: ArenaRealtimeUserRole;
+  isHost: boolean;
+};
+
+export type AuraBatchPayload = {
+  A: number;
+  B: number;
+  C: number;
+  D: number;
+  M: number;
+};
+
+export type GlobalTimerBroadcastPayload = {
+  active: boolean;
+  paused: boolean;
+  remainingSec: number;
+  endsAtMs: number | null;
+};
+
+export type SpeakingTurnBroadcastPayload =
+  | {
+      action: 'start';
+      debaterId: string;
+      duration?: number;
+      slot?: 'A' | 'B' | 'C' | 'D';
+      speakerName?: string;
+    }
+  | { action: 'pause' }
+  | { action: 'resume' }
+  | { action: 'stop' };
+
+export type StructuredDebateBroadcastPayload =
+  | { enabled: false }
+  | { enabled: true; budgetSeconds?: number };
+
+export type BeefVerdictBroadcastKind = 'resolved' | 'closed' | 'rematch';
+
+export type BeefEndedBroadcastPayload = {
+  summary?: Record<string, unknown>;
+  reason?: string;
+};
+
+export type ArenaBigGiftBroadcastPayload = Record<string, unknown>;
+
+/**
+ * Callbacks temps réel : mis à jour **à chaque rendu** via `callbacksRef`,
+ * sans re-mounter les canaux réseau.
+ */
+export interface ArenaRealtimeCallbacks {
+  /** Boost tiers / points utilisé pour agréger l’aura côté client sur réactions distantes (défaut 1). */
+  getAuraBoost?: () => number;
+
+  /** Bruitages arène depuis un broadcast distant. */
+  onSfxPlayed?: (soundId: string) => void;
+
+  /**
+   * Réaction emoji reçue (broadcast ou polling DB).
+   * `supportSlot` est absent lors du fallback polling (`beef_reactions` sans colonne équivalente).
+   */
+  onReactionReceived?: (emoji: string, supportSlot?: 'A' | 'B' | 'C' | 'D' | 'M', source?: 'broadcast' | 'poll') => void;
+
+  /** Incrémentation d’aura / chaleur distante après une réaction broadcast (boost déjà résolu via `getAuraBoost`). */
+  onReactionAurasFromBroadcast?: (
+    summary: Pick<AuraBatchPayload, 'A' | 'B' | 'C' | 'D' | 'M'> & { globalHeatDelta?: number },
+  ) => void;
+
+  onAuraBatchDeltas?: (deltas: AuraBatchPayload) => void;
+  onAuraMasterSync?: (snapshot: AuraBatchPayload) => void;
+
+  onMessageReceived?: (
+    userName: string,
+    content: string,
+    initialLetter: string | undefined,
+    messageId: string,
+    source: 'broadcast' | 'poll',
+  ) => void;
+
+  onMessageDeleted?: (messageId: string) => void;
+
+  onArenaBigGift?: (payload: ArenaBigGiftBroadcastPayload) => void;
+
+  /**
+   * `pulse_voice` distant : deltas de « voix » A/B ; le consumer applique aussi l’élévation de
+   * chaleur globale attendue (~+2) comme dans `TikTokStyleArena`.
+   */
+  onPulseVoice?: (dA: number, dB: number) => void;
+
+  /** Bandeau : `text` vide / null = clear. Durée ignorée pour le clear. */
+  onAnnouncementBanner?: (payload: { text: string | null | undefined; durationSec?: number | undefined }) => void;
+
+  onGlobalTimerSync?: (payload: GlobalTimerBroadcastPayload) => void;
+
+  onSpeakingTurn?: (payload: SpeakingTurnBroadcastPayload) => void;
+
+  onMediatorFloor?: (active: boolean) => void;
+
+  /** Toast « médiateur » pour les non-médiateurs. */
+  onMediationToss?: (firstName: string) => void;
+
+  onStructuredDebate?: (payload: StructuredDebateBroadcastPayload) => void;
+
+  onMediatorMuteChallenger?: (payload: { targetUserId: string; muted: boolean }) => void;
+
+  onBeefVerdict?: (payload: { verdict: BeefVerdictBroadcastKind }) => void;
+
+  onBeefEnded?: (payload: BeefEndedBroadcastPayload | undefined) => void;
+
+  /** Après souscription réussie au canal `live_*` (Drain buffer aura puis outbox côté arène si besoin). */
+  onLiveBroadcastSubscribed?: () => void;
+
+  /** Invite spectateur → ligne `beef_participants` acceptée pour l’utilisateur courant (UPDATE Realtime). */
+  onSpectatorSelfInviteAccepted?: () => void;
+
+  /** Mutation `beef_participants` pour ce beef (Postgres Changes). Le parent filtre médiateur / refetch invités. */
+  onBeefParticipantsTableChanged?: () => void;
+}
+
+const MAX_LIVE_BROADCAST_RETRIES = 5;
+const BROADCAST_OUTBOX_CAP = 48;
+
+function asRecord(payload: unknown): Record<string, unknown> | null {
+  if (payload === null || payload === undefined) return null;
+  if (typeof payload === 'object' && !Array.isArray(payload)) return payload as Record<string, unknown>;
+  return null;
+}
+
+function capAura(n: unknown): number {
+  return Math.min(300, Math.max(0, Math.floor(Number(n) || 0)));
+}
+
+export interface UseArenaRealtimeResult {
+  liveConnected: boolean;
+  safeBroadcast: (event: string, payload?: Record<string, unknown>) => void;
+  broadcastSfx: (id: string) => void;
+  broadcastReaction: (emoji: string, supportSlot?: 'A' | 'B' | 'C' | 'D' | 'M') => void;
+  broadcastAuraBatch: (payload: AuraBatchPayload) => void;
+  broadcastAuraMasterSync: (snapshot: AuraBatchPayload) => void;
+  broadcastMessage: (args: {
+    user_name: string;
+    content: string;
+    initial?: string | null;
+    id: string;
+  }) => void;
+  broadcastDeleteMessage: (messageId: string) => void;
+  broadcastArenaBigGift: (payload: ArenaBigGiftBroadcastPayload) => void;
+  broadcastPulseVoice: (dA: number, dB: number) => void;
+  broadcastAnnouncementBanner: (text: string, durationSec?: number) => void;
+  broadcastBeefGlobalTimer: (payload: GlobalTimerBroadcastPayload) => void;
+  broadcastSpeakingTurn: (payload: SpeakingTurnBroadcastPayload) => void;
+  broadcastMediatorFloor: (active: boolean) => void;
+  broadcastMediationToss: (firstSpeakerId: string, firstName: string) => void;
+  broadcastStructuredDebate: (payload: StructuredDebateBroadcastPayload) => void;
+  broadcastMediatorMuteChallenger: (targetUserId: string, muted: boolean) => void;
+  broadcastBeefVerdict: (verdict: BeefVerdictBroadcastKind) => void;
+  broadcastBeefEnded: (payload: BeefEndedBroadcastPayload & { summary?: Record<string, unknown> }) => void;
+}
+
+/**
+ * Phase Phénix — moteur réseau isolé (`live_*` broadcast + Postgres Changes + polling secours DB).
+ *
+ * Contrat churn : **`callbacks`** est reflété dans **`callbacksRef` à chaque rendu**.
+ * Effets souscription **`live_*`, `spectator_invite_*`, `beef_participants_live_*`** et polling
+ * ne dépendent que de **`[roomId, userId, userRole, isHost]`**.
+ */
+export function useArenaRealtime(
+  params: ArenaRealtimeParams,
+  callbacks: ArenaRealtimeCallbacks,
+): UseArenaRealtimeResult {
+  const callbacksRef = useRef(callbacks);
+  callbacksRef.current = callbacks;
+
+  const identityRef = useRef(params);
+  identityRef.current = params;
+
+  const { roomId, userId, userRole } = params;
+
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const liveBroadcastRetryAttemptsRef = useRef(0);
+  const liveBroadcastRetryTimerRef = useRef<number | null>(null);
+
+  /** File d’attente tant que non SUBSCRIBED. */
+  const broadcastOutboxRef = useRef<Array<{ event: string; payload: Record<string, unknown> }>>([]);
+
+  const spectatorInviteSyncChRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  const [liveConnected, setLiveConnected] = useState(false);
+
+  const flushBroadcastOutbox = useCallback(() => {
+    const ch = channelRef.current;
+    if (!ch || broadcastOutboxRef.current.length === 0) return;
+    const items = broadcastOutboxRef.current;
+    broadcastOutboxRef.current = [];
+    for (const { event, payload } of items) {
+      void ch.send({ type: 'broadcast', event, payload }).catch((err: unknown) => {
+        console.warn(`[Live] Broadcast flush failed: ${event}`, err);
+      });
+    }
+  }, []);
+
+  const safeBroadcast = useCallback((event: string, payload: Record<string, unknown> = {}) => {
+    const ch = channelRef.current;
+    if (ch) {
+      void ch.send({ type: 'broadcast', event, payload }).catch((err: unknown) => {
+        console.warn(`[Live] Broadcast failed: ${event}`, err);
+      });
+      return;
+    }
+    if (event === 'announcement_banner') {
+      broadcastOutboxRef.current = broadcastOutboxRef.current.filter((x) => x.event !== 'announcement_banner');
+    }
+    broadcastOutboxRef.current.push({ event, payload });
+    while (broadcastOutboxRef.current.length > BROADCAST_OUTBOX_CAP) {
+      broadcastOutboxRef.current.shift();
+    }
+  }, []);
+
+  const broadcastSfx = useCallback((id: string) => safeBroadcast('sfx', { id }), [safeBroadcast]);
+
+  const broadcastReaction = useCallback(
+    (emoji: string, supportSlot?: 'A' | 'B' | 'C' | 'D' | 'M') => {
+      const p: Record<string, unknown> = { emoji };
+      if (supportSlot !== undefined) p.supportSlot = supportSlot;
+      safeBroadcast('reaction', p);
+    },
+    [safeBroadcast],
+  );
+
+  const broadcastAuraBatch = useCallback(
+    (payload: AuraBatchPayload) => safeBroadcast('aura_batch', { ...payload }),
+    [safeBroadcast],
+  );
+
+  const broadcastAuraMasterSync = useCallback(
+    (snapshot: AuraBatchPayload) => safeBroadcast('aura_master_sync', { ...snapshot }),
+    [safeBroadcast],
+  );
+
+  const broadcastMessage = useCallback(
+    (args: { user_name: string; content: string; initial?: string | null; id: string }) => {
+      safeBroadcast('message', {
+        user_name: args.user_name,
+        content: args.content,
+        initial: args.initial ?? undefined,
+        id: args.id,
+      });
+    },
+    [safeBroadcast],
+  );
+
+  const broadcastDeleteMessage = useCallback(
+    (messageId: string) => safeBroadcast('delete_message', { messageId }),
+    [safeBroadcast],
+  );
+
+  const broadcastArenaBigGift = useCallback(
+    (giftPayload: ArenaBigGiftBroadcastPayload) => safeBroadcast('arena_big_gift', giftPayload),
+    [safeBroadcast],
+  );
+
+  const broadcastPulseVoice = useCallback(
+    (dA: number, dB: number) => safeBroadcast('pulse_voice', { dA, dB }),
+    [safeBroadcast],
+  );
+
+  const broadcastAnnouncementBanner = useCallback(
+    (text: string, durationSec?: number) => {
+      safeBroadcast('announcement_banner', { text, durationSec: durationSec ?? 0 });
+    },
+    [safeBroadcast],
+  );
+
+  const broadcastBeefGlobalTimer = useCallback(
+    (payload: GlobalTimerBroadcastPayload) => safeBroadcast('beef_global_timer', { ...payload }),
+    [safeBroadcast],
+  );
+
+  const broadcastSpeakingTurn = useCallback(
+    (p: SpeakingTurnBroadcastPayload) => safeBroadcast('speaking_turn', p as unknown as Record<string, unknown>),
+    [safeBroadcast],
+  );
+
+  const broadcastMediatorFloor = useCallback((active: boolean) => safeBroadcast('mediator_floor', { active }), [safeBroadcast]);
+
+  const broadcastMediationToss = useCallback(
+    (firstSpeakerId: string, firstName: string) =>
+      safeBroadcast('mediation_toss', { firstSpeakerId, firstName }),
+    [safeBroadcast],
+  );
+
+  const broadcastStructuredDebate = useCallback(
+    (p: StructuredDebateBroadcastPayload) =>
+      safeBroadcast('structured_debate', p as unknown as Record<string, unknown>),
+    [safeBroadcast],
+  );
+
+  const broadcastMediatorMuteChallenger = useCallback(
+    (targetUserId: string, muted: boolean) => safeBroadcast('mediator_mute_challenger', { targetUserId, muted }),
+    [safeBroadcast],
+  );
+
+  const broadcastBeefVerdict = useCallback(
+    (verdict: BeefVerdictBroadcastKind) => safeBroadcast('beef_verdict', { verdict }),
+    [safeBroadcast],
+  );
+
+  const broadcastBeefEnded = useCallback(
+    (p: BeefEndedBroadcastPayload & { summary?: Record<string, unknown> }) => safeBroadcast('beef_ended', { ...p }),
+    [safeBroadcast],
+  );
+
+  /** Reset canal live + retries quand change de beef. */
+  useEffect(() => {
+    broadcastOutboxRef.current = [];
+    liveBroadcastRetryAttemptsRef.current = 0;
+    if (liveBroadcastRetryTimerRef.current !== null) {
+      window.clearTimeout(liveBroadcastRetryTimerRef.current);
+      liveBroadcastRetryTimerRef.current = null;
+    }
+  }, [roomId]);
+
+  /** Canal spectateur invitation (un seul effet orchestré pour anti-spam / pas de duplication). */
+  useEffect(() => {
+    const prev = spectatorInviteSyncChRef.current;
+    if (prev) {
+      void supabase.removeChannel(prev);
+      spectatorInviteSyncChRef.current = null;
+    }
+
+    if (!roomId || !userId) return undefined;
+    if (userRole !== 'viewer' && userRole !== 'spectator') return undefined;
+
+    const ch = supabase
+      .channel(`spectator_invite_sync_${roomId}_${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'beef_participants',
+          filter: `beef_id=eq.${roomId}`,
+        },
+        (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
+          const newRow = payload.new;
+          const oldRow = payload.old;
+          const rawUid = newRow.user_id;
+          const rowUserStr =
+            typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
+          if (rowUserStr !== String(userId)) return;
+
+          if (newRow.invite_status === 'accepted') {
+            if (oldRow?.invite_status === 'accepted') return;
+            callbacksRef.current.onSpectatorSelfInviteAccepted?.();
+          }
+        },
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn('[Live] spectator_invite_sync canal indisponible');
+        }
+      });
+
+    spectatorInviteSyncChRef.current = ch;
+
+    return () => {
+      if (spectatorInviteSyncChRef.current === ch) {
+        void supabase.removeChannel(ch);
+        spectatorInviteSyncChRef.current = null;
+      }
+    };
+  }, [roomId, userId, userRole, params.isHost]);
+
+  /** `beef_participants` live pour ce beef. */
+  useEffect(() => {
+    if (!roomId) return undefined;
+
+    const ch = supabase
+      .channel(`beef_participants_live_${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'beef_participants',
+          filter: `beef_id=eq.${roomId}`,
+        },
+        () => {
+          callbacksRef.current.onBeefParticipantsTableChanged?.();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(ch);
+    };
+  }, [roomId, userId, userRole, params.isHost]);
+
+  /** ── Canal broadcast `live_${roomId}` + reconnexion bornée (sans clé dans les deps React). ── */
+  useEffect(() => {
+    if (!roomId) {
+      channelRef.current = null;
+      setLiveConnected(false);
+      return undefined;
+    }
+
+    let disposed = false;
+    let activeChannel: ReturnType<typeof supabase.channel> | null = null;
+
+    function clearRetryTimer(): void {
+      if (liveBroadcastRetryTimerRef.current !== null) {
+        window.clearTimeout(liveBroadcastRetryTimerRef.current);
+        liveBroadcastRetryTimerRef.current = null;
+      }
+    }
+
+    function scheduleReconnect(): void {
+      if (disposed || !roomId) return;
+      clearRetryTimer();
+      if (liveBroadcastRetryAttemptsRef.current >= MAX_LIVE_BROADCAST_RETRIES) {
+        return;
+      }
+      liveBroadcastRetryAttemptsRef.current += 1;
+      const delay = Math.min(2000 * liveBroadcastRetryAttemptsRef.current, 15_000);
+      liveBroadcastRetryTimerRef.current = window.setTimeout(() => {
+        liveBroadcastRetryTimerRef.current = null;
+        if (!disposed) connect();
+      }, delay);
+    }
+
+    function teardownChannel(reason: string): void {
+      if (activeChannel) {
+        console.warn('[Live] Broadcast channel:', reason, '— polling fallback actif, reconnexion si possible');
+        void supabase.removeChannel(activeChannel);
+        activeChannel = null;
+      }
+      channelRef.current = null;
+      setLiveConnected(false);
+    }
+
+    function connect(): void {
+      if (!roomId || disposed) return;
+      clearRetryTimer();
+      teardownChannelSilent();
+
+      const ch = supabase.channel(`live_${roomId}`, {
+        config: { broadcast: { self: false } },
+      });
+
+      ch
+        .on('broadcast', { event: 'sfx' }, ({ payload }: { payload?: unknown }) => {
+          const o = asRecord(payload);
+          const id = o?.id;
+          if (typeof id === 'string' && id) callbacksRef.current.onSfxPlayed?.(id);
+        })
+        .on('broadcast', { event: 'reaction' }, ({ payload }: { payload?: unknown }) => {
+          const o = asRecord(payload);
+          if (!o || typeof o.emoji !== 'string') return;
+          const slotRaw = o.supportSlot;
+          const slot =
+            slotRaw === 'A' || slotRaw === 'B' || slotRaw === 'C' || slotRaw === 'D' || slotRaw === 'M'
+              ? slotRaw
+              : undefined;
+          const boost = callbacksRef.current.getAuraBoost?.() ?? 1;
+          callbacksRef.current.onReactionReceived?.(o.emoji, slot, 'broadcast');
+          if (slot !== undefined) {
+            const d: AuraBatchPayload = { A: 0, B: 0, C: 0, D: 0, M: 0 };
+            d[slot === 'M' ? 'M' : slot] = boost;
+            callbacksRef.current.onReactionAurasFromBroadcast?.({
+              ...d,
+              globalHeatDelta: 3,
+            });
+          }
+        })
+        .on('broadcast', { event: 'aura_batch' }, ({ payload }: { payload?: unknown }) => {
+          const o = asRecord(payload);
+          if (!o) return;
+          const dA = Math.max(0, Math.floor(Number(o.A) || 0));
+          const dB = Math.max(0, Math.floor(Number(o.B) || 0));
+          const dC = Math.max(0, Math.floor(Number(o.C) || 0));
+          const dD = Math.max(0, Math.floor(Number(o.D) || 0));
+          const dM = Math.max(0, Math.floor(Number(o.M) || 0));
+          if (!dA && !dB && !dC && !dD && !dM) return;
+          callbacksRef.current.onAuraBatchDeltas?.({
+            A: dA,
+            B: dB,
+            C: dC,
+            D: dD,
+            M: dM,
+          });
+        })
+        .on('broadcast', { event: 'aura_master_sync' }, ({ payload }: { payload?: unknown }) => {
+          if (identityRef.current.isHost) return;
+          const o = asRecord(payload);
+          if (!o) return;
+          callbacksRef.current.onAuraMasterSync?.({
+            A: capAura(o.A),
+            B: capAura(o.B),
+            C: capAura(o.C),
+            D: capAura(o.D),
+            M: capAura(o.M),
+          });
+        })
+        .on('broadcast', { event: 'message' }, ({ payload }: { payload?: unknown }) => {
+          const o = asRecord(payload);
+          if (
+            !o ||
+            typeof o.user_name !== 'string' ||
+            typeof o.content !== 'string' ||
+            typeof o.id !== 'string'
+          ) {
+            return;
+          }
+          const ini = typeof o.initial === 'string' ? o.initial : undefined;
+          callbacksRef.current.onMessageReceived?.(o.user_name, o.content, ini, o.id, 'broadcast');
+        })
+        .on('broadcast', { event: 'delete_message' }, ({ payload }: { payload?: unknown }) => {
+          const o = asRecord(payload);
+          const mid = o?.messageId;
+          const idStr = typeof mid === 'string' ? mid : mid != null ? String(mid) : '';
+          if (idStr) callbacksRef.current.onMessageDeleted?.(idStr);
+        })
+        .on('broadcast', { event: 'arena_big_gift' }, ({ payload }: { payload?: unknown }) => {
+          const o = asRecord(payload);
+          if (!o) return;
+          callbacksRef.current.onArenaBigGift?.(o);
+
+          const cost = Number(o.cost) || 0;
+          if (cost > 0) {
+            const medBoost = Math.min(25, 4 + Math.floor(cost / 40));
+            callbacksRef.current.onReactionAurasFromBroadcast?.({
+              A: 0,
+              B: 0,
+              C: 0,
+              D: 0,
+              M: medBoost,
+              globalHeatDelta: Math.min(100, 20),
+            });
+          }
+        })
+        .on('broadcast', { event: 'pulse_voice' }, ({ payload }: { payload?: unknown }) => {
+          const o = asRecord(payload);
+          const dA = Math.max(0, Math.floor(Number(o?.dA) || 0));
+          const dB = Math.max(0, Math.floor(Number(o?.dB) || 0));
+          if (dA || dB) callbacksRef.current.onPulseVoice?.(dA, dB);
+        })
+        .on('broadcast', { event: 'announcement_banner' }, ({ payload }: { payload?: unknown }) => {
+          if (identityRef.current.isHost) return;
+          const o = asRecord(payload);
+          if (!o) return;
+          const rawText =
+            typeof o.text === 'string' ? o.text : o.text === null || o.text === undefined ? '' : String(o.text);
+          const trimmed = rawText.trim();
+          callbacksRef.current.onAnnouncementBanner?.({
+            text: trimmed.length > 0 ? trimmed : null,
+            durationSec: typeof o.durationSec === 'number' ? o.durationSec : undefined,
+          });
+        })
+        .on('broadcast', { event: 'beef_global_timer' }, ({ payload }: { payload?: unknown }) => {
+          if (identityRef.current.isHost) return;
+          const o = asRecord(payload);
+          if (!o) return;
+          const rawEnd = o.endsAtMs;
+          const endsAtMs =
+            rawEnd != null && Number.isFinite(Number(rawEnd)) ? Number(rawEnd) : null;
+          callbacksRef.current.onGlobalTimerSync?.({
+            active: !!o.active,
+            paused: !!o.paused,
+            remainingSec: Math.max(0, Math.floor(Number(o.remainingSec) || 0)),
+            endsAtMs,
+          });
+        })
+        .on('broadcast', { event: 'speaking_turn' }, ({ payload }: { payload?: unknown }) => {
+          if (identityRef.current.isHost) return;
+          const o = asRecord(payload);
+          if (!o) return;
+          const action = o.action;
+          if (action === 'start') {
+            callbacksRef.current.onSpeakingTurn?.({
+              action: 'start',
+              debaterId: typeof o.debaterId === 'string' ? o.debaterId : String(o.debaterId ?? ''),
+              duration:
+                typeof o.duration === 'number' ? Math.max(0, Math.floor(o.duration)) : undefined,
+              slot: o.slot === 'A' || o.slot === 'B' || o.slot === 'C' || o.slot === 'D' ? o.slot : undefined,
+              speakerName: typeof o.speakerName === 'string' ? o.speakerName : undefined,
+            });
+            return;
+          }
+          if (action === 'pause') {
+            callbacksRef.current.onSpeakingTurn?.({ action: 'pause' });
+            return;
+          }
+          if (action === 'resume') {
+            callbacksRef.current.onSpeakingTurn?.({ action: 'resume' });
+            return;
+          }
+          if (action === 'stop') {
+            callbacksRef.current.onSpeakingTurn?.({ action: 'stop' });
+          }
+        })
+        .on('broadcast', { event: 'mediator_floor' }, ({ payload }: { payload?: unknown }) => {
+          const o = asRecord(payload);
+          if (typeof o?.active === 'boolean') callbacksRef.current.onMediatorFloor?.(o.active);
+        })
+        .on('broadcast', { event: 'mediation_toss' }, ({ payload }: { payload?: unknown }) => {
+          const o = asRecord(payload);
+          if (typeof o?.firstName === 'string' && identityRef.current.userRole !== 'mediator') {
+            callbacksRef.current.onMediationToss?.(o.firstName);
+          }
+        })
+        .on('broadcast', { event: 'structured_debate' }, ({ payload }: { payload?: unknown }) => {
+          const o = asRecord(payload);
+          if (!o) return;
+          const en = o.enabled;
+          if (en === false) {
+            callbacksRef.current.onStructuredDebate?.({ enabled: false });
+            return;
+          }
+          if (en === true) {
+            callbacksRef.current.onStructuredDebate?.({
+              enabled: true,
+              budgetSeconds: typeof o.budgetSeconds === 'number' ? o.budgetSeconds : undefined,
+            });
+          }
+        })
+        .on('broadcast', { event: 'mediator_mute_challenger' }, ({ payload }: { payload?: unknown }) => {
+          const { userRole: ur, userId: uidSelf } = identityRef.current;
+          if (ur !== 'challenger') return;
+          const o = asRecord(payload);
+          const tgt = typeof o?.targetUserId === 'string' ? o.targetUserId : String(o?.targetUserId ?? '');
+          if (!tgt || tgt !== uidSelf) return;
+          callbacksRef.current.onMediatorMuteChallenger?.({ targetUserId: tgt, muted: !!o?.muted });
+        })
+        .on('broadcast', { event: 'beef_verdict' }, ({ payload }: { payload?: unknown }) => {
+          const o = asRecord(payload);
+          const vRaw = typeof o?.verdict === 'string' ? o.verdict : undefined;
+          let v: BeefVerdictBroadcastKind | null = null;
+          if (vRaw === 'resolved' || vRaw === 'closed' || vRaw === 'rematch') {
+            v = vRaw as BeefVerdictBroadcastKind;
+          }
+          if (!v) return;
+          callbacksRef.current.onBeefVerdict?.({ verdict: v });
+        })
+        .on('broadcast', { event: 'beef_ended' }, ({ payload }: { payload?: unknown }) => {
+          const o = asRecord(payload);
+          const reason = typeof o?.reason === 'string' ? o.reason : undefined;
+          const summaryRaw = o?.summary;
+          const summary =
+            summaryRaw !== null &&
+            summaryRaw !== undefined &&
+            typeof summaryRaw === 'object' &&
+            !Array.isArray(summaryRaw)
+              ? (summaryRaw as Record<string, unknown>)
+              : undefined;
+
+          callbacksRef.current.onBeefEnded?.({
+            summary,
+            reason,
+          });
+        })
+        .subscribe((status: string) => {
+          if (disposed) return;
+          if (status === 'SUBSCRIBED') {
+            channelRef.current = ch;
+            activeChannel = ch;
+            setLiveConnected(true);
+            liveBroadcastRetryAttemptsRef.current = 0;
+            void supabase.auth.getSession().then(({ data: { session } }) => {
+              const tok = session?.access_token;
+              if (tok) {
+                try {
+                  supabase.realtime.setAuth(tok);
+                } catch {
+                  /* ignore */
+                }
+              }
+            });
+            queueMicrotask(() => {
+              if (!channelRef.current) return;
+              callbacksRef.current.onLiveBroadcastSubscribed?.();
+              flushBroadcastOutbox();
+            });
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            teardownChannel(status);
+            scheduleReconnect();
+          }
+        });
+
+      activeChannel = ch;
+    }
+
+    function teardownChannelSilent(): void {
+      if (activeChannel) {
+        void supabase.removeChannel(activeChannel);
+        activeChannel = null;
+      }
+      channelRef.current = null;
+      setLiveConnected(false);
+    }
+
+    connect();
+
+    return () => {
+      disposed = true;
+      clearRetryTimer();
+      teardownChannelSilent();
+    };
+  }, [roomId, userId, userRole, params.isHost, flushBroadcastOutbox]);
+
+  /** Fallback polling `beef_messages` (8 s). */
+  useEffect(() => {
+    if (!roomId || !userId) return undefined;
+
+    let lastTs = new Date().toISOString();
+
+    const poll = async () => {
+      try {
+        const { data } = await supabase
+          .from('beef_messages')
+          .select('id, username, display_name, content, user_id, created_at')
+          .eq('beef_id', roomId)
+          .eq('is_deleted', false)
+          .gt('created_at', lastTs)
+          .order('created_at', { ascending: true })
+          .limit(10);
+
+        if (data && data.length > 0) {
+          lastTs = data[data.length - 1].created_at;
+
+          data.forEach((msg) => {
+            if (String(msg.user_id) === String(userId)) return;
+
+            callbacksRef.current.onMessageReceived?.(
+              String(msg.display_name || msg.username || ''),
+              String(msg.content ?? ''),
+              undefined,
+              String(msg.id),
+              'poll',
+            );
+          });
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const interval = window.setInterval(poll, 8000);
+    return () => window.clearInterval(interval);
+  }, [roomId, userId, userRole, params.isHost]);
+
+  /** Fallback polling `beef_reactions` (8 s). */
+  useEffect(() => {
+    if (!roomId || !userId) return undefined;
+
+    let lastReactionTs = new Date().toISOString();
+
+    const pollReactions = async () => {
+      try {
+        const { data } = await supabase
+          .from('beef_reactions')
+          .select('id, emoji, user_id, created_at')
+          .eq('beef_id', roomId)
+          .gt('created_at', lastReactionTs)
+          .order('created_at', { ascending: true })
+          .limit(20);
+
+        if (data && data.length > 0) {
+          lastReactionTs = data[data.length - 1].created_at;
+
+          data.forEach((r) => {
+            if (r.user_id === userId) return;
+            callbacksRef.current.onReactionReceived?.(r.emoji, undefined, 'poll');
+          });
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const interval = window.setInterval(pollReactions, 8000);
+    return () => window.clearInterval(interval);
+  }, [roomId, userId, userRole, params.isHost]);
+
+  return {
+    liveConnected,
+    safeBroadcast,
+    broadcastSfx,
+    broadcastReaction,
+    broadcastAuraBatch,
+    broadcastAuraMasterSync,
+    broadcastMessage,
+    broadcastDeleteMessage,
+    broadcastArenaBigGift,
+    broadcastPulseVoice,
+    broadcastAnnouncementBanner,
+    broadcastBeefGlobalTimer,
+    broadcastSpeakingTurn,
+    broadcastMediatorFloor,
+    broadcastMediationToss,
+    broadcastStructuredDebate,
+    broadcastMediatorMuteChallenger,
+    broadcastBeefVerdict,
+    broadcastBeefEnded,
+  };
+}
