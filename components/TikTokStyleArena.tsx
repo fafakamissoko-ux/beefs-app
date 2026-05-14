@@ -672,14 +672,9 @@ export function TikTokStyleArena({
     spectatorInviteSyncChRef.current = ch;
   }, []);
 
-  /** Spectateurs : deps [roomId, userId] + resync au changement de rôle — pas de churn `isViewer`. */
   useEffect(() => {
     syncSpectatorInviteChannel();
-  }, [roomId, userId, syncSpectatorInviteChannel]);
-
-  useEffect(() => {
-    syncSpectatorInviteChannel();
-  }, [userRole, syncSpectatorInviteChannel]);
+  }, [roomId, userId, userRole, syncSpectatorInviteChannel]);
 
   useEffect(() => {
     return () => {
