@@ -172,8 +172,9 @@ export interface UseArenaRealtimeResult {
  * Phase Phénix — moteur réseau isolé (`live_*` broadcast + Postgres Changes + polling secours DB).
  *
  * Contrat churn : **`callbacks`** est reflété dans **`callbacksRef` à chaque rendu**.
- * Effets souscription **`live_*`, `spectator_invite_*`, `beef_participants_live_*`** et polling
- * ne dépendent que de **`[roomId, userId, userRole, isHost]`**.
+ * Le canal **`live_*`** ne dépend que **`roomId`** (et **`flushBroadcastOutbox` stable**).
+ * Effets **`spectator_invite_*`** / **`beef_participants_live_*`** et polling secours restent
+ * sur leurs deps dédiées (**`roomId`/`userId`/rôle** où pertinent).
  */
 export function useArenaRealtime(
   params: ArenaRealtimeParams,
@@ -455,7 +456,7 @@ export function useArenaRealtime(
       teardownChannelSilent();
 
       const ch = supabase.channel(`live_${roomId}`, {
-        config: { broadcast: { self: false } },
+        config: { broadcast: { self: false, ack: true } },
       });
 
       ch
@@ -716,7 +717,7 @@ export function useArenaRealtime(
       clearRetryTimer();
       teardownChannelSilent();
     };
-  }, [roomId, userId, userRole, params.isHost, flushBroadcastOutbox]);
+  }, [roomId, flushBroadcastOutbox]);
 
   /** Fallback polling `beef_messages` (8 s). */
   useEffect(() => {
@@ -757,7 +758,7 @@ export function useArenaRealtime(
 
     const interval = window.setInterval(poll, 8000);
     return () => window.clearInterval(interval);
-  }, [roomId, userId, userRole, params.isHost]);
+  }, [roomId, userId]);
 
   /** Fallback polling `beef_reactions` (8 s). */
   useEffect(() => {
@@ -790,7 +791,7 @@ export function useArenaRealtime(
 
     const interval = window.setInterval(pollReactions, 8000);
     return () => window.clearInterval(interval);
-  }, [roomId, userId, userRole, params.isHost]);
+  }, [roomId, userId]);
 
   return {
     liveConnected,
