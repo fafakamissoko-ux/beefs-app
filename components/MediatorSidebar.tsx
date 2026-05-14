@@ -73,7 +73,7 @@ type MediatorSidebarProps = {
 };
 
 const SECTION_SHELL =
-  'rounded-2xl border border-white/10 bg-[#121214]/90 p-4 shadow-[0_8px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl';
+  'rounded-2xl border border-white/10 bg-slate-900/60 p-4 shadow-[0_8px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl';
 
 export function MediatorSidebar({
   open,
@@ -180,7 +180,7 @@ export function MediatorSidebar({
                   animate={{ x: 0, y: 0 }}
                   exit={isSmPanel ? { x: '100%', y: 0 } : { y: '100%', x: 0 }}
                   transition={{ type: 'spring', damping: 34, stiffness: 400 }}
-                  className="fixed inset-x-0 bottom-0 z-[9999] flex h-[85dvh] flex-col overflow-hidden rounded-t-[2rem] border-t border-white/10 bg-[#0a0a0c]/95 shadow-2xl backdrop-blur-3xl sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:left-auto sm:ml-0 sm:h-dvh sm:w-[400px] sm:rounded-none sm:border-l sm:border-t-0"
+                  className="fixed inset-x-0 bottom-0 z-[9999] flex h-[85dvh] flex-col overflow-hidden rounded-t-[2rem] border-t border-white/10 bg-[#0A0E17]/90 shadow-2xl backdrop-blur-3xl sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:left-auto sm:ml-0 sm:h-dvh sm:w-[400px] sm:rounded-none sm:border-l sm:border-t-0"
                 >
                   <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-white/25 sm:hidden" />
 
@@ -191,13 +191,13 @@ export function MediatorSidebar({
                       </h2>
                       {networkHealthy !== undefined && (
                         <div
-                          className="flex w-fit shrink-0 items-center gap-2 rounded-full border border-white/10 bg-black/50 px-2.5 py-1"
+                          className="flex w-fit shrink-0 items-center gap-2 rounded-full border border-white/10 bg-slate-950/50 px-2.5 py-1"
                           title={networkHealthy ? 'Signal realtime OK' : 'Signal faible ou perdu'}
                         >
                           <div
-                            className={`h-2 w-2 rounded-full ${networkHealthy ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.85)]' : 'animate-pulse bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.85)]'}`}
+                            className={`h-2 w-2 rounded-full ${networkHealthy ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.85)]' : 'animate-pulse bg-rose-500 shadow-[0_0_10px_rgba(225,29,72,0.85)]'}`}
                           />
-                          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-white/70">
+                          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-blue-200/70">
                             {networkHealthy ? 'Live sync' : 'Hors ligne'}
                           </span>
                         </div>
@@ -218,14 +218,14 @@ export function MediatorSidebar({
 
                   <div className="hide-scrollbar flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain p-4">
                     {/* Bloc 1 — Urgence */}
-                    <section className={`${SECTION_SHELL} border-red-500/25 bg-gradient-to-b from-red-950/40 to-transparent`}>
-                      <p className="mb-3 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/90">
+                    <section className={`${SECTION_SHELL} border-rose-500/25 bg-gradient-to-b from-rose-950/40 to-transparent`}>
+                      <p className="mb-3 font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-rose-400/90">
                         Contrôle urgence
                       </p>
                       <button
                         type="button"
                         onClick={onMuteAll}
-                        className="flex min-h-[3.5rem] w-full items-center justify-center gap-3 rounded-2xl border-2 border-red-500/60 bg-red-600/90 px-4 py-4 text-sm font-black uppercase tracking-widest text-white shadow-[0_0_32px_rgba(220,38,38,0.45)] transition hover:bg-red-500 active:scale-[0.98]"
+                        className="flex min-h-[3.5rem] w-full items-center justify-center gap-3 rounded-2xl border-2 border-rose-500/60 bg-rose-600/90 px-4 py-4 text-sm font-black uppercase tracking-widest text-white shadow-[0_0_32px_rgba(225,29,72,0.45)] transition hover:bg-rose-500 active:scale-[0.98]"
                       >
                         <MicOff className="h-6 w-6 shrink-0" strokeWidth={2} />
                         Silence total — couper tous les micros
@@ -235,10 +235,10 @@ export function MediatorSidebar({
                     {/* Bloc 2 — Participants */}
                     <section className={SECTION_SHELL}>
                       <div className="mb-3 flex items-center justify-between gap-2">
-                        <h3 className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-white/65">
+                        <h3 className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-blue-200/65">
                           Ring — participants
                         </h3>
-                        <span className="rounded-full bg-white/5 px-2 py-0.5 font-mono text-[9px] text-white/45">
+                        <span className="rounded-full border border-white/10 bg-slate-950/40 px-2 py-0.5 font-mono text-[9px] text-blue-200/50">
                           {remoteRows.length} lien(s)
                         </span>
                       </div>
@@ -250,7 +250,7 @@ export function MediatorSidebar({
                             return (
                               <li
                                 key={row.sessionId || row.slot}
-                                className="flex flex-col gap-3 rounded-xl border border-white/[0.08] bg-black/35 p-3 sm:flex-row sm:items-center sm:justify-between"
+                                className="flex flex-col gap-3 rounded-xl border border-white/10 bg-slate-950/50 p-3 sm:flex-row sm:items-center sm:justify-between"
                               >
                                 <div className="min-w-0">
                                   <p className="truncate font-semibold text-white">
@@ -276,7 +276,7 @@ export function MediatorSidebar({
                                     className={`flex min-h-[40px] min-w-[5.5rem] items-center justify-center rounded-xl border px-3 font-mono text-[10px] font-black uppercase tracking-wide transition disabled:cursor-not-allowed disabled:opacity-35 ${
                                       muted
                                         ? 'border-emerald-500/50 bg-emerald-600/25 text-emerald-200 hover:bg-emerald-600/35'
-                                        : 'border-red-500/55 bg-red-600/25 text-red-100 hover:bg-red-600/35'
+                                        : 'border-rose-500/55 bg-rose-600/25 text-rose-100 hover:bg-rose-600/35'
                                     }`}
                                   >
                                     {muted ? (
@@ -298,7 +298,7 @@ export function MediatorSidebar({
                                       if (!row.sessionId) return;
                                       onHotMic(row.slot, speakingTurnSec);
                                     }}
-                                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-amber-500/45 bg-amber-500/15 px-3 font-mono text-[10px] font-black uppercase tracking-wide text-amber-200 transition hover:bg-amber-500/25 disabled:cursor-not-allowed disabled:opacity-35"
+                                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-cyan-500/45 bg-cyan-500/15 px-3 font-mono text-[10px] font-black uppercase tracking-wide text-cyan-200 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-35"
                                   >
                                     <Radio className="h-3.5 w-3.5" />
                                     Hot mic
@@ -307,7 +307,7 @@ export function MediatorSidebar({
                                     type="button"
                                     disabled={!row.sessionId}
                                     onClick={() => void onEjectParticipant(row.sessionId)}
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white/55 transition hover:border-red-500/40 hover:bg-red-950/40 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-35"
+                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-blue-200/55 transition hover:border-rose-500/40 hover:bg-rose-950/40 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-35"
                                     aria-label="Expulser le participant"
                                     title="Expulser"
                                   >
@@ -319,7 +319,7 @@ export function MediatorSidebar({
                           })}
                         </ul>
                       ) : (
-                        <div className="rounded-xl border border-dashed border-white/12 py-10 text-center font-mono text-[11px] uppercase tracking-widest text-white/35">
+                        <div className="rounded-xl border border-dashed border-white/10 py-10 text-center font-mono text-[11px] uppercase tracking-widest text-blue-200/45">
                           Aucun challenger connecté sur la grille
                         </div>
                       )}
@@ -327,12 +327,12 @@ export function MediatorSidebar({
 
                     {/* Bloc 3 — Chronos & parole */}
                     <section className={SECTION_SHELL}>
-                      <h3 className="mb-4 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-white/65">
+                      <h3 className="mb-4 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-blue-200/65">
                         Chronomètres &amp; parole
                       </h3>
 
-                      <div className="mb-6 rounded-xl border border-white/[0.07] bg-black/40 p-4">
-                        <div className="mb-3 flex items-center gap-2 text-white/50">
+                      <div className="mb-6 rounded-xl border border-white/10 bg-slate-950/50 p-4">
+                        <div className="mb-3 flex items-center gap-2 text-blue-200/55">
                           <Timer className="h-4 w-4 text-sky-400" strokeWidth={1.5} />
                           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">
                             Chronomètre global — beef
@@ -340,7 +340,7 @@ export function MediatorSidebar({
                         </div>
                         {!timerActive ? (
                           <>
-                            <p className="mb-3 text-center text-[11px] text-white/45">
+                            <p className="mb-3 text-center text-[11px] text-blue-200/50">
                               Définissez la durée puis lancez le direct.
                             </p>
                             <div className="mb-4 flex justify-center">
@@ -367,7 +367,7 @@ export function MediatorSidebar({
                               type="button"
                               disabled={startingBeef}
                               onClick={() => void onStartBeef(matchDurationMin * 60)}
-                              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-teal-500 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg transition hover:brightness-110 active:scale-[0.99] disabled:opacity-45"
+                              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg transition hover:brightness-110 active:scale-[0.99] disabled:opacity-45"
                             >
                               <Play className="h-4 w-4 fill-current" />
                               {startingBeef ? 'Ouverture…' : 'Démarrer le chrono LIVE'}
@@ -413,8 +413,8 @@ export function MediatorSidebar({
                         )}
                       </div>
 
-                      <div className="rounded-xl border border-white/[0.07] bg-black/35 p-4">
-                        <p className="mb-3 text-center font-mono text-[10px] font-bold uppercase tracking-widest text-white/45">
+                      <div className="rounded-xl border border-white/10 bg-slate-950/50 p-4">
+                        <p className="mb-3 text-center font-mono text-[10px] font-bold uppercase tracking-widest text-blue-200/50">
                           Durée allouée au tour / Hot mic (TimeWheelPicker)
                         </p>
                         <TimeWheelPicker
@@ -434,7 +434,7 @@ export function MediatorSidebar({
                             <button
                               type="button"
                               onClick={onStopSpeakingTurn}
-                              className="w-full rounded-2xl border-2 border-red-500/60 bg-red-600 py-4 font-mono text-xs font-black uppercase tracking-[0.15em] text-white shadow-[0_0_24px_rgba(220,38,38,0.35)] transition hover:bg-red-500 active:scale-[0.99]"
+                              className="w-full rounded-2xl border-2 border-rose-500/60 bg-rose-600 py-4 font-mono text-xs font-black uppercase tracking-[0.15em] text-white shadow-[0_0_24px_rgba(225,29,72,0.35)] transition hover:bg-rose-500 active:scale-[0.99]"
                             >
                               Couper le tour de parole immédiatement
                             </button>
@@ -461,7 +461,7 @@ export function MediatorSidebar({
 
                     {/* Bloc 4 — Production */}
                     <section className={SECTION_SHELL}>
-                      <h3 className="mb-4 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-white/65">
+                      <h3 className="mb-4 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-blue-200/65">
                         Outils de production
                       </h3>
 
@@ -472,15 +472,15 @@ export function MediatorSidebar({
                           className={`flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-3 transition ${
                             mediatorMicEnabled
                               ? 'border-white/12 bg-white/[0.07]'
-                              : 'border-red-500/35 bg-red-950/30'
+                              : 'border-rose-500/35 bg-rose-950/30'
                           }`}
                         >
                           {mediatorMicEnabled ? (
                             <Mic className="h-5 w-5 text-white" strokeWidth={1.5} />
                           ) : (
-                            <MicOff className="h-5 w-5 text-red-400" strokeWidth={1.5} />
+                            <MicOff className="h-5 w-5 text-rose-400" strokeWidth={1.5} />
                           )}
-                          <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-white/65">
+                          <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-blue-200/60">
                             Mon micro
                           </span>
                         </button>
@@ -490,22 +490,22 @@ export function MediatorSidebar({
                           className={`flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-3 transition ${
                             mediatorCamEnabled
                               ? 'border-white/12 bg-white/[0.07]'
-                              : 'border-red-500/35 bg-red-950/30'
+                              : 'border-rose-500/35 bg-rose-950/30'
                           }`}
                         >
                           {mediatorCamEnabled ? (
                             <Video className="h-5 w-5 text-white" strokeWidth={1.5} />
                           ) : (
-                            <VideoOff className="h-5 w-5 text-red-400" strokeWidth={1.5} />
+                            <VideoOff className="h-5 w-5 text-rose-400" strokeWidth={1.5} />
                           )}
-                          <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-white/65">
+                          <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-blue-200/60">
                             Ma caméra
                           </span>
                         </button>
                       </div>
 
-                      <div className="rounded-xl border border-white/[0.08] bg-black/40 p-3">
-                        <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wider text-white/50">
+                      <div className="rounded-xl border border-white/10 bg-slate-950/50 p-3">
+                        <p className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wider text-blue-200/55">
                           Bannière — message public
                         </p>
                         <label htmlFor="mediator-announce-input" className="sr-only">
@@ -517,9 +517,9 @@ export function MediatorSidebar({
                           onChange={(e) => setAnnounceDraft(e.target.value)}
                           rows={3}
                           placeholder="Message affiché sur l’arène…"
-                          className="mb-3 w-full resize-none rounded-2xl border border-white/12 bg-[#18181c] px-3 py-3 font-sans text-sm text-white placeholder-white/35 focus:border-amber-400/35 focus:outline-none"
+                          className="mb-3 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/50 px-3 py-3 font-sans text-sm text-white placeholder-blue-200/35 focus:border-amber-400/35 focus:outline-none"
                         />
-                        <p className="mb-2 font-mono text-[9px] font-bold uppercase tracking-wider text-white/40">
+                        <p className="mb-2 font-mono text-[9px] font-bold uppercase tracking-wider text-blue-200/45">
                           Durée d’affichage
                         </p>
                         <div className="mb-3 flex flex-wrap gap-1.5">
@@ -563,12 +563,12 @@ export function MediatorSidebar({
                         </div>
                       </div>
 
-                      <div className="my-6 border-t border-white/[0.07] pt-5">
+                      <div className="my-6 border-t border-white/10 pt-5">
                         <div className="mb-3 flex items-center justify-between">
-                          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-white/55">
+                          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-blue-200/60">
                             Invités en attente
                           </span>
-                          <span className="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[9px] text-white/65">
+                          <span className="rounded-full border border-white/10 bg-slate-950/45 px-2 py-0.5 font-mono text-[9px] text-blue-200/65">
                             {pendingInvites.length}
                           </span>
                         </div>
@@ -581,14 +581,14 @@ export function MediatorSidebar({
                         )}
                         <ul className="mt-4 space-y-2">
                           {pendingInvites.length === 0 ? (
-                            <li className="rounded-xl border border-dashed border-white/12 py-6 text-center font-mono text-[10px] text-white/38">
+                            <li className="rounded-xl border border-dashed border-white/10 py-6 text-center font-mono text-[10px] text-blue-200/45">
                               Aucune invitation en attente
                             </li>
                           ) : (
                             pendingInvites.map((inv) => (
                               <li
                                 key={inv.userId}
-                                className="flex flex-col gap-2 rounded-xl border border-white/[0.08] bg-black/30 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                                className="flex flex-col gap-2 rounded-xl border border-white/10 bg-slate-950/50 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
                               >
                                 <span className="min-w-0 break-words text-sm font-medium text-white/90">
                                   {inv.label}
@@ -600,7 +600,7 @@ export function MediatorSidebar({
                                       onRejectPendingInvite?.(inv.userId);
                                       onClose();
                                     }}
-                                    className="flex-1 rounded-xl border border-red-500/45 bg-red-600/85 py-2.5 font-mono text-[10px] font-black uppercase tracking-wide text-white hover:bg-red-500 sm:flex-initial sm:px-6"
+                                    className="flex-1 rounded-xl border border-rose-500/45 bg-rose-600/85 py-2.5 font-mono text-[10px] font-black uppercase tracking-wide text-white hover:bg-rose-500 sm:flex-initial sm:px-6"
                                   >
                                     Refuser
                                   </button>
@@ -624,13 +624,13 @@ export function MediatorSidebar({
 
                     {/* Bloc 5 — Verdict (danger) */}
                     <section
-                      className={`${SECTION_SHELL} border-red-500/30 bg-gradient-to-b from-red-950/25 to-transparent pb-8`}
+                      className={`${SECTION_SHELL} border-rose-500/30 bg-gradient-to-b from-rose-950/25 to-transparent pb-8`}
                     >
                       <div className="mb-4 flex items-center gap-2">
-                        <span className="rounded bg-red-600/85 px-2 py-0.5 font-mono text-[9px] font-black uppercase text-white">
+                        <span className="rounded bg-rose-600/85 px-2 py-0.5 font-mono text-[9px] font-black uppercase text-white">
                           Zone critique
                         </span>
-                        <h3 className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-red-400/95">
+                        <h3 className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-rose-400/95">
                           Verdict &amp; clôture
                         </h3>
                       </div>
@@ -638,12 +638,12 @@ export function MediatorSidebar({
                       {confirmVerdict ? (
                         <div
                           role="alert"
-                          className="space-y-4 rounded-xl border-2 border-red-500 bg-red-950/65 p-4 shadow-[inset_0_0_0_1px_rgba(239,68,68,0.35)]"
+                          className="space-y-4 rounded-xl border-2 border-rose-500 bg-rose-950/65 p-4 shadow-[inset_0_0_0_1px_rgba(225,29,72,0.35)]"
                         >
-                          <p className="text-center font-mono text-[10px] font-black uppercase tracking-widest text-red-200">
+                          <p className="text-center font-mono text-[10px] font-black uppercase tracking-widest text-rose-200">
                             Confirmation requise
                           </p>
-                          <p className="text-center text-[13px] leading-snug text-red-50/95">
+                          <p className="text-center text-[13px] leading-snug text-rose-50/95">
                             {confirmVerdict === 'resolved'
                               ? 'Proclamer la paix terminera ou marquera le dénouement officiel.'
                               : confirmVerdict === 'rematch'
@@ -665,7 +665,7 @@ export function MediatorSidebar({
                                 setConfirmVerdict(null);
                                 onClose();
                               }}
-                              className="flex-[1.2] rounded-xl bg-red-600 py-3 font-mono text-[11px] font-black uppercase text-white shadow-[0_0_20px_rgba(220,38,38,0.55)] hover:bg-red-500"
+                              className="flex-[1.2] rounded-xl bg-rose-600 py-3 font-mono text-[11px] font-black uppercase text-white shadow-[0_0_20px_rgba(225,29,72,0.55)] hover:bg-rose-500"
                             >
                               Exécuter le verdict
                             </button>
@@ -690,7 +690,7 @@ export function MediatorSidebar({
                           <button
                             type="button"
                             onClick={() => setConfirmVerdict('closed')}
-                            className="w-full rounded-2xl border border-red-400/55 bg-red-950/55 py-3.5 font-mono text-[12px] font-black uppercase tracking-widest text-red-100 transition hover:bg-red-900/65"
+                            className="w-full rounded-2xl border border-rose-400/55 bg-rose-950/55 py-3.5 font-mono text-[12px] font-black uppercase tracking-widest text-rose-100 transition hover:bg-rose-900/65"
                           >
                             Sceller l’arène
                           </button>
