@@ -2827,7 +2827,7 @@ export function TikTokStyleArena({
   }, [liveConnected, isHost, beefEnded, roomId]);
 
   useEffect(() => {
-    if (!isHost || beefEnded || !liveConnected) return;
+    if (beefEnded || !liveConnected) return;
     const id = window.setInterval(() => {
       const b = auraBufferRef.current;
       if (!(b.A || b.B || b.C || b.D || b.M)) return;
@@ -2835,7 +2835,7 @@ export function TikTokStyleArena({
       b.A = b.B = b.C = b.D = b.M = 0;
     }, 1500);
     return () => window.clearInterval(id);
-  }, [isHost, beefEnded, liveConnected]);
+  }, [beefEnded, liveConnected]);
 
   useEffect(() => {
     if (!isHost || beefEnded || !liveConnected) return;

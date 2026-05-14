@@ -215,9 +215,17 @@ export function useArenaRealtime(
   const safeBroadcast = useCallback((event: string, payload: Record<string, unknown> = {}) => {
     const ch = channelRef.current;
     if (ch) {
-      void ch.send({ type: 'broadcast', event, payload }).catch((err: unknown) => {
-        console.warn(`[Live] Broadcast failed: ${event}`, err);
-      });
+      ch.send({ type: 'broadcast', event, payload })
+        .then((status) => {
+          if (status !== 'ok') {
+            console.error(
+              `[Live] BROADCAST REJETÉ par le serveur pour l'événement ${event}. Statut: ${status}`,
+            );
+          }
+        })
+        .catch((err: unknown) => {
+          console.error(`[Live] Erreur réseau inattendue sur ${event}:`, err);
+        });
       return;
     }
     if (event === 'announcement_banner') {
