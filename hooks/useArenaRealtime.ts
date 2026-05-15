@@ -466,8 +466,14 @@ export function useArenaRealtime(
       clearRetryTimer();
       teardownChannelSilent();
 
+      // Éradication préventive des canaux zombies (Race condition React 18)
+      const existing = supabase.getChannels().find((c) => c.topic === `live_${roomId}`);
+      if (existing) {
+        void supabase.removeChannel(existing);
+      }
+
       const ch = supabase.channel(`live_${roomId}`, {
-        config: { broadcast: { self: false, ack: true } },
+        config: { broadcast: { self: false } },
       });
 
       ch
@@ -724,10 +730,14 @@ export function useArenaRealtime(
       setLiveConnected(false);
     }
 
-    connect();
+    // Délai anti-zombie pour laisser le nettoyage du Strict Mode s'opérer
+    const connectTimer = window.setTimeout(() => {
+      if (!disposed) connect();
+    }, 250);
 
     return () => {
       disposed = true;
+      window.clearTimeout(connectTimer);
       clearRetryTimer();
       teardownChannelSilent();
     };
