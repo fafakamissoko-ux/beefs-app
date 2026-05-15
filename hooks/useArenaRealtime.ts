@@ -215,8 +215,10 @@ export function useArenaRealtime(
   const safeBroadcast = useCallback((event: string, payload: Record<string, unknown> = {}) => {
     const ch = channelRef.current;
     if (ch) {
+      console.log(`[TRACER - ⬆️ ENVOI] [${event}] prêt à partir. Payload:`, payload);
       ch.send({ type: 'broadcast', event, payload })
         .then((status) => {
+          console.log(`[TRACER - 📡 REPONSE SERVEUR] [${event}] -> Statut:`, status);
           if (status !== 'ok') {
             console.error(
               `[Live] BROADCAST REJETÉ par le serveur pour l'événement ${event}. Statut: ${status}`,
@@ -228,6 +230,7 @@ export function useArenaRealtime(
         });
       return;
     }
+    console.warn(`[TRACER - ⏳ HORS LIGNE] Canal non connecté. Mise en attente de [${event}]...`);
     if (event === 'announcement_banner') {
       broadcastOutboxRef.current = broadcastOutboxRef.current.filter((x) => x.event !== 'announcement_banner');
     }
@@ -493,6 +496,7 @@ export function useArenaRealtime(
           }
         })
         .on('broadcast', { event: 'aura_batch' }, ({ payload }: { payload?: unknown }) => {
+          console.log('[TRACER - ⬇️ REÇU] Événement [aura_batch]', payload);
           const o = asRecord(payload);
           if (!o) return;
           const dA = Math.max(0, Math.floor(Number(o.A) || 0));
@@ -565,6 +569,7 @@ export function useArenaRealtime(
           if (dA || dB) callbacksRef.current.onPulseVoice?.(dA, dB);
         })
         .on('broadcast', { event: 'announcement_banner' }, ({ payload }: { payload?: unknown }) => {
+          console.log('[TRACER - ⬇️ REÇU] Événement [announcement_banner]', payload);
           if (identityRef.current.isHost) return;
           const o = asRecord(payload);
           if (!o) return;
@@ -679,6 +684,7 @@ export function useArenaRealtime(
           });
         })
         .subscribe((status: string) => {
+          console.log(`[TRACER - 🔌 CANAL live_${roomId}] Changement d'état:`, status);
           if (disposed) return;
           if (status === 'SUBSCRIBED') {
             channelRef.current = ch;
