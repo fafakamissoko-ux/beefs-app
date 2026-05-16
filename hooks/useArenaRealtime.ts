@@ -346,52 +346,63 @@ export function useArenaRealtime(
 
   /** Canal spectateur invitation (un seul effet orchestré pour anti-spam / pas de duplication). */
   useEffect(() => {
-    const prev = spectatorInviteSyncChRef.current;
-    if (prev) {
-      void supabase.removeChannel(prev);
-      spectatorInviteSyncChRef.current = null;
-    }
-
     if (!roomId || !userId) return undefined;
     const currentRole = identityRef.current.userRole;
     if (currentRole !== 'viewer' && currentRole !== 'spectator') return undefined;
 
-    const ch = supabase
-      .channel(`spectator_invite_sync_${roomId}_${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'beef_participants',
-          filter: `beef_id=eq.${roomId}`,
-        },
-        (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
-          const newRow = payload.new;
-          const oldRow = payload.old;
-          const rawUid = newRow.user_id;
-          const rowUserStr =
-            typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
-          if (rowUserStr !== String(userId)) return;
+    let disposed = false;
+    let ch: ReturnType<typeof supabase.channel> | null = null;
 
-          if (newRow.invite_status === 'accepted') {
-            if (oldRow?.invite_status === 'accepted') return;
-            callbacksRef.current.onSpectatorSelfInviteAccepted?.();
+    async function setup() {
+      const topic = `spectator_invite_sync_${roomId}_${userId}`;
+      const existing = supabase.getChannels().find((c) => c.topic === topic);
+      if (existing) {
+        await supabase.removeChannel(existing);
+      }
+      if (disposed) return;
+
+      ch = supabase
+        .channel(topic)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'beef_participants',
+            filter: `beef_id=eq.${roomId}`,
+          },
+          (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
+            const newRow = payload.new;
+            const oldRow = payload.old;
+            const rawUid = newRow.user_id;
+            const rowUserStr =
+              typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
+            if (rowUserStr !== String(userId)) return;
+
+            if (newRow.invite_status === 'accepted') {
+              if (oldRow?.invite_status === 'accepted') return;
+              callbacksRef.current.onSpectatorSelfInviteAccepted?.();
+            }
+          },
+        )
+        .subscribe((status) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            console.warn('[Live] spectator_invite_sync canal indisponible');
           }
-        },
-      )
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn('[Live] spectator_invite_sync canal indisponible');
-        }
-      });
+        });
 
-    spectatorInviteSyncChRef.current = ch;
+      spectatorInviteSyncChRef.current = ch;
+    }
+
+    void setup();
 
     return () => {
-      if (spectatorInviteSyncChRef.current === ch) {
+      disposed = true;
+      if (ch) {
         void supabase.removeChannel(ch);
-        spectatorInviteSyncChRef.current = null;
+        if (spectatorInviteSyncChRef.current === ch) {
+          spectatorInviteSyncChRef.current = null;
+        }
       }
     };
   }, [roomId, userId]);
@@ -447,7 +458,7 @@ export function useArenaRealtime(
       const delay = Math.min(2000 * liveBroadcastRetryAttemptsRef.current, 15_000);
       liveBroadcastRetryTimerRef.current = window.setTimeout(() => {
         liveBroadcastRetryTimerRef.current = null;
-        if (!disposed) connect();
+        if (!disposed) void connect();
       }, delay);
     }
 
@@ -461,16 +472,17 @@ export function useArenaRealtime(
       setLiveConnected(false);
     }
 
-    function connect(): void {
+    async function connect(): Promise<void> {
       if (!roomId || disposed) return;
       clearRetryTimer();
       teardownChannelSilent();
 
-      // Éradication préventive des canaux zombies (Race condition React 18)
+      // Éradication préventive des canaux zombies (Asynchrone)
       const existing = supabase.getChannels().find((c) => c.topic === `live_${roomId}`);
       if (existing) {
-        void supabase.removeChannel(existing);
+        await supabase.removeChannel(existing);
       }
+      if (disposed) return;
 
       const ch = supabase.channel(`live_${roomId}`, {
         config: { broadcast: { self: false } },
@@ -730,14 +742,10 @@ export function useArenaRealtime(
       setLiveConnected(false);
     }
 
-    // Délai anti-zombie pour laisser le nettoyage du Strict Mode s'opérer
-    const connectTimer = window.setTimeout(() => {
-      if (!disposed) connect();
-    }, 250);
+    void connect();
 
     return () => {
       disposed = true;
-      window.clearTimeout(connectTimer);
       clearRetryTimer();
       teardownChannelSilent();
     };
