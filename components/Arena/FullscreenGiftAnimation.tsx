@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { REALTIME_LISTEN_TYPES } from '@supabase/realtime-js';
-import { supabase } from '@/lib/supabase/client';
 
 const BIG_GIFT_MIN = 500;
 const ANIM_MS = 4500;
@@ -184,12 +182,14 @@ function GiftVisual({ theme, emoji, label, senderName, cost }: ArenaBigGiftPaylo
 }
 
 type Props = {
+  /** Conservé pour l’API parente ; le flux réseau est géré par `useArenaRealtime` + `localBigGift`. */
   roomId: string;
-  /** Même onglet : broadcast self=false n’inclut pas l’émetteur — on rejoue l’anim localement. */
+  /** Cadeau « gros budget » à animer (émetteur inclus : `self: false` côté hook). */
   localBigGift: ArenaBigGiftPayload | null;
 };
 
 export function FullscreenGiftAnimation({ roomId, localBigGift }: Props) {
+  void roomId;
   const labelId = useId();
   const [active, setActive] = useState<ActiveAnim>(null);
 
@@ -203,33 +203,6 @@ export function FullscreenGiftAnimation({ roomId, localBigGift }: Props) {
     if (!localBigGift || localBigGift.cost < BIG_GIFT_MIN) return;
     play(localBigGift, `local_${Date.now()}`);
   }, [localBigGift, play]);
-
-  useEffect(() => {
-    if (!roomId) return;
-    const ch = supabase
-      .channel(`live_${roomId}`, { config: { broadcast: { self: false } } })
-      // Enum + callback `any` : évite que TS prenne l'overload `system` (Vercel / TS strict)
-      .on(REALTIME_LISTEN_TYPES.BROADCAST, { event: 'arena_big_gift' }, (msg: any) => {
-        const payload = msg?.payload as ArenaBigGiftPayload | undefined;
-        if (!payload || typeof payload.cost !== 'number' || payload.cost < BIG_GIFT_MIN) return;
-        const p = payload;
-        if (!p.label || !p.emoji || !p.senderName) return;
-        play(
-          {
-            cost: p.cost,
-            label: p.label,
-            emoji: p.emoji,
-            giftTypeId: p.giftTypeId || 'burst',
-            senderName: p.senderName,
-          },
-          `rt_${p.senderName}_${p.cost}_${Date.now()}`
-        );
-      })
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(ch);
-    };
-  }, [roomId, play]);
 
   const theme = active ? themeForGiftId(active.giftTypeId) : 'burst';
 
