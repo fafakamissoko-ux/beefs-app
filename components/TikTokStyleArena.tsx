@@ -753,17 +753,21 @@ export function TikTokStyleArena({
   const loadParticipants = useCallback(async () => {
     const { data } = await supabase
       .from('beef_participants')
-      .select('user_id, role, is_main')
+      .select('user_id, role, is_main, invite_status')
       .eq('beef_id', roomId);
     if (!data?.length) {
       setParticipantRoles({});
       return;
     }
+    type ParticipantRow = { user_id: string; role: string; invite_status?: string | null };
+    const validData = (data as ParticipantRow[]).filter(
+      (p) => p.role === 'mediator' || p.role === 'host' || p.invite_status === 'accepted',
+    );
     const { fetchUserPublicByIds } = await import('@/lib/fetch-user-public-profile');
-    const ids = data.map((p) => p.user_id).filter(Boolean);
+    const ids = validData.map((p) => p.user_id).filter(Boolean);
     const pubMap = await fetchUserPublicByIds(supabase, ids, 'id, username, display_name');
     const roles: Record<string, BeefParticipantRowMeta> = {};
-    data.forEach((p) => {
+    validData.forEach((p) => {
       const row = p as { user_id: string; role: string };
       const u = pubMap.get(row.user_id);
       const dn = (u?.display_name ?? '').trim();
@@ -2094,13 +2098,15 @@ export function TikTokStyleArena({
       speakingTurnActive &&
       speakingTurnTarget &&
       (speakingTurnTarget === userId || speakingTurnTarget === localParticipant?.arenaUserId);
+
     if (speakingTurnActive && speakingTurnTarget) {
-      setLocalAudioEnabled(!!floorHotMic);
-      return;
+      if (!floorHotMic) {
+        setLocalAudioEnabled(false); // Coupe forcée si ce n'est pas son tour
+      }
+      return; // Si c'est son tour, on quitte l'effet pour le laisser libre de son bouton
     }
     if (!structuredDebateEnabled) {
-      setLocalAudioEnabled(true);
-      return;
+      return; // En débat libre, on quitte l'effet. L'utilisateur gère son propre mute.
     }
     setLocalAudioEnabled(false);
   }, [
@@ -3375,6 +3381,12 @@ export function TikTokStyleArena({
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  const isLockedByTurn =
+                                    structuredDebateEnabled && speakingTurnActive && effectiveHotMicSpeakerSlot !== cfg.slot;
+                                  if (micMutedByMediator || mediatorHoldingFloor || isLockedByTurn) {
+                                    toast('Micro verrouillé par le médiateur ou les règles du débat.', 'error');
+                                    return;
+                                  }
                                   toggleMic();
                                 }}
                                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-slate-950/50 shadow-lg backdrop-blur-xl ${micEnabled && !micMutedByMediator ? 'text-white' : 'bg-rose-500 text-white'}`}
@@ -3624,7 +3636,23 @@ export function TikTokStyleArena({
           onRestartSpeakingTurn={restartSpeakingTurn}
           beefTimeFormatted={formatBeefTime(beefTimeRemaining)}
           onSetChallengerMuted={handleMediatorChallengerMute}
-          onEjectParticipant={async (sid) => { const ok = await ejectRemoteParticipant(sid); if (ok) toast('Participant expulsé', 'success'); else toast('Expulsion impossible.', 'error'); }}
+          onEjectParticipant={async (sid) => {
+            const ok = await ejectRemoteParticipant(sid);
+            if (ok) {
+              const target = remoteParticipants.find((p) => p.sessionId === sid);
+              if (target?.arenaUserId) {
+                await runBeefManage({
+                  action: 'REMOVE_PARTICIPANT',
+                  removeKind: 'kick',
+                  beefId: roomId,
+                  participantId: target.arenaUserId,
+                });
+              }
+              toast('Participant expulsé', 'success');
+            } else {
+              toast('Expulsion impossible.', 'error');
+            }
+          }}
           onAdjustTime={adjustBeefTime}
           mediatorMicEnabled={micEnabled}
           mediatorCamEnabled={camEnabled}
