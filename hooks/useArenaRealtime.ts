@@ -174,7 +174,8 @@ export interface UseArenaRealtimeResult {
  * Le canal **`live_*`** ne dépend que **`roomId`** (et **`flushBroadcastOutbox` stable**).
  * **`spectator_invite_*`** : deps **`[roomId, userId]`** ; le filtre viewer/spectateur lit **`identityRef.current.userRole`**.
  * **`beef_participants_live_*`** : **`[roomId]`** uniquement.
- * **`live_*` broadcast** : **`[roomId, flushBroadcastOutbox]`** — souscription directe (sans couche async / reconnexion bornée).
+ * **`live_*` broadcast** : **`[roomId, flushBroadcastOutbox]`** — souscription après debounce (~150 ms Strict Mode),
+ * reconnexion silencieuse ~3 s après `CLOSED` / `CHANNEL_ERROR` / `TIMED_OUT`.
  * Le polling secours utilise **`[roomId, userId]`**.
  */
 export function useArenaRealtime(
@@ -341,55 +342,65 @@ export function useArenaRealtime(
     const currentRole = identityRef.current.userRole;
     if (currentRole !== 'viewer' && currentRole !== 'spectator') return undefined;
 
-    const topic = `spectator_invite_sync_${roomId}_${userId}`;
-    const ch = supabase
-      .channel(topic)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'beef_participants', filter: `beef_id=eq.${roomId}` },
-        (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
-          const newRow = payload.new;
-          const oldRow = payload.old;
-          const rawUid = newRow.user_id;
-          const rowUserStr = typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
-          if (rowUserStr !== String(userId)) return;
+    let ch: ReturnType<typeof supabase.channel> | null = null;
 
-          if (newRow.invite_status === 'accepted' && oldRow?.invite_status !== 'accepted') {
-            callbacksRef.current.onSpectatorSelfInviteAccepted?.();
+    const initTimer = window.setTimeout(() => {
+      const topic = `spectator_invite_sync_${roomId}_${userId}`;
+      ch = supabase
+        .channel(topic)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'beef_participants', filter: `beef_id=eq.${roomId}` },
+          (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
+            const newRow = payload.new;
+            const oldRow = payload.old;
+            const rawUid = newRow.user_id;
+            const rowUserStr = typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
+            if (rowUserStr !== String(userId)) return;
+
+            if (newRow.invite_status === 'accepted' && oldRow?.invite_status !== 'accepted') {
+              callbacksRef.current.onSpectatorSelfInviteAccepted?.();
+            }
+          },
+        )
+        .subscribe((status) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            console.warn('[Live] spectator_invite_sync canal indisponible');
           }
-        },
-      )
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn('[Live] spectator_invite_sync canal indisponible');
-        }
-      });
+        });
+    }, 150);
 
     return () => {
-      void supabase.removeChannel(ch);
+      window.clearTimeout(initTimer);
+      if (ch) void supabase.removeChannel(ch);
     };
   }, [roomId, userId]);
   useEffect(() => {
     if (!roomId) return undefined;
 
-    const ch = supabase
-      .channel(`beef_participants_live_${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'beef_participants',
-          filter: `beef_id=eq.${roomId}`,
-        },
-        () => {
-          callbacksRef.current.onBeefParticipantsTableChanged?.();
-        },
-      )
-      .subscribe();
+    let ch: ReturnType<typeof supabase.channel> | null = null;
+
+    const initTimer = window.setTimeout(() => {
+      ch = supabase
+        .channel(`beef_participants_live_${roomId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'beef_participants',
+            filter: `beef_id=eq.${roomId}`,
+          },
+          () => {
+            callbacksRef.current.onBeefParticipantsTableChanged?.();
+          },
+        )
+        .subscribe();
+    }, 150);
 
     return () => {
-      void supabase.removeChannel(ch);
+      window.clearTimeout(initTimer);
+      if (ch) void supabase.removeChannel(ch);
     };
   }, [roomId]);
 
@@ -401,11 +412,22 @@ export function useArenaRealtime(
       return undefined;
     }
 
-    const ch = supabase.channel(`live_${roomId}`, {
-      config: { broadcast: { self: false } },
-    });
+    let ch: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+    let reconnectTimer: number | null = null;
 
-    ch
+    const connectChannel = () => {
+      if (cancelled) return;
+      if (ch) {
+        void supabase.removeChannel(ch);
+        ch = null;
+      }
+
+      ch = supabase.channel(`live_${roomId}`, {
+        config: { broadcast: { self: false } },
+      });
+
+      ch
         .on('broadcast', { event: 'sfx' }, ({ payload }: { payload?: unknown }) => {
           const o = asRecord(payload);
           const id = o?.id;
@@ -641,11 +663,30 @@ export function useArenaRealtime(
           } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             channelRef.current = null;
             setLiveConnected(false);
+            // Reconnexion automatique et silencieuse après 3 secondes
+            if (reconnectTimer !== null) {
+              window.clearTimeout(reconnectTimer);
+            }
+            reconnectTimer = window.setTimeout(() => {
+              reconnectTimer = null;
+              if (roomId) connectChannel();
+            }, 3000);
           }
         });
+    };
+
+    const initTimer = window.setTimeout(connectChannel, 150);
 
     return () => {
-      void supabase.removeChannel(ch);
+      cancelled = true;
+      if (reconnectTimer !== null) {
+        window.clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+      window.clearTimeout(initTimer);
+      if (ch) {
+        void supabase.removeChannel(ch);
+      }
     };
   }, [roomId, flushBroadcastOutbox]);
 
