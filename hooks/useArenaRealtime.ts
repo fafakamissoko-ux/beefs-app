@@ -357,8 +357,11 @@ export function useArenaRealtime(
       const topic = `spectator_invite_sync_${roomId}_${userId}`;
       const existing = supabase.getChannels().find((c) => c.topic === topic);
       if (existing) {
-        await supabase.removeChannel(existing);
+        void supabase.removeChannel(existing);
       }
+
+      // Délai de respiration réseau pour bypasser le hang de la promesse Supabase
+      await new Promise((resolve) => setTimeout(resolve, 250));
       if (disposed) return;
 
       ch = supabase
@@ -475,15 +478,23 @@ export function useArenaRealtime(
     async function connect(): Promise<void> {
       if (!roomId || disposed) return;
       clearRetryTimer();
-      teardownChannelSilent();
 
-      // Éradication préventive des canaux zombies (Asynchrone)
+      // 1. Éradication asynchrone propre (SANS teardownChannelSilent avant)
       const existing = supabase.getChannels().find((c) => c.topic === `live_${roomId}`);
       if (existing) {
-        await supabase.removeChannel(existing);
+        void supabase.removeChannel(existing);
       }
+
+      // Délai de respiration réseau pour bypasser le hang de la promesse Supabase
+      await new Promise((resolve) => setTimeout(resolve, 250));
       if (disposed) return;
 
+      // 2. Nettoyage sécurisé des références locales
+      activeChannel = null;
+      channelRef.current = null;
+      setLiveConnected(false);
+
+      // 3. Création du nouveau canal pur
       const ch = supabase.channel(`live_${roomId}`, {
         config: { broadcast: { self: false } },
       });

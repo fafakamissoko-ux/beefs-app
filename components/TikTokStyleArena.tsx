@@ -1405,9 +1405,11 @@ export function TikTokStyleArena({
     }
   }, [remoteParticipants, isJoined, isHost, host.id, host.name, participantRoles, mediatorGraceActive, toast]);
 
+  const joinAttemptedRef = useRef(false);
   // Auto-join quand « Rejoindre » + URL Daily + jeton (fournis par la page parente).
   useEffect(() => {
-    if (!hasJoined || !effectiveDailyRoomUrl || !meetingTokenForDaily || isJoined || isJoining) return;
+    if (!hasJoined || !effectiveDailyRoomUrl || !meetingTokenForDaily || isJoined || isJoining || joinAttemptedRef.current) return;
+    joinAttemptedRef.current = true;
     void join(preJoinMediaStream);
   }, [hasJoined, effectiveDailyRoomUrl, meetingTokenForDaily, isJoined, isJoining, join, preJoinMediaStream]);
 
