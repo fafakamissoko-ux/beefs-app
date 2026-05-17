@@ -125,7 +125,6 @@ export function BeefCard({
   const [replayHover, setReplayHover] = useState(false);
   const [isTeaserOpen, setIsTeaserOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [isReminded, setIsReminded] = useState(false);
 
   const isParticipant = user
@@ -214,8 +213,6 @@ export function BeefCard({
     return '';
   };
 
-  const showCountdownTimer =
-    (status === 'scheduled' || status === 'live') && !!scheduled_at && new Date(scheduled_at).getTime() > Date.now();
   const isManifesto = saisirTab || (intent === 'manifesto' && (status === 'pending' || status === 'ready'));
   const isReplay = status === 'ended' || status === 'replay' || status === 'completed';
   const descText = description?.trim() ?? '';
@@ -229,24 +226,21 @@ export function BeefCard({
         : 'border-white/[0.08] hover:border-white/20';
 
   return (
-    <div className="relative flex h-full w-full flex-col">
+    <div
+      className={`relative flex h-full w-full flex-col overflow-hidden rounded-[1.2rem] border bg-black transition-all duration-300 md:rounded-[1.5rem] ${dynamicBorderClass} ${status === 'live' ? 'shadow-[0_0_0_1px_rgba(162,0,255,0.35)]' : ''} ${isManifesto ? 'border-dashed border-white/20' : ''}`}
+    >
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04, duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-        onClick={onClick}
+        onClick={() => setIsTeaserOpen(true)}
         onMouseEnter={() => isReplay && setReplayHover(true)}
         onMouseLeave={() => isReplay && setReplayHover(false)}
-        className={`group relative flex h-full min-h-[300px] w-full cursor-pointer flex-col overflow-hidden rounded-[1.2rem] border bg-[#08080A] transition-all duration-300 md:rounded-[1.5rem] ${dynamicBorderClass} ${status === 'live' ? 'shadow-[0_0_0_1px_rgba(162,0,255,0.35)]' : ''} ${isManifesto ? 'border-dashed border-white/20' : ''}`}
+        className="group relative aspect-[3/4] max-h-[75vh] w-full shrink-0 cursor-pointer overflow-hidden bg-black"
       >
         <div
           ref={mediaBlockRef}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsTeaserOpen(true);
-          }}
-          className="relative aspect-video w-full shrink-0 cursor-zoom-in overflow-hidden rounded-t-[1.2rem] bg-black/40 md:rounded-t-[1.5rem]"
+          className="absolute inset-0 z-0 h-full w-full overflow-hidden rounded-[1.2rem] bg-black md:rounded-[1.5rem]"
         >
           {video_url ? (
             <video
@@ -268,7 +262,7 @@ export function BeefCard({
           ) : (
             <div className="absolute inset-0 bg-gradient-to-b from-obsidian-900 to-black" />
           )}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" aria-hidden />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent z-[5]" aria-hidden />
 
           <div className="absolute left-2 top-2 z-20 flex max-w-[60%] flex-col items-start gap-1">
             {status === 'live' && (
@@ -366,22 +360,75 @@ export function BeefCard({
                 </AnimatePresence>
               </div>
             )}
+            {video_url && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleMute(e);
+                }}
+                className="rounded-full border border-white/20 bg-black/60 p-1.5 backdrop-blur-md transition-colors hover:bg-black/70"
+                aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
+              >
+                {isMuted ? <VolumeX className="h-3 w-3 text-white" /> : <Volume2 className="h-3 w-3 text-white" />}
+              </button>
+            )}
           </div>
 
-          <div className="absolute bottom-2 right-2 z-[50] flex max-w-[80%] flex-col items-end gap-1.5">
-            <div className="flex flex-wrap items-center justify-end gap-1.5">
-              {showCountdownTimer && scheduled_at && status !== 'scheduled' && (
-                <div className="rounded border border-white/20 bg-black/60 px-1.5 py-0.5 backdrop-blur-sm [&_*]:!text-[9px]">
-                  <Countdown scheduledAt={scheduled_at} />
-                </div>
-              )}
+          <div className="pointer-events-none absolute bottom-2 left-2 z-10 flex flex-col items-start gap-1">
+            {status === 'scheduled' && scheduled_at && (
+              <div
+                className="pointer-events-auto origin-bottom-left scale-90 rounded border border-cyan-500/40 bg-black/70 px-2 py-1 shadow-lg backdrop-blur-md [&_.text-blue-400]:text-cyan-400 [&_svg]:text-cyan-400"
+                aria-live="polite"
+              >
+                <Countdown scheduledAt={scheduled_at} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* OVERLAY D'INFORMATIONS TIKTOK */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end p-4 pt-20">
+          <h3 className="mb-2 line-clamp-2 font-sans text-[15px] font-bold leading-snug text-white md:text-[17px] drop-shadow-md">
+            {title}
+          </h3>
+          <div className="mb-3 flex flex-wrap items-center gap-x-2 font-sans text-[10px] font-black uppercase tracking-widest text-white/90 sm:text-xs drop-shadow-md">
+            <span className="italic">{challenger_a_name || 'Challenger 1'}</span>
+            <span className="text-brand-400">VS</span>
+            <span className="italic">{challenger_b_name || 'Challenger 2'}</span>
+            {challenger_c_name && (
+              <>
+                <span className="text-brand-400">VS</span>
+                <span className="italic">{challenger_c_name}</span>
+              </>
+            )}
+            {challenger_d_name && (
+              <>
+                <span className="text-brand-400">VS</span>
+                <span className="italic">{challenger_d_name}</span>
+              </>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pointer-events-auto">
+            {mediator_name ? (
+              <span className="w-fit rounded-full border border-white/20 bg-black/40 px-2.5 py-1 text-[9px] font-bold tracking-wide text-gray-200 backdrop-blur-md sm:text-[10px]">
+                REF: <span className="text-white">@{mediator_name}</span>
+              </span>
+            ) : (
+              <span className="w-fit rounded-full border border-plasma-500/40 bg-plasma-500/20 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-plasma-300 backdrop-blur-md sm:text-[10px]">
+                En attente de Ref
+              </span>
+            )}
+
+            <div className="flex items-center gap-1.5">
               {status === 'live' && getTimeDisplay() && (
-                <div className="flex h-6 items-center gap-0.5 rounded border border-white/20 bg-black/60 px-1.5 font-mono text-[10px] font-bold text-white/90 backdrop-blur-sm">
-                  <Clock className="h-2.5 w-2.5" aria-hidden /> <span>{getTimeDisplay()}</span>
+                <div className="flex h-7 items-center gap-1 rounded-full border border-white/20 bg-black/50 px-2 font-mono text-[10px] font-bold text-white/90 backdrop-blur-md">
+                  <Clock className="h-3 w-3" aria-hidden /> <span>{getTimeDisplay()}</span>
                 </div>
               )}
-              <div className="flex h-6 items-center gap-1 rounded border border-white/20 bg-black/60 px-1.5 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
-                <Eye className="h-3 w-3 shrink-0" aria-hidden strokeWidth={2.25} />
+              <div className="flex h-7 items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 font-mono text-[10px] font-bold text-white backdrop-blur-md">
+                <Eye className="h-3.5 w-3.5" aria-hidden strokeWidth={2.25} />{' '}
                 <span>{viewer_count.toLocaleString()}</span>
               </div>
               {onAuraClick ? (
@@ -397,8 +444,8 @@ export function BeefCard({
                     }
                     onAuraClick();
                   }}
-                  className={`relative flex h-6 items-center justify-center gap-1 rounded border bg-black/60 px-1.5 font-mono text-[10px] font-bold backdrop-blur-sm ${
-                    has_liked_by_user ? 'border-volt-500/50 text-volt-400' : 'border-white/20 text-white hover:text-prestige-gold'
+                  className={`relative flex h-7 items-center gap-1.5 rounded-full border bg-black/50 px-2.5 font-mono text-[10px] font-bold backdrop-blur-md ${
+                    has_liked_by_user ? 'border-volt-500/50 text-volt-400' : 'border-white/20 text-white hover:text-volt-400'
                   }`}
                   aria-label={has_liked_by_user ? "Retirer l'Aura" : "Envoyer de l'Aura"}
                 >
@@ -415,125 +462,42 @@ export function BeefCard({
                       </motion.span>
                     ))}
                   </AnimatePresence>
-                  <Sparkles className={`h-2.5 w-2.5 shrink-0 ${has_liked_by_user ? 'fill-current' : ''}`} aria-hidden />
+                  <Sparkles className={`h-3.5 w-3.5 ${has_liked_by_user ? 'fill-current' : ''}`} aria-hidden />
                   <span>{engagement_score.toLocaleString()}</span>
                 </motion.button>
               ) : (
-                <div className="flex h-6 items-center gap-1 rounded border border-white/20 bg-black/60 px-1.5 font-mono text-[10px] font-bold text-white backdrop-blur-sm">
-                  <Sparkles className="h-2.5 w-2.5 shrink-0" aria-hidden />
-                  <span>{engagement_score.toLocaleString()}</span>
+                <div className="flex h-7 items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 font-mono text-[10px] font-bold text-white backdrop-blur-md">
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden /> <span>{engagement_score.toLocaleString()}</span>
                 </div>
               )}
             </div>
           </div>
-
-          <div className="absolute bottom-2 left-2 z-10 flex flex-col items-start gap-1">
-            {status === 'scheduled' && scheduled_at && (
-              <div
-                className="origin-bottom-left scale-90 rounded border border-cyan-500/40 bg-black/70 px-2 py-1 shadow-lg backdrop-blur-md [&_.text-blue-400]:text-cyan-400 [&_svg]:text-cyan-400"
-                aria-live="polite"
-              >
-                <Countdown scheduledAt={scheduled_at} />
-              </div>
-            )}
-            {video_url && (
-              <button
-                type="button"
-                onClick={handleToggleMute}
-                className="rounded-full border border-white/20 bg-black/50 p-1.5 backdrop-blur-md transition-colors hover:bg-black/70"
-                aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
-              >
-                {isMuted ? <VolumeX className="h-3 w-3 text-white" /> : <Volume2 className="h-3 w-3 text-white" />}
-              </button>
-            )}
-          </div>
         </div>
 
-        <div className="relative z-10 flex min-h-0 flex-grow flex-col bg-[#08080A] p-3 md:p-4">
-          <h3 className="mb-1 line-clamp-2 font-sans text-[13px] font-bold leading-snug text-white md:text-[15px]">{title}</h3>
-
-          <div className="mb-2 flex flex-col gap-1.5">
-            <div className="mb-3 flex flex-wrap items-center gap-x-2 font-sans text-sm font-black uppercase tracking-widest text-white/90">
-              <span className="italic">{challenger_a_name || 'Challenger 1'}</span>
-              <span className="text-brand-400">VS</span>
-              <span className="italic">{challenger_b_name || 'Challenger 2'}</span>
-              {challenger_c_name && (
-                <>
-                  <span className="text-brand-400">VS</span>
-                  <span className="italic">{challenger_c_name}</span>
-                </>
-              )}
-              {challenger_d_name && (
-                <>
-                  <span className="text-brand-400">VS</span>
-                  <span className="italic">{challenger_d_name}</span>
-                </>
-              )}
-            </div>
-            {mediator_name ? (
-              <span className="w-fit rounded border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-bold tracking-wide text-gray-300 md:text-[10px]">
-                REF : <span className="text-white">@{mediator_name}</span>
-              </span>
-            ) : (
-              <span className="w-fit rounded border border-plasma-500/30 bg-plasma-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-plasma-400 md:text-[10px]">
-                En attente de Ref
-              </span>
+        {isReplay && (
+          <AnimatePresence>
+            {replayHover && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-[40] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10">
+                  <Play className="ml-1 h-5 w-5 fill-white text-white" />
+                </div>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
+        )}
+      </motion.div>
 
-          {descText ? (
-            <div className="mb-2 flex flex-col items-start">
-              <p className={`break-words text-[10px] font-medium text-white/60 md:text-[11px] ${isDescExpanded ? '' : 'line-clamp-2'}`}>
-                {descText}
-              </p>
-              {descText.length > 60 && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsDescExpanded(!isDescExpanded);
-                  }}
-                  className="mt-0.5 text-[9px] font-bold text-plasma-400"
-                >
-                  {isDescExpanded ? 'Réduire' : 'Voir plus'}
-                </button>
-              )}
-            </div>
-          ) : null}
-          {tags.length > 0 && (
-            <div className="mt-auto flex flex-wrap gap-1 pt-2">
-              {tags.slice(0, 3).map((tag, idx) =>
-                onTagClick ? (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onTagClick(tag);
-                    }}
-                    className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-[8px] font-bold text-white/40 hover:text-plasma-300 md:text-[9px]"
-                  >
-                    #{tag}
-                  </button>
-                ) : (
-                  <span
-                    key={idx}
-                    className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-[8px] font-bold text-white/40 md:text-[9px]"
-                  >
-                    #{tag}
-                  </span>
-                ),
-              )}
-            </div>
-          )}
-        </div>
-
-        {((status === 'pending' &&
+      {((status === 'pending' &&
           ((!mediator_name && onSaisirAffaire && !isParticipant) || (mediator_name && onValiderRef) || (mediator_name && !onValiderRef && !onSaisirAffaire))) ||
           (status === 'scheduled' && (onPrepareAudience || onSeDesister)) ||
           (status === 'live' && liveAudienceAction) ||
           (isManifesto && onApply)) && (
-          <div className="mt-auto bg-[#08080A] px-3 pb-3 pt-0">
+          <div className="shrink-0 border-t border-white/[0.08] bg-[#08080A] px-3 pb-3 pt-2">
             {isManifesto && onApply && (
               <button
                 type="button"
@@ -641,24 +605,6 @@ export function BeefCard({
             )}
           </div>
         )}
-
-        {isReplay && (
-          <AnimatePresence>
-            {replayHover && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute inset-0 z-[3] flex items-center justify-center rounded-t-[1.2rem] bg-black/60 backdrop-blur-sm md:rounded-t-[1.5rem]"
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10">
-                  <Play className="ml-1 h-5 w-5 fill-white text-white" />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
-      </motion.div>
 
       {isTeaserOpen && (
         <div
