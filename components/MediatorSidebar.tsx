@@ -73,7 +73,7 @@ type MediatorSidebarProps = {
 };
 
 const SECTION_SHELL =
-  'rounded-2xl border border-white/10 bg-slate-900/60 p-4 shadow-[0_8px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl';
+  'rounded-3xl border border-white/[0.08] bg-white/[0.02] p-4 shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[60px]';
 
 export function MediatorSidebar({
   open,
@@ -180,7 +180,7 @@ export function MediatorSidebar({
                   animate={{ x: 0, y: 0 }}
                   exit={isSmPanel ? { x: '100%', y: 0 } : { y: '100%', x: 0 }}
                   transition={{ type: 'spring', damping: 34, stiffness: 400 }}
-                  className="fixed inset-x-0 bottom-0 z-[9999] flex h-[85dvh] flex-col overflow-hidden rounded-t-[2rem] border-t border-white/10 bg-[#0A0E17]/90 shadow-2xl backdrop-blur-3xl sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:left-auto sm:ml-0 sm:h-dvh sm:w-[400px] sm:rounded-none sm:border-l sm:border-t-0"
+                  className="fixed inset-x-0 bottom-0 z-[9999] flex h-[85dvh] flex-col overflow-hidden rounded-t-[2.5rem] border-t border-white/[0.08] bg-[#0A0E17]/60 shadow-[0_-20px_80px_rgba(0,0,0,0.6)] backdrop-blur-[80px] sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:left-auto sm:ml-0 sm:h-dvh sm:w-[400px] sm:rounded-none sm:border-l sm:border-t-0"
                 >
                   <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-white/25 sm:hidden" />
 
@@ -225,7 +225,7 @@ export function MediatorSidebar({
                       <button
                         type="button"
                         onClick={onMuteAll}
-                        className="flex min-h-[3.5rem] w-full items-center justify-center gap-3 rounded-2xl border-2 border-rose-500/60 bg-rose-600/90 px-4 py-4 text-sm font-black uppercase tracking-widest text-white shadow-[0_0_32px_rgba(225,29,72,0.45)] transition hover:bg-rose-500 active:scale-[0.98]"
+                        className="flex min-h-[3.5rem] w-full items-center justify-center gap-3 rounded-2xl border border-rose-500/50 bg-rose-950/40 px-4 py-4 text-sm font-black uppercase tracking-widest text-rose-400 shadow-[0_4px_16px_rgba(225,29,72,0.3),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md transition hover:bg-rose-900/50 active:scale-[0.98]"
                       >
                         <MicOff className="h-6 w-6 shrink-0" strokeWidth={2} />
                         Silence total — couper tous les micros
@@ -250,7 +250,7 @@ export function MediatorSidebar({
                             return (
                               <li
                                 key={row.sessionId || row.slot}
-                                className="flex flex-col gap-3 rounded-xl border border-white/10 bg-slate-950/50 p-3 sm:flex-row sm:items-center sm:justify-between"
+                                className="flex flex-col gap-3 rounded-2xl border border-white/[0.05] bg-black/20 p-3 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)] sm:flex-row sm:items-center sm:justify-between"
                               >
                                 <div className="min-w-0">
                                   <p className="truncate font-semibold text-white">
@@ -275,8 +275,8 @@ export function MediatorSidebar({
                                     }}
                                     className={`flex min-h-[40px] min-w-[5.5rem] items-center justify-center rounded-xl border px-3 font-mono text-[10px] font-black uppercase tracking-wide transition disabled:cursor-not-allowed disabled:opacity-35 ${
                                       muted
-                                        ? 'border-emerald-500/50 bg-emerald-600/25 text-emerald-200 hover:bg-emerald-600/35'
-                                        : 'border-rose-500/55 bg-rose-600/25 text-rose-100 hover:bg-rose-600/35'
+                                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.2),inset_0_1px_1px_rgba(255,255,255,0.1)] hover:bg-emerald-500/20'
+                                        : 'border-rose-500/40 bg-rose-950/40 text-rose-400 shadow-[0_0_10px_rgba(225,29,72,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)] hover:bg-rose-900/50'
                                     }`}
                                   >
                                     {muted ? (
@@ -298,7 +298,7 @@ export function MediatorSidebar({
                                       if (!row.sessionId) return;
                                       onHotMic(row.slot, speakingTurnSec);
                                     }}
-                                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-cyan-500/45 bg-cyan-500/15 px-3 font-mono text-[10px] font-black uppercase tracking-wide text-cyan-200 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-35"
+                                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3 font-mono text-[10px] font-black uppercase tracking-wide text-cyan-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-35"
                                   >
                                     <Radio className="h-3.5 w-3.5" />
                                     Hot mic
@@ -367,7 +367,7 @@ export function MediatorSidebar({
                               type="button"
                               disabled={startingBeef}
                               onClick={() => void onStartBeef(matchDurationMin * 60)}
-                              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 py-4 text-xs font-black uppercase tracking-widest text-white shadow-lg transition hover:brightness-110 active:scale-[0.99] disabled:opacity-45"
+                              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-blue-600/80 py-4 text-xs font-black uppercase tracking-widest text-white shadow-[0_8px_32px_rgba(37,99,235,0.4),inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-md transition hover:bg-blue-500 active:scale-[0.99] disabled:opacity-45"
                             >
                               <Play className="h-4 w-4 fill-current" />
                               {startingBeef ? 'Ouverture…' : 'Démarrer le chrono LIVE'}
@@ -517,7 +517,7 @@ export function MediatorSidebar({
                           onChange={(e) => setAnnounceDraft(e.target.value)}
                           rows={3}
                           placeholder="Message affiché sur l’arène…"
-                          className="mb-3 w-full resize-none rounded-2xl border border-white/10 bg-slate-950/50 px-3 py-3 font-sans text-sm text-white placeholder-blue-200/35 focus:border-amber-400/35 focus:outline-none"
+                          className="mb-3 w-full resize-none rounded-2xl border border-white/[0.08] bg-black/40 px-4 py-3 font-sans text-sm text-white placeholder-white/30 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] focus:border-white/20 focus:bg-black/60 focus:outline-none"
                         />
                         <p className="mb-2 font-mono text-[9px] font-bold uppercase tracking-wider text-blue-200/45">
                           Durée d’affichage
