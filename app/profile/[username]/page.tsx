@@ -881,7 +881,13 @@ export default function PublicProfilePage() {
                         viewer_count={beef.viewer_count || 0}
                         tags={beef.tags}
                         scheduled_at={beef.scheduled_at}
-                        onClick={() => router.push(`/arena/${beef.id}`)}
+                        onClick={() => {
+                        if (['ended', 'replay', 'completed', 'cancelled'].includes(beef.status)) {
+                          router.push(`/beef/${beef.id}/summary`);
+                        } else {
+                          router.push(`/arena/${beef.id}`);
+                        }
+                      }}
                       />
                       {(beef.resolution_status && beef.resolution_status !== 'in_progress') || beef.mediation_summary?.trim() ? (
                         <div className="pl-1 space-y-1.5" onClick={(e) => e.stopPropagation()}>
@@ -925,7 +931,13 @@ export default function PublicProfilePage() {
                       viewer_count={beef.viewer_count || 0}
                       tags={beef.tags}
                       scheduled_at={beef.scheduled_at}
-                      onClick={() => router.push(`/arena/${beef.id}`)}
+                      onClick={() => {
+                        if (['ended', 'replay', 'completed', 'cancelled'].includes(beef.status)) {
+                          router.push(`/beef/${beef.id}/summary`);
+                        } else {
+                          router.push(`/arena/${beef.id}`);
+                        }
+                      }}
                     />
                   ))}
                 </div>

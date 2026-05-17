@@ -938,7 +938,13 @@ export default function ProfileContent() {
                           viewer_count={beef.viewer_count || 0}
                           tags={beef.tags}
                           scheduled_at={beef.scheduled_at}
-                          onClick={() => router.push(`/arena/${beef.id}`)}
+                          onClick={() => {
+                          if (['ended', 'replay', 'completed', 'cancelled'].includes(beef.status)) {
+                            router.push(`/beef/${beef.id}/summary`);
+                          } else {
+                            router.push(`/arena/${beef.id}`);
+                          }
+                        }}
                         />
                       ))}
                     {mediationBeefs.filter((beef) => mediationCategoryForBeef(beef) === selectedResolutionFilter)
@@ -1010,7 +1016,13 @@ export default function ProfileContent() {
                         viewer_count={beef.viewer_count || 0}
                         tags={beef.tags}
                         scheduled_at={beef.scheduled_at}
-                        onClick={() => router.push(`/arena/${beef.id}`)}
+                        onClick={() => {
+                          if (['ended', 'replay', 'completed', 'cancelled'].includes(beef.status)) {
+                            router.push(`/beef/${beef.id}/summary`);
+                          } else {
+                            router.push(`/arena/${beef.id}`);
+                          }
+                        }}
                       />
                       {user && beef.mediator_id === user.id && (
                         <MediationBeefEditorPanel
