@@ -490,123 +490,6 @@ export function BeefCard({
             )}
           </AnimatePresence>
         )}
-      </motion.div>
-
-      {((status === 'pending' &&
-          ((!mediator_name && onSaisirAffaire && !isParticipant) || (mediator_name && onValiderRef) || (mediator_name && !onValiderRef && !onSaisirAffaire))) ||
-          (status === 'scheduled' && (onPrepareAudience || onSeDesister)) ||
-          (status === 'live' && liveAudienceAction) ||
-          (isManifesto && onApply)) && (
-          <div className="shrink-0 border-t border-white/[0.08] bg-[#08080A] px-3 pb-3 pt-2">
-            {isManifesto && onApply && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onApply?.();
-                }}
-                className="mb-2 text-[9px] font-medium text-prestige-gold/80 hover:underline"
-              >
-                + Rôle au ring
-              </button>
-            )}
-
-            {status === 'pending' && onSaisirAffaire && !mediator_name && !isParticipant && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSaisirAffaire();
-                }}
-                className="w-full rounded-xl bg-white py-2 text-[10px] font-black uppercase tracking-widest text-black hover:bg-gray-200 md:text-xs"
-              >
-                Devenir le Ref
-              </button>
-            )}
-
-            {status === 'pending' && !!mediator_name && onValiderRef && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-[9px] text-plasma-400">@{mediator_name} postule.</span>
-                <div className="flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRefuserRef?.();
-                    }}
-                    className="flex-1 rounded-lg bg-white/10 py-1.5 text-[10px] font-bold text-white"
-                  >
-                    Refuser
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onValiderRef();
-                    }}
-                    className="flex-1 rounded-lg bg-plasma-600 py-1.5 text-[10px] font-bold text-white"
-                  >
-                    Valider
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {status === 'pending' && !!mediator_name && !onValiderRef && !onSaisirAffaire && (
-              <span className="block py-2 text-center text-[10px] italic text-gray-500">
-                {user?.id === created_by ? (
-                  user?.id !== mediator_id ? (
-                    <>
-                      En attente de ta validation du Ref (@{mediator_name})…
-                    </>
-                  ) : null
-                ) : isWaitingForMe ? null : (
-                  <>En attente d&apos;un Ref…</>
-                )}
-              </span>
-            )}
-
-            {status === 'scheduled' && onPrepareAudience && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPrepareAudience();
-                }}
-                className="mb-1 w-full rounded-xl border border-white/20 py-2 text-[11px] font-semibold text-white"
-              >
-                Préparer l&apos;Audience
-              </button>
-            )}
-            {status === 'scheduled' && onSeDesister && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSeDesister();
-                }}
-                className="w-full text-center text-[10px] text-plasma-400/80"
-              >
-                Se désister
-              </button>
-            )}
-
-            {status === 'live' && liveAudienceAction && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  liveAudienceAction.onClick();
-                }}
-                className="w-full rounded-xl border border-plasma-500/40 bg-plasma-500/20 py-2 text-[10px] font-bold text-white md:text-xs"
-              >
-                {liveAudienceAction.variant === 'return' ? "Retourner dans l'Agora" : "Rejoindre l'Audience"}
-              </button>
-            )}
-          </div>
-        )}
-
-      {isTeaserOpen && (
         <div
           className="fixed inset-0 z-[9999] flex flex-col bg-obsidian-950 md:flex-row md:items-center md:justify-center md:bg-obsidian-950/95 md:p-8"
           role="presentation"
@@ -728,6 +611,131 @@ export function BeefCard({
                     'Aucune description. Rejoignez l\'Agora pour découvrir l\'enjeu de cette affaire.'}
                 </div>
               </div>
+              {tags.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-1.5">
+                  {tags.map((tag, idx) => (
+                    <span key={idx} className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold text-white/40">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {((status === 'pending' &&
+                ((!mediator_name && onSaisirAffaire && !isParticipant) ||
+                  (mediator_name && onValiderRef) ||
+                  (mediator_name && !onValiderRef && !onSaisirAffaire))) ||
+                (status === 'scheduled' && (onPrepareAudience || onSeDesister)) ||
+                (status === 'live' && liveAudienceAction) ||
+                (isManifesto && onApply)) && (
+                <div className="mb-4 flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                  {isManifesto && onApply && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onApply?.();
+                        setIsTeaserOpen(false);
+                      }}
+                      className="text-[12px] font-medium text-prestige-gold/80 hover:underline"
+                    >
+                      + Rôle au ring
+                    </button>
+                  )}
+                  {status === 'pending' && onSaisirAffaire && !mediator_name && !isParticipant && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSaisirAffaire();
+                        setIsTeaserOpen(false);
+                      }}
+                      className="w-full rounded-xl bg-white py-2.5 text-xs font-black uppercase tracking-widest text-black hover:bg-gray-200"
+                    >
+                      Devenir le Ref
+                    </button>
+                  )}
+                  {status === 'pending' && !!mediator_name && onValiderRef && (
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[11px] text-plasma-400">@{mediator_name} postule.</span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRefuserRef?.();
+                            setIsTeaserOpen(false);
+                          }}
+                          className="flex-1 rounded-lg bg-white/10 py-2 text-[11px] font-bold text-white hover:bg-white/20"
+                        >
+                          Refuser
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onValiderRef();
+                            setIsTeaserOpen(false);
+                          }}
+                          className="flex-1 rounded-lg bg-plasma-600 py-2 text-[11px] font-bold text-white hover:bg-plasma-500"
+                        >
+                          Valider
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {status === 'pending' && !!mediator_name && !onValiderRef && !onSaisirAffaire && (
+                    <span className="block py-2 text-center text-[11px] italic text-gray-500">
+                      {user?.id === created_by
+                        ? user?.id !== mediator_id
+                          ? `En attente de ta validation du Ref (@${mediator_name ?? ''})…`
+                          : null
+                        : isWaitingForMe
+                          ? null
+                          : "En attente d'un Ref…"}
+                    </span>
+                  )}
+                  {status === 'scheduled' && onPrepareAudience && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPrepareAudience();
+                        setIsTeaserOpen(false);
+                      }}
+                      className="w-full rounded-xl border border-white/20 py-2.5 text-xs font-semibold text-white hover:bg-white/10"
+                    >
+                      Préparer l&apos;Audience
+                    </button>
+                  )}
+                  {status === 'scheduled' && onSeDesister && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSeDesister();
+                        setIsTeaserOpen(false);
+                      }}
+                      className="w-full text-center text-[11px] text-plasma-400/80 hover:text-plasma-400"
+                    >
+                      Se désister
+                    </button>
+                  )}
+                  {status === 'live' && liveAudienceAction && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        liveAudienceAction.onClick();
+                        setIsTeaserOpen(false);
+                      }}
+                      className="w-full rounded-xl border border-plasma-500/40 bg-plasma-500/20 py-2.5 text-xs font-bold text-white hover:bg-plasma-500/30"
+                    >
+                      {liveAudienceAction.variant === 'return' ? "Retourner dans l'Agora" : "Rejoindre l'Audience"}
+                    </button>
+                  )}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => {
