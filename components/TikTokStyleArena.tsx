@@ -3294,7 +3294,9 @@ export function TikTokStyleArena({
                   ? 'top-[3.5rem] right-2 sm:top-[4.5rem] sm:right-4 flex-row-reverse items-start'
                   : idx === 3
                     ? 'top-2 right-2 sm:top-4 sm:right-4 flex-col items-end'
-                    : 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-start',
+                    : expectedCount === 3 && idx === 2
+                      ? 'top-2 right-2 sm:top-4 sm:right-4 flex-row-reverse items-start'
+                      : 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-start',
             };
             });
 
@@ -3308,8 +3310,8 @@ export function TikTokStyleArena({
                       speakingTurnActive && Boolean(effectiveHotMicSpeakerSlot) && effectiveHotMicSpeakerSlot !== cfg.slot;
                     const auraShadow =
                       cfg.aura > 0
-                        ? `0 0 ${20 + Math.min(cfg.aura, 120) * 0.8}px rgba(${cfg.color}, 0.5)`
-                        : 'none';
+                        ? `0 0 ${20 + Math.min(cfg.aura, 120) * 0.8}px rgba(${cfg.color}, 0.4), inset 0 0 40px rgba(${cfg.color}, 0.15)`
+                        : 'inset 0 0 20px rgba(255,255,255,0.02)';
                     const filterVal = isMutedByFocus
                       ? 'grayscale(0.6) blur(3px)'
                       : `brightness(${1 + (cfg.aura / 300) * 0.4})`;
@@ -3317,7 +3319,7 @@ export function TikTokStyleArena({
                     return (
                       <motion.div
                         key={cfg.id}
-                        className={`relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-white/[0.08] to-transparent border border-white/[0.12] shadow-[0_20px_60px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md transition-all duration-300 ${cfg.cellClass}`}
+                        className={`relative overflow-hidden rounded-[2rem] bg-white/5 border border-white/10 backdrop-blur-2xl transition-all duration-300 ${cfg.cellClass}`}
                         style={{
                           boxShadow: auraShadow,
                           zIndex: cfg.aura > 0 ? 10 : 1,
@@ -3353,14 +3355,14 @@ export function TikTokStyleArena({
                           data-cinema-stay
                           className={`pointer-events-auto absolute z-[140] flex gap-1.5 ${cfg.uiPos}`}
                         >
-                          <div className="flex max-w-[9rem] sm:max-w-[14rem] items-center gap-2 rounded-2xl bg-black/30 backdrop-blur-[40px] shadow-[0_10px_30px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] border border-white/[0.08] px-4 py-2">
+                          <div className="flex max-w-[9rem] sm:max-w-[14rem] items-center gap-2 rounded-full bg-slate-900/40 backdrop-blur-[40px] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] border border-white/[0.08] px-4 py-2">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null);
                               }}
-                              className="truncate text-[10px] sm:text-[11px] font-black tracking-wide text-white hover:text-cyan-400"
+                              className="truncate text-[10px] sm:text-[11px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md"
                             >
                               @{cfg.name}
                             </button>
@@ -3389,7 +3391,7 @@ export function TikTokStyleArena({
                                   }
                                   toggleMic();
                                 }}
-                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border shadow-[0_10px_20px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-[60px] transition-all duration-300 active:scale-95 ${micEnabled && !micMutedByMediator ? 'border-white/10 bg-white/10 text-white hover:bg-white/20' : 'border-rose-500/30 bg-rose-500/20 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.3)]'}`}
+                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-[60px] transition-all duration-300 active:scale-95 ${micEnabled && !micMutedByMediator ? 'border-white/20 bg-white/10 text-white hover:bg-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'border-rose-500/50 bg-rose-950/40 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)]'}`}
                               >
                                 <Mic className="h-4 w-4" strokeWidth={1.75} />
                               </button>
@@ -3399,7 +3401,7 @@ export function TikTokStyleArena({
                                   e.stopPropagation();
                                   toggleCam();
                                 }}
-                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border shadow-[0_10px_20px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-[60px] transition-all duration-300 active:scale-95 ${camEnabled ? 'border-white/10 bg-white/10 text-white hover:bg-white/20' : 'border-rose-500/30 bg-rose-500/20 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.3)]'}`}
+                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-[60px] transition-all duration-300 active:scale-95 ${camEnabled ? 'border-white/20 bg-white/10 text-white hover:bg-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'border-rose-500/50 bg-rose-950/40 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)]'}`}
                               >
                                 <Video className="h-4 w-4" strokeWidth={1.75} />
                               </button>
@@ -3419,7 +3421,10 @@ export function TikTokStyleArena({
                   {/* La vidéo (centrée, halo directement sur le bord du cercle vidéo) */}
                   <motion.div
                     animate={{
-                      boxShadow: auraMed > 0 ? `0 0 50px ${getMediatorDynamicColor(auraMed)}` : '0 0 0 1px rgba(255,255,255,0.1)',
+                      boxShadow:
+                        auraMed > 0
+                          ? `0 0 50px ${getMediatorDynamicColor(auraMed)}, inset 0 0 20px rgba(212,175,55,0.3)`
+                          : 'inset 0 0 20px rgba(255,255,255,0.05), 0 0 0 1px rgba(255,255,255,0.1)',
                     }}
                     style={{ filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})` }}
                     className="pointer-events-auto relative h-[155px] w-[155px] overflow-hidden rounded-full sm:h-[220px] sm:w-[220px]"
@@ -3471,31 +3476,28 @@ export function TikTokStyleArena({
                     </button>
                   </motion.div>
 
-                  {/* LA PILULE INLINE : [ @Ref | 🎛️ ] */}
-                  <div className="pointer-events-auto mt-2 flex items-center overflow-hidden rounded-full border border-prestige-gold/30 bg-black/40 shadow-[0_10px_40px_rgba(212,175,55,0.15),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[60px] transition-all duration-300 hover:bg-black/50">
+                  {/* LA PILULE INLINE : MONOLITHE SPATIAL */}
+                  <div className="pointer-events-auto mt-2 flex items-center rounded-full border border-white/10 bg-black/50 shadow-[0_10px_40px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-[60px] transition-all duration-300 hover:bg-black/60 p-1">
                     <button
                       type="button"
                       onClick={() => void openProfile(mediatorName, host.id)}
-                      className={`px-5 py-2 text-[11px] font-black text-prestige-gold transition-colors hover:text-white sm:text-[12px] ${isHost ? 'pr-3' : ''}`}
+                      className="px-4 py-1.5 text-[11px] font-black text-prestige-gold transition-colors hover:text-white sm:text-[12px] drop-shadow-md"
                     >
                       @{mediatorName}
                     </button>
                     {isHost && (
-                      <div className="flex h-full items-center">
-                        <div className="h-4 w-px bg-white/20" />
-                        <button
-                          type="button"
-                          data-mediator-sidebar-toggle
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMediatorSidebarOpen((o) => !o);
-                          }}
-                          className="flex h-full min-h-[28px] items-center justify-center bg-amber-500/10 px-3 py-1.5 text-amber-400 transition-colors hover:bg-amber-500/20 active:bg-amber-500/30"
-                          title="Command Deck"
-                        >
-                          <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        data-mediator-sidebar-toggle
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMediatorSidebarOpen((o) => !o);
+                        }}
+                        className="flex h-8 w-8 ml-1 items-center justify-center rounded-full bg-white/5 text-prestige-gold transition-colors hover:bg-white/15 hover:text-white active:scale-95 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]"
+                        title="Command Deck"
+                      >
+                        <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      </button>
                     )}
                   </div>
 
