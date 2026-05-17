@@ -1567,7 +1567,7 @@ export function TikTokStyleArena({
 
   const leftAura = auraA;
   const rightAura = auraB;
-  const leftColor = '168,85,247';
+  const leftColor = '225,29,72';
   const rightColor = '16,185,129';
 
   const expectedChallengers = useMemo(
@@ -3330,7 +3330,7 @@ export function TikTokStyleArena({
               name,
               panel,
               slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as EmperorSlot,
-              color: idx === 0 ? '168,85,247' : idx === 1 ? '16,185,129' : idx === 2 ? '234,179,8' : '59,130,246',
+              color: idx === 0 ? '225,29,72' : idx === 1 ? '16,185,129' : idx === 2 ? '234,179,8' : '59,130,246',
               aura: [auraA, auraB, auraC, auraD][idx],
               cellClass: expectedCount === 3 && idx === 2 ? 'col-span-2' : '',
               uiPos:

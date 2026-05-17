@@ -17,7 +17,7 @@ import { hrefWithFrom } from '@/lib/navigation-return';
 import { useClientArenaOnboardingGuard } from '@/lib/client-arena-onboarding-guard';
 
 const CreateBeefForm = dynamic(() => import('@/components/CreateBeefForm').then(m => m.CreateBeefForm), {
-  loading: () => <div className="flex items-center justify-center p-8"><div className="w-6 h-6 border-2 border-plasma-500 border-t-transparent rounded-full animate-spin" /></div>,
+  loading: () => <div className="flex items-center justify-center p-8"><div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>,
 });
 
 /** Ouvre la modale création quand on arrive depuis le header (ex. /feed?create=1). */
@@ -743,7 +743,7 @@ export default function FeedPage() {
   if (authLoading) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-plasma-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent" />
       </div>
     );
   }
@@ -769,15 +769,15 @@ export default function FeedPage() {
                   onClick={() => setFeedType(tab.id)}
                   className={`group flex min-h-[44px] items-center gap-2 pb-1 transition-colors ${
                     feedType === tab.id
-                      ? 'border-b-2 border-plasma-500 font-black uppercase tracking-widest text-[11px] text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] md:text-[12px]'
-                      : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-plasma-400 font-bold uppercase tracking-widest text-[11px] md:text-[12px]'
+                      ? 'border-b-2 border-white font-black uppercase tracking-widest text-[11px] text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] md:text-[12px]'
+                      : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-white font-bold uppercase tracking-widest text-[11px] md:text-[12px]'
                   }`}
                 >
                   <tab.icon
                     className={`h-4 w-4 shrink-0 ${
                       feedType === tab.id
                         ? 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]'
-                        : 'text-white/40 group-hover:text-plasma-400'
+                        : 'text-white/40 group-hover:text-white'
                     }`}
                   />
                   <span
@@ -796,7 +796,7 @@ export default function FeedPage() {
               href={hrefWithFrom('/buy-points', pathname)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-[44px] max-md:hidden shrink-0 items-center justify-center gap-2 rounded-full border border-plasma-500/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-plasma-400 transition-colors hover:bg-plasma-500/10 hover:text-white lg:hidden"
+              className="inline-flex min-h-[44px] max-md:hidden shrink-0 items-center justify-center gap-2 rounded-full border border-prestige-gold/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-prestige-gold transition-colors hover:bg-prestige-gold/10 hover:text-yellow-400 lg:hidden"
             >
               <Coins className="w-4 h-4 flex-shrink-0" />
               <span>Lingots</span>
@@ -844,7 +844,7 @@ export default function FeedPage() {
             <div className="flex flex-wrap gap-2">
               {selectedTags.map(tag => (
                 <motion.div key={tag} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                  className="flex items-center gap-1.5 rounded-full bg-plasma-600 px-3 py-1 text-xs font-semibold text-white">
+                  className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">
                   <span>#{tag}</span>
                   <button onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))} className="hover:bg-white/20 rounded-full p-0.5">
                     <X className="w-3 h-3" />
@@ -864,7 +864,7 @@ export default function FeedPage() {
               <button
                 key={tag}
                 onClick={() => handleTagClick(tag)}
-                className="inline-flex min-h-[44px] flex-shrink-0 items-center rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1 font-sans text-xs font-medium text-white/40 whitespace-nowrap transition-colors hover:text-plasma-400"
+                className="inline-flex min-h-[44px] flex-shrink-0 items-center rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1 font-sans text-xs font-medium text-white/40 whitespace-nowrap transition-colors hover:text-white"
               >
                 #{tag}
               </button>
@@ -931,7 +931,7 @@ export default function FeedPage() {
               {/* === CARTE APPÂT (Visiteurs) === */}
               {!user && showHero && (
                 <div
-                  className={`relative flex h-auto min-h-[380px] shrink-0 flex-col items-center justify-between overflow-hidden border border-plasma-500/40 bg-gradient-to-br from-plasma-600/10 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(162,0,255,0.1)] max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
+                  className={`relative flex h-auto min-h-[380px] shrink-0 flex-col items-center justify-between overflow-hidden border border-white/20 bg-gradient-to-br from-white/5 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(255,255,255,0.08)] max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
                 >
                   <button
                     type="button"
@@ -948,7 +948,7 @@ export default function FeedPage() {
                   >
                     <X className="h-5 w-5" />
                   </button>
-                  <Flame className="mb-4 h-12 w-12 text-plasma-500 drop-shadow-[0_0_15px_rgba(162,0,255,0.8)]" aria-hidden />
+                  <Flame className="mb-4 h-12 w-12 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]" aria-hidden />
                   <h2 className="mb-2 font-sans text-xl font-black uppercase italic text-white md:text-2xl">Un compte à régler ?</h2>
                   <p className="mx-auto mb-8 max-w-sm text-xs text-gray-400 md:text-sm">
                     Ne laisse plus une affaire sans réponse. Convoque ton adversaire dans l&apos;Agora.
@@ -956,7 +956,7 @@ export default function FeedPage() {
                   <button
                     type="button"
                     onClick={() => router.push('/signup?next=/feed')}
-                    className="w-full max-w-[220px] rounded-xl bg-plasma-600 py-3.5 text-sm font-black uppercase tracking-widest text-white shadow-glow-plasma transition-transform hover:scale-105 active:scale-95"
+                    className="w-full max-w-[220px] rounded-xl bg-white py-3.5 text-sm font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-transform hover:scale-105 active:scale-95"
                   >
                     Call Out
                   </button>
@@ -1072,13 +1072,13 @@ export default function FeedPage() {
           <button
             type="button"
             onClick={() => router.push(`/arena/${activeBeef.id}`)}
-            className="group pointer-events-auto flex items-center gap-3 rounded-full border border-plasma-500/40 bg-black/90 p-2 pr-4 shadow-[0_4px_20px_rgba(162,0,255,0.4)] backdrop-blur-xl transition-all hover:scale-105 hover:border-plasma-500/70"
+            className="group pointer-events-auto flex items-center gap-3 rounded-full border border-cyan-500/40 bg-black/90 p-2 pr-4 shadow-[0_4px_20px_rgba(34,211,238,0.3)] backdrop-blur-xl transition-all hover:scale-105 hover:border-cyan-400"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-plasma-500/20">
-              <Radio className="h-5 w-5 animate-pulse text-plasma-400" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-500/20">
+              <Radio className="h-5 w-5 animate-pulse text-cyan-400" />
             </div>
             <div className="flex flex-col items-start text-left">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-plasma-400">Beef en cours</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-400">Beef en cours</span>
               <span className="max-w-[120px] truncate text-xs font-semibold text-white md:max-w-[150px]">
                 {activeBeef.title}
               </span>
