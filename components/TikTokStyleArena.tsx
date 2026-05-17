@@ -3186,16 +3186,18 @@ export function TikTokStyleArena({
           <div ref={chatMessagesScrollRef} className="flex-1 overflow-y-auto px-4 py-2 hide-scrollbar">
             {visibleMessages.map((msg) => (
               <div key={msg.id} className="mb-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-white/50 mr-2">{msg.user_name}</span>
-                <div className="inline-block rounded-2xl bg-gradient-to-b from-white/[0.12] to-white/[0.04] backdrop-blur-2xl shadow-[0_8px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.15)] border border-white/[0.05] px-4 py-2 text-sm text-white/90">{msg.content}</div>
+                <span className="block mb-1 ml-2 text-[9px] font-black uppercase tracking-widest text-white/40">{msg.user_name}</span>
+                <div className="inline-block rounded-2xl rounded-tl-sm border border-white/[0.05] bg-white/5 px-3 py-2 text-[13px] leading-snug text-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px]">
+                  {msg.content}
+                </div>
               </div>
             ))}
             <div ref={chatMessagesEndRef} className="h-px w-full" />
           </div>
 
           <div id="dock-desktop" className="mt-auto flex w-full shrink-0 items-center gap-2 p-3 bg-white/[0.02] backdrop-blur-[60px] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-            <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full bg-black/20 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)] border border-white/5 px-4 py-2 text-[13px] text-white focus:outline-none" />
-            <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg">😀</button>
+            <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full border border-white/[0.05] bg-black/40 px-4 py-2.5 text-[13px] text-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] placeholder-white/30 focus:bg-black/60 focus:outline-none" />
+            <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/10 text-white shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-transform active:scale-95 disabled:opacity-30">😀</button>
             <button
               type="button"
               onClick={() => {
@@ -3203,11 +3205,11 @@ export function TikTokStyleArena({
                 setShowAllReactions(false);
                 setShowGiftPicker(!showGiftPicker);
               }}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/20 bg-gradient-to-br from-pink-500/80 to-orange-400/80 shadow-[0_4px_16px_rgba(249,115,22,0.4),inset_0_1px_1px_rgba(255,255,255,0.4)] transition-transform active:scale-95"
             >
               <Gift className="h-4 w-4 text-white" />
             </button>
-            <button onClick={() => void handleSendMessage()} disabled={!chatInput.trim()} className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 disabled:opacity-35"><Send className="h-4 w-4 text-white" /></button>
+            <button onClick={() => void handleSendMessage()} disabled={!chatInput.trim()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/10 text-white shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-transform active:scale-95 disabled:opacity-30"><Send className="h-4 w-4 text-white" /></button>
           </div>
         </div>
       </aside>
@@ -3233,14 +3235,14 @@ export function TikTokStyleArena({
         {/* INDICATEURS SYSTÈME DISCRETS (Haut Droite) */}
         {!isCinematicMode && (
           <div className="pointer-events-none absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[500] flex items-center gap-2 sm:right-4 sm:top-4">
-            <div className="flex items-center rounded-full border border-white/10 bg-slate-950/50 px-2 py-1 shadow-lg backdrop-blur-md">
-              <div className={`mr-1.5 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'animate-pulse bg-rose-500' : 'bg-amber-400'}`} />
-              <span className="font-mono text-[9px] font-black uppercase tracking-wider text-white">Live</span>
+            <div className="flex items-center rounded-full border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 shadow-[0_8px_16px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px]">
+              <div className={`mr-2 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'animate-pulse bg-rose-500 shadow-[0_0_10px_rgba(225,29,72,0.8)]' : 'bg-amber-400'}`} />
+              <span className="font-mono text-[10px] font-black uppercase tracking-widest text-white/90">Live</span>
             </div>
             <button
               type="button"
               onClick={() => setShowViewerList(true)}
-              className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/50 px-2.5 py-1 shadow-lg backdrop-blur-md transition-colors hover:bg-white/10"
+              className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 shadow-[0_8px_16px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px] transition-all hover:bg-white/[0.06]"
             >
               <Eye className="h-3 w-3 text-white" />
               <span className="font-mono text-[10px] font-bold text-white">{liveViewerCount > 0 ? liveViewerCount : '—'}</span>
@@ -3530,8 +3532,8 @@ export function TikTokStyleArena({
             <div ref={chatMessagesScrollRef} />
           </div>
           <div id="dock-mobile" className="pointer-events-auto mt-auto flex w-full shrink-0 items-center gap-2 px-3 pb-2">
-            <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} className="flex-1 min-w-0 rounded-full bg-black/30 shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)] border border-white/[0.08] backdrop-blur-[40px] px-4 py-2 text-[13px] text-white focus:bg-black/40 focus:ring-1 focus:ring-white/20 focus:outline-none" placeholder="Message..." />
-            <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg">😀</button>
+            <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full border border-white/[0.05] bg-black/40 px-4 py-2.5 text-[13px] text-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] placeholder-white/30 focus:bg-black/60 focus:outline-none" />
+            <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/10 text-white shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-transform active:scale-95 disabled:opacity-30">😀</button>
             <button
               type="button"
               onClick={() => {
@@ -3539,11 +3541,11 @@ export function TikTokStyleArena({
                 setShowAllReactions(false);
                 setShowGiftPicker(!showGiftPicker);
               }}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-orange-400"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/20 bg-gradient-to-br from-pink-500/80 to-orange-400/80 shadow-[0_4px_16px_rgba(249,115,22,0.4),inset_0_1px_1px_rgba(255,255,255,0.4)] transition-transform active:scale-95"
             >
               <Gift className="h-4 w-4 text-white" />
             </button>
-            <button onClick={() => void handleSendMessage()} disabled={!chatInput.trim()} className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500 disabled:opacity-50"><Send className="h-4 w-4 text-white" /></button>
+            <button onClick={() => void handleSendMessage()} disabled={!chatInput.trim()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/10 text-white shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-transform active:scale-95 disabled:opacity-30"><Send className="h-4 w-4 text-white" /></button>
           </div>
         </div>
         )}
@@ -3569,7 +3571,7 @@ export function TikTokStyleArena({
                 animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
                 exit={{ opacity: 0, x: 12, filter: 'blur(4px)' }}
                 transition={{ type: 'spring', damping: 28, stiffness: 340 }}
-                className="flex flex-row items-center gap-1 overflow-hidden rounded-full border border-white/10 bg-slate-950/55 px-1.5 py-1 shadow-[0_0_32px_rgba(0,0,0,0.5)] backdrop-blur-2xl"
+                className="flex flex-row items-center gap-1.5 overflow-hidden rounded-full border border-white/[0.08] bg-white/[0.02] px-2 py-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[60px]"
               >
                 {(
                   [
@@ -3590,7 +3592,7 @@ export function TikTokStyleArena({
                       arenaOutboundRef.current.broadcastSfx?.(sfx.id);
                       setSoundboardExpanded(false);
                     }}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/5 bg-white/5 transition-all hover:bg-white/20 active:scale-90"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/5 bg-black/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] transition-all hover:bg-white/10 active:scale-90"
                     title={sfx.label}
                   >
                     <span className="text-lg drop-shadow-md sm:text-xl">{sfx.emoji}</span>
@@ -3607,7 +3609,7 @@ export function TikTokStyleArena({
             }}
             aria-label="Effets sonores"
             aria-expanded={soundboardExpanded}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-slate-950/50 text-amber-100 shadow-[0_0_32px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all hover:bg-white/10 active:scale-95"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05] text-white shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-[60px] transition-all hover:bg-white/[0.1] active:scale-95"
           >
             <Music className="h-5 w-5" strokeWidth={1.6} />
           </button>
