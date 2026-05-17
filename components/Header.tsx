@@ -388,7 +388,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               href={user ? '/feed' : '/'}
               className={`relative z-[5] flex shrink-0 items-center gap-2.5 group ${shell === 'phone' ? 'lg:mb-10 lg:w-full' : ''}`}
             >
-              <BeefLogo size={32} className="transition-transform group-hover:scale-105 drop-shadow-[0_0_12px_rgba(162,0,255,0.55)]" />
+              <BeefLogo size={32} className="transition-transform group-hover:scale-105 drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]" />
               <span className="hidden sm:block text-xl font-extrabold text-white tracking-tighter drop-shadow-md">
                 Beefs
               </span>
@@ -433,7 +433,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   const active = isActive(item.href);
                   const itemClasses = `relative flex items-center gap-2 border-l-[3px] border-transparent px-3.5 py-2 text-sm font-medium transition-all duration-200 ${
                     active
-                      ? 'text-white max-lg:rounded-xl max-lg:border-l-transparent max-lg:bg-white/10 max-lg:text-plasma-400 lg:rounded-none lg:border-plasma-400 lg:bg-gradient-to-r lg:from-plasma-500/15 lg:to-transparent lg:text-white'
+                      ? 'text-white max-lg:rounded-xl max-lg:border-l-transparent max-lg:bg-white/10 max-lg:text-cyan-400 lg:rounded-none lg:border-cyan-400 lg:bg-gradient-to-r lg:from-cyan-500/15 lg:to-transparent lg:text-white'
                       : 'text-gray-500 max-lg:rounded-xl max-lg:hover:bg-white/[0.04] max-lg:hover:text-gray-200 lg:rounded-none lg:text-gray-400 lg:hover:border-transparent lg:hover:bg-white/[0.04] lg:hover:text-white'
                   } ${shell === 'full' && navSecondaryHrefs.has(item.href) ? 'hidden xl:flex' : ''} ${
                     shell === 'phone' ? 'lg:w-full lg:justify-start lg:px-4' : ''
@@ -451,7 +451,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         className={itemClasses}
                       >
                         <div className="relative">
-                          <Icon className={`w-[18px] h-[18px] ${active ? 'max-lg:text-plasma-400' : ''}`} />
+                          <Icon className={`w-[18px] h-[18px] ${active ? 'max-lg:text-cyan-400' : ''}`} />
                           <NavUnreadBadge href={item.href} count={item.badge} />
                         </div>
                         <span className="md:hidden lg:inline">{item.label}</span>
@@ -473,8 +473,8 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         <Icon
                           className={`w-[18px] h-[18px] ${
                             active
-                              ? 'max-lg:text-plasma-400 ' +
-                                (item.href === '/points' ? 'lg:text-plasma-400' : '')
+                              ? 'max-lg:text-cyan-400 ' +
+                                (item.href === '/points' ? 'lg:text-cyan-400' : '')
                               : ''
                           }`}
                         />
@@ -497,13 +497,13 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
             {/* L'Élite de l'Agora (Desktop Sidebar) */}
             <div className={`hidden shrink-0 ${shell === 'full' ? 'lg:hidden' : 'lg:flex lg:flex-col lg:gap-4 lg:px-6 lg:mt-4 lg:mb-8'}`}>
               <div className="mb-1 flex items-center gap-2">
-                <Flame className="h-4 w-4 text-plasma-500" />
+                <Flame className="h-4 w-4 text-cyan-500" />
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">L&apos;Élite de l&apos;Agora</h3>
               </div>
               <div className="flex flex-col gap-3.5">
                 {topUsers.map((u, i) => (
                   <Link key={u.id} href={`/profile/${u.username}`} className="group flex items-center gap-3">
-                    <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-bold text-white transition-colors group-hover:border-plasma-500/50">
+                    <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-bold text-white transition-colors group-hover:border-cyan-500/50">
                       {u.avatar_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={u.avatar_url} alt={u.username ?? ''} className="h-full w-full rounded-full object-cover" />
@@ -513,7 +513,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       {i === 0 && <span className="absolute -right-2 -top-2 text-[12px] drop-shadow-md">👑</span>}
                     </div>
                     <div className="flex min-w-0 flex-col">
-                      <span className="truncate text-xs font-bold text-gray-300 transition-colors group-hover:text-plasma-400">{u.display_name || u.username}</span>
+                      <span className="truncate text-xs font-bold text-gray-300 transition-colors group-hover:text-cyan-400">{u.display_name || u.username}</span>
                       <span className="text-[9px] font-medium uppercase tracking-wider text-gray-500">Aura Suprême</span>
                     </div>
                   </Link>
@@ -607,7 +607,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           <div className="py-1 dropdown-divider-top">
                             <button
                               onClick={async () => { await signOut(); setUserMenuOpen(false); }}
-                              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-plasma-400 transition-colors hover:bg-plasma-500/[0.08]"
+                              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-cyan-400 transition-colors hover:bg-cyan-500/[0.08]"
                             >
                               <LogOut className="w-4 h-4" />
                               <span>Déconnexion</span>
@@ -623,7 +623,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   <div className="flex flex-col w-full gap-3">
                     <Link
                       href="/signup"
-                      className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-plasma-600 px-5 py-2 text-sm font-black uppercase tracking-widest text-white shadow-glow-plasma transition-transform hover:scale-105 active:scale-95"
+                      className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-white px-5 py-2 text-sm font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-transform hover:bg-gray-200 hover:scale-105 active:scale-95"
                     >
                       Rejoindre l&apos;Agora
                     </Link>
@@ -692,7 +692,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                   const active = isActive(item.href);
                   const itemClasses = `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all ${
                     active
-                      ? 'max-lg:rounded-xl max-lg:bg-white/10 text-plasma-400'
+                      ? 'max-lg:rounded-xl max-lg:bg-white/10 text-cyan-400'
                       : 'text-gray-400 hover:text-white hover:bg-white/[0.04] max-lg:rounded-xl'
                   }`;
 
@@ -714,7 +714,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         </div>
                         <span className="flex-1">{item.label}</span>
                         {item.badge > 0 && (
-                          <span className="rounded-full bg-plasma-500/10 px-2 py-0.5 text-[10px] font-bold text-plasma-400">
+                          <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-400">
                             {item.badge} nouvelle{item.badge > 1 ? 's' : ''}
                           </span>
                         )}
@@ -736,7 +736,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         </div>
                         <span className="flex-1">{item.label}</span>
                         {item.badge > 0 && (
-                          <span className="rounded-full bg-plasma-500/10 px-2 py-0.5 text-[10px] font-bold text-plasma-400">
+                          <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-400">
                             {item.badge} nouvelle{item.badge > 1 ? 's' : ''}
                           </span>
                         )}
@@ -768,7 +768,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         </Link>
                       ))}
                       <button onClick={() => { signOut(); setMobileMenuOpen(false); }}
-                        className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-plasma-400 transition-colors hover:bg-plasma-500/[0.08]">
+                        className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-cyan-400 transition-colors hover:bg-cyan-500/[0.08]">
                         <LogOut className="w-5 h-5" />
                         <span>Déconnexion</span>
                       </button>
@@ -778,7 +778,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       <Link
                         href="/signup"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex w-full items-center justify-center rounded-xl bg-plasma-600 py-3.5 text-center text-sm font-black uppercase tracking-widest text-white shadow-glow-plasma transition-transform hover:scale-[0.98] active:scale-95"
+                        className="flex w-full items-center justify-center rounded-xl bg-white py-3.5 text-center text-sm font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-transform hover:bg-gray-200 hover:scale-[0.98] active:scale-95"
                       >
                         Rejoindre l&apos;Agora
                       </Link>

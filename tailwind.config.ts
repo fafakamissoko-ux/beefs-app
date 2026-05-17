@@ -18,15 +18,6 @@ const config: Config = {
           950: "#010102",
           900: "#07070A",
         },
-        plasma: {
-          DEFAULT: "#A200FF",
-          200: "#EEC6FF",
-          300: "#D580FF",
-          400: "#C44DFF",
-          500: "#A200FF",
-          600: "#7A00CC",
-          700: "#5C0099",
-        },
         cyan: {
           DEFAULT: "#00F0FF",
           200: "#B9FFFF",
@@ -49,21 +40,22 @@ const config: Config = {
         prestige: {
           gold: "#E5C07B",
         },
-        /** Alias UI produit pour le violet principal (voir `plasma`). */
+        /** Brand Spatial Monolith — Cyan premium */
         brand: {
-          400: "#C44DFF",
+          400: "#00F0FF",
+          500: "#00B3CC",
+          600: "#008B99",
         },
       },
       boxShadow: {
-        "glow-plasma": "0 0 20px rgba(162, 0, 255, 0.4)",
-        "glow-mediator":
-          "0 0 32px rgba(162, 0, 255, 0.12), 0 0 16px rgba(255, 255, 255, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.06)",
+        "glow-brand": "0 0 20px rgba(0, 240, 255, 0.4)",
+        "glow-mediator": "0 0 20px rgba(212, 175, 55, 0.6)",
         "glow-cyan": "0 0 20px rgba(0, 240, 255, 0.4)",
         "glow-blood": "0 0 20px rgba(255, 0, 60, 0.6)",
         card: "0 1px 0 rgba(255,255,255,0.06), 0 8px 32px rgba(0,0,0,0.5)",
       },
       backgroundImage: {
-        "brand-gradient": "linear-gradient(135deg, #A200FF 0%, #7A00CC 100%)",
+        "brand-gradient": "linear-gradient(135deg, #00F0FF 0%, #00B3CC 100%)",
       },
     },
   },

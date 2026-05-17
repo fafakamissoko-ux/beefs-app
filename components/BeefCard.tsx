@@ -225,12 +225,12 @@ export function BeefCard({
     auraTier === 3
       ? 'border-volt-500/80 shadow-[0_0_20px_rgba(223,255,0,0.15)]'
       : auraTier === 2
-        ? 'border-plasma-500/60 shadow-[0_0_15px_rgba(162,0,255,0.1)]'
+        ? 'border-cyan-500/60 shadow-[0_0_15px_rgba(0,240,255,0.1)]'
         : 'border-white/[0.08] hover:border-white/20';
 
   const chromeRelative =
     'relative flex h-full w-full flex-col overflow-hidden rounded-[1.2rem] border bg-black transition-all duration-300 md:rounded-[1.5rem]';
-  const liveRing = status === 'live' ? 'shadow-[0_0_0_1px_rgba(162,0,255,0.35)]' : '';
+  const liveRing = status === 'live' ? 'shadow-[0_0_0_1px_rgba(0,240,255,0.35)]' : '';
   const manifestoStroke = isManifesto ? 'border-dashed border-white/20' : '';
   const beefCardChromeClass = [chromeRelative, dynamicBorderClass, liveRing, manifestoStroke].filter(Boolean).join(' ');
 
@@ -295,7 +295,7 @@ export function BeefCard({
                   onNotifyClick?.();
                   toast(!isReminded ? 'Rappel activé' : 'Rappel annulé', 'success');
                 }}
-                className={`flex h-7 w-7 items-center justify-center rounded-full border backdrop-blur-md transition-all ${isReminded ? 'border-plasma-400 bg-plasma-500 text-white' : 'border-white/20 bg-black/60 text-white hover:bg-white/20'}`}
+                className={`flex h-7 w-7 items-center justify-center rounded-full border backdrop-blur-md transition-all ${isReminded ? 'border-cyan-400 bg-cyan-500 text-white' : 'border-white/20 bg-black/60 text-white hover:bg-white/20'}`}
               >
                 <Bell className={`h-3.5 w-3.5 ${isReminded ? 'fill-white' : ''}`} />
               </button>
@@ -423,7 +423,7 @@ export function BeefCard({
                 REF: <span className="text-white">@{mediator_name}</span>
               </span>
             ) : (
-              <span className="w-fit rounded-full border border-plasma-500/40 bg-plasma-500/20 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-plasma-300 backdrop-blur-md sm:text-[10px]">
+              <span className="w-fit rounded-full border border-prestige-gold/40 bg-prestige-gold/20 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-prestige-gold backdrop-blur-md sm:text-[10px]">
                 En attente de Ref
               </span>
             )}
