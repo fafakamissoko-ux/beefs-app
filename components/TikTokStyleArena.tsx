@@ -207,6 +207,22 @@ interface UserProfile {
   };
 }
 
+const getUsernameColor = (username: string) => {
+  const colors = [
+    'text-cyan-400',
+    'text-emerald-400',
+    'text-amber-400',
+    'text-violet-400',
+    'text-rose-400',
+    'text-sky-400',
+  ];
+  let hash = 0;
+  for (let i = 0; i < username.length; i++) {
+    hash = username.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
+
 export function TikTokStyleArena({
   host,
   challenger,
@@ -3186,7 +3202,11 @@ export function TikTokStyleArena({
           <div ref={chatMessagesScrollRef} className="flex-1 overflow-y-auto px-4 py-2 hide-scrollbar">
             {visibleMessages.map((msg) => (
               <div key={msg.id} className="mb-3">
-                <span className="block mb-1 ml-2 text-[9px] font-black uppercase tracking-widest text-white/40">{msg.user_name}</span>
+                <span
+                  className={`block mb-1 ml-2 text-[9px] font-black uppercase tracking-widest ${getUsernameColor(msg.user_name)}`}
+                >
+                  {msg.user_name}
+                </span>
                 <div className="inline-block rounded-2xl rounded-tl-sm border border-white/[0.05] bg-white/5 px-3 py-2 text-[13px] leading-snug text-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px]">
                   {msg.content}
                 </div>
@@ -3523,13 +3543,17 @@ export function TikTokStyleArena({
         {!isCinematicMode && (
           <div
             data-cinema-stay
-            className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end bg-gradient-to-t from-[#0A0E17] via-[#0A0E17]/85 to-transparent pt-32 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none"
+            className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end pt-32 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none"
           >
           <div className="pointer-events-auto w-[85%] max-h-[30vh] overflow-y-auto px-3 mb-2 flex flex-col justify-end hide-scrollbar">
             {visibleMessages.map((msg) => (
               <div key={msg.id} className="mb-2">
-                <span className="text-[11px] font-bold text-white/60 mr-2">{msg.user_name}</span>
-                <span className="text-[13px] text-white drop-shadow-md">{msg.content}</span>
+                <span className={`text-[11px] font-bold mr-2 drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${getUsernameColor(msg.user_name)}`}>
+                  {msg.user_name}
+                </span>
+                <span className="text-[13px] text-white font-medium drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
+                  {msg.content}
+                </span>
               </div>
             ))}
             <div ref={chatMessagesScrollRef} />
