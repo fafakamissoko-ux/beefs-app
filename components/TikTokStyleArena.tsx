@@ -3297,7 +3297,7 @@ export function TikTokStyleArena({
                   : idx === 3
                     ? 'top-2 right-2 sm:top-4 sm:right-4 flex-col items-end'
                     : expectedCount === 3 && idx === 2
-                      ? 'top-2 right-2 sm:top-4 sm:right-4 flex-row-reverse items-start'
+                      ? 'left-2 right-2 sm:left-4 sm:right-4 top-2 sm:top-4 flex-row justify-between items-start pointer-events-none'
                       : 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-start',
             };
             });
@@ -3305,7 +3305,7 @@ export function TikTokStyleArena({
             return (
               <>
                 <div className={`relative h-full w-full grid gap-1 sm:gap-2 ${gridClass}`}>
-                  {layoutConfigs.map((cfg) => {
+                  {layoutConfigs.map((cfg, idx) => {
                     const isSpeaking = speakingTurnActive && effectiveHotMicSpeakerSlot === cfg.slot;
                     const isLocal = cfg.panel?.sessionId === localParticipant?.sessionId && !isViewer;
                     const isMutedByFocus =
@@ -3355,32 +3355,35 @@ export function TikTokStyleArena({
 
                         <div
                           data-cinema-stay
-                          className={`pointer-events-auto absolute z-[140] flex gap-1.5 ${cfg.uiPos}`}
+                          className={`absolute z-[140] flex gap-1.5 ${cfg.uiPos} ${expectedCount === 3 && idx === 2 ? '' : 'pointer-events-auto'}`}
                         >
-                          <div className="flex max-w-[9rem] sm:max-w-[14rem] items-center gap-2 rounded-full bg-slate-900/40 backdrop-blur-[40px] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] border border-white/[0.08] px-4 py-2">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null);
-                              }}
-                              className="truncate text-[10px] sm:text-[11px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md"
-                            >
-                              @{cfg.name}
-                            </button>
-                            {!cfg.panel && (
-                              <span className="shrink-0 rounded border border-rose-500/20 bg-rose-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase text-rose-400">
-                                Absent
-                              </span>
+                          <div className={`flex gap-1.5 items-start ${expectedCount === 3 && idx === 2 ? 'pointer-events-auto' : ''}`}>
+                            <div className="flex max-w-[9rem] sm:max-w-[14rem] items-center gap-2 rounded-full bg-slate-900/40 backdrop-blur-[40px] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] border border-white/[0.08] px-4 py-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null);
+                                }}
+                                className="truncate text-[10px] sm:text-[11px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md"
+                              >
+                                @{cfg.name}
+                              </button>
+                              {!cfg.panel && (
+                                <span className="shrink-0 rounded border border-rose-500/20 bg-rose-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase text-rose-400">
+                                  Absent
+                                </span>
+                              )}
+                            </div>
+                            {isSpeaking && (
+                              <div className="w-fit animate-pulse rounded bg-rose-600 px-2 py-0.5 text-[9px] font-black text-white shadow-[0_0_10px_rgba(225,29,72,0.6)]">
+                                DIRECT
+                              </div>
                             )}
                           </div>
-                          {isSpeaking && (
-                            <div className="w-fit animate-pulse rounded bg-rose-600 px-2 py-0.5 text-[9px] font-black text-white shadow-[0_0_10px_rgba(225,29,72,0.6)]">
-                              DIRECT
-                            </div>
-                          )}
+
                           {isLocal && (
-                            <div className="flex shrink-0 items-center gap-1.5">
+                            <div className={`flex shrink-0 items-center gap-1.5 ${expectedCount === 3 && idx === 2 ? 'pointer-events-auto' : ''}`}>
                               <button
                                 type="button"
                                 onClick={(e) => {
