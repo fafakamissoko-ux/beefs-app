@@ -781,6 +781,18 @@ export function TikTokStyleArena({
       .from('beef_participants')
       .select('user_id, role, is_main, invite_status')
       .eq('beef_id', roomId);
+
+    // --- DÉTECTEUR D'EXPULSION (LIMBO FIX) ---
+    if (!isViewer && !isHost && data) {
+      const amIStillHere = data.some((p: { user_id: string }) => p.user_id === userId);
+      if (!amIStillHere) {
+        toast('Vous avez été renvoyé dans les gradins par la régie.', 'error');
+        setTimeout(() => window.location.reload(), 1200);
+        return;
+      }
+    }
+    // -----------------------------------------
+
     if (!data?.length) {
       setParticipantRoles({});
       return;
@@ -806,7 +818,7 @@ export function TikTokStyleArena({
       };
     });
     setParticipantRoles(roles);
-  }, [roomId]);
+  }, [roomId, userId, isViewer, isHost, toast]);
 
   useEffect(() => {
     void loadParticipants();
