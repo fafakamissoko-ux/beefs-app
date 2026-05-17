@@ -420,6 +420,8 @@ export function TikTokStyleArena({
   const reactionDockRef = useRef<HTMLDivElement | null>(null);
   const chatMessagesScrollRef = useRef<HTMLDivElement>(null);
   const chatMessagesEndRef = useRef<HTMLDivElement>(null);
+  const chatMessagesMobileScrollRef = useRef<HTMLDivElement>(null);
+  const chatMessagesMobileEndRef = useRef<HTMLDivElement>(null);
   const announcementClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** File d'attente batchée pour particules (évite de marteler le state sur les pics de broadcast) */
   const reactionBufferRef = useRef<FlyingReactionEntry[]>([]);
@@ -548,11 +550,19 @@ export function TikTokStyleArena({
   const scrollChatToEnd = useCallback(() => {
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {
-        const el = chatMessagesScrollRef.current;
-        if (el) {
-          el.scrollTop = el.scrollHeight;
+        // Desktop
+        const elDesktop = chatMessagesScrollRef.current;
+        if (elDesktop) {
+          elDesktop.scrollTop = elDesktop.scrollHeight;
         }
         chatMessagesEndRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
+
+        // Mobile
+        const elMobile = chatMessagesMobileScrollRef.current;
+        if (elMobile) {
+          elMobile.scrollTop = elMobile.scrollHeight;
+        }
+        chatMessagesMobileEndRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
       });
     });
   }, []);
@@ -3545,18 +3555,23 @@ export function TikTokStyleArena({
             data-cinema-stay
             className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end pt-32 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none"
           >
-          <div className="pointer-events-auto w-[85%] max-h-[30vh] overflow-y-auto px-3 mb-2 flex flex-col justify-end hide-scrollbar">
-            {visibleMessages.map((msg) => (
-              <div key={msg.id} className="mb-2">
-                <span className={`text-[11px] font-bold mr-2 drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${getUsernameColor(msg.user_name)}`}>
-                  {msg.user_name}
-                </span>
-                <span className="text-[13px] text-white font-medium drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
-                  {msg.content}
-                </span>
-              </div>
-            ))}
-            <div ref={chatMessagesScrollRef} />
+          <div
+            ref={chatMessagesMobileScrollRef}
+            className="pointer-events-auto w-[85%] max-h-[30vh] overflow-y-auto overscroll-contain touch-pan-y px-3 mb-2 flex flex-col hide-scrollbar"
+          >
+            <div className="mt-auto flex flex-col justify-end">
+              {visibleMessages.map((msg) => (
+                <div key={msg.id} className="mb-2">
+                  <span className={`text-[11px] font-bold mr-2 drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${getUsernameColor(msg.user_name)}`}>
+                    {msg.user_name}
+                  </span>
+                  <span className="text-[13px] text-white font-medium drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
+                    {msg.content}
+                  </span>
+                </div>
+              ))}
+              <div ref={chatMessagesMobileEndRef} className="h-px w-full" />
+            </div>
           </div>
           <div id="dock-mobile" className="pointer-events-auto mt-auto flex w-full shrink-0 items-center gap-2 px-3 pb-2">
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full border border-white/[0.05] bg-black/40 px-4 py-2.5 text-[13px] text-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] placeholder-white/30 focus:bg-black/60 focus:outline-none" />
