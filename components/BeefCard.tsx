@@ -8,6 +8,9 @@ import { Countdown } from '@/components/Countdown';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 
+/** Alias pour éviter le motif `}[` dans `useState<…>(…)` sous SWC/TSX. */
+type FloatingAuraChip = { id: number; x: number };
+
 interface BeefCardProps {
   id: string;
   title: string;
@@ -120,8 +123,8 @@ export function BeefCard({
   const modalVideoRef = useRef<HTMLVideoElement | null>(null);
   const mediaBlockRef = useRef<HTMLDivElement | null>(null);
 
-  const [cardFloatingAuras, setCardFloatingAuras] = useState<{ id: number; x: number }[]>([]);
-  const [teaserFloatingAuras, setTeaserFloatingAuras] = useState<{ id: number; x: number }[]>([]);
+  const [cardFloatingAuras, setCardFloatingAuras] = useState<Array<FloatingAuraChip>>([]);
+  const [teaserFloatingAuras, setTeaserFloatingAuras] = useState<Array<FloatingAuraChip>>([]);
   const [replayHover, setReplayHover] = useState(false);
   const [isTeaserOpen, setIsTeaserOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -171,12 +174,12 @@ export function BeefCard({
     return () => obs.disconnect();
   }, [video_url, id]);
 
-  const getPrimaryStatusBadge = () => {
+  function getPrimaryStatusBadge(): React.ReactNode {
     switch (status) {
       case 'pending':
         return (
           <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white/90 backdrop-blur-md md:text-xs">
-            ⚖️ EN ATTENTE
+            EN ATTENTE
           </div>
         );
       case 'ended':
@@ -184,7 +187,7 @@ export function BeefCard({
       case 'completed':
         return (
           <div className="flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-300 backdrop-blur-md md:text-xs">
-            ▶ REPLAY
+            REPLAY
           </div>
         );
       case 'scheduled':
@@ -203,7 +206,7 @@ export function BeefCard({
       default:
         return null;
     }
-  };
+  }
 
   const getTimeDisplay = () => {
     const now = Date.now();
@@ -225,10 +228,14 @@ export function BeefCard({
         ? 'border-plasma-500/60 shadow-[0_0_15px_rgba(162,0,255,0.1)]'
         : 'border-white/[0.08] hover:border-white/20';
 
+  const chromeRelative =
+    'relative flex h-full w-full flex-col overflow-hidden rounded-[1.2rem] border bg-black transition-all duration-300 md:rounded-[1.5rem]';
+  const liveRing = status === 'live' ? 'shadow-[0_0_0_1px_rgba(162,0,255,0.35)]' : '';
+  const manifestoStroke = isManifesto ? 'border-dashed border-white/20' : '';
+  const beefCardChromeClass = [chromeRelative, dynamicBorderClass, liveRing, manifestoStroke].filter(Boolean).join(' ');
+
   return (
-    <div
-      className={`relative flex h-full w-full flex-col overflow-hidden rounded-[1.2rem] border bg-black transition-all duration-300 md:rounded-[1.5rem] ${dynamicBorderClass} ${status === 'live' ? 'shadow-[0_0_0_1px_rgba(162,0,255,0.35)]' : ''} ${isManifesto ? 'border-dashed border-white/20' : ''}`}
-    >
+    <div className={beefCardChromeClass}>
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -490,6 +497,7 @@ export function BeefCard({
             )}
           </AnimatePresence>
         )}
+        {isTeaserOpen && (
         <div
           className="fixed inset-0 z-[9999] flex flex-col bg-obsidian-950 md:flex-row md:items-center md:justify-center md:bg-obsidian-950/95 md:p-8"
           role="presentation"
@@ -749,7 +757,8 @@ export function BeefCard({
             </div>
           </div>
         </div>
-      )}
+        )}
+      </motion.div>
     </div>
   );
 }
