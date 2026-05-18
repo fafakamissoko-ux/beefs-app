@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase/client';
 import { BeefCard } from '@/components/BeefCard';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { FollowListModal } from '@/components/FollowListModal';
+import { AuraGiversModal } from '@/components/AuraGiversModal';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { FollowButton } from '@/components/FollowButton';
 import { AppBackButton } from '@/components/AppBackButton';
@@ -124,6 +125,7 @@ export default function PublicProfilePage() {
   const [loading, setLoading] = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showFollowModal, setShowFollowModal] = useState<null | 'followers' | 'following'>(null);
+  const [isAuraModalOpen, setIsAuraModalOpen] = useState(false);
   const [mediatorReviews, setMediatorReviews] = useState<MediatorViewerReviewDisplay[]>([]);
   const [activeTab, setActiveTab] = useState<'debates' | 'participations' | 'reviews'>('debates');
   const [viewingImage, setViewingImage] = useState<{ url: string; type: 'avatar' | 'banner' } | null>(null);
@@ -770,7 +772,14 @@ export default function PublicProfilePage() {
               )}
 
               {/* Aura — prestige (lifetime) vs Lingots ≠ affichés ici */}
-              <div className="flex flex-wrap items-center gap-3 mb-4">
+              <div
+                className="flex flex-wrap items-center gap-3 mb-4 cursor-pointer transition-transform active:scale-95 hover:opacity-80"
+                onClick={() => setIsAuraModalOpen(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && setIsAuraModalOpen(true)}
+                aria-label="Voir les donateurs d'Aura"
+              >
                 {(() => {
                   const currentAura = profile.lifetime_points ?? profile.points;
                   const rank = getAuraRank(currentAura);
@@ -1008,6 +1017,14 @@ export default function PublicProfilePage() {
           userId={profile.id}
           type={showFollowModal}
           onClose={() => setShowFollowModal(null)}
+        />
+      )}
+
+      {profile && (
+        <AuraGiversModal
+          isOpen={isAuraModalOpen}
+          onClose={() => setIsAuraModalOpen(false)}
+          targetId={profile.id}
         />
       )}
 
