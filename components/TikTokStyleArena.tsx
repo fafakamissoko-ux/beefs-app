@@ -212,7 +212,7 @@ const getUsernameColor = (username: string) => {
     'text-cyan-400',
     'text-emerald-400',
     'text-amber-400',
-    'text-violet-400',
+    'text-cyan-400',
     'text-rose-400',
     'text-sky-400',
   ];
@@ -2927,12 +2927,12 @@ export function TikTokStyleArena({
         if (target.closest('button, input, textarea, a, aside, [id^="dock-"], [data-cinema-stay]')) return;
         setIsCinematicMode(true);
       }}
-      className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden bg-[#0A0E17] lg:flex-row"
+      className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden border border-white/10 bg-black/50 backdrop-blur-3xl lg:flex-row"
     >
       {/* --- COUCHE 1 : ÉCRAN VS (Priorité 1) --- */}
       <AnimatePresence>
         {showVsScreen && (
-          <div className="absolute inset-0 z-[9999] bg-[#0A0E17]">
+          <div className="absolute inset-0 z-[9999] bg-black/50 backdrop-blur-3xl border border-white/10">
             {rolesLoaded ? (
               <VsTransition
                 challengers={
@@ -2951,7 +2951,7 @@ export function TikTokStyleArena({
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
               </div>
             )}
           </div>
@@ -2960,7 +2960,7 @@ export function TikTokStyleArena({
 
       {/* --- COUCHE 2 : PRE-JOIN (Priorité 2) --- */}
       {!showVsScreen && !hasJoined && showPreJoin && (
-        <div className="absolute inset-0 z-[8000] bg-[#0A0E17]">
+        <div className="absolute inset-0 z-[8000] bg-black/50 backdrop-blur-3xl border border-white/10">
           <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer} mediatorName={mediatorName} />
           {!effectiveDailyRoomUrl && (
             <div className="absolute bottom-10 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-slate-900/65 px-4 py-2 text-xs font-semibold text-cyan-400 backdrop-blur-md">
@@ -3008,7 +3008,7 @@ export function TikTokStyleArena({
 
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
-        <div className="absolute inset-0 bg-[#0A0E17] z-[999] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-3xl border border-white/10 z-[999] flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
             <span className="text-gray-500 text-sm">Déconnexion...</span>
@@ -3030,7 +3030,7 @@ export function TikTokStyleArena({
       />
       {beefEnded && endSummary && (
         <div
-          className="absolute inset-0 z-[1000] bg-gradient-to-b from-[#0A0E17] via-slate-950 to-[#06080f] flex flex-col items-center justify-center p-6"
+          className="absolute inset-0 z-[1000] flex flex-col items-center justify-center bg-black/50 p-6 backdrop-blur-3xl"
           role="dialog"
           aria-modal="true"
           aria-labelledby="beef-end-summary-title"
@@ -3072,7 +3072,7 @@ export function TikTokStyleArena({
               <div className="mb-3 text-center font-mono text-xs uppercase tracking-widest text-gray-400">Résonance Générée</div>
               <div className="flex flex-wrap justify-center gap-2">
                 {endSummary.resonanceA > 0 && (
-                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-blue-500/20 bg-blue-500/10 p-2">
+                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-2">
                     <span className="text-lg font-black tabular-nums text-cyan-400">{endSummary.resonanceA}</span>
                     <span className="mt-1 font-mono text-[9px] uppercase text-cyan-200/60">Slot A</span>
                   </div>
@@ -3082,9 +3082,9 @@ export function TikTokStyleArena({
                   <span className="mt-1 font-mono text-[9px] uppercase text-prestige-gold/60">Arbitre</span>
                 </div>
                 {endSummary.resonanceB > 0 && (
-                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-2">
-                    <span className="text-lg font-black tabular-nums text-emerald-400">{endSummary.resonanceB}</span>
-                    <span className="mt-1 font-mono text-[9px] uppercase text-emerald-200/60">Slot B</span>
+                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-white/20 bg-white/10 p-2">
+                    <span className="text-lg font-black tabular-nums text-white/90">{endSummary.resonanceB}</span>
+                    <span className="mt-1 font-mono text-[9px] uppercase text-white/60">Slot B</span>
                   </div>
                 )}
                 {endSummary.resonanceC > 0 && (
@@ -3094,9 +3094,9 @@ export function TikTokStyleArena({
                   </div>
                 )}
                 {endSummary.resonanceD > 0 && (
-                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-blue-500/20 bg-blue-500/10 p-2">
-                    <span className="text-lg font-black tabular-nums text-blue-400">{endSummary.resonanceD}</span>
-                    <span className="mt-1 font-mono text-[9px] uppercase text-blue-200/60">Slot D</span>
+                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-2">
+                    <span className="text-lg font-black tabular-nums text-cyan-400">{endSummary.resonanceD}</span>
+                    <span className="mt-1 font-mono text-[9px] uppercase text-cyan-200/60">Slot D</span>
                   </div>
                 )}
               </div>
@@ -3126,7 +3126,7 @@ export function TikTokStyleArena({
                   if (endSummaryTimerRef.current) clearTimeout(endSummaryTimerRef.current);
                   router.replace('/feed');
                 }}
-                className="w-full rounded-full bg-blue-500 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-600"
+                className="w-full rounded-full border border-white/20 bg-white/10 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/15"
               >
                 Retour au feed
               </motion.button>
@@ -3176,7 +3176,7 @@ export function TikTokStyleArena({
                     <span className="font-black text-white">{userPoints} Lingots</span>
                   </div>
                 </div>
-                <button type="button" onClick={() => { setShowArenaMenu(false); goBuyPoints(); }} className="flex items-center gap-1.5 rounded-full bg-blue-500 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-cyan-400">
+                <button type="button" onClick={() => { setShowArenaMenu(false); goBuyPoints(); }} className="flex items-center gap-1.5 rounded-full bg-prestige-gold px-3 py-1.5 text-xs font-bold text-black shadow-[0_0_15px_rgba(212,175,55,0.4)] transition-colors hover:bg-yellow-500">
                   Recharger
                 </button>
               </div>
@@ -3258,7 +3258,7 @@ export function TikTokStyleArena({
       )}
 
       {/* === ZONE 2 : LA VIDÉO (AVEC OVERLAY CHAT MOBILE) === */}
-      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[#0A0E17] z-10">
+      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-black/50 backdrop-blur-3xl border border-white/10 z-10">
 
         {/* TICKER MOBILE */}
         {!isCinematicMode && arenaHasAnnouncement && (
@@ -3312,7 +3312,7 @@ export function TikTokStyleArena({
         )}
 
         {/* === ARÈNE EMPEREUR === */}
-        <div className="absolute inset-0 z-0 bg-[#0A0E17] p-1 sm:p-2">
+        <div className="absolute inset-0 z-0 bg-black/50 backdrop-blur-3xl border border-white/10 p-1 sm:p-2">
           {(() => {
             type EmperorSlot = 'A' | 'B' | 'C' | 'D';
             const expectedCount = Math.max(2, expectedUids.length);
@@ -3485,7 +3485,7 @@ export function TikTokStyleArena({
                             e.stopPropagation();
                             void recoverMediaDevices();
                           }}
-                          className="rounded-full bg-blue-500 px-3 py-1.5 text-[9px] font-black text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                          className="rounded-full bg-white px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-black shadow-[0_0_15px_rgba(255,255,255,0.25)] hover:bg-gray-200"
                         >
                           📡 RÉACTIVER
                         </button>
@@ -3809,7 +3809,7 @@ export function TikTokStyleArena({
                     <button
                       type="button"
                       onClick={() => setGiftTarget('left')}
-                      className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'left' ? 'bg-blue-500 text-white' : 'text-white/50 hover:bg-white/10'}`}
+                      className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'left' ? 'border border-white/20 bg-white/10 text-white' : 'text-white/50 hover:bg-white/10'}`}
                     >
                       @{leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
                     </button>
@@ -3823,7 +3823,7 @@ export function TikTokStyleArena({
                     <button
                       type="button"
                       onClick={() => setGiftTarget('right')}
-                      className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'right' ? 'bg-emerald-500 text-white' : 'text-white/50 hover:bg-white/10'}`}
+                      className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'right' ? 'border border-white/20 bg-white/10 text-white' : 'text-white/50 hover:bg-white/10'}`}
                     >
                       @{rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
                     </button>
@@ -3971,7 +3971,7 @@ export function TikTokStyleArena({
                 <X className="h-5 w-5" strokeWidth={1.5} />
               </button>
 
-              <div className="relative h-28 bg-gradient-to-r from-blue-500/20 via-cyan-400/20 to-blue-600/20">
+              <div className="relative h-28 bg-gradient-to-r from-cyan-500/20 via-white/10 to-cyan-600/20">
                 <div className="absolute inset-0 bg-white/5" />
               </div>
 
@@ -4045,7 +4045,7 @@ export function TikTokStyleArena({
                         className={`flex-1 rounded-full py-2.5 font-bold transition-colors ${
                           profileFollowsTarget
                             ? 'border border-white/25 bg-white/10 text-white hover:bg-white/20'
-                            : 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:opacity-90'
+                            : 'bg-white text-black font-black uppercase tracking-widest hover:bg-gray-200'
                         }`}
                       >
                         {profileFollowsTarget ? 'Abonné ✓' : 'Suivre'}
@@ -4094,7 +4094,7 @@ export function TikTokStyleArena({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[3000] flex items-center justify-center bg-[#0A0E17]/90 px-4 backdrop-blur-md"
+            className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/50 border border-white/10 px-4 backdrop-blur-md"
             role="dialog"
             aria-modal="true"
             aria-labelledby="mediation-invite-title"
@@ -4103,7 +4103,7 @@ export function TikTokStyleArena({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 10 }}
-              className="w-full max-w-sm overflow-hidden rounded-3xl border border-cobalt-500/30 bg-gradient-to-b from-slate-900/95 to-[#0A0E17] p-6 text-center shadow-[0_0_80px_rgba(59,130,246,0.15)]"
+              className="w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-black/50 p-6 text-center shadow-[0_0_80px_rgba(0,240,255,0.12)] backdrop-blur-3xl"
             >
               <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-cobalt-500/20">
                 <span className="text-4xl" aria-hidden>
@@ -4123,7 +4123,7 @@ export function TikTokStyleArena({
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="w-full rounded-full bg-cobalt-500 py-3.5 font-mono text-sm font-black uppercase tracking-wider text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-transform hover:bg-cobalt-400 active:scale-95"
+                className="w-full rounded-full bg-white py-3.5 font-mono text-sm font-black uppercase tracking-wider text-black shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-transform hover:bg-gray-200 active:scale-95"
               >
                 Prendre place
               </button>
@@ -4199,7 +4199,7 @@ export function TikTokStyleArena({
                       <span className="text-xl font-black text-white">{userPoints} <span className="text-sm font-bold text-gray-400">Lingots</span></span>
                     </div>
                   </div>
-                  <button type="button" onClick={() => { setShowArenaMenu(false); goBuyPoints(); }} className="flex items-center gap-1.5 rounded-full bg-blue-500 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-cyan-400">
+                  <button type="button" onClick={() => { setShowArenaMenu(false); goBuyPoints(); }} className="flex items-center gap-1.5 rounded-full bg-prestige-gold px-4 py-2 text-xs font-bold text-black shadow-[0_0_15px_rgba(212,175,55,0.4)] transition-colors hover:bg-yellow-500">
                     Recharger
                   </button>
                 </div>
@@ -4260,7 +4260,7 @@ export function TikTokStyleArena({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-[12px]"
+            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 px-4 backdrop-blur-3xl"
             onClick={() => {
               if (!authHook?.mandatory) setAuthHook(null);
             }}
@@ -4271,7 +4271,7 @@ export function TikTokStyleArena({
               exit={{ scale: 0.9, y: 30, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-[360px] overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#0A0E17]/90 p-8 text-center shadow-[0_0_100px_rgba(59,130,246,0.2)] ring-1 ring-white/20"
+              className="relative w-full max-w-[360px] overflow-hidden rounded-[2.5rem] border border-white/10 bg-black/50 p-8 text-center shadow-[0_0_100px_rgba(0,240,255,0.15)] ring-1 ring-white/20 backdrop-blur-3xl"
             >
               <h2 className="mb-3 font-sans text-2xl font-black uppercase italic tracking-tighter text-white drop-shadow-md">
                 {authHook.title}
@@ -4283,7 +4283,7 @@ export function TikTokStyleArena({
                 <button
                   type="button"
                   onClick={() => router.push(`/signup?next=${encodeURIComponent(window.location.pathname)}`)}
-                  className="w-full rounded-2xl bg-blue-600 py-4 text-xs font-black uppercase tracking-widest text-white shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all hover:scale-[1.02] hover:bg-blue-500"
+                  className="w-full rounded-2xl bg-white py-4 text-xs font-black uppercase tracking-widest text-black transition-all hover:scale-[1.02] hover:bg-gray-200"
                 >
                   Créer mon profil
                 </button>

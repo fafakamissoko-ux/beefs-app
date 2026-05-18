@@ -136,9 +136,9 @@ export function PreJoinScreen({
   const ambientLayer = (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
       <div className="absolute -left-[20%] -top-[25%] h-[min(70vh,32rem)] w-[min(85vw,36rem)] rounded-full bg-cyan-600/[0.22] blur-[100px] sm:blur-[120px]" />
-      <div className="absolute -right-[18%] -bottom-[20%] h-[min(65vh,30rem)] w-[min(80vw,34rem)] rounded-full bg-emerald-500/[0.16] blur-[95px] sm:blur-[115px]" />
+      <div className="absolute -right-[18%] -bottom-[20%] h-[min(65vh,30rem)] w-[min(80vw,34rem)] rounded-full bg-cyan-500/20 blur-[95px] sm:blur-[115px]" />
       <div className="absolute right-0 top-1/3 h-40 w-40 -translate-y-1/2 translate-x-1/4 rounded-full bg-cyan-500/10 blur-3xl" />
-      <div className="absolute bottom-0 left-1/4 h-32 w-32 rounded-full bg-emerald-400/10 blur-3xl" />
+      <div className="absolute bottom-0 left-1/4 h-32 w-32 rounded-full bg-cyan-400/10 blur-3xl" />
     </div>
   );
 
@@ -158,7 +158,7 @@ export function PreJoinScreen({
               <span aria-hidden>←</span>
             </button>
             <div className="space-y-5 pt-10 text-center">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500/25 to-emerald-500/20 ring-1 ring-white/10 sm:h-24 sm:w-24">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500/25 to-cyan-500/15 ring-1 ring-white/10 sm:h-24 sm:w-24">
                 <span className="text-4xl font-black text-white sm:text-5xl">{userName?.[0]?.toUpperCase() || '?'}</span>
               </div>
               <div>
@@ -168,7 +168,7 @@ export function PreJoinScreen({
               <button
                 type="button"
                 onClick={() => onJoin(null)}
-                className="w-full touch-manipulation rounded-2xl bg-gradient-to-r from-cyan-600 to-emerald-600 py-3 text-sm font-black text-white shadow-[0_0_42px_-6px_rgba(0,240,255,0.45),0_18px_48px_-8px_rgba(5,150,105,0.35)] transition-[transform,filter] duration-150 hover:brightness-110 active:scale-[0.97] sm:py-3.5 sm:text-base"
+                className="w-full touch-manipulation rounded-2xl bg-white py-3 text-sm font-black uppercase tracking-widest text-black transition-[transform,background-color] duration-150 hover:bg-gray-200 active:scale-[0.97] sm:py-3.5 sm:text-base"
               >
                 👁️ Regarder le Beef
               </button>
@@ -200,7 +200,7 @@ export function PreJoinScreen({
         </div>
 
         {/* Camera preview */}
-        <div className="relative aspect-video max-h-[min(42vh,22rem)] overflow-hidden rounded-2xl border border-white/[0.08] bg-obsidian-900/80 sm:max-h-none sm:rounded-3xl">
+        <div className="relative aspect-video max-h-[min(42vh,22rem)] overflow-hidden rounded-2xl border border-white/10 bg-black/50 backdrop-blur-3xl sm:max-h-none sm:rounded-3xl">
           {camEnabled ? (
             <video
               ref={videoRef}
@@ -274,7 +274,7 @@ export function PreJoinScreen({
               onClick={toggleMic}
               className={`mb-1.5 flex w-full touch-manipulation items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition-all sm:mb-2 sm:gap-2 sm:rounded-2xl sm:px-3 sm:py-2.5 sm:text-sm ${
                 micEnabled
-                  ? 'bg-white/[0.06] text-white ring-1 ring-emerald-500/25 hover:bg-white/[0.1]'
+                  ? 'bg-white/[0.06] text-white ring-1 ring-cyan-500/25 hover:bg-white/[0.1]'
                   : 'border border-red-500/40 bg-red-500/15 text-red-200 hover:bg-red-500/25'
               }`}
             >
@@ -284,7 +284,7 @@ export function PreJoinScreen({
             {micEnabled && (
               <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06] sm:h-2">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-500 transition-all duration-75"
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-300 transition-all duration-75"
                   style={{ width: `${audioLevel}%` }}
                 />
               </div>
@@ -314,7 +314,7 @@ export function PreJoinScreen({
                 <select
                   value={selectedMic}
                   onChange={e => { setSelectedMic(e.target.value); startPreview(selectedCam, e.target.value); }}
-                  className="w-full cursor-pointer appearance-none rounded-[1.5rem] bg-white/[0.04] px-3 py-2 pr-9 text-xs text-white ring-0 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 sm:rounded-[1.75rem] sm:px-4 sm:py-2.5 sm:text-sm"
+                  className="w-full cursor-pointer appearance-none rounded-[1.5rem] bg-white/[0.04] px-3 py-2 pr-9 text-xs text-white ring-0 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 sm:rounded-[1.75rem] sm:px-4 sm:py-2.5 sm:text-sm"
                 >
                   {devices.mics.map(d => (
                     <option key={d.deviceId} value={d.deviceId}>{d.label || 'Micro'}</option>
@@ -349,7 +349,7 @@ export function PreJoinScreen({
         <button
           type="button"
           onClick={handleJoin}
-          className="w-full touch-manipulation rounded-2xl bg-gradient-to-r from-cyan-600 to-emerald-600 py-3 text-sm font-black tracking-wide text-white shadow-[0_0_40px_-8px_rgba(0,240,255,0.45),0_18px_44px_-10px_rgba(5,150,105,0.35)] transition-[transform,filter,box-shadow] duration-200 hover:brightness-110 hover:shadow-[0_0_50px_-6px_rgba(0,240,255,0.5),0_22px_52px_-10px_rgba(5,150,105,0.4)] active:scale-[0.96] sm:py-3.5 sm:text-base md:py-4"
+          className="w-full touch-manipulation rounded-2xl bg-white py-3 text-sm font-black uppercase tracking-widest text-black transition-[transform,background-color] duration-200 hover:bg-gray-200 active:scale-[0.96] sm:py-3.5 sm:text-base md:py-4"
         >
           Entrer dans l&apos;Arène
         </button>

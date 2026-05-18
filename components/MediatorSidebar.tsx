@@ -180,7 +180,7 @@ export function MediatorSidebar({
                   animate={{ x: 0, y: 0 }}
                   exit={isSmPanel ? { x: '100%', y: 0 } : { y: '100%', x: 0 }}
                   transition={{ type: 'spring', damping: 34, stiffness: 400 }}
-                  className="fixed inset-x-0 bottom-0 z-[9999] flex h-[85dvh] flex-col overflow-hidden rounded-t-[2.5rem] border-t border-white/[0.08] bg-[#0A0E17]/60 shadow-[0_-20px_80px_rgba(0,0,0,0.6)] backdrop-blur-[80px] sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:left-auto sm:ml-0 sm:h-dvh sm:w-[400px] sm:rounded-none sm:border-l sm:border-t-0"
+                  className="fixed inset-x-0 bottom-0 z-[9999] flex h-[85dvh] flex-col overflow-hidden rounded-t-[2.5rem] border border-white/10 bg-black/50 shadow-[0_-20px_80px_rgba(0,0,0,0.6)] backdrop-blur-[80px] sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:left-auto sm:ml-0 sm:h-dvh sm:w-[400px] sm:rounded-none sm:border-l sm:border-t-0"
                 >
                   <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-white/25 sm:hidden" />
 
@@ -367,7 +367,7 @@ export function MediatorSidebar({
                               type="button"
                               disabled={startingBeef}
                               onClick={() => void onStartBeef(matchDurationMin * 60)}
-                              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-blue-600/80 py-4 text-xs font-black uppercase tracking-widest text-white shadow-[0_8px_32px_rgba(37,99,235,0.4),inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-md transition hover:bg-blue-500 active:scale-[0.99] disabled:opacity-45"
+                              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-4 text-xs font-black uppercase tracking-widest text-black shadow-[0_8px_32px_rgba(255,255,255,0.12),inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-md transition hover:bg-gray-200 active:scale-[0.99] disabled:opacity-45"
                             >
                               <Play className="h-4 w-4 fill-current" />
                               {startingBeef ? 'Ouverture…' : 'Démarrer le chrono LIVE'}
@@ -385,7 +385,7 @@ export function MediatorSidebar({
                                 <button
                                   type="button"
                                   onClick={onResumeBeefTimer}
-                                  className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-600/20 py-3 font-mono text-[10px] font-bold uppercase text-emerald-200 hover:bg-emerald-600/30"
+                                  className="flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 py-3 font-mono text-[10px] font-bold uppercase text-white hover:bg-white/15"
                                 >
                                   <Play className="h-3.5 w-3.5" />
                                   Reprendre
@@ -610,7 +610,7 @@ export function MediatorSidebar({
                                       onAcceptPendingInvite?.(inv.userId);
                                       onClose();
                                     }}
-                                    className="flex-1 rounded-xl border border-emerald-400/55 bg-emerald-600 py-2.5 font-mono text-[10px] font-black uppercase tracking-wide text-white hover:bg-emerald-500 sm:flex-initial sm:px-6"
+                                    className="flex-1 rounded-xl bg-white py-2.5 font-mono text-[10px] font-black uppercase tracking-wide text-black hover:bg-gray-200 sm:flex-initial sm:px-6"
                                   >
                                     Accepter
                                   </button>
@@ -676,7 +676,7 @@ export function MediatorSidebar({
                           <button
                             type="button"
                             onClick={() => setConfirmVerdict('resolved')}
-                            className="w-full rounded-2xl border border-emerald-500/55 bg-emerald-600/20 py-3.5 font-mono text-[12px] font-black uppercase tracking-widest text-emerald-200 transition hover:bg-emerald-600/35"
+                            className="w-full rounded-2xl bg-white py-3.5 font-mono text-[12px] font-black uppercase tracking-widest text-black transition hover:bg-gray-200"
                           >
                             Proclamer la paix
                           </button>
