@@ -254,6 +254,12 @@
   .shadow-glow {
     box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
   }
+  .shadow-glow-strong {
+    box-shadow:
+      0 0 32px rgba(0, 240, 255, 0.12),
+      0 0 16px rgba(255, 255, 255, 0.06),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
   .hide-scrollbar::-webkit-scrollbar { display: none; }
   .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
