@@ -361,12 +361,12 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       <header
         className={
           shell === 'phone'
-            ? `z-[100] relative mx-auto flex w-full max-w-md shrink-0 flex-col rounded-none border-b border-white/10 bg-[#050505]/80 backdrop-blur-2xl lg:mx-0 lg:h-full lg:min-h-0 lg:max-w-none lg:w-64 lg:self-stretch lg:border-b-0 lg:border-r lg:border-white/[0.08] lg:backdrop-blur-2xl ${
+            ? `z-[100] relative mx-auto flex w-full max-w-md shrink-0 flex-col rounded-none border-b border-white/10 bg-slate-950/60 backdrop-blur-3xl lg:mx-0 lg:h-full lg:min-h-0 lg:max-w-none lg:w-64 lg:self-stretch lg:border-b-0 lg:border-r lg:border-white/10 ${
                 isActive('/feed')
-                  ? 'border-none bg-gradient-to-b from-black/90 via-black/40 to-transparent backdrop-blur-md max-lg:from-black/90 max-lg:via-black/40 max-lg:to-transparent lg:bg-[#050505]/60'
-                  : 'border-b border-white/[0.08] bg-black/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md lg:shadow-none lg:border-b-0 lg:bg-[#050505]/60'
+                  ? 'border-none bg-gradient-to-b from-black/90 via-black/40 to-transparent backdrop-blur-md max-lg:from-black/90 max-lg:via-black/40 max-lg:to-transparent lg:bg-slate-950/60 lg:backdrop-blur-3xl'
+                  : 'border-b border-white/10 bg-slate-950/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-3xl lg:shadow-none lg:border-b-0 lg:border-r lg:border-white/10'
               }`
-            : 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-[#050505]/80 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
+            : 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-slate-950/60 backdrop-blur-3xl shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
         }
       >
         <div
@@ -456,7 +456,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         </div>
                         <span className="md:hidden lg:inline">{item.label}</span>
                         {active && (
-                          <motion.div layoutId="nav-indicator" className="absolute -bottom-[13px] left-3 right-3 block h-[2px] rounded-full lg:hidden" style={{ background: 'linear-gradient(90deg, #00F0FF, #A200FF)' }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
+                          <motion.div layoutId="nav-indicator" className="absolute -bottom-[13px] left-3 right-3 block h-[2px] rounded-full lg:hidden" style={{ background: 'linear-gradient(90deg, #00F0FF, #00B3CC)' }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
                         )}
                       </button>
                     );
@@ -485,7 +485,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         <motion.div
                           layoutId="nav-indicator"
                           className="absolute -bottom-[13px] left-3 right-3 block h-[2px] rounded-full lg:hidden"
-                          style={{ background: 'linear-gradient(90deg, #00F0FF, #A200FF)' }}
+                          style={{ background: 'linear-gradient(90deg, #00F0FF, #00B3CC)' }}
                           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                         />
                       )}
@@ -676,7 +676,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="lg:hidden border-b border-white/[0.06] bg-black/80 backdrop-blur-2xl overflow-y-auto max-h-[calc(100dvh-3.5rem)] shadow-2xl"
+              className="lg:hidden border-b border-white/10 bg-slate-950/80 backdrop-blur-3xl overflow-y-auto max-h-[calc(100dvh-3.5rem)] shadow-2xl"
             >
               {/* Backdrop */}
               <motion.div

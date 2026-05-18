@@ -102,27 +102,31 @@
   }
 
   .text-gradient {
-    background: linear-gradient(135deg, #ff6a2e, #3377ff);
+    background: linear-gradient(135deg, #00F0FF, #00B3CC);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .btn-primary {
-    @apply inline-flex min-h-[44px] items-center justify-center px-6 py-3 text-white font-bold rounded-full transition-all duration-300 active:scale-[0.95] shadow-glow-brand;
-    background: linear-gradient(135deg, #ff4d00, #cc3d00);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 8px 24px rgba(255, 77, 0, 0.3);
+    @apply inline-flex min-h-[44px] items-center justify-center px-6 py-3 font-bold rounded-full transition-all duration-300 active:scale-[0.95];
+    background: #ffffff;
+    color: #000000;
+    border: none;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
   }
   .btn-primary:hover {
-    background: linear-gradient(135deg, #ff6a2e, #ff4d00);
-    box-shadow: 0 0 24px rgba(255, 77, 0, 0.35);
+    background: #f3f4f6;
+    color: #000000;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
   }
   .btn-primary:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none !important;
     box-shadow: none !important;
-    background: linear-gradient(135deg, #ff4d00, #cc3d00);
+    background: #ffffff;
+    color: #000000;
   }
   .btn-primary[aria-busy="true"] {
     pointer-events: none;

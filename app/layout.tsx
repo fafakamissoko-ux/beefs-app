@@ -135,7 +135,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Beefs" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className="font-sans overflow-x-hidden bg-obsidian text-white antialiased">
+      <body className="font-sans overflow-x-hidden bg-black text-white antialiased">
         <RootLayoutClient>{children}</RootLayoutClient>
       </body>
     </html>
