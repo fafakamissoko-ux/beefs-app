@@ -660,7 +660,7 @@ export function BeefCard({
                         : 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.4)]'
                     }`}
                   >
-                    {liveAudienceAction?.variant === 'return' ? '⚔️ Retourner au Front' : '🔴 Rejoindre le Direct'}
+                    {liveAudienceAction?.variant === 'return' ? '⚔️ Retourner dans l\'Agora' : '🔴 Rejoindre le Direct'}
                   </button>
                 ) : status === 'scheduled' ? (
                   onPrepareAudience ? (
