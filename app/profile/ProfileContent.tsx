@@ -17,6 +17,7 @@ import { useToast } from '@/components/Toast';
 import { mediationCategoryForBeef } from '@/lib/mediation-resolution';
 import { MediationBeefEditorPanel } from '@/components/MediationBeefEditorPanel';
 import { ImageCropModal } from '@/components/ImageCropModal';
+import { AuraGiversModal } from '@/components/AuraGiversModal';
 import {
   fetchMediatorViewerReviews,
   type MediatorViewerReviewDisplay,
@@ -125,6 +126,7 @@ export default function ProfileContent() {
   const [phoneCountryCode, setPhoneCountryCode] = useState('+33');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [isAuraModalOpen, setIsAuraModalOpen] = useState(false);
 
   const ALL_EMAIL_PROVIDERS = [
     { label: 'Gmail', domain: 'gmail.com' },
@@ -766,7 +768,19 @@ export default function ProfileContent() {
               )}
 
               {/* Aura (prestige) — séparé des Lingots (solde) */}
-              <div className="flex flex-wrap items-center gap-3 mb-4">
+              <div
+                className="mb-4 flex flex-wrap cursor-pointer items-center gap-3 transition-transform hover:opacity-80 active:scale-95"
+                onClick={() => setIsAuraModalOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setIsAuraModalOpen(true);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label="Voir les donateurs d'Aura"
+              >
                 {(() => {
                   const currentAura = profile.lifetime_points ?? profile.points;
                   const rank = getAuraRank(currentAura);
@@ -1647,6 +1661,12 @@ export default function ProfileContent() {
           onCancel={cancelCropModal}
         />
       )}
+
+      <AuraGiversModal
+        isOpen={isAuraModalOpen}
+        onClose={() => setIsAuraModalOpen(false)}
+        targetId={profile.id}
+      />
     </div>
   );
 }
