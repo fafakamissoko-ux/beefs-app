@@ -31,7 +31,7 @@ type ModalType =
 
 const ROLE_COLORS: Record<string, string> = {
   admin: 'bg-red-500/15 text-red-400 border-red-500/30',
-  moderator: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+  moderator: 'bg-prestige-gold/15 text-prestige-gold border-prestige-gold/30',
   user: 'bg-gray-500/15 text-gray-400 border-gray-500/30',
 };
 
@@ -369,9 +369,9 @@ export default function AdminUsersPage() {
                               color: u.role === 'admin' ? '#f87171' : u.role === 'moderator' ? '#c084fc' : '#9ca3af',
                             }}
                           >
-                            <option value="user" className="bg-gray-900">Utilisateur</option>
-                            <option value="moderator" className="bg-gray-900">Modérateur</option>
-                            <option value="admin" className="bg-gray-900">Admin</option>
+                            <option value="user" className="bg-slate-950">Utilisateur</option>
+                            <option value="moderator" className="bg-slate-950">Modérateur</option>
+                            <option value="admin" className="bg-slate-950">Admin</option>
                           </select>
                         </td>
                         <td className="px-3 py-3 text-center">
@@ -468,9 +468,9 @@ export default function AdminUsersPage() {
                         disabled={actionLoading === u.id}
                         className="bg-white/[0.04] text-[10px] text-gray-400 font-semibold pl-1.5 pr-0.5 py-1 rounded-lg border border-white/[0.08] focus:outline-none disabled:opacity-50"
                       >
-                        <option value="user" className="bg-gray-900">User</option>
-                        <option value="moderator" className="bg-gray-900">Mod</option>
-                        <option value="admin" className="bg-gray-900">Admin</option>
+                        <option value="user" className="bg-slate-950">User</option>
+                        <option value="moderator" className="bg-slate-950">Mod</option>
+                        <option value="admin" className="bg-slate-950">Admin</option>
                       </select>
                       <button
                         onClick={() => toggleBan(u)}

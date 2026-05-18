@@ -269,7 +269,7 @@ export default function InvitationsPage() {
 
   if (authLoading || !user || loading) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-[#050505]">
+      <div className="flex min-h-dvh items-center justify-center">
         <div className="text-center">
           <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
           <p className="font-semibold text-white">Chargement des défis...</p>
@@ -279,7 +279,7 @@ export default function InvitationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] pb-20 font-sans">
+    <div className="min-h-screen pb-20 font-sans">
       <AnimatePresence>
         {transitioningTo && (
           <motion.div
@@ -287,7 +287,7 @@ export default function InvitationsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#050505]/95 backdrop-blur-xl"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center backdrop-blur-xl"
           >
             <Swords className="mb-6 h-24 w-24 animate-pulse text-cyan-500" />
             <h2 className="text-3xl font-black uppercase tracking-widest text-white">Entrée dans l&apos;Arène...</h2>
@@ -346,7 +346,7 @@ export default function InvitationsPage() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
                   transition={{ delay: index * 0.05 }}
-                  className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0A0A0A]"
+                  className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/60 backdrop-blur-3xl"
                   style={{
                     boxShadow: `0 0 ${15 + (invitation.beef.aura_score || 0) * 2}px rgba(0, 240, 255, ${0.15 + (invitation.beef.aura_score || 0) * 0.05})`,
                   }}

@@ -492,8 +492,8 @@ export default function SettingsPage() {
             className="card rounded-2xl p-6"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-purple-400" />
+              <div className="w-10 h-10 bg-cyan-500/20 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-cyan-400" />
               </div>
               <h3 className="text-white font-bold text-xl">Informations du profil</h3>
             </div>
@@ -795,7 +795,7 @@ export default function SettingsPage() {
                       ? !passwords.current || !passwords.new || !passwords.confirm
                       : !passwordOtp.trim())
                   }
-                  className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="w-full bg-white text-black font-bold py-3 rounded-lg shadow-[0_0_15px_rgba(255,255,255,0.4)] transition-all hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {saving
                     ? 'Modification...'
@@ -890,7 +890,7 @@ export default function SettingsPage() {
             className="card rounded-2xl p-6"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-cobalt-500/20 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-cyan-500/20 rounded-full flex items-center justify-center">
                 <LayoutTemplate className="w-5 h-5 text-cobalt-400" />
               </div>
               <h3 className="text-white font-bold text-xl">Affichage & accessibilité</h3>
@@ -989,7 +989,7 @@ export default function SettingsPage() {
                   aria-labelledby="reduce-anim-label"
                   onClick={() => updatePreferences({ reduceAnimations: !preferences.reduceAnimations })}
                   className={`relative w-12 h-7 rounded-full transition-all ${
-                    preferences.reduceAnimations ? 'bg-cobalt-500' : 'bg-white/10'
+                    preferences.reduceAnimations ? 'bg-cyan-500' : 'bg-white/10'
                   }`}
                 >
                   <span
@@ -1018,7 +1018,7 @@ export default function SettingsPage() {
                   aria-labelledby="high-contrast-label"
                   onClick={() => updatePreferences({ highContrast: !preferences.highContrast })}
                   className={`relative w-12 h-7 rounded-full transition-all ${
-                    preferences.highContrast ? 'bg-cobalt-500' : 'bg-white/10'
+                    preferences.highContrast ? 'bg-cyan-500' : 'bg-white/10'
                   }`}
                 >
                   <span
@@ -1102,7 +1102,7 @@ export default function SettingsPage() {
             className="card rounded-2xl p-6"
           >
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-cobalt-500/20 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-cyan-500/20 rounded-full flex items-center justify-center">
                 <Bell className="w-5 h-5 text-cobalt-400" />
               </div>
               <h3 className="text-white font-bold text-xl">Radar & alertes</h3>
@@ -1135,7 +1135,7 @@ export default function SettingsPage() {
                     aria-labelledby={`notif-pref-label-${key}`}
                     onClick={() => toggleNotifPref(key)}
                     className={`relative w-12 h-7 rounded-full transition-all ${
-                      notifPrefs[key] ? 'bg-cobalt-500' : 'bg-white/10'
+                      notifPrefs[key] ? 'bg-cyan-500' : 'bg-white/10'
                     }`}
                   >
                     <span
