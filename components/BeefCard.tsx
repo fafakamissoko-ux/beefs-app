@@ -321,7 +321,7 @@ export function BeefCard({
                       initial={{ opacity: 0, scale: 0.95, y: -10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      className="absolute right-0 z-[70] mt-2 w-40 overflow-hidden rounded-xl border border-white/10 bg-obsidian-900 py-1 shadow-2xl md:w-48"
+                      className="absolute right-0 z-[70] mt-2 w-40 overflow-hidden rounded-xl border border-white/10 bg-slate-900/80 py-1 shadow-2xl backdrop-blur-xl md:w-48"
                     >
                       {onEdit && (
                         <button
@@ -499,7 +499,7 @@ export function BeefCard({
         )}
         {isTeaserOpen && (
         <div
-          className="fixed inset-0 z-[9999] flex flex-col bg-obsidian-950 md:flex-row md:items-center md:justify-center md:bg-obsidian-950/95 md:p-8"
+          className="fixed inset-0 z-[9999] flex flex-col bg-black/50 backdrop-blur-3xl md:flex-row md:items-center md:justify-center md:p-8"
           role="presentation"
           onClick={(e) => {
             e.stopPropagation();
@@ -507,7 +507,7 @@ export function BeefCard({
           }}
         >
           <div
-            className="relative flex h-full w-full flex-col overflow-hidden bg-obsidian-900 shadow-2xl md:h-auto md:max-h-[90vh] md:max-w-5xl md:flex-row md:rounded-3xl md:border md:border-white/10"
+            className="relative flex h-full w-full flex-col overflow-hidden border border-white/10 bg-slate-950/60 shadow-2xl backdrop-blur-3xl md:h-auto md:max-h-[90vh] md:max-w-5xl md:flex-row md:rounded-3xl"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"

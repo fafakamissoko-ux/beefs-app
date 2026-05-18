@@ -602,7 +602,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
           <motion.div
             initial={{ scale: 0.94, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="max-h-[min(92dvh,calc(100dvh-1.5rem))] w-full overflow-y-auto overscroll-contain rounded-[2rem] border-2 border-brand-500/50 bg-surface-2 p-5 shadow-modal sm:p-6"
+            className="max-h-[min(92dvh,calc(100dvh-1.5rem))] w-full overflow-y-auto overscroll-contain rounded-[2rem] border border-white/10 bg-slate-950/60 p-5 shadow-modal backdrop-blur-3xl sm:p-6"
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
@@ -715,7 +715,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
 
                   <div>
                     <label htmlFor="edit-beef-description" className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                      <FileText className="h-4 w-4 text-purple-400" aria-hidden />
+                      <FileText className="h-4 w-4 text-cyan-400" aria-hidden />
                       Description
                     </label>
                     <textarea
@@ -788,7 +788,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                               key={tag}
                               type="button"
                               onMouseDown={() => addTag(tag)}
-                              className={`flex shrink-0 items-center gap-1 rounded-full border border-gray-700 bg-gray-800 px-2.5 py-1 text-xs font-semibold text-gray-300 transition-all hover:border-brand-500/40 hover:text-brand-300`}
+                              className={`flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-semibold text-white/80 transition-all hover:border-cyan-500/40 hover:text-cyan-300`}
                             >
                               <span className="text-brand-400/70">#</span>
                               {tag}
@@ -897,7 +897,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                             <button
                               type="button"
                               onClick={() => toggleMainParticipant(participant.user_id)}
-                              className={`shrink-0 rounded-full px-2 py-1 text-xs font-bold transition-all ${participant.is_main ? 'bg-brand-500 text-black' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}
+                              className={`shrink-0 rounded-full px-2 py-1 text-xs font-bold transition-all ${participant.is_main ? 'bg-brand-500 text-black' : 'border border-white/20 bg-white/10 text-white/70 hover:bg-white/15'}`}
                             >
                               {participant.is_main ? '🔥 Principal' : 'Témoin'}
                             </button>
@@ -933,11 +933,11 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                   type="button"
                   disabled={saving}
                   onClick={() => void handleSave()}
-                  className="brand-gradient flex flex-1 items-center justify-center gap-2 rounded-[2rem] py-3 text-sm font-bold text-white shadow-glow transition-all hover:opacity-90 disabled:opacity-60"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-[2rem] bg-white py-3 text-sm font-bold text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-all hover:bg-gray-200 disabled:opacity-60"
                 >
                   {saving ? (
                     <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />
                       Enregistrement…
                     </>
                   ) : (

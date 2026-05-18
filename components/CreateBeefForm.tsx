@@ -353,7 +353,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="max-h-[min(92dvh,calc(100dvh-1.5rem))] w-full overflow-y-auto overscroll-contain rounded-[2rem] border-2 border-brand-500/50 bg-surface-2 p-5 shadow-modal sm:p-6"
+          className="max-h-[min(92dvh,calc(100dvh-1.5rem))] w-full overflow-y-auto overscroll-contain rounded-[2rem] border border-white/10 bg-slate-950/60 p-5 shadow-modal backdrop-blur-3xl sm:p-6"
         >
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -508,7 +508,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
 
                 <div>
                   <label htmlFor="create-beef-description" className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
-                    <FileText className="h-4 w-4 text-purple-400" aria-hidden />
+                    <FileText className="h-4 w-4 text-cyan-400" aria-hidden />
                     Description
                   </label>
                   <textarea
@@ -618,7 +618,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                             className={`flex flex-shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all ${
                               i === 0 && tagInput
                                 ? 'border border-brand-500/50 bg-brand-500/25 text-brand-300'
-                                : 'border border-gray-700 bg-gray-800 text-gray-300 hover:border-brand-500/40 hover:text-brand-300'
+                                : 'border border-white/20 bg-white/10 text-white/80 hover:border-cyan-500/40 hover:text-cyan-300'
                             }`}
                           >
                             <span className="text-brand-400/70">#</span>
@@ -704,7 +704,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                             type="button"
                             onClick={() => toggleMainParticipant(participant.user_id)}
                             className={`flex-shrink-0 rounded-full px-2 py-1 text-xs font-bold transition-all ${
-                              participant.is_main ? 'bg-brand-500 text-black' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                              participant.is_main ? 'bg-brand-500 text-black' : 'border border-white/20 bg-white/10 text-white/70 hover:bg-white/15'
                             }`}
                           >
                             {participant.is_main ? '🔥 Principal' : 'Témoin'}
@@ -731,7 +731,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                   )}
                 </div>
 
-                <div className="space-y-3 rounded-[2rem] border border-blue-500/30 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 p-3">
+                <div className="space-y-3 rounded-[2rem] border border-cyan-500/20 bg-cyan-500/10 p-3">
                   <div className="flex items-center gap-2 text-sm font-semibold text-white">
                     <Calendar className="h-4 w-4 shrink-0 text-cyan-400" aria-hidden />
                     Démarrage du beef
@@ -846,11 +846,11 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="flex flex-1 items-center justify-center gap-2 rounded-[2rem] py-3 text-sm font-bold text-white shadow-glow transition-all brand-gradient hover:opacity-90 disabled:opacity-60"
+                className="flex flex-1 items-center justify-center gap-2 rounded-[2rem] bg-white py-3 text-sm font-bold text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-all hover:bg-gray-200 disabled:opacity-60"
               >
                 {loading ? (
                   <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />
                     <span>Création…</span>
                   </>
                 ) : (
@@ -863,8 +863,8 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
             </div>
           )}
 
-          <div className="mt-3 rounded-[2rem] border border-blue-500/20 bg-blue-500/10 p-2">
-            <p className="text-xs text-blue-400">
+          <div className="mt-3 rounded-[2rem] border border-cyan-500/20 bg-cyan-500/10 p-2">
+            <p className="text-xs text-cyan-400">
               <strong>Obligatoire :</strong> titre, tags, description (50+ caractères).{' '}
               {intent === 'mediation' && 'Médiation : entre 2 et 4 participants principaux.'}
             </p>
