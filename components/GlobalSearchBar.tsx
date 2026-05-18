@@ -169,7 +169,7 @@ export function GlobalSearchModal({ open, onOpenChange }: GlobalSearchModalProps
               transition={{ type: 'spring', stiffness: 420, damping: 32 }}
               className="pointer-events-auto flex w-full max-w-lg max-h-[min(85dvh,640px)] flex-col"
             >
-              <div className="flex min-h-0 max-h-full flex-1 flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-[#121214] shadow-[0_24px_80px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.04)]">
+              <div className="flex min-h-0 max-h-full flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 shadow-[0_24px_80px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.04)] backdrop-blur-2xl">
               <div className="flex shrink-0 items-center border-b border-white/[0.08]">
                 <button
                   type="button"

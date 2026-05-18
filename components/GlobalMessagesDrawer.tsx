@@ -33,11 +33,11 @@ export function GlobalMessagesDrawer() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 z-[999999] w-full md:w-[450px] lg:w-[600px] bg-[#050505] border-l border-white/10 flex flex-col shadow-2xl overflow-hidden"
+            className="fixed right-0 top-0 bottom-0 z-[999999] flex w-full flex-col overflow-hidden border-l border-white/10 bg-slate-950/80 shadow-2xl backdrop-blur-3xl md:w-[450px] lg:w-[600px]"
           >
             <Suspense
               fallback={
-                <div className="flex flex-1 min-h-[200px] items-center justify-center bg-[#050505]">
+                <div className="flex min-h-[200px] flex-1 items-center justify-center bg-transparent">
                   <div className="h-10 w-10 animate-spin rounded-full border-4 border-plasma-500 border-t-transparent" />
                 </div>
               }
