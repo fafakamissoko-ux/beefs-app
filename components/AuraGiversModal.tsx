@@ -17,9 +17,17 @@ interface AuraGiversModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetId: string;
+  type: 'profile' | 'beef' | 'teaser' | 'avatar' | 'banner';
+  ownerId: string;
 }
 
-export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({ isOpen, onClose, targetId }) => {
+export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
+  isOpen,
+  onClose,
+  targetId,
+  type,
+  ownerId,
+}) => {
   const router = useRouter();
   const [givers, setGivers] = useState<AuraGiver[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +50,11 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({ isOpen, onClos
       setCurrentUser(session?.user?.id || null);
 
       if (session?.user?.id) {
-        const { data } = await supabase.rpc('get_profile_aura_givers', { p_target_id: targetId });
+        const { data } = await supabase.rpc('get_universal_aura_givers', {
+          p_target_id: targetId,
+          p_type: type,
+          p_owner_id: ownerId,
+        });
         if (!cancelled) {
           setGivers((data as AuraGiver[] | null) || []);
         }
@@ -60,7 +72,7 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({ isOpen, onClos
     return () => {
       cancelled = true;
     };
-  }, [isOpen, targetId]);
+  }, [isOpen, targetId, type, ownerId]);
 
   if (!isOpen) return null;
 
@@ -103,13 +115,19 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({ isOpen, onClos
               <p className="text-sm font-bold text-cyan-400">Déchiffrement de l&apos;Aura...</p>
             </div>
           ) : !currentUser ? (
-            <div className="py-8 text-center">
-              <Lock className="mx-auto mb-3 h-10 w-10 text-white/30" />
-              <p className="text-sm text-gray-400">L&apos;identité des donateurs est protégée.</p>
+            /* ÉTAT ANONYME (CADENAS SPATIAL OS) */
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] shadow-[0_0_30px_rgba(255,255,255,0.05)]">
+                <Lock className="h-8 w-8 text-white/40" strokeWidth={1.5} />
+              </div>
+              <h4 className="mb-2 text-lg font-black text-white">L&apos;élite de l&apos;Agora</h4>
+              <p className="mb-8 text-sm text-gray-400">
+                Rejoignez la plateforme pour voir l&apos;identité des donateurs.
+              </p>
               <button
                 type="button"
                 onClick={() => router.push('/signup')}
-                className="mt-4 w-full rounded-xl bg-white py-3 text-sm font-black uppercase text-black transition-colors hover:bg-gray-200"
+                className="w-full max-w-[200px] rounded-xl bg-white py-3.5 text-xs font-black uppercase tracking-wider text-black shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all hover:scale-105 active:scale-95"
               >
                 Rejoindre l&apos;Agora
               </button>
@@ -151,9 +169,9 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({ isOpen, onClos
                   </button>
                 </div>
               ))}
-              {currentUser !== targetId && givers.length === 7 && (
+              {currentUser !== ownerId && givers.length === 7 && (
                 <p className="mt-4 text-center text-[10px] font-bold uppercase tracking-wider text-white/40">
-                  Seul le propriétaire du profil peut voir la liste complète.
+                  Seul le propriétaire peut voir la liste complète.
                 </p>
               )}
             </>
