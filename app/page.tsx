@@ -36,7 +36,7 @@ export default function SplashScreen() {
 
   return (
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-[#050505]">
-      <div className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_center,rgba(162,0,255,0.15)_0%,transparent_60%)]" />
+      <div className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_center,rgba(0,240,255,0.1)_0%,transparent_60%)]" />
       <div className="relative z-10 flex flex-col items-center">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
@@ -44,8 +44,8 @@ export default function SplashScreen() {
           transition={{ duration: 0.8 }}
           className="relative mb-6"
         >
-          <div className="absolute inset-0 animate-pulse rounded-full bg-plasma-500/20 blur-2xl" />
-          <BeefLogo size={100} className="drop-shadow-[0_0_30px_rgba(162,0,255,0.8)]" />
+          <div className="absolute inset-0 animate-pulse rounded-full bg-cyan-500/20 blur-2xl" />
+          <BeefLogo size={100} className="drop-shadow-[0_0_30px_rgba(0,240,255,0.8)]" />
         </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
@@ -57,14 +57,14 @@ export default function SplashScreen() {
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-plasma-400 text-[11px] md:text-sm font-black uppercase tracking-[0.2em] shadow-glow-plasma mb-12 text-center px-4"
+          className="text-cyan-400 text-[11px] md:text-sm font-black uppercase tracking-[0.2em] shadow-glow-brand mb-12 text-center px-4"
         >
           L&apos;Agora du règlement de comptes
         </motion.p>
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-1 w-48 overflow-hidden rounded-full bg-white/10">
           <motion.div
-            className="h-full bg-gradient-to-r from-plasma-600 to-cyan-400"
+            className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400"
             style={{ width: `${progress}%` }}
           />
         </motion.div>

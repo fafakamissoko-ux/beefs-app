@@ -16,7 +16,7 @@ export function VsTransition({ challengers, debateTitle, onComplete }: VsTransit
   }, [onComplete]);
 
   const colors = [
-    'text-purple-400 drop-shadow-[0_0_40px_rgba(168,85,247,1)]',
+    'text-white drop-shadow-[0_0_40px_rgba(0,240,255,0.85)]',
     'text-emerald-400 drop-shadow-[0_0_40px_rgba(16,185,129,1)]',
     'text-yellow-400 drop-shadow-[0_0_40px_rgba(234,179,8,1)]',
     'text-blue-400 drop-shadow-[0_0_40px_rgba(59,130,246,1)]',
@@ -26,7 +26,7 @@ export function VsTransition({ challengers, debateTitle, onComplete }: VsTransit
 
   return (
     <motion.div
-      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-obsidian-950 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-plasma-900/20 via-obsidian-950 to-black backdrop-blur-3xl"
+      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-obsidian-950 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-600/20 via-obsidian-950 to-black backdrop-blur-3xl"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 1.1, filter: 'blur(20px)' }}
       transition={{ duration: 0.6, ease: 'easeInOut' }}
@@ -41,7 +41,7 @@ export function VsTransition({ challengers, debateTitle, onComplete }: VsTransit
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: 'spring', damping: 12, delay: 0.4 + i * 0.15 }}
-                className="relative z-30 flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-obsidian-950 bg-gradient-to-br from-plasma-500 to-obsidian-900 shadow-[0_0_50px_rgba(162,0,255,0.8)] sm:h-16 sm:w-16"
+                className="relative z-30 flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-obsidian-950 bg-gradient-to-br from-cyan-500 to-obsidian-900 shadow-[0_0_50px_rgba(0,240,255,0.8)] sm:h-16 sm:w-16"
               >
                 <span className="font-sans text-xl font-black italic text-white drop-shadow-md sm:text-2xl">VS</span>
               </motion.div>

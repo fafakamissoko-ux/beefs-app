@@ -231,7 +231,7 @@ export function GlobalDuelAmbush() {
   const isMediationConvo = ambush.invite_type === 'combatant' && ambush.mediator_id === ambush.inviter_id;
 
   let MainIcon = Swords;
-  let themeColor = 'plasma';
+  let themeColor = 'cyan';
 
   if (isRefRequest || isRefOffer) {
     MainIcon = Scale;
@@ -243,7 +243,7 @@ export function GlobalDuelAmbush() {
 
   let ambushTitle = (
     <>
-      <span className="text-plasma-400">{ambush.inviter_display_name}</span> te défie !
+      <span className="text-cyan-400">{ambush.inviter_display_name}</span> te défie !
     </>
   );
   if (isRefRequest)
@@ -297,7 +297,7 @@ export function GlobalDuelAmbush() {
         <motion.div
           animate={{ opacity: pendingAction ? 0.1 : [0.3, 0.6, 0.3] }}
           transition={pendingAction ? { duration: 0 } : { duration: 1, repeat: Infinity }}
-          className={`pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] ${themeColor === 'yellow' ? 'from-yellow-900/40' : themeColor === 'brand' ? 'from-brand-900/40' : 'from-plasma-900/40'} via-transparent to-transparent`}
+          className={`pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] ${themeColor === 'yellow' ? 'from-yellow-900/40' : themeColor === 'brand' ? 'from-brand-900/40' : 'from-cyan-600/20'} via-transparent to-transparent`}
         />
 
         <motion.div
@@ -312,7 +312,7 @@ export function GlobalDuelAmbush() {
                 initial={{ width: '100%' }}
                 animate={{ width: '0%' }}
                 transition={{ duration: 30, ease: 'linear' }}
-                className={`h-full ${themeColor === 'yellow' ? 'bg-yellow-500' : themeColor === 'brand' ? 'bg-brand-500' : 'bg-plasma-500'}`}
+                className={`h-full ${themeColor === 'yellow' ? 'bg-yellow-500' : themeColor === 'brand' ? 'bg-brand-500' : 'bg-cyan-500'}`}
               />
             </div>
           )}
@@ -321,17 +321,17 @@ export function GlobalDuelAmbush() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="mb-6 flex justify-center">
                 <div
-                  className={`flex h-20 w-20 items-center justify-center rounded-full border ${themeColor === 'yellow' ? 'border-yellow-500/20 bg-yellow-500/10' : themeColor === 'brand' ? 'border-brand-500/20 bg-brand-500/10' : 'border-plasma-500/20 bg-plasma-500/10'}`}
+                  className={`flex h-20 w-20 items-center justify-center rounded-full border ${themeColor === 'yellow' ? 'border-yellow-500/20 bg-yellow-500/10' : themeColor === 'brand' ? 'border-brand-500/20 bg-brand-500/10' : 'border-cyan-500/20 bg-cyan-500/10'}`}
                 >
                   <MainIcon
-                    className={`h-10 w-10 animate-pulse ${themeColor === 'yellow' ? 'text-yellow-500' : themeColor === 'brand' ? 'text-brand-500' : 'text-plasma-500'}`}
+                    className={`h-10 w-10 animate-pulse ${themeColor === 'yellow' ? 'text-yellow-500' : themeColor === 'brand' ? 'text-brand-500' : 'text-cyan-500'}`}
                   />
                 </div>
               </div>
 
               <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-xs font-black uppercase tracking-widest text-white/70">
                 <ShieldAlert
-                  className={`h-4 w-4 ${themeColor === 'yellow' ? 'text-yellow-500' : themeColor === 'brand' ? 'text-brand-500' : 'text-plasma-500'}`}
+                  className={`h-4 w-4 ${themeColor === 'yellow' ? 'text-yellow-500' : themeColor === 'brand' ? 'text-brand-500' : 'text-cyan-500'}`}
                 />
                 {isRefRequest
                   ? 'Appel au Jugement'
@@ -348,10 +348,10 @@ export function GlobalDuelAmbush() {
               {ambush.scheduled_at &&
                 new Date(ambush.scheduled_at).getTime() > Date.now() + 5 * 60_000 && (
                   <div
-                    className={`mt-4 inline-block rounded-xl border px-4 py-2 ${themeColor === 'yellow' ? 'border-yellow-500/30 bg-yellow-500/10' : themeColor === 'brand' ? 'border-brand-500/30 bg-brand-500/10' : 'border-plasma-500/30 bg-plasma-500/10'}`}
+                    className={`mt-4 inline-block rounded-xl border px-4 py-2 ${themeColor === 'yellow' ? 'border-yellow-500/30 bg-yellow-500/10' : themeColor === 'brand' ? 'border-brand-500/30 bg-brand-500/10' : 'border-cyan-500/30 bg-cyan-500/10'}`}
                   >
                     <p
-                      className={`text-sm font-bold ${themeColor === 'yellow' ? 'text-yellow-500' : themeColor === 'brand' ? 'text-brand-400' : 'text-plasma-400'}`}
+                      className={`text-sm font-bold ${themeColor === 'yellow' ? 'text-yellow-500' : themeColor === 'brand' ? 'text-brand-400' : 'text-cyan-400'}`}
                     >
                       🗓️ Programmé le{' '}
                       {new Date(ambush.scheduled_at).toLocaleDateString('fr-FR', {
@@ -377,8 +377,8 @@ export function GlobalDuelAmbush() {
                     themeColor === 'yellow'
                       ? 'bg-yellow-600 shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:bg-yellow-500'
                       : themeColor === 'brand' || isScheduledForLater || !hasRef
-                        ? 'bg-brand-600 shadow-[0_0_20px_rgba(162,0,255,0.3)] hover:bg-brand-500'
-                        : 'bg-plasma-500 shadow-[0_0_20px_rgba(156,39,176,0.3)] hover:bg-plasma-400'
+                        ? 'bg-brand-600 shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:bg-brand-500'
+                        : 'bg-cyan-500 shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:bg-cyan-400'
                   }`}
                 >
                   <div className="relative z-10 flex items-center justify-center gap-2 text-lg">
@@ -421,7 +421,7 @@ export function GlobalDuelAmbush() {
                 value={responseMessage}
                 onChange={(e) => setResponseMessage(e.target.value)}
                 placeholder="Ex: Je finis mon live et j'arrive..."
-                className="mb-6 w-full resize-none rounded-xl border border-white/10 bg-white/5 p-4 text-white placeholder:text-white/30 focus:border-plasma-500 focus:outline-none focus:ring-1 focus:ring-plasma-500"
+                className="mb-6 w-full resize-none rounded-xl border border-white/10 bg-white/5 p-4 text-white placeholder:text-white/30 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 rows={3}
                 autoFocus
               />
@@ -439,7 +439,7 @@ export function GlobalDuelAmbush() {
                   type="button"
                   onClick={() => void executeResponse(pendingAction, responseMessage)}
                   disabled={isResponding}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 font-bold text-white disabled:opacity-50 ${pendingAction === 'later' ? 'bg-plasma-500 hover:bg-plasma-400' : 'bg-red-500 hover:bg-red-400'}`}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 font-bold text-white disabled:opacity-50 ${pendingAction === 'later' ? 'bg-cyan-500 hover:bg-cyan-400' : 'bg-red-500 hover:bg-red-400'}`}
                 >
                   <Send className="h-4 w-4" /> Confirmer
                 </button>

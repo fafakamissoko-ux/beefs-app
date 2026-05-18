@@ -289,14 +289,14 @@ export default function InvitationsPage() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#050505]/95 backdrop-blur-xl"
           >
-            <Swords className="mb-6 h-24 w-24 animate-pulse text-plasma-500" />
+            <Swords className="mb-6 h-24 w-24 animate-pulse text-cyan-500" />
             <h2 className="text-3xl font-black uppercase tracking-widest text-white">Entrée dans l&apos;Arène...</h2>
             <div className="mt-8 h-1 w-48 overflow-hidden rounded-full bg-white/10">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: '100%' }}
                 transition={{ duration: 0.6 }}
-                className="h-full bg-plasma-500 shadow-[0_0_15px_rgba(156,39,176,0.5)]"
+                className="h-full bg-cyan-500 shadow-[0_0_15px_rgba(0,240,255,0.5)]"
               />
             </div>
           </motion.div>
@@ -307,7 +307,7 @@ export default function InvitationsPage() {
         <AppBackButton className="mb-6" />
         <div className="mb-10 text-center md:text-left">
           <h1 className="mb-2 flex items-center justify-center gap-3 text-4xl font-black text-white md:justify-start">
-            <Swords className="h-10 w-10 text-plasma-500" />
+            <Swords className="h-10 w-10 text-cyan-500" />
             CONVOCATIONS
           </h1>
           <p className="text-sm font-semibold uppercase tracking-wider text-white/40">
@@ -348,10 +348,10 @@ export default function InvitationsPage() {
                   transition={{ delay: index * 0.05 }}
                   className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0A0A0A]"
                   style={{
-                    boxShadow: `0 0 ${15 + (invitation.beef.aura_score || 0) * 2}px rgba(156, 39, 176, ${0.15 + (invitation.beef.aura_score || 0) * 0.05})`,
+                    boxShadow: `0 0 ${15 + (invitation.beef.aura_score || 0) * 2}px rgba(0, 240, 255, ${0.15 + (invitation.beef.aura_score || 0) * 0.05})`,
                   }}
                 >
-                  <div className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-plasma-500 via-brand-500 to-plasma-500 opacity-50" />
+                  <div className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-cyan-500 via-brand-500 to-cyan-500 opacity-50" />
 
                   <div className="p-6 md:p-8">
                     <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -373,13 +373,13 @@ export default function InvitationsPage() {
 
                     <div className="mb-6 rounded-2xl border border-white/5 bg-white/5 p-4">
                       <div className="mb-3 flex items-center gap-2">
-                        <Flame className="h-5 w-5 text-plasma-400" />
+                        <Flame className="h-5 w-5 text-cyan-400" />
                         <span className="font-bold text-white">{invitation.beef.subject}</span>
                       </div>
                       {invitation.beef.scheduled_at &&
                         new Date(invitation.beef.scheduled_at).getTime() > Date.now() + 5 * 60_000 && (
-                          <div className="mb-4 inline-block rounded-xl border border-plasma-500/30 bg-plasma-500/10 px-4 py-2">
-                            <p className="text-sm font-bold text-plasma-400">
+                          <div className="mb-4 inline-block rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2">
+                            <p className="text-sm font-bold text-cyan-400">
                               🗓️ Programmé le{' '}
                               {new Date(invitation.beef.scheduled_at).toLocaleDateString('fr-FR', {
                                 day: 'numeric',
@@ -403,7 +403,7 @@ export default function InvitationsPage() {
 
                     {invitation.personal_message ? (
                       <div className="relative mb-8 pl-4">
-                        <div className="absolute left-0 top-0 h-full w-1 rounded-full bg-plasma-500" />
+                        <div className="absolute left-0 top-0 h-full w-1 rounded-full bg-cyan-500" />
                         <p className="text-sm italic text-white/70">&ldquo;{invitation.personal_message}&rdquo;</p>
                       </div>
                     ) : null}
@@ -413,7 +413,7 @@ export default function InvitationsPage() {
                         type="button"
                         onClick={() => handleResponse(invitation.id, invitation.beef_id, true)}
                         disabled={respondingTo === invitation.id}
-                        className="group relative flex-1 overflow-hidden rounded-2xl bg-plasma-500 px-6 py-4 font-black text-white shadow-[0_0_20px_rgba(156,39,176,0.3)] transition-all hover:scale-[1.02] hover:bg-plasma-400 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+                        className="group relative flex-1 overflow-hidden rounded-2xl bg-cyan-500 px-6 py-4 font-black text-white shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all hover:scale-[1.02] hover:bg-cyan-400 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
                       >
                         <div className="relative z-10 flex items-center justify-center gap-2 text-lg">
                           <Zap className="h-5 w-5" /> Relever le Défi

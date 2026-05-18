@@ -271,7 +271,7 @@ export default function ArenaPage() {
     return (
       <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black">
         <div className="text-center text-white">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-plasma-500" />
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-cyan-500" />
         </div>
       </div>
     );
@@ -289,7 +289,7 @@ export default function ArenaPage() {
           className="w-full max-w-sm space-y-6 text-center"
         >
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-            <LogIn className="h-8 w-8 text-plasma-400" />
+            <LogIn className="h-8 w-8 text-cyan-400" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Connexion requise</h1>
@@ -299,7 +299,7 @@ export default function ArenaPage() {
           </div>
           <Link
             href={`/login?next=${encodeURIComponent(loginNext)}`}
-            className="block w-full rounded-xl bg-plasma-500 py-3 text-center text-sm font-bold text-white transition-colors hover:bg-plasma-400"
+            className="block w-full rounded-xl bg-cyan-500 py-3 text-center text-sm font-bold text-white transition-colors hover:bg-cyan-400"
           >
             Se connecter
           </Link>
@@ -323,7 +323,7 @@ export default function ArenaPage() {
         <button
           type="button"
           onClick={retryTicket}
-          className="rounded-xl bg-plasma-500 px-6 py-3 text-sm font-bold text-white hover:bg-plasma-400"
+          className="rounded-xl bg-cyan-500 px-6 py-3 text-sm font-bold text-white hover:bg-cyan-400"
         >
           Réessayer
         </button>
@@ -358,20 +358,20 @@ export default function ArenaPage() {
   if (needsStaging && !isStagingPassed) {
     return (
       <div className="fixed inset-0 z-[9999] flex h-dvh w-screen flex-col items-center justify-center bg-[#050505] p-6 text-center">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-plasma-900/20 via-[#050505] to-[#050505]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-600/20 via-[#050505] to-[#050505]" />
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative z-10 flex w-full max-w-md flex-col items-center gap-8 rounded-[2rem] border border-white/10 bg-[#0A0A0A]/80 p-8 shadow-[0_0_50px_rgba(156,39,176,0.15)] backdrop-blur-2xl"
+          className="relative z-10 flex w-full max-w-md flex-col items-center gap-8 rounded-[2rem] border border-white/10 bg-[#0A0A0A]/80 p-8 shadow-[0_0_50px_rgba(0,240,255,0.15)] backdrop-blur-2xl"
         >
           <div className="flex flex-col items-center gap-3">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
-              <ShieldAlert className="h-8 w-8 text-plasma-400" />
+              <ShieldAlert className="h-8 w-8 text-cyan-400" />
             </div>
             <h2 className="text-2xl font-black uppercase tracking-widest text-white">Check Matériel</h2>
             <p className="text-sm font-semibold text-white/50">
-              Tu entres dans l&apos;Arène en tant que <span className="uppercase text-plasma-400">{userRole}</span>.
+              Tu entres dans l&apos;Arène en tant que <span className="uppercase text-cyan-400">{userRole}</span>.
             </p>
           </div>
 
@@ -403,7 +403,7 @@ export default function ArenaPage() {
           <button
             type="button"
             onClick={() => setIsStagingPassed(true)}
-            className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-plasma-500 px-6 py-4 text-lg font-black text-white shadow-[0_0_20px_rgba(156,39,176,0.3)] transition-all hover:scale-[1.02] hover:bg-plasma-400 active:scale-95"
+            className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-cyan-500 px-6 py-4 text-lg font-black text-white shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all hover:scale-[1.02] hover:bg-cyan-400 active:scale-95"
           >
             <div className="relative z-10 flex items-center gap-2">
               <Play className="h-5 w-5" /> JE SUIS PRÊT

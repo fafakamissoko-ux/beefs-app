@@ -633,7 +633,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
             <button
               type="button"
               onClick={() => setShowNewConv(!showNewConv)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-plasma-500 text-white shadow-lg transition-all hover:scale-105 hover:bg-plasma-400 active:scale-95"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-white shadow-lg transition-all hover:scale-105 hover:bg-cyan-400 active:scale-95"
             >
               <Plus className="h-5 w-5" />
             </button>
@@ -810,7 +810,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                       setMessageMenu(null);
                       setShowChatMenu(false);
                     }}
-                    className="ml-auto shrink-0 rounded-full px-3 py-1.5 text-xs font-bold text-plasma-400 transition-colors hover:bg-plasma-500/10"
+                    className="ml-auto shrink-0 rounded-full px-3 py-1.5 text-xs font-bold text-cyan-400 transition-colors hover:bg-cyan-500/10"
                   >
                     {isSelectionMode ? 'Annuler' : 'Sélectionner'}
                   </button>
@@ -930,7 +930,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                           {isSelectionMode && !isDeleted && (
                             <div className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center">
                               {selectedMessages.has(msg.id) ? (
-                                <CheckSquare className="h-5 w-5 text-plasma-500" aria-hidden />
+                                <CheckSquare className="h-5 w-5 text-cyan-500" aria-hidden />
                               ) : (
                                 <Square className="h-5 w-5 text-gray-500" aria-hidden />
                               )}
@@ -971,7 +971,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                                             toggleReaction(msg, emoji);
                                             setMessageMenu(null);
                                           }}
-                                          className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl transition-transform hover:scale-125 active:scale-90 md:h-8 md:w-8 md:text-lg ${hasReacted ? 'bg-plasma-500/30' : 'bg-white/5 md:bg-transparent md:hover:bg-white/10'}`}
+                                          className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl transition-transform hover:scale-125 active:scale-90 md:h-8 md:w-8 md:text-lg ${hasReacted ? 'bg-cyan-500/30' : 'bg-white/5 md:bg-transparent md:hover:bg-white/10'}`}
                                         >
                                           {emoji}
                                         </button>
@@ -1006,18 +1006,18 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                               e.stopPropagation();
                               setReplyingTo(msg);
                             }}
-                            className={`flex min-w-0 max-w-[85%] select-none flex-col shadow-md md:max-w-[70%] ${isSelectionMode || isDeleted ? 'pointer-events-none' : ''} ${isMine ? 'items-end' : 'items-start'} ${bubbleRadius} ${isDeleted ? 'border border-white/10 bg-white/5 italic text-white/40' : isMine ? 'bg-gradient-to-br from-plasma-600 to-plasma-500 text-white' : 'border border-white/5 bg-white/10 text-white/95 backdrop-blur-md'} ${!isSelectionMode && !isDeleted ? 'cursor-pointer' : ''}`}
+                            className={`flex min-w-0 max-w-[85%] select-none flex-col shadow-md md:max-w-[70%] ${isSelectionMode || isDeleted ? 'pointer-events-none' : ''} ${isMine ? 'items-end' : 'items-start'} ${bubbleRadius} ${isDeleted ? 'border border-white/10 bg-white/5 italic text-white/40' : isMine ? 'bg-gradient-to-br from-cyan-600 to-cyan-500 text-white' : 'border border-white/5 bg-white/10 text-white/95 backdrop-blur-md'} ${!isSelectionMode && !isDeleted ? 'cursor-pointer' : ''}`}
                           >
                             <div className="w-full overflow-hidden px-4 py-2.5">
                               {repliedMsg && !isDeleted && (
-                                <div className={`mb-2 rounded-lg border-l-2 p-2 text-xs ${isMine ? 'border-white/50 bg-black/20 text-white/90' : 'border-plasma-500 bg-black/30 text-gray-300'}`}>
+                                <div className={`mb-2 rounded-lg border-l-2 p-2 text-xs ${isMine ? 'border-white/50 bg-black/20 text-white/90' : 'border-cyan-500 bg-black/30 text-gray-300'}`}>
                                   <p className="mb-0.5 font-bold opacity-75">{repliedMsg.sender_id === user.id ? 'Vous' : selectedConv.other_user.display_name}</p>
                                   <p className="truncate opacity-90">{repliedMsg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
                                 </div>
                               )}
                               {isBeefResponse && !isDeleted && (
                                 <div
-                                  className={`mb-1.5 flex items-center gap-1.5 border-b pb-1 text-[10px] font-black uppercase tracking-widest ${isMine ? 'border-white/20 text-white/80' : 'border-plasma-500/30 text-plasma-400'}`}
+                                  className={`mb-1.5 flex items-center gap-1.5 border-b pb-1 text-[10px] font-black uppercase tracking-widest ${isMine ? 'border-white/20 text-white/80' : 'border-cyan-500/30 text-cyan-400'}`}
                                 >
                                   <Swords className="h-3 w-3" />
                                   {isLater ? 'A mis le défi en attente' : 'A esquivé le défi'}
@@ -1046,7 +1046,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                                     e.stopPropagation();
                                     toggleReaction(msg, emoji);
                                   }}
-                                  className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] ${hasReacted ? 'border-plasma-500/50 bg-plasma-500/20 text-plasma-400' : 'border-white/10 bg-white/5 text-gray-300'}`}
+                                  className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] ${hasReacted ? 'border-cyan-500/50 bg-cyan-500/20 text-cyan-400' : 'border-white/10 bg-white/5 text-gray-300'}`}
                                 >
                                   <span>{emoji}</span>
                                   <span>{users.length}</span>
@@ -1099,10 +1099,10 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                           initial={{ opacity: 0, y: 10, height: 0 }}
                           animate={{ opacity: 1, y: 0, height: 'auto' }}
                           exit={{ opacity: 0, y: 10, height: 0 }}
-                          className="flex items-center justify-between rounded-r-lg border-l-2 border-plasma-500 bg-white/5 px-3 py-2"
+                          className="flex items-center justify-between rounded-r-lg border-l-2 border-cyan-500 bg-white/5 px-3 py-2"
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-plasma-400">
+                            <p className="text-xs font-bold text-cyan-400">
                               Réponse à {replyingTo.sender_id === user.id ? 'vous-même' : selectedConv.other_user.display_name}
                             </p>
                             <p className="truncate text-xs text-gray-400">{replyingTo.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
@@ -1133,7 +1133,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                       >
                         <Plus className="h-5 w-5" />
                       </button>
-                      <div className="flex min-w-0 flex-1 items-end rounded-[1.5rem] border border-white/10 bg-white/5 p-1.5 transition-all focus-within:border-plasma-500/50 focus-within:bg-white/[0.07]">
+                      <div className="flex min-w-0 flex-1 items-end rounded-[1.5rem] border border-white/10 bg-white/5 p-1.5 transition-all focus-within:border-cyan-500/50 focus-within:bg-white/[0.07]">
                         <textarea
                           ref={messageComposerRef}
                           value={newMessage}
@@ -1159,7 +1159,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                         <button
                           type="submit"
                           disabled={!newMessage.trim()}
-                          className="mb-0.5 mr-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-plasma-500 text-white transition-colors hover:bg-plasma-400 disabled:cursor-not-allowed disabled:opacity-30"
+                          className="mb-0.5 mr-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-white transition-colors hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-30"
                         >
                           <Send className="-ml-0.5 h-4 w-4" />
                         </button>

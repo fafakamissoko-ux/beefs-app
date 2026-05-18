@@ -36,7 +36,7 @@ export default function RulesPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-16 text-center"
         >
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-plasma-600 to-violet-700 shadow-glow-plasma">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-cyan-600 to-cyan-700 shadow-glow-brand">
             <Shield className="h-10 w-10 text-white" />
           </div>
           <h1 className="mb-4 font-sans text-4xl font-black uppercase italic tracking-tighter text-white md:text-6xl">
@@ -57,9 +57,9 @@ export default function RulesPage() {
                 initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition-all hover:border-plasma-500/50 hover:bg-white/10"
+                className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition-all hover:border-cyan-500/50 hover:bg-white/10"
               >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-plasma-500/20 text-plasma-400 transition-colors group-hover:bg-plasma-500 group-hover:text-white">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/20 text-cyan-400 transition-colors group-hover:bg-cyan-500 group-hover:text-white">
                   <Icon className="h-6 w-6" aria-hidden />
                 </div>
                 <h3 className="mb-2 font-sans text-xl font-black uppercase tracking-tight text-white">{rule.title}</h3>
@@ -74,10 +74,10 @@ export default function RulesPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="mt-8 rounded-[2.5rem] border border-plasma-500/10 bg-gradient-to-br from-plasma-900/20 to-transparent p-6 md:p-8 text-center"
+          className="mt-8 rounded-[2.5rem] border border-cyan-500/10 bg-gradient-to-br from-cyan-600/20 to-transparent p-6 md:p-8 text-center"
         >
-          <Flame className="mx-auto mb-4 h-8 w-8 text-plasma-500" aria-hidden />
-          <p className="mb-8 font-mono text-xs font-bold uppercase tracking-widest text-plasma-400">
+          <Flame className="mx-auto mb-4 h-8 w-8 text-cyan-500" aria-hidden />
+          <p className="mb-8 font-mono text-xs font-bold uppercase tracking-widest text-cyan-400">
             Prêt à entrer dans l&apos;histoire ?
           </p>
           <button
