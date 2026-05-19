@@ -2927,7 +2927,7 @@ export function TikTokStyleArena({
         if (target.closest('button, input, textarea, a, aside, [id^="dock-"], [data-cinema-stay]')) return;
         setIsCinematicMode(true);
       }}
-      className="fixed inset-0 z-10 flex h-dvh w-screen flex-col overflow-hidden border border-white/10 bg-black/50 backdrop-blur-3xl lg:flex-row"
+      className="fixed inset-0 z-10 flex flex-col overflow-hidden border border-white/10 bg-black/50 backdrop-blur-3xl lg:flex-row"
     >
       {/* --- COUCHE 1 : ÉCRAN VS (Priorité 1) --- */}
       <AnimatePresence>

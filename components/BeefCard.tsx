@@ -247,7 +247,7 @@ export function BeefCard({
         onClick={() => setIsTeaserOpen(true)}
         onMouseEnter={() => isReplay && setReplayHover(true)}
         onMouseLeave={() => isReplay && setReplayHover(false)}
-        className="group relative aspect-[3/4] max-h-[75vh] w-full shrink-0 cursor-pointer overflow-hidden bg-black"
+        className="group relative aspect-[3/4] max-h-[70dvh] w-full shrink-0 cursor-pointer overflow-hidden bg-black"
       >
         <div
           ref={mediaBlockRef}
@@ -399,8 +399,8 @@ export function BeefCard({
         </div>
 
         {/* OVERLAY D'INFORMATIONS TIKTOK */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end p-4 pt-20">
-          <h3 className="mb-2 line-clamp-2 font-sans text-[15px] font-bold leading-snug text-white md:text-[17px] drop-shadow-md">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end p-2.5 pt-12 sm:p-4 sm:pt-20">
+          <h3 className="mb-1 sm:mb-2 line-clamp-2 font-sans text-[13px] sm:text-[15px] leading-tight font-bold text-white md:text-[17px] drop-shadow-md">
             {title}
           </h3>
           <div className="mb-3 flex flex-wrap items-center gap-x-2 font-sans text-[10px] font-black uppercase tracking-widest text-white/90 sm:text-xs drop-shadow-md">
@@ -423,23 +423,23 @@ export function BeefCard({
 
           <div className="flex flex-wrap items-center justify-between gap-2 pointer-events-auto">
             {mediator_name ? (
-              <span className="w-fit rounded-full border border-white/20 bg-black/40 px-2.5 py-1 text-[9px] font-bold tracking-wide text-gray-200 backdrop-blur-md sm:text-[10px]">
+              <span className="w-fit rounded-full border border-white/20 bg-black/40 px-1.5 py-0.5 text-[8px] font-bold tracking-wide text-gray-200 backdrop-blur-md sm:px-2.5 sm:py-1 sm:text-[10px]">
                 REF: <span className="text-white">@{mediator_name}</span>
               </span>
             ) : (
-              <span className="w-fit rounded-full border border-prestige-gold/40 bg-prestige-gold/20 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest text-prestige-gold backdrop-blur-md sm:text-[10px]">
+              <span className="w-fit rounded-full border border-prestige-gold/40 bg-prestige-gold/20 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-prestige-gold backdrop-blur-md sm:px-2.5 sm:py-1 sm:text-[10px]">
                 En attente de Ref
               </span>
             )}
 
             <div className="flex items-center gap-1.5">
               {status === 'live' && getTimeDisplay() && (
-                <div className="flex h-7 items-center gap-1 rounded-full border border-white/20 bg-black/50 px-2 font-mono text-[10px] font-bold text-white/90 backdrop-blur-md">
+                <div className="flex h-6 sm:h-7 items-center gap-1 rounded-full border border-white/20 bg-black/50 px-2 font-mono text-[9px] sm:text-[10px] font-bold text-white/90 backdrop-blur-md">
                   <Clock className="h-3 w-3" aria-hidden /> <span>{getTimeDisplay()}</span>
                 </div>
               )}
               <div
-                className="flex h-7 cursor-pointer items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 font-mono text-[10px] font-bold text-white backdrop-blur-md transition-all hover:bg-white/10 active:scale-95"
+                className="flex h-6 sm:h-7 cursor-pointer items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 font-mono text-[10px] font-bold text-white backdrop-blur-md transition-all hover:bg-white/10 active:scale-95"
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsViewsModalOpen(true);
@@ -450,7 +450,7 @@ export function BeefCard({
               </div>
               {onAuraClick ? (
                 <div
-                  className={`relative flex h-7 items-center overflow-hidden rounded-full border bg-black/50 font-mono text-[10px] font-bold backdrop-blur-md ${
+                  className={`relative flex h-6 sm:h-7 items-center overflow-hidden rounded-full border bg-black/50 font-mono text-[9px] sm:text-[10px] font-bold backdrop-blur-md ${
                     has_liked_by_user ? 'border-amber-400/50 text-amber-400' : 'border-white/20 text-white'
                   }`}
                 >
@@ -506,7 +506,7 @@ export function BeefCard({
                   </button>
                 </div>
               ) : (
-                <div className="relative flex h-7 items-center overflow-hidden rounded-full border border-white/20 bg-black/50 font-mono text-[10px] font-bold text-white backdrop-blur-md">
+                <div className="relative flex h-6 sm:h-7 items-center overflow-hidden rounded-full border border-white/20 bg-black/50 font-mono text-[9px] sm:text-[10px] font-bold text-white backdrop-blur-md">
                   <div className="flex h-full items-center justify-center pl-2.5 pr-1.5">
                     <Sparkles className="h-3.5 w-3.5" aria-hidden />
                   </div>

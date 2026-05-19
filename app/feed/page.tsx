@@ -965,9 +965,10 @@ export default function FeedPage() {
               {beefs.map((beef, index) => (
                 <div
                   key={beef.id}
-                  className={`relative shrink-0 ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
+                  className={`relative shrink-0 flex justify-center ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
                 >
-                  <BeefCard
+                  <div className={mobileViewMode === 'list' ? 'w-full max-w-[380px]' : 'w-full'}>
+                    <BeefCard
                     {...beef}
                     onPrepareAudience={
                       beef.status === 'scheduled' && user?.id === beef.mediator_id
@@ -1046,6 +1047,7 @@ export default function FeedPage() {
                     }
                     index={index}
                   />
+                  </div>
                 </div>
               ))}
             </div>
