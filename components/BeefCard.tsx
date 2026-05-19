@@ -7,6 +7,7 @@ import { Clock, Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, MoreVerti
 import { Countdown } from '@/components/Countdown';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { AuraGiversModal } from '@/components/AuraGiversModal';
 
 /** Alias pour éviter le motif `}[` dans `useState<…>(…)` sous SWC/TSX. */
 type FloatingAuraChip = { id: number; x: number };
@@ -129,6 +130,8 @@ export function BeefCard({
   const [isTeaserOpen, setIsTeaserOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isReminded, setIsReminded] = useState(false);
+  const [isBeefAuraModalOpen, setIsBeefAuraModalOpen] = useState(false);
+  const [isTeaserAuraModalOpen, setIsTeaserAuraModalOpen] = useState(false);
 
   const isParticipant = user
     ? user.id === created_by ||
@@ -470,11 +473,28 @@ export function BeefCard({
                     ))}
                   </AnimatePresence>
                   <Sparkles className={`h-3.5 w-3.5 ${has_liked_by_user ? 'fill-current' : ''}`} aria-hidden />
-                  <span>{engagement_score.toLocaleString()}</span>
+                  <span
+                    className="z-10 cursor-pointer px-0.5 hover:underline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsBeefAuraModalOpen(true);
+                    }}
+                  >
+                    {engagement_score.toLocaleString()}
+                  </span>
                 </motion.button>
               ) : (
                 <div className="flex h-7 items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 font-mono text-[10px] font-bold text-white backdrop-blur-md">
-                  <Sparkles className="h-3.5 w-3.5" aria-hidden /> <span>{engagement_score.toLocaleString()}</span>
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden />{' '}
+                  <span
+                    className="cursor-pointer px-0.5 hover:underline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsBeefAuraModalOpen(true);
+                    }}
+                  >
+                    {engagement_score.toLocaleString()}
+                  </span>
                 </div>
               )}
             </div>
@@ -597,7 +617,11 @@ export function BeefCard({
                     />
                   </div>
                   <span
-                    className={`font-mono text-xs font-bold drop-shadow-md ${
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsTeaserAuraModalOpen(true);
+                    }}
+                    className={`z-10 cursor-pointer px-1 font-mono text-xs font-bold drop-shadow-md hover:underline ${
                       has_liked_teaser
                         ? 'text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
                         : 'text-white'
@@ -772,6 +796,21 @@ export function BeefCard({
         </div>
         )}
       </motion.div>
+
+      <AuraGiversModal
+        isOpen={isBeefAuraModalOpen}
+        onClose={() => setIsBeefAuraModalOpen(false)}
+        targetId={id}
+        type="beef"
+        ownerId={mediator_id || created_by || ''}
+      />
+      <AuraGiversModal
+        isOpen={isTeaserAuraModalOpen}
+        onClose={() => setIsTeaserAuraModalOpen(false)}
+        targetId={id}
+        type="teaser"
+        ownerId={created_by || ''}
+      />
     </div>
   );
 }

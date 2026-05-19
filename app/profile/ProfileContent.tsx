@@ -771,15 +771,10 @@ export default function ProfileContent() {
               <div
                 className="mb-4 flex flex-wrap cursor-pointer items-center gap-3 transition-transform hover:opacity-80 active:scale-95"
                 onClick={() => setIsAuraModalOpen(true)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setIsAuraModalOpen(true);
-                  }
-                }}
                 role="button"
                 tabIndex={0}
-                aria-label="Voir les donateurs d'Aura"
+                onKeyDown={(e) => e.key === 'Enter' && setIsAuraModalOpen(true)}
+                aria-label="Voir mes donateurs d'Aura"
               >
                 {(() => {
                   const currentAura = profile.lifetime_points ?? profile.points;
@@ -1666,6 +1661,8 @@ export default function ProfileContent() {
         isOpen={isAuraModalOpen}
         onClose={() => setIsAuraModalOpen(false)}
         targetId={profile.id}
+        type="profile"
+        ownerId={profile.id}
       />
     </div>
   );

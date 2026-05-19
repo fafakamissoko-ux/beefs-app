@@ -1025,6 +1025,8 @@ export default function PublicProfilePage() {
           isOpen={isAuraModalOpen}
           onClose={() => setIsAuraModalOpen(false)}
           targetId={profile.id}
+          type="profile"
+          ownerId={profile.id}
         />
       )}
 
