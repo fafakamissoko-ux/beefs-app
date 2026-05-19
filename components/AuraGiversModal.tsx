@@ -14,11 +14,19 @@ interface AuraGiver {
   created_at: string;
 }
 
+interface BeefViewerRow {
+  viewer_id: string;
+  display_name: string;
+  username: string;
+  avatar_url: string;
+  viewed_at: string;
+}
+
 interface AuraGiversModalProps {
   isOpen: boolean;
   onClose: () => void;
   targetId: string;
-  type: 'profile' | 'beef' | 'teaser' | 'avatar' | 'banner';
+  type: 'profile' | 'beef' | 'teaser' | 'avatar' | 'banner' | 'views';
   ownerId: string;
 }
 
@@ -51,13 +59,31 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
       setCurrentUser(session?.user?.id || null);
 
       if (session?.user?.id) {
-        const { data } = await supabase.rpc('get_universal_aura_givers', {
-          p_target_id: targetId,
-          p_type: type,
-          p_owner_id: ownerId,
-        });
-        if (!cancelled) {
-          setGivers((data as AuraGiver[] | null) || []);
+        if (type === 'views') {
+          const { data } = await supabase.rpc('get_beef_viewers', {
+            p_beef_id: targetId,
+            p_owner_id: ownerId,
+          });
+          if (!cancelled) {
+            const rows = (data as BeefViewerRow[] | null) || [];
+            const mappedData: AuraGiver[] = rows.map((v) => ({
+              giver_id: v.viewer_id,
+              display_name: v.display_name,
+              username: v.username,
+              avatar_url: v.avatar_url,
+              created_at: v.viewed_at,
+            }));
+            setGivers(mappedData);
+          }
+        } else {
+          const { data } = await supabase.rpc('get_universal_aura_givers', {
+            p_target_id: targetId,
+            p_type: type,
+            p_owner_id: ownerId,
+          });
+          if (!cancelled) {
+            setGivers((data as AuraGiver[] | null) || []);
+          }
         }
       } else {
         setGivers([]);
@@ -104,7 +130,7 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
               ✦
             </span>
             <h3 id="aura-givers-title" className="text-base font-black uppercase tracking-wider text-white">
-              Donateurs d&apos;Aura
+              AURA
             </h3>
           </div>
           <button
@@ -143,7 +169,7 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
             </div>
           ) : givers.length === 0 ? (
             <p className="py-12 text-center text-sm text-gray-500">
-              Personne n&apos;a encore envoyé d&apos;Aura.
+              {type === 'views' ? 'Aucun spectateur enregistré.' : "Personne n'a encore envoyé d'Aura."}
             </p>
           ) : (
             <>

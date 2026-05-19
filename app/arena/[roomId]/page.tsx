@@ -57,6 +57,13 @@ export default function ArenaPage() {
     setTicketAttempt(0);
   }, [roomId]);
 
+  /** Mouchard d'enregistrement des vues (Phase 3) */
+  useEffect(() => {
+    if (dailyRoomUrl && dailyMeetingToken && roomId && userId) {
+      supabase.rpc('record_beef_view', { p_beef_id: roomId }).catch(console.error);
+    }
+  }, [dailyRoomUrl, dailyMeetingToken, roomId, userId]);
+
   useEffect(() => {
     if (roomIdParam.trim() !== '' && !roomId) {
       router.replace('/feed');

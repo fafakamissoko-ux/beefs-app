@@ -132,6 +132,7 @@ export function BeefCard({
   const [isReminded, setIsReminded] = useState(false);
   const [isBeefAuraModalOpen, setIsBeefAuraModalOpen] = useState(false);
   const [isTeaserAuraModalOpen, setIsTeaserAuraModalOpen] = useState(false);
+  const [isViewsModalOpen, setIsViewsModalOpen] = useState(false);
 
   const isParticipant = user
     ? user.id === created_by ||
@@ -437,8 +438,14 @@ export function BeefCard({
                   <Clock className="h-3 w-3" aria-hidden /> <span>{getTimeDisplay()}</span>
                 </div>
               )}
-              <div className="flex h-7 items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 font-mono text-[10px] font-bold text-white backdrop-blur-md">
-                <Eye className="h-3.5 w-3.5" aria-hidden strokeWidth={2.25} />{' '}
+              <div
+                className="flex h-7 cursor-pointer items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 font-mono text-[10px] font-bold text-white backdrop-blur-md transition-all hover:bg-white/10 active:scale-95"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsViewsModalOpen(true);
+                }}
+              >
+                <Eye className="h-3.5 w-3.5" aria-hidden strokeWidth={2.25} />
                 <span>{viewer_count.toLocaleString()}</span>
               </div>
               {onAuraClick ? (
@@ -839,6 +846,13 @@ export function BeefCard({
         targetId={id}
         type="teaser"
         ownerId={created_by || ''}
+      />
+      <AuraGiversModal
+        isOpen={isViewsModalOpen}
+        onClose={() => setIsViewsModalOpen(false)}
+        targetId={id}
+        type="views"
+        ownerId={mediator_id || created_by || ''}
       />
     </div>
   );
