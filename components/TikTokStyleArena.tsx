@@ -309,6 +309,16 @@ export function TikTokStyleArena({
 
   /** MediaStream du pré-joint (médiateur / challenger) — réutilisé par Daily pour éviter un 2ᵉ getUserMedia bloqué sur mobile. */
   const [preJoinMediaStream, setPreJoinMediaStream] = useState<MediaStream | null>(null);
+
+  // KILL-SWITCH : Coupe physiquement la caméra/micro quand l'arène est détruite
+  useEffect(() => {
+    return () => {
+      if (preJoinMediaStream) {
+        preJoinMediaStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [preJoinMediaStream]);
+
   const [chatInput, setChatInput] = useState('');
   /** Chat en overlay bas-gauche (pas de sidebar) */
   const [mediatorSidebarOpen, setMediatorSidebarOpen] = useState(false);
@@ -1090,6 +1100,9 @@ export function TikTokStyleArena({
 
   const endBeef = useCallback(async (reason: string = 'Terminé par le médiateur') => {
     if (beefEndedRef.current) return;
+    if (preJoinMediaStream) {
+      preJoinMediaStream.getTracks().forEach(track => track.stop());
+    }
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.removeItem(`arena_joined_${roomId}_${userId}`);
@@ -2580,6 +2593,9 @@ export function TikTokStyleArena({
 
   // Leave: for mediators, triggers endBeef. For others, just leave.
   const handleLeave = useCallback(async () => {
+    if (preJoinMediaStream) {
+      preJoinMediaStream.getTracks().forEach(track => track.stop());
+    }
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.removeItem(`arena_joined_${roomId}_${userId}`);
@@ -3363,7 +3379,7 @@ export function TikTokStyleArena({
                     return (
                       <motion.div
                         key={cfg.id}
-                        className={`relative overflow-hidden rounded-[2rem] bg-white/5 backdrop-blur-2xl transition-all duration-300 ${cfg.cellClass}`}
+                        className={`relative overflow-hidden rounded-[2rem] bg-transparent backdrop-blur-2xl transition-all duration-300 ${cfg.cellClass}`}
                         style={{
                           boxShadow: auraShadow,
                           zIndex: cfg.aura > 0 ? 10 : 1,

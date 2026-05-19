@@ -540,7 +540,7 @@ export function BeefCard({
           }}
         >
           <div
-            className="relative flex h-full w-full flex-col overflow-hidden border border-white/10 bg-slate-950/60 shadow-2xl backdrop-blur-3xl md:h-auto md:max-h-[90vh] md:max-w-5xl md:flex-row md:rounded-3xl"
+            className="relative flex h-full w-full flex-col overflow-hidden bg-slate-950/60 shadow-2xl backdrop-blur-3xl md:h-auto md:max-h-[90vh] md:max-w-5xl md:flex-row md:rounded-3xl"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
