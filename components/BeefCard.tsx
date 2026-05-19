@@ -3,7 +3,7 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, MoreVertical, Trash2, Edit2, Flag } from 'lucide-react';
+import { Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, MoreVertical, Trash2, Edit2, Flag } from 'lucide-react';
 import { Countdown } from '@/components/Countdown';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -211,14 +211,6 @@ export function BeefCard({
         return null;
     }
   }
-
-  const getTimeDisplay = () => {
-    const now = Date.now();
-    const createdTime = new Date(created_at).getTime();
-    const minutesAgo = Math.floor((now - createdTime) / 60000);
-    if (status === 'live') return minutesAgo < 60 ? `${minutesAgo}m` : `${Math.floor(minutesAgo / 60)}h`;
-    return '';
-  };
 
   const isManifesto = saisirTab || (intent === 'manifesto' && (status === 'pending' || status === 'ready'));
   const isReplay = status === 'ended' || status === 'replay' || status === 'completed';
@@ -433,11 +425,6 @@ export function BeefCard({
             )}
 
             <div className="flex items-center gap-1.5">
-              {status === 'live' && getTimeDisplay() && (
-                <div className="flex h-6 sm:h-7 items-center gap-1 rounded-full border border-white/20 bg-black/50 px-2 font-mono text-[9px] sm:text-[10px] font-bold text-white/90 backdrop-blur-md">
-                  <Clock className="h-3 w-3" aria-hidden /> <span>{getTimeDisplay()}</span>
-                </div>
-              )}
               <div
                 className="flex h-6 sm:h-7 cursor-pointer items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 font-mono text-[10px] font-bold text-white backdrop-blur-md transition-all hover:bg-white/10 active:scale-95"
                 onClick={(e) => {
