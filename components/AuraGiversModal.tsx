@@ -130,7 +130,7 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
               ✦
             </span>
             <h3 id="aura-givers-title" className="text-base font-black uppercase tracking-wider text-white">
-              AURA
+              {type === 'views' ? 'CITOYENS' : 'AURA'}
             </h3>
           </div>
           <button

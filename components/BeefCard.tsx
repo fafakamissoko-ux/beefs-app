@@ -451,7 +451,7 @@ export function BeefCard({
               {onAuraClick ? (
                 <div
                   className={`relative flex h-7 items-center overflow-hidden rounded-full border bg-black/50 font-mono text-[10px] font-bold backdrop-blur-md ${
-                    has_liked_by_user ? 'border-volt-500/50 text-volt-400' : 'border-white/20 text-white'
+                    has_liked_by_user ? 'border-amber-400/50 text-amber-400' : 'border-white/20 text-white'
                   }`}
                 >
                   <AnimatePresence>
@@ -461,7 +461,7 @@ export function BeefCard({
                         initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
                         animate={{ opacity: 0, y: -28, scale: 1.1 }}
                         exit={{ opacity: 0 }}
-                        className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-black text-volt-400"
+                        className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-black text-amber-400"
                       >
                         +1
                       </motion.span>
@@ -470,7 +470,7 @@ export function BeefCard({
                   <button
                     type="button"
                     className={`flex h-full items-center justify-center pl-2.5 pr-1.5 transition-all hover:bg-white/10 active:bg-white/20 ${
-                      !has_liked_by_user ? 'hover:text-volt-400' : ''
+                      !has_liked_by_user ? 'hover:text-amber-400' : ''
                     }`}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -483,7 +483,15 @@ export function BeefCard({
                     }}
                     aria-label={has_liked_by_user ? "Retirer l'Aura" : "Envoyer de l'Aura"}
                   >
-                    <Sparkles className={`h-3.5 w-3.5 ${has_liked_by_user ? 'fill-current' : ''}`} aria-hidden />
+                    <Sparkles
+                      className={
+                        'h-3.5 w-3.5 ' +
+                        (has_liked_by_user
+                          ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.7)]'
+                          : '')
+                      }
+                      aria-hidden
+                    />
                   </button>
                   <button
                     type="button"
@@ -602,7 +610,7 @@ export function BeefCard({
                         animate={{ opacity: 0, y: -40, scale: 1.5 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.65 }}
-                        className="pointer-events-none absolute -top-8 left-1/2 z-50 -translate-x-1/2 text-sm font-black text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]"
+                        className="pointer-events-none absolute -top-8 left-1/2 z-50 -translate-x-1/2 text-sm font-black text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]"
                       >
                         +1
                       </motion.span>
@@ -630,14 +638,14 @@ export function BeefCard({
                     aria-label="Aura teaser"
                     className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border bg-black/60 backdrop-blur-md transition-transform active:scale-90 ${
                       has_liked_teaser
-                        ? 'border-yellow-400/50 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
+                        ? 'border-amber-400/50 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
                         : 'border-white/10 hover:bg-white/20'
                     }`}
                   >
                     <Sparkles
                       className={`h-6 w-6 ${
                         has_liked_teaser
-                          ? 'fill-yellow-400 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
+                          ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
                           : 'text-white'
                       }`}
                     />
@@ -659,7 +667,7 @@ export function BeefCard({
                     aria-label="Voir les donateurs d'Aura teaser"
                     className={`cursor-pointer px-3 py-2 -mx-3 -my-2 font-mono text-xs font-bold drop-shadow-md transition-transform active:scale-95 ${
                       has_liked_teaser
-                        ? 'text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
+                        ? 'text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
                         : 'text-white'
                     }`}
                   >
