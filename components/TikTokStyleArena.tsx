@@ -3274,7 +3274,7 @@ export function TikTokStyleArena({
       )}
 
       {/* === ZONE 2 : LA VIDÉO (AVEC OVERLAY CHAT MOBILE) === */}
-      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-black/50 backdrop-blur-3xl border border-white/10 z-10">
+      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-black/50 backdrop-blur-3xl z-10">
 
         {/* TICKER MOBILE */}
         {!isCinematicMode && arenaHasAnnouncement && (
