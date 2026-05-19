@@ -309,14 +309,9 @@ export function TikTokStyleArena({
 
   /** MediaStream du pré-joint (médiateur / challenger) — réutilisé par Daily pour éviter un 2ᵉ getUserMedia bloqué sur mobile. */
   const [preJoinMediaStream, setPreJoinMediaStream] = useState<MediaStream | null>(null);
-
-  // KILL-SWITCH : Coupe physiquement la caméra/micro quand l'arène est détruite
+  const preJoinMediaStreamRef = useRef<MediaStream | null>(null);
   useEffect(() => {
-    return () => {
-      if (preJoinMediaStream) {
-        preJoinMediaStream.getTracks().forEach(track => track.stop());
-      }
-    };
+    preJoinMediaStreamRef.current = preJoinMediaStream;
   }, [preJoinMediaStream]);
 
   const [chatInput, setChatInput] = useState('');
@@ -885,6 +880,7 @@ export function TikTokStyleArena({
   const endBeefRef = useRef<(reason: string) => Promise<void>>();
   /** Rempli après `useDailyCall` — `endBeef` vit au-dessus du hook et ne peut pas fermer sur `leave` en closure directe. */
   const leaveRef = useRef<() => Promise<void>>(async () => {});
+  const stopAllMediaTracksRef = useRef<() => void>(() => {});
 
   /** API broadcast issue du hook (remplie à chaque rendu après `useArenaRealtime`). */
   const arenaOutboundRef = useRef<Partial<UseArenaRealtimeResult>>({});
@@ -1100,9 +1096,7 @@ export function TikTokStyleArena({
 
   const endBeef = useCallback(async (reason: string = 'Terminé par le médiateur') => {
     if (beefEndedRef.current) return;
-    if (preJoinMediaStream) {
-      preJoinMediaStream.getTracks().forEach(track => track.stop());
-    }
+    stopAllMediaTracksRef.current();
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.removeItem(`arena_joined_${roomId}_${userId}`);
@@ -1117,7 +1111,10 @@ export function TikTokStyleArena({
       toggle: 'END_BEEF',
       endReason: reason,
     });
-    if (!r.ok) return;
+    if (!r.ok) {
+      stopAllMediaTracksRef.current();
+      return;
+    }
 
     beefEndedRef.current = true;
 
@@ -1305,6 +1302,7 @@ export function TikTokStyleArena({
   const {
     join,
     leave,
+    stopCamera,
     toggleMic,
     toggleCam,
     setLocalAudioEnabled,
@@ -1322,6 +1320,49 @@ export function TikTokStyleArena({
     isCameraInterrupted,
     recoverMediaDevices,
   } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer, userId, meetingTokenForDaily);
+
+  const stopAllMediaTracks = useCallback(() => {
+    const stopped = new Set<MediaStreamTrack>();
+    const stopTrack = (track: MediaStreamTrack | null | undefined) => {
+      if (!track || stopped.has(track)) return;
+      stopped.add(track);
+      try {
+        track.stop();
+      } catch {
+        /* ignore */
+      }
+    };
+
+    preJoinMediaStreamRef.current?.getTracks().forEach(stopTrack);
+
+    if (localParticipant?.videoTrack) stopTrack(localParticipant.videoTrack);
+    if (localParticipant?.audioTrack) stopTrack(localParticipant.audioTrack);
+
+    for (const peer of physicalPeers) {
+      if (!peer.isLocal) continue;
+      stopTrack(peer.videoTrack);
+      stopTrack(peer.audioTrack);
+    }
+
+    try {
+      stopCamera();
+    } catch {
+      /* ignore */
+    }
+
+    preJoinMediaStreamRef.current = null;
+    setPreJoinMediaStream(null);
+  }, [localParticipant, physicalPeers, stopCamera]);
+
+  useEffect(() => {
+    stopAllMediaTracksRef.current = stopAllMediaTracks;
+  }, [stopAllMediaTracks]);
+
+  useEffect(() => {
+    return () => {
+      stopAllMediaTracksRef.current();
+    };
+  }, []);
 
   const reconcileExpected = useMemo(
     (): ReconcileExpectedRoles => ({
@@ -2593,9 +2634,7 @@ export function TikTokStyleArena({
 
   // Leave: for mediators, triggers endBeef. For others, just leave.
   const handleLeave = useCallback(async () => {
-    if (preJoinMediaStream) {
-      preJoinMediaStream.getTracks().forEach(track => track.stop());
-    }
+    stopAllMediaTracks();
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.removeItem(`arena_joined_${roomId}_${userId}`);
@@ -2604,6 +2643,7 @@ export function TikTokStyleArena({
       }
     }
     if (beefEndedRef.current) {
+      await leaveRef.current();
       router.replace('/feed');
       return;
     }
@@ -2620,7 +2660,7 @@ export function TikTokStyleArena({
       await leave();
       router.replace('/feed');
     }
-  }, [leave, router, isHost, endBeef, roomId, userId]);
+  }, [leave, router, isHost, endBeef, roomId, userId, stopAllMediaTracks]);
 
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 

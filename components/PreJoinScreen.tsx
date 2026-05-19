@@ -42,9 +42,44 @@ export function PreJoinScreen({
   const [selectedMic, setSelectedMic] = useState('');
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number>(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const closeAudioContext = useCallback(() => {
+    analyserRef.current = null;
+    const ctx = audioContextRef.current;
+    audioContextRef.current = null;
+    if (ctx && ctx.state !== 'closed') {
+      void ctx.close().catch(() => {});
+    }
+  }, []);
+
+  /** Libère preview PreJoin ; si handoff Daily, ne pas stopper les pistes matérielles. */
+  const releasePreJoinResources = useCallback(
+    (options: { stopTracks: boolean }) => {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = 0;
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      closeAudioContext();
+      if (options.stopTracks) {
+        streamRef.current?.getTracks().forEach((t) => {
+          try {
+            t.stop();
+          } catch {
+            /* ignore */
+          }
+        });
+      }
+      streamRef.current = null;
+      setStream(null);
+    },
+    [closeAudioContext],
+  );
 
   const startPreview = useCallback(async (camId?: string, micId?: string) => {
     streamRef.current?.getTracks().forEach(t => t.stop());
+    closeAudioContext();
     setCamError(null);
 
     try {
@@ -62,6 +97,7 @@ export function PreJoinScreen({
 
       // Audio level meter
       const ctx = new AudioContext();
+      audioContextRef.current = ctx;
       const source = ctx.createMediaStreamSource(s);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
@@ -83,11 +119,11 @@ export function PreJoinScreen({
         cameras: allDevices.filter(d => d.kind === 'videoinput'),
         mics: allDevices.filter(d => d.kind === 'audioinput'),
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setCamError('Caméra/micro non disponible. Vérifie les permissions du navigateur.');
       console.error('Camera error:', err);
     }
-  }, [camEnabled]);
+  }, [camEnabled, closeAudioContext]);
 
   const startPreviewRef = useRef(startPreview);
   startPreviewRef.current = startPreview;
@@ -97,12 +133,9 @@ export function PreJoinScreen({
       void startPreviewRef.current();
     }
     return () => {
-      cancelAnimationFrame(animFrameRef.current);
-      if (!mediaHandedOffRef.current) {
-        streamRef.current?.getTracks().forEach(t => t.stop());
-      }
+      releasePreJoinResources({ stopTracks: !mediaHandedOffRef.current });
     };
-  }, [viewerMode]);
+  }, [viewerMode, releasePreJoinResources]);
 
   const toggleCam = () => {
     if (stream) {
@@ -127,9 +160,8 @@ export function PreJoinScreen({
   const handleJoin = () => {
     mediaHandedOffRef.current = true;
     const acquired = streamRef.current ?? stream;
-    cancelAnimationFrame(animFrameRef.current);
-    if (videoRef.current) videoRef.current.srcObject = null;
-    /** Ne pas arrêter les pistes ici : Daily réutilise le même MediaStream (évite getUserMedia après await token). */
+    /** Ne pas stopper les pistes : Daily les réutilise ; on libère seulement preview + AudioContext. */
+    releasePreJoinResources({ stopTracks: false });
     onJoin(acquired);
   };
 
