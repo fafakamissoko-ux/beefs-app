@@ -83,7 +83,7 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
       role="presentation"
     >
       <div
-        className="flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-slate-950/80 shadow-2xl backdrop-blur-3xl"
+        className="flex max-h-[80vh] w-full max-w-md animate-in fade-in zoom-in-95 flex-col overflow-hidden rounded-3xl border border-white/10 bg-slate-950/80 shadow-2xl backdrop-blur-3xl duration-200 ease-out"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -108,7 +108,7 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
           </button>
         </div>
 
-        <div className="hide-scrollbar flex-1 space-y-4 overflow-y-auto p-5">
+        <div className="hide-scrollbar flex-1 space-y-4 overflow-y-auto overscroll-contain p-5">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="mb-4 h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
