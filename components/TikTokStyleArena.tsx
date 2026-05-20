@@ -10,16 +10,9 @@ import {
   Gift,
   X,
   PanelRight,
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
   Send,
   Award,
-  Timer,
-  Pause,
   Share2,
-  Sliders,
   Calendar,
   Flame,
   Menu,
@@ -34,7 +27,7 @@ import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { VsTransition } from './VsTransition';
 import { ChatPanel } from './ChatPanel';
 import { PreJoinScreen } from './PreJoinScreen';
-import { ParticipantVideo } from './ParticipantVideo';
+import { ArenaLayoutManager } from '@/components/Arena/ArenaLayoutManager';
 import { FeatureGuide } from './FeatureGuide';
 import { ViewerListModal } from './ViewerListModal';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
@@ -3388,255 +3381,46 @@ export function TikTokStyleArena({
           </div>
         )}
 
-        {/* === ARÈNE EMPEREUR === */}
-        <div className="absolute inset-0 z-0 bg-black/50 backdrop-blur-3xl p-1 sm:p-2">
-          {(() => {
-            type EmperorSlot = 'A' | 'B' | 'C' | 'D';
-            const expectedCount = Math.max(2, expectedUids.length);
-            const gridClass = expectedCount <= 2 ? 'grid-cols-2 grid-rows-1' : 'grid-cols-2 grid-rows-2';
-            const layoutConfigs = displayPanelsFixed.slice(0, expectedCount).map((panel, idx) => {
-              const r = reconciledPeers.find((x) => x.semantic.expectedSlotIndex === idx);
-              const name =
-                r?.semantic.kind === 'orphan'
-                  ? `@${ORPHAN_GUEST_LABEL}`
-                  : participantRoles[expectedUids[idx]]?.name ||
-                    panel?.userName?.trim() ||
-                    `Participant ${idx + 1}`;
-              return {
-              id: `grid-${idx}`,
-              name,
-              panel,
-              slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as EmperorSlot,
-              color: idx === 0 ? '225,29,72' : idx === 1 ? '16,185,129' : idx === 2 ? '234,179,8' : '59,130,246',
-              aura: [auraA, auraB, auraC, auraD][idx],
-              cellClass: expectedCount === 3 && idx === 2 ? 'col-span-2' : '',
-              uiPos:
-                idx === 1
-                  ? 'top-[3.5rem] right-2 sm:top-[4.5rem] sm:right-4 flex-row-reverse items-start'
-                  : idx === 3
-                    ? 'top-2 right-2 sm:top-4 sm:right-4 flex-col items-end'
-                    : expectedCount === 3 && idx === 2
-                      ? 'left-2 right-2 sm:left-4 sm:right-4 top-2 sm:top-4 flex-row justify-between items-start pointer-events-none'
-                      : 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-start',
-            };
-            });
-
-            return (
-              <>
-                <div className={`relative h-full w-full grid gap-1 sm:gap-2 ${gridClass}`}>
-                  {layoutConfigs.map((cfg, idx) => {
-                    const isSpeaking = speakingTurnActive && effectiveHotMicSpeakerSlot === cfg.slot;
-                    const isLocal = cfg.panel?.sessionId === localParticipant?.sessionId && !isViewer;
-                    const isMutedByFocus =
-                      speakingTurnActive && Boolean(effectiveHotMicSpeakerSlot) && effectiveHotMicSpeakerSlot !== cfg.slot;
-                    const auraShadow =
-                      cfg.aura > 0
-                        ? `0 0 ${20 + Math.min(cfg.aura, 120) * 0.8}px rgba(${cfg.color}, 0.4), inset 0 0 40px rgba(${cfg.color}, 0.15)`
-                        : 'inset 0 0 20px rgba(255,255,255,0.02)';
-                    const filterVal = isMutedByFocus
-                      ? 'grayscale(0.6) blur(3px)'
-                      : `brightness(${1 + (cfg.aura / 300) * 0.4})`;
-
-                    return (
-                      <motion.div
-                        key={cfg.id}
-                        className={`relative overflow-hidden rounded-[2rem] bg-transparent backdrop-blur-2xl transition-all duration-300 ${cfg.cellClass}`}
-                        style={{
-                          boxShadow: auraShadow,
-                          zIndex: cfg.aura > 0 ? 10 : 1,
-                          opacity: isMutedByFocus ? 0.4 : 1,
-                          filter: filterVal,
-                        }}
-                      >
-                        {cfg.panel?.videoTrack ? (
-                          <ParticipantVideo
-                            videoTrack={cfg.panel.videoTrack}
-                            muted={isLocal}
-                            className="absolute inset-0 h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-4xl opacity-20">👤</div>
-                        )}
-
-                        {!isLocal && (
-                          <motion.button
-                            type="button"
-                            data-cinema-stay
-                            whileTap={{ scale: 0.96 }}
-                            onPointerDown={(e) => {
-                              e.stopPropagation();
-                              emitTapSupport(cfg.slot);
-                              preferSide(cfg.slot);
-                            }}
-                            className="absolute inset-0 z-[28] h-full w-full touch-manipulation outline-none"
-                          />
-                        )}
-
-                        <div
-                          data-cinema-stay
-                          className={`absolute z-[140] flex gap-1.5 ${cfg.uiPos} ${expectedCount === 3 && idx === 2 ? '' : 'pointer-events-auto'}`}
-                        >
-                          <div className={`flex gap-1.5 items-start ${expectedCount === 3 && idx === 2 ? 'pointer-events-auto' : ''}`}>
-                            <div className="flex max-w-[9rem] sm:max-w-[14rem] items-center gap-2 rounded-full bg-slate-900/40 backdrop-blur-[40px] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] border border-white/[0.08] px-4 py-2">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  void openProfile(cfg.name, cfg.panel?.arenaUserId ?? null);
-                                }}
-                                className="truncate text-[10px] sm:text-[11px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md"
-                              >
-                                @{cfg.name}
-                              </button>
-                              {!cfg.panel && (
-                                <span className="shrink-0 rounded border border-rose-500/20 bg-rose-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase text-rose-400">
-                                  Absent
-                                </span>
-                              )}
-                            </div>
-                            {isSpeaking && (
-                              <div className="w-fit animate-pulse rounded bg-rose-600 px-2 py-0.5 text-[9px] font-black text-white shadow-[0_0_10px_rgba(225,29,72,0.6)]">
-                                DIRECT
-                              </div>
-                            )}
-                          </div>
-
-                          {isLocal && (
-                            <div className={`flex shrink-0 items-center gap-1.5 ${expectedCount === 3 && idx === 2 ? 'pointer-events-auto' : ''}`}>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const isLockedByTurn =
-                                    structuredDebateEnabled && speakingTurnActive && effectiveHotMicSpeakerSlot !== cfg.slot;
-                                  if (micMutedByMediator || mediatorHoldingFloor || isLockedByTurn) {
-                                    toast('Micro verrouillé par le médiateur ou les règles du débat.', 'error');
-                                    return;
-                                  }
-                                  toggleMic();
-                                }}
-                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-[60px] transition-all duration-300 active:scale-95 ${micEnabled && !micMutedByMediator ? 'border-white/20 bg-white/10 text-white hover:bg-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'border-rose-500/50 bg-rose-950/40 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)]'}`}
-                              >
-                                <Mic className="h-4 w-4" strokeWidth={1.75} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleCam();
-                                }}
-                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-[60px] transition-all duration-300 active:scale-95 ${camEnabled ? 'border-white/20 bg-white/10 text-white hover:bg-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'border-rose-500/50 bg-rose-950/40 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)]'}`}
-                              >
-                                <Video className="h-4 w-4" strokeWidth={1.75} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-
-                {/* LE RÉFÉRENT EMPEREUR (HALO BLINDÉ & PILULE INLINE) */}
-                <div
-                  data-cinema-stay
-                  className="pointer-events-none absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
-                >
-                  {/* La vidéo (centrée, halo directement sur le bord du cercle vidéo) */}
-                  <motion.div
-                    animate={{
-                      boxShadow:
-                        auraMed > 0
-                          ? `0 0 50px ${getMediatorDynamicColor(auraMed)}, inset 0 0 20px rgba(212,175,55,0.3)`
-                          : 'inset 0 0 20px rgba(255,255,255,0.05), 0 0 0 1px rgba(255,255,255,0.1)',
-                    }}
-                    style={{ filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})` }}
-                    className="pointer-events-auto relative h-[155px] w-[155px] overflow-hidden rounded-full sm:h-[220px] sm:w-[220px]"
-                  >
-                    {/* Bouton Réactiver (Médiateur local) */}
-                    {mediatorIsLocal && isCameraInterrupted && !isViewer && (
-                      <div className="absolute inset-0 z-[150] flex items-center justify-center bg-slate-950/55 p-2 backdrop-blur-md">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void recoverMediaDevices();
-                          }}
-                          className="rounded-full bg-white px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-black shadow-[0_0_15px_rgba(255,255,255,0.25)] hover:bg-gray-200"
-                        >
-                          📡 RÉACTIVER
-                        </button>
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onPointerDown={(e) => {
-                        e.stopPropagation();
-                        if (isWaitingForMediator) return;
-                        emitTapSupport('M');
-                        preferSide('M');
-                      }}
-                      onDoubleClick={(e) => e.stopPropagation()}
-                      className="flex h-full w-full touch-manipulation overflow-hidden rounded-full border-none bg-transparent outline-none active:scale-95"
-                    >
-                      {isWaitingForMediator ? (
-                        <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-slate-950/55 p-4">
-                          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-cyan-400 border-t-transparent sm:h-10 sm:w-10" />
-                        </div>
-                      ) : mediatorParticipant?.videoTrack ? (
-                        <ParticipantVideo
-                          videoTrack={mediatorParticipant.videoTrack}
-                          muted={mediatorIsLocal}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : mediatorGraceActive ? (
-                        <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-slate-900/65 p-4">
-                          <span className="text-[12px] font-black text-rose-500 sm:text-[14px]">{mediatorGraceSeconds}s</span>
-                        </div>
-                      ) : (
-                        <span className="m-auto text-4xl opacity-30 sm:text-5xl">⚖️</span>
-                      )}
-                    </button>
-                  </motion.div>
-
-                  {/* LA PILULE INLINE : MONOLITHE SPATIAL */}
-                  <div className="pointer-events-auto mt-2 flex items-center rounded-full border border-white/10 bg-black/50 shadow-[0_10px_40px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-[60px] transition-all duration-300 hover:bg-black/60 p-1">
-                    <button
-                      type="button"
-                      onClick={() => void openProfile(mediatorName, host.id)}
-                      className="px-4 py-1.5 text-[11px] font-black text-prestige-gold transition-colors hover:text-white sm:text-[12px] drop-shadow-md"
-                    >
-                      @{mediatorName}
-                    </button>
-                    {isHost && (
-                      <button
-                        type="button"
-                        data-mediator-sidebar-toggle
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMediatorSidebarOpen((o) => !o);
-                        }}
-                        className="flex h-8 w-8 ml-1 items-center justify-center rounded-full bg-white/5 text-prestige-gold transition-colors hover:bg-white/15 hover:text-white active:scale-95 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]"
-                        title="Command Deck"
-                      >
-                        <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Chrono déporté */}
-                  {isJoined && timerActive && (
-                    <div className="pointer-events-auto mt-1 flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-600/10 px-3 py-1 text-[10px] font-black text-rose-500 backdrop-blur-md tabular-nums">
-                      {timerPaused ? <Pause className="h-3 w-3 text-amber-200" /> : <Timer className="h-3 w-3" />}
-                      {formatBeefTime(beefTimeRemaining)}
-                    </div>
-                  )}
-                </div>
-              </>
-            );
-          })()}
-        </div>
+        <ArenaLayoutManager
+          expectedUids={expectedUids}
+          challengerRemoteSlots={displayPanelsFixed}
+          reconciledPeers={reconciledPeers}
+          participantRoles={participantRoles}
+          auras={auras}
+          localSessionId={localParticipant?.sessionId}
+          isViewer={isViewer}
+          isHost={isHost}
+          speakingTurnActive={speakingTurnActive}
+          effectiveHotMicSpeakerSlot={effectiveHotMicSpeakerSlot}
+          structuredDebateEnabled={structuredDebateEnabled}
+          micMutedByMediator={micMutedByMediator}
+          mediatorHoldingFloor={mediatorHoldingFloor}
+          micEnabled={micEnabled}
+          camEnabled={camEnabled}
+          onTapSupport={emitTapSupport}
+          onPreferSide={preferSide}
+          onOpenProfile={openProfile}
+          onToggleMic={toggleMic}
+          onToggleCam={toggleCam}
+          onToast={toast}
+          mediatorParticipant={mediatorParticipant}
+          mediatorIsLocal={mediatorIsLocal}
+          mediatorName={mediatorName}
+          auraMed={auraMed}
+          isWaitingForMediator={isWaitingForMediator}
+          isCameraInterrupted={isCameraInterrupted}
+          onRecoverMediaDevices={recoverMediaDevices}
+          mediatorGraceActive={mediatorGraceActive}
+          mediatorGraceSeconds={mediatorGraceSeconds}
+          mediatorHostId={host.id}
+          isJoined={isJoined}
+          timerActive={timerActive}
+          timerPaused={timerPaused}
+          beefTimeRemaining={beefTimeRemaining}
+          formatBeefTime={formatBeefTime}
+          onToggleMediatorSidebar={() => setMediatorSidebarOpen((o) => !o)}
+          getMediatorDynamicColor={getMediatorDynamicColor}
+        />
 
         {/* OVERLAY CHAT MOBILE (Intégré à la vidéo, invisible sur PC) */}
         {!isCinematicMode && (
