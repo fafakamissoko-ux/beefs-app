@@ -22,7 +22,7 @@ import { MediatorInviteInline } from '@/components/MediatorInviteInline';
 export type MediatorRemoteRow = {
   sessionId: string;
   label: string;
-  slot: 'A' | 'B' | 'C' | 'D';
+  slot: 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
   debaterId: string | null;
   audioOn: boolean;
 };
@@ -42,8 +42,8 @@ type MediatorSidebarProps = {
   remoteRows: MediatorRemoteRow[];
   speakingTurnActive: boolean;
   speakingTurnPaused: boolean;
-  hotMicSpeakerSlot: 'A' | 'B' | 'C' | 'D' | null;
-  onHotMic: (slot: 'A' | 'B' | 'C' | 'D', durationSec: number, opts?: { force?: boolean }) => void;
+  hotMicSpeakerSlot: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | null;
+  onHotMic: (slot: 'A' | 'B' | 'C' | 'D' | 'E' | 'F', durationSec: number, opts?: { force?: boolean }) => void;
   onStopSpeakingTurn: () => void;
   onPauseSpeakingTurn: () => void;
   onResumeSpeakingTurn: () => void;

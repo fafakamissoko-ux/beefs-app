@@ -151,7 +151,7 @@ export interface PhysicalPeer {
 export interface SemanticIdentity {
   arenaUserId: string | null;
   role: string;
-  /** 0…3 grille challengers ; -1 médiateur ; orphelins remplissent les trous */
+  /** 0…5 grille challengers ; -1 médiateur ; orphelins remplissent les trous */
   expectedSlotIndex: number;
   kind: 'expected' | 'orphan';
 }
@@ -209,8 +209,8 @@ export function reconcilePeers(
   expected: ReconcileExpectedRoles,
 ): ReconciledPeer[] {
   const { mediatorUserId, mediatorDisplayName, challengerUidsOrdered, roles } = expected;
-  const nSlots = 4;
-  const slotUsed: boolean[] = [false, false, false, false];
+  const nSlots = 6;
+  const slotUsed: boolean[] = Array.from({ length: nSlots }, () => false);
   const assigned = new Map<string, SemanticIdentity>();
   const needPhysical = [...physicalPeers];
 

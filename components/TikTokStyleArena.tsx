@@ -58,6 +58,21 @@ import {
   type ReconcileExpectedRoles,
 } from '@/lib/participant-identity';
 import {
+  addAuraBatchToRecord,
+  ARENA_CHALLENGER_SLOT_COUNT,
+  AURA_DISPLAY_CAP,
+  CHALLENGER_SLOT_IDS,
+  createEmptyChallengerAuras,
+  createZeroAuraBatch,
+  hasAnyAuraBatchDelta,
+  indexToChallengerSlot,
+  challengerSlotToIndex,
+  snapshotToChallengerAuras,
+  type ArenaSupportSlotId,
+  type ChallengerSlotId,
+  type AuraBatchPayload,
+} from '@/lib/arena-slots';
+import {
   FlyingReactionsLayer,
   createFlyingReactionEntry,
   pushFlyingReaction,
@@ -329,10 +344,11 @@ export function TikTokStyleArena({
   const [acceptedInviteAlert, setAcceptedInviteAlert] = useState(false);
 
   // ── AURA "FERVEUR SOCIALE" ──
-  const [auraA, setAuraA] = useState(0);
-  const [auraB, setAuraB] = useState(0);
-  const [auraC, setAuraC] = useState(0);
-  const [auraD, setAuraD] = useState(0);
+  const [auras, setAuras] = useState<Record<ChallengerSlotId, number>>(createEmptyChallengerAuras);
+  const auraA = auras.A;
+  const auraB = auras.B;
+  const auraC = auras.C;
+  const auraD = auras.D;
   const [auraMed, setAuraMed] = useState(0);
   const [auraFeverMed, setAuraFeverMed] = useState(false);
   /** Heat Index global : activité de la salle (chat, spectateurs, réactions) — lueur chaude sur le bandeau vidéo. */
@@ -351,6 +367,8 @@ export function TikTokStyleArena({
     resonanceB: number;
     resonanceC: number;
     resonanceD: number;
+    resonanceE: number;
+    resonanceF: number;
     resonanceM: number;
     messages: number;
     endReason: string;
@@ -383,7 +401,7 @@ export function TikTokStyleArena({
   /** Bannière partagée « tour de parole » (remplace le toast pour tous les participants) */
   const [floorAnnouncement, setFloorAnnouncement] = useState<{
     name: string;
-    slot: 'A' | 'B' | 'C' | 'D';
+    slot: ChallengerSlotId;
   } | null>(null);
 
   /** Débat structuré (budget challengers, tours imposés, micros) */
@@ -431,13 +449,13 @@ export function TikTokStyleArena({
   /** File d'attente batchée pour particules (évite de marteler le state sur les pics de broadcast) */
   const reactionBufferRef = useRef<FlyingReactionEntry[]>([]);
   /** Accumulateur d’Aura (réactions / tap intégrés) — flush réseau ~1,5 s pour limiter le flood. */
-  const auraBufferRef = useRef({ A: 0, B: 0, C: 0, D: 0, M: 0 });
+  const auraBufferRef = useRef<AuraBatchPayload>(createZeroAuraBatch());
   /** Snapshot pour `aura_master_sync` (intervalle sans recréer la closure). */
-  const auraSnapshotRef = useRef({ A: 0, B: 0, C: 0, D: 0, M: 0 });
+  const auraSnapshotRef = useRef<AuraBatchPayload>(createZeroAuraBatch());
 
   useEffect(() => {
-    auraSnapshotRef.current = { A: auraA, B: auraB, C: auraC, D: auraD, M: auraMed };
-  }, [auraA, auraB, auraC, auraD, auraMed]);
+    auraSnapshotRef.current = { ...createZeroAuraBatch(), ...auras, M: auraMed };
+  }, [auras, auraMed]);
 
   useEffect(() => {
     setDockPickersMounted(true);
@@ -672,6 +690,8 @@ export function TikTokStyleArena({
     votesB: 0,
     votesC: 0,
     votesD: 0,
+    votesE: 0,
+    votesF: 0,
   });
 
   /** Chat temps réel : dédup + insert (réutilisé par `useArenaRealtime`, avant Daily). */
@@ -698,7 +718,7 @@ export function TikTokStyleArena({
     setGlobalHeat((v) => Math.min(100, v + 4));
   }, []);
 
-  const addRemoteReaction = useCallback((emoji: string, supportSlot?: 'A' | 'B' | 'C' | 'D' | 'M' | null) => {
+  const addRemoteReaction = useCallback((emoji: string, supportSlot?: ArenaSupportSlotId | null) => {
     if (INTEGRATED_SUPPORT_REACTIONS.has(emoji)) {
       if (supportSlot === 'A') {
         statsRef.current.votesA += 1;
@@ -714,6 +734,14 @@ export function TikTokStyleArena({
       }
       if (supportSlot === 'D') {
         statsRef.current.votesD += 1;
+        return;
+      }
+      if (supportSlot === 'E') {
+        statsRef.current.votesE += 1;
+        return;
+      }
+      if (supportSlot === 'F') {
+        statsRef.current.votesF += 1;
         return;
       }
       if (supportSlot === 'M') {
@@ -746,19 +774,19 @@ export function TikTokStyleArena({
   const getAuraBoost = () => 15;
 
   const emitTapSupport = useCallback(
-    (target: 'A' | 'B' | 'C' | 'D' | 'M') => {
+    (target: ArenaSupportSlotId) => {
       if (requireAuth('Fais grimper l\'Aura', 'Crée un compte gratuit pour tapoter l\'écran et soutenir tes favoris !')) return;
       const boost = getAuraBoost();
       setGlobalHeat((v) => Math.min(100, v + 2));
       if (target === 'M') {
         setSupportBurst((p) => ({ ...p, M: p.M + 1 }));
-        setAuraMed((v) => Math.min(300, v + boost));
+        setAuraMed((v) => Math.min(AURA_DISPLAY_CAP, v + boost));
       } else {
         setSupportBurst((p) => ({ ...p, [target]: p[target] + 1 }));
-        if (target === 'A') setAuraA((v) => Math.min(300, v + boost));
-        else if (target === 'B') setAuraB((v) => Math.min(300, v + boost));
-        else if (target === 'C') setAuraC((v) => Math.min(300, v + boost));
-        else if (target === 'D') setAuraD((v) => Math.min(300, v + boost));
+        setAuras((prev) => ({
+          ...prev,
+          [target]: Math.min(AURA_DISPLAY_CAP, prev[target] + boost),
+        }));
       }
       auraBufferRef.current[target] += boost;
     },
@@ -927,9 +955,9 @@ export function TikTokStyleArena({
   const pulseBroadcastPending = useRef({ A: 0, B: 0 });
 
   const pulseBroadcastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [myVote, setMyVote] = useState<'A' | 'B' | 'C' | 'D' | null>(null);
-  const lastPulseSideRef = useRef<'A' | 'B' | 'C' | 'D' | null>(null);
-  const [supportBurst, setSupportBurst] = useState({ A: 0, B: 0, C: 0, D: 0, M: 0 });
+  const [myVote, setMyVote] = useState<ChallengerSlotId | null>(null);
+  const lastPulseSideRef = useRef<ChallengerSlotId | null>(null);
+  const [supportBurst, setSupportBurst] = useState<AuraBatchPayload>(createZeroAuraBatch);
   const supportBurstRef = useRef(supportBurst);
   useEffect(() => {
     supportBurstRef.current = supportBurst;
@@ -947,7 +975,7 @@ export function TikTokStyleArena({
   const rematchExitTimerRef = useRef<number | null>(null);
 
   /** Mémorise le panneau « préféré » pour les réactions intégrées (pas de compteur de vote). */
-  const preferSide = useCallback((side: 'A' | 'B' | 'C' | 'D' | 'M') => {
+  const preferSide = useCallback((side: ArenaSupportSlotId) => {
     if (side !== 'M') {
       setMyVote(side);
       lastPulseSideRef.current = side;
@@ -996,7 +1024,10 @@ export function TikTokStyleArena({
     statsRef.current.votesB = 0;
     statsRef.current.votesC = 0;
     statsRef.current.votesD = 0;
-    setSupportBurst({ A: 0, B: 0, C: 0, D: 0, M: 0 });
+    statsRef.current.votesE = 0;
+    statsRef.current.votesF = 0;
+    setSupportBurst(createZeroAuraBatch());
+    setAuras(createEmptyChallengerAuras());
   }, [roomId, resetPulseVoices, resetArenaVerdict]);
 
   useEffect(() => {
@@ -1137,6 +1168,8 @@ export function TikTokStyleArena({
       resonanceB: s.votesB + sb.B,
       resonanceC: s.votesC + sb.C,
       resonanceD: s.votesD + sb.D,
+      resonanceE: s.votesE + sb.E,
+      resonanceF: s.votesF + sb.F,
       resonanceM: sb.M,
       messages: s.messagesCount,
       endReason: reason,
@@ -1231,10 +1264,13 @@ export function TikTokStyleArena({
   useEffect(() => {
     if (!isHost) return;
     const iv = setInterval(() => {
-      setAuraA((v) => Math.max(0, v - 3));
-      setAuraB((v) => Math.max(0, v - 3));
-      setAuraC((v) => Math.max(0, v - 3));
-      setAuraD((v) => Math.max(0, v - 3));
+      setAuras((prev) => {
+        const next = { ...prev };
+        for (const id of CHALLENGER_SLOT_IDS) {
+          next[id] = Math.max(0, prev[id] - 3);
+        }
+        return next;
+      });
       if (!auraFeverRef.current) {
         setAuraMed((v) => Math.max(0, v - 3));
       }
@@ -1262,7 +1298,7 @@ export function TikTokStyleArena({
 
   /** Aura prestige-gold — cadre sponsor : les gains remontent au Host quand un soutien financier est détecté.
    *  TODO: brancher sur l'événement gift broadcast ; pour l'instant, activé par l'aura A ou B > 60. */
-  const sponsorAuraActive = auraA > 60 || auraB > 60 || auraC > 60 || auraD > 60;
+  const sponsorAuraActive = CHALLENGER_SLOT_IDS.some((id) => auras[id] > 60);
   const sponsorGlow = sponsorAuraActive
     ? 'shadow-[0_0_52px_rgba(212,175,55,0.45),0_0_96px_rgba(255,220,140,0.22),inset_0_0_26px_rgba(212,175,55,0.14)]'
     : '';
@@ -1379,12 +1415,15 @@ export function TikTokStyleArena({
     [physicalPeers, reconcileExpected],
   );
 
-  /** Grille 4 cases : index = slot attribué par reconcilePeers (A=0 … D=3). */
+  /** Grille challengers : index = slot attribué par reconcilePeers (A=0 … F=5). */
   const challengerRemoteSlots = useMemo((): Array<CallParticipant | null> => {
-    const panels: Array<CallParticipant | null> = [null, null, null, null];
+    const panels: Array<CallParticipant | null> = Array.from(
+      { length: ARENA_CHALLENGER_SLOT_COUNT },
+      () => null,
+    );
     for (const r of reconciledPeers) {
       const idx = r.semantic.expectedSlotIndex;
-      if (idx >= 0 && idx < 4) {
+      if (idx >= 0 && idx < ARENA_CHALLENGER_SLOT_COUNT) {
         panels[idx] = physicalPeerToCallParticipant(r.physical);
       }
     }
@@ -1598,19 +1637,12 @@ export function TikTokStyleArena({
       : (challengerRemoteSlots[0]?.userName || 'Challenger 2');
 
   const getSlotForUser = useCallback(
-    (uid?: string | null): 'A' | 'B' | 'C' | 'D' => {
+    (uid?: string | null): ChallengerSlotId => {
       if (!uid) return 'A';
       const idx = expectedUids.indexOf(uid);
-      if (idx < 0) {
-        const j = challengerRemoteSlots.findIndex((p) => p && p.arenaUserId === uid);
-        if (j === 1) return 'B';
-        if (j === 2) return 'C';
-        if (j === 3) return 'D';
-        return 'A';
-      }
-      if (idx === 1) return 'B';
-      if (idx === 2) return 'C';
-      if (idx === 3) return 'D';
+      if (idx >= 0) return indexToChallengerSlot(idx);
+      const j = challengerRemoteSlots.findIndex((p) => p && p.arenaUserId === uid);
+      if (j >= 0) return indexToChallengerSlot(j);
       return 'A';
     },
     [expectedUids, challengerRemoteSlots],
@@ -1679,8 +1711,12 @@ export function TikTokStyleArena({
 
   const mediatorRemoteRows = useMemo((): MediatorRemoteRow[] => {
     if (!isHost || !effectiveDailyRoomUrl) return [];
+    const challengerSlotCount = Math.min(
+      ARENA_CHALLENGER_SLOT_COUNT,
+      Math.max(expectedUids.length, challengerRemoteSlots.length),
+    );
     if (expectedUids.length === 0) {
-      return challengerRemoteSlots.slice(0, 4).map((p, idx) => {
+      return challengerRemoteSlots.slice(0, challengerSlotCount).map((p, idx) => {
         const r = reconciledPeers.find((x) => x.semantic.expectedSlotIndex === idx);
         const orphan = r?.semantic.kind === 'orphan';
         return {
@@ -1688,15 +1724,15 @@ export function TikTokStyleArena({
           label: orphan
             ? `@${ORPHAN_GUEST_LABEL}`
             : p?.userName || `Participant ${idx + 1}`,
-          slot: (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as 'A' | 'B' | 'C' | 'D',
+          slot: indexToChallengerSlot(idx),
           debaterId: p?.arenaUserId ?? null,
           audioOn: p?.audioOn ?? false,
         };
       });
     }
-    return expectedUids.slice(0, 4).map((uid, idx) => {
+    return expectedUids.slice(0, ARENA_CHALLENGER_SLOT_COUNT).map((uid, idx) => {
       const panel = displayPanelsFixed[idx];
-      const slot = (idx === 0 ? 'A' : idx === 1 ? 'B' : idx === 2 ? 'C' : 'D') as 'A' | 'B' | 'C' | 'D';
+      const slot = indexToChallengerSlot(idx);
       const r = reconciledPeers.find((x) => x.semantic.expectedSlotIndex === idx);
       const label =
         r?.semantic.kind === 'orphan'
@@ -1727,7 +1763,7 @@ export function TikTokStyleArena({
   leftPanelRef.current = leftPanel;
   rightPanelRef.current = rightPanel;
 
-  const hotMicSpeakerSlot = useMemo((): 'A' | 'B' | 'C' | 'D' | null => {
+  const hotMicSpeakerSlot = useMemo((): ChallengerSlotId | null => {
     if (!speakingTurnActive || !speakingTurnTarget) return null;
     for (const p of challengerRemoteSlots) {
       if (p && p.arenaUserId === speakingTurnTarget) {
@@ -1738,7 +1774,7 @@ export function TikTokStyleArena({
   }, [speakingTurnActive, speakingTurnTarget, challengerRemoteSlots, getSlotForUser]);
 
   /** Slot affiché sur les panneaux (spectateurs : parfois pas de match arenaUserId → fallback bannière). */
-  const effectiveHotMicSpeakerSlot = useMemo((): 'A' | 'B' | 'C' | 'D' | null => {
+  const effectiveHotMicSpeakerSlot = useMemo((): ChallengerSlotId | null => {
     if (!speakingTurnActive) return null;
     return hotMicSpeakerSlot ?? floorAnnouncement?.slot ?? null;
   }, [speakingTurnActive, hotMicSpeakerSlot, floorAnnouncement]);
@@ -1825,9 +1861,9 @@ export function TikTokStyleArena({
     onReaction(emoji);
 
     const integrated = INTEGRATED_SUPPORT_REACTIONS.has(emoji);
-    const slotPick = (myVote ?? lastPulseSideRef.current ?? 'A') as 'A' | 'B' | 'C' | 'D';
+    const slotPick: ChallengerSlotId = myVote ?? lastPulseSideRef.current ?? 'A';
     const isHeartEmoji = emoji === '❤️' || emoji === HEART_ON_FIRE;
-    const heartTarget: 'A' | 'B' | 'C' | 'D' | 'M' =
+    const heartTarget: ArenaSupportSlotId =
       isHeartEmoji && speakingTurnActive && effectiveHotMicSpeakerSlot
         ? effectiveHotMicSpeakerSlot
         : isHeartEmoji
@@ -1841,10 +1877,10 @@ export function TikTokStyleArena({
         setAuraMed((v) => Math.min(300, v + boost));
       } else {
         setSupportBurst((prev) => ({ ...prev, [heartTarget]: prev[heartTarget] + 1 }));
-        if (heartTarget === 'A') setAuraA((v) => Math.min(300, v + boost));
-        else if (heartTarget === 'B') setAuraB((v) => Math.min(300, v + boost));
-        else if (heartTarget === 'C') setAuraC((v) => Math.min(300, v + boost));
-        else setAuraD((v) => Math.min(300, v + boost));
+        setAuras((prev) => ({
+          ...prev,
+          [heartTarget]: Math.min(AURA_DISPLAY_CAP, prev[heartTarget] + boost),
+        }));
       }
       auraBufferRef.current[heartTarget] += boost;
       const xPercent =
@@ -1856,7 +1892,11 @@ export function TikTokStyleArena({
               ? 82 + Math.random() * 10
               : heartTarget === 'D'
                 ? 38 + Math.random() * 24
-                : 44 + Math.random() * 12;
+                : heartTarget === 'E'
+                  ? 52 + Math.random() * 20
+                  : heartTarget === 'F'
+                    ? 62 + Math.random() * 18
+                    : 44 + Math.random() * 12;
       const entry = createFlyingReactionEntry(emoji, {
         x: xPercent,
         opacityMul: 0.5,
@@ -1866,10 +1906,10 @@ export function TikTokStyleArena({
     } else if (integrated) {
       const boost = getAuraBoost();
       setSupportBurst((prev) => ({ ...prev, [slotPick]: prev[slotPick] + 1 }));
-      if (slotPick === 'A') setAuraA((v) => Math.min(300, v + boost));
-      else if (slotPick === 'B') setAuraB((v) => Math.min(300, v + boost));
-      else if (slotPick === 'C') setAuraC((v) => Math.min(300, v + boost));
-      else if (slotPick === 'D') setAuraD((v) => Math.min(300, v + boost));
+      setAuras((prev) => ({
+        ...prev,
+        [slotPick]: Math.min(AURA_DISPLAY_CAP, prev[slotPick] + boost),
+      }));
       auraBufferRef.current[slotPick] += boost;
       const entry = createFlyingReactionEntry(emoji);
       setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
@@ -1962,7 +2002,7 @@ export function TikTokStyleArena({
   };
 
   const startHotMicTurn = useCallback(
-    (slot: 'A' | 'B' | 'C' | 'D', durationSec: number, opts?: { force?: boolean }) => {
+    (slot: ChallengerSlotId, durationSec: number, opts?: { force?: boolean }) => {
       if (speakingTurnActive && !opts?.force) {
         toast('Un tour de parole est déjà en cours.', 'info');
         return;
@@ -1972,14 +2012,7 @@ export function TikTokStyleArena({
       }
       setSpeakingTurnPaused(false);
       const duration = Math.max(15, Math.min(600, Math.round(durationSec / 5) * 5));
-      const activePanel =
-        slot === 'A'
-          ? challengerRemoteSlots[0]
-          : slot === 'B'
-            ? challengerRemoteSlots[1]
-            : slot === 'C'
-              ? challengerRemoteSlots[2]
-              : challengerRemoteSlots[3];
+      const activePanel = challengerRemoteSlots[challengerSlotToIndex(slot)] ?? null;
       const debaterId = activePanel?.arenaUserId ?? null;
       if (!debaterId || !activePanel?.sessionId) {
         toast('Challenger non connecté pour ce slot.', 'info');
@@ -1988,7 +2021,7 @@ export function TikTokStyleArena({
       setSpeakingTurnDuration(duration);
       setMediatorHoldingFloor(false);
       arenaOutboundRef.current.broadcastMediatorFloor?.(false);
-      for (const p of challengerRemoteSlots.slice(0, 4)) {
+      for (const p of challengerRemoteSlots) {
         if (!p?.sessionId || !p.arenaUserId) continue;
         const isSpeaker = p.sessionId === activePanel.sessionId;
         hardMuteParticipant(p.sessionId, !isSpeaker);
@@ -2699,35 +2732,21 @@ export function TikTokStyleArena({
     onSfxPlayed: (id: string) => {
       playSfx(id);
     },
-    onReactionReceived: (emoji: string, supportSlot?: 'A' | 'B' | 'C' | 'D' | 'M', _source?: 'broadcast' | 'poll') => {
+    onReactionReceived: (emoji: string, supportSlot?: ArenaSupportSlotId, _source?: 'broadcast' | 'poll') => {
       addRemoteReaction(emoji, supportSlot ?? undefined);
     },
     onReactionAurasFromBroadcast: (summary) => {
-      const A = summary.A ?? 0;
-      const B = summary.B ?? 0;
-      const C = summary.C ?? 0;
-      const D = summary.D ?? 0;
-      const M = summary.M ?? 0;
       const gh = summary.globalHeatDelta ?? 0;
-      if (A) setAuraA((v) => Math.min(300, v + A));
-      if (B) setAuraB((v) => Math.min(300, v + B));
-      if (C) setAuraC((v) => Math.min(300, v + C));
-      if (D) setAuraD((v) => Math.min(300, v + D));
-      if (M) setAuraMed((v) => Math.min(300, v + M));
+      setAuras((prev) => addAuraBatchToRecord(prev, summary));
+      if (summary.M) setAuraMed((v) => Math.min(AURA_DISPLAY_CAP, v + summary.M));
       if (gh) setGlobalHeat((v) => Math.min(100, v + gh));
     },
     onAuraBatchDeltas: (d) => {
-      if (d.A) setAuraA((v) => Math.min(300, v + d.A));
-      if (d.B) setAuraB((v) => Math.min(300, v + d.B));
-      if (d.C) setAuraC((v) => Math.min(300, v + d.C));
-      if (d.D) setAuraD((v) => Math.min(300, v + d.D));
-      if (d.M) setAuraMed((v) => Math.min(300, v + d.M));
+      setAuras((prev) => addAuraBatchToRecord(prev, d));
+      if (d.M) setAuraMed((v) => Math.min(AURA_DISPLAY_CAP, v + d.M));
     },
     onAuraMasterSync: (snap) => {
-      setAuraA(snap.A);
-      setAuraB(snap.B);
-      setAuraC(snap.C);
-      setAuraD(snap.D);
+      setAuras(snapshotToChallengerAuras(snap));
       setAuraMed(snap.M);
     },
     onMessageReceived: (uname, content, initialLetter, messageId) => {
@@ -2863,6 +2882,8 @@ export function TikTokStyleArena({
           resonanceB: Number(o.resonanceB) || 0,
           resonanceC: Number(o.resonanceC) || 0,
           resonanceD: Number(o.resonanceD) || 0,
+          resonanceE: Number(o.resonanceE) || 0,
+          resonanceF: Number(o.resonanceF) || 0,
           resonanceM: Number(o.resonanceM) || 0,
           messages: Number(o.messages) || 0,
           endReason: String(o.endReason ?? 'Fin du beef'),
@@ -2883,9 +2904,9 @@ export function TikTokStyleArena({
     },
     onLiveBroadcastSubscribed: () => {
       const b = auraBufferRef.current;
-      if (!(b.A || b.B || b.C || b.D || b.M)) return;
-      arenaOutboundRef.current.broadcastAuraBatch?.({ A: b.A, B: b.B, C: b.C, D: b.D, M: b.M });
-      b.A = b.B = b.C = b.D = b.M = 0;
+      if (!hasAnyAuraBatchDelta(b)) return;
+      arenaOutboundRef.current.broadcastAuraBatch?.({ ...b });
+      auraBufferRef.current = createZeroAuraBatch();
     },
     onSpectatorSelfInviteAccepted: () => setAcceptedInviteAlert(true),
     onBeefParticipantsTableChanged: () => {
@@ -2942,9 +2963,9 @@ export function TikTokStyleArena({
     if (beefEnded || !liveConnected) return;
     const id = window.setInterval(() => {
       const b = auraBufferRef.current;
-      if (!(b.A || b.B || b.C || b.D || b.M)) return;
-      arenaOutboundRef.current.broadcastAuraBatch?.({ A: b.A, B: b.B, C: b.C, D: b.D, M: b.M });
-      b.A = b.B = b.C = b.D = b.M = 0;
+      if (!hasAnyAuraBatchDelta(b)) return;
+      arenaOutboundRef.current.broadcastAuraBatch?.({ ...b });
+      auraBufferRef.current = createZeroAuraBatch();
     }, 1500);
     return () => window.clearInterval(id);
   }, [beefEnded, liveConnected]);

@@ -2,6 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import {
+  type ArenaSupportSlotId,
+  type AuraBatchPayload,
+  type ChallengerSlotId,
+  createZeroAuraBatch,
+  isArenaSupportSlotId,
+  parseAuraBatchPayload,
+  hasAnyAuraBatchDelta,
+} from '@/lib/arena-slots';
+
+export type { AuraBatchPayload, ArenaSupportSlotId, ChallengerSlotId } from '@/lib/arena-slots';
+export { CHALLENGER_SLOT_IDS, ARENA_CHALLENGER_SLOT_COUNT } from '@/lib/arena-slots';
 
 /** ───────────────── Types identité & payloads broadcast ───────────────── */
 
@@ -13,14 +25,6 @@ export type ArenaRealtimeParams = {
   userName: string;
   userRole: ArenaRealtimeUserRole;
   isHost: boolean;
-};
-
-export type AuraBatchPayload = {
-  A: number;
-  B: number;
-  C: number;
-  D: number;
-  M: number;
 };
 
 export type GlobalTimerBroadcastPayload = {
@@ -35,7 +39,7 @@ export type SpeakingTurnBroadcastPayload =
       action: 'start';
       debaterId: string;
       duration?: number;
-      slot?: 'A' | 'B' | 'C' | 'D';
+      slot?: ChallengerSlotId;
       speakerName?: string;
     }
   | { action: 'pause' }
@@ -70,11 +74,11 @@ export interface ArenaRealtimeCallbacks {
    * Réaction emoji reçue (broadcast ou polling DB).
    * `supportSlot` est absent lors du fallback polling (`beef_reactions` sans colonne équivalente).
    */
-  onReactionReceived?: (emoji: string, supportSlot?: 'A' | 'B' | 'C' | 'D' | 'M', source?: 'broadcast' | 'poll') => void;
+  onReactionReceived?: (emoji: string, supportSlot?: ArenaSupportSlotId, source?: 'broadcast' | 'poll') => void;
 
   /** Incrémentation d’aura / chaleur distante après une réaction broadcast (boost déjà résolu via `getAuraBoost`). */
   onReactionAurasFromBroadcast?: (
-    summary: Pick<AuraBatchPayload, 'A' | 'B' | 'C' | 'D' | 'M'> & { globalHeatDelta?: number },
+    summary: AuraBatchPayload & { globalHeatDelta?: number },
   ) => void;
 
   onAuraBatchDeltas?: (deltas: AuraBatchPayload) => void;
@@ -144,7 +148,7 @@ export interface UseArenaRealtimeResult {
   liveConnected: boolean;
   safeBroadcast: (event: string, payload?: Record<string, unknown>) => void;
   broadcastSfx: (id: string) => void;
-  broadcastReaction: (emoji: string, supportSlot?: 'A' | 'B' | 'C' | 'D' | 'M') => void;
+  broadcastReaction: (emoji: string, supportSlot?: ArenaSupportSlotId) => void;
   broadcastAuraBatch: (payload: AuraBatchPayload) => void;
   broadcastAuraMasterSync: (snapshot: AuraBatchPayload) => void;
   broadcastMessage: (args: {
@@ -240,7 +244,7 @@ export function useArenaRealtime(
   const broadcastSfx = useCallback((id: string) => safeBroadcast('sfx', { id }), [safeBroadcast]);
 
   const broadcastReaction = useCallback(
-    (emoji: string, supportSlot?: 'A' | 'B' | 'C' | 'D' | 'M') => {
+    (emoji: string, supportSlot?: ArenaSupportSlotId) => {
       const p: Record<string, unknown> = { emoji };
       if (supportSlot !== undefined) p.supportSlot = supportSlot;
       safeBroadcast('reaction', p);
@@ -438,13 +442,11 @@ export function useArenaRealtime(
           if (!o || typeof o.emoji !== 'string') return;
           const slotRaw = o.supportSlot;
           const slot =
-            slotRaw === 'A' || slotRaw === 'B' || slotRaw === 'C' || slotRaw === 'D' || slotRaw === 'M'
-              ? slotRaw
-              : undefined;
+            typeof slotRaw === 'string' && isArenaSupportSlotId(slotRaw) ? slotRaw : undefined;
           const boost = callbacksRef.current.getAuraBoost?.() ?? 1;
           callbacksRef.current.onReactionReceived?.(o.emoji, slot, 'broadcast');
           if (slot !== undefined) {
-            const d: AuraBatchPayload = { A: 0, B: 0, C: 0, D: 0, M: 0 };
+            const d = createZeroAuraBatch();
             d[slot === 'M' ? 'M' : slot] = boost;
             callbacksRef.current.onReactionAurasFromBroadcast?.({
               ...d,
@@ -456,31 +458,15 @@ export function useArenaRealtime(
           console.log('[TRACER - ⬇️ REÇU] Événement [aura_batch]', payload);
           const o = asRecord(payload);
           if (!o) return;
-          const dA = Math.max(0, Math.floor(Number(o.A) || 0));
-          const dB = Math.max(0, Math.floor(Number(o.B) || 0));
-          const dC = Math.max(0, Math.floor(Number(o.C) || 0));
-          const dD = Math.max(0, Math.floor(Number(o.D) || 0));
-          const dM = Math.max(0, Math.floor(Number(o.M) || 0));
-          if (!dA && !dB && !dC && !dD && !dM) return;
-          callbacksRef.current.onAuraBatchDeltas?.({
-            A: dA,
-            B: dB,
-            C: dC,
-            D: dD,
-            M: dM,
-          });
+          const deltas = parseAuraBatchPayload(o);
+          if (!hasAnyAuraBatchDelta(deltas)) return;
+          callbacksRef.current.onAuraBatchDeltas?.(deltas);
         })
         .on('broadcast', { event: 'aura_master_sync' }, ({ payload }: { payload?: unknown }) => {
           if (identityRef.current.isHost) return;
           const o = asRecord(payload);
           if (!o) return;
-          callbacksRef.current.onAuraMasterSync?.({
-            A: capAura(o.A),
-            B: capAura(o.B),
-            C: capAura(o.C),
-            D: capAura(o.D),
-            M: capAura(o.M),
-          });
+          callbacksRef.current.onAuraMasterSync?.(parseAuraBatchPayload(o));
         })
         .on('broadcast', { event: 'message' }, ({ payload }: { payload?: unknown }) => {
           const o = asRecord(payload);
@@ -509,12 +495,10 @@ export function useArenaRealtime(
           const cost = Number(o.cost) || 0;
           if (cost > 0) {
             const medBoost = Math.min(25, 4 + Math.floor(cost / 40));
+            const d = createZeroAuraBatch();
+            d.M = medBoost;
             callbacksRef.current.onReactionAurasFromBroadcast?.({
-              A: 0,
-              B: 0,
-              C: 0,
-              D: 0,
-              M: medBoost,
+              ...d,
               globalHeatDelta: Math.min(100, 20),
             });
           }
