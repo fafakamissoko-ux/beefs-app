@@ -60,7 +60,9 @@ export function MediatorOrb({
   return (
     <div
       data-cinema-stay
-      className="pointer-events-none absolute left-1/2 top-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+      className={`pointer-events-none absolute left-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center ${
+        isConstellation ? 'top-[42%]' : 'top-1/2'
+      }`}
     >
       <motion.div
         animate={{
