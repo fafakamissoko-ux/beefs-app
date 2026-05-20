@@ -65,10 +65,69 @@ export function ArenaVideoSurface({
   const chromePointer =
     tileCount === 3 && tileIndex === 2 && variant === 'nexus' ? '' : 'pointer-events-auto';
 
-  const chromeClass =
-    variant === 'constellation'
-      ? 'absolute -bottom-8 left-1/2 z-[140] flex -translate-x-1/2 flex-col items-center overflow-visible pointer-events-auto'
-      : `absolute z-[140] flex gap-1.5 ${tile.uiPosClass} ${chromePointer}`;
+  const nexusChromeClass = `absolute z-[140] flex gap-1.5 ${tile.uiPosClass} ${chromePointer}`;
+
+  const localControls = tile.isLocal ? (
+    <div
+      className={`flex shrink-0 items-center gap-1.5 ${tileCount === 3 && tileIndex === 2 && variant === 'nexus' ? 'pointer-events-auto' : ''}`}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          const isLockedByTurn =
+            structuredDebateEnabled &&
+            speakingTurnActive &&
+            effectiveHotMicSpeakerSlot !== tile.slot;
+          if (micMutedByMediator || mediatorHoldingFloor || isLockedByTurn) {
+            onToast('Micro verrouillé par le médiateur ou les règles du débat.', 'error');
+            return;
+          }
+          onToggleMic();
+        }}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-[60px] transition-all duration-300 active:scale-95 ${micEnabled && !micMutedByMediator ? 'border-white/20 bg-white/10 text-white hover:bg-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'border-rose-500/50 bg-rose-950/40 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)]'}`}
+      >
+        <Mic className="h-4 w-4" strokeWidth={1.75} />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleCam();
+        }}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-[60px] transition-all duration-300 active:scale-95 ${camEnabled ? 'border-white/20 bg-white/10 text-white hover:bg-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'border-rose-500/50 bg-rose-950/40 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)]'}`}
+      >
+        <Video className="h-4 w-4" strokeWidth={1.75} />
+      </button>
+    </div>
+  ) : null;
+
+  const pseudoBadge = (
+    <div className="flex max-w-full flex-col items-center gap-1">
+      <div className="flex max-w-full items-center gap-2 rounded-full border border-white/[0.08] bg-slate-900/40 px-3 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px] sm:px-4 sm:py-2">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            void onOpenProfile(tile.name, tile.arenaUserId);
+          }}
+          className="truncate text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]"
+        >
+          @{tile.name}
+        </button>
+        {!tile.panel && (
+          <span className="shrink-0 rounded border border-rose-500/20 bg-rose-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase text-rose-400">
+            Absent
+          </span>
+        )}
+      </div>
+      {isSpeaking && (
+        <div className="w-fit animate-pulse rounded bg-rose-600 px-2 py-0.5 text-[9px] font-black text-white shadow-[0_0_10px_rgba(225,29,72,0.6)]">
+          DIRECT
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <motion.div
@@ -107,69 +166,33 @@ export function ArenaVideoSurface({
         />
       )}
 
-      <div data-cinema-stay className={chromeClass}>
-        <div
-          className={`flex items-start gap-1.5 ${tileCount === 3 && tileIndex === 2 && variant === 'nexus' ? 'pointer-events-auto' : ''}`}
-        >
-          <div className="flex max-w-[9rem] items-center gap-2 rounded-full border border-white/[0.08] bg-slate-900/40 px-4 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px] sm:max-w-[14rem]">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                void onOpenProfile(tile.name, tile.arenaUserId);
-              }}
-              className="truncate text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]"
+      {variant === 'constellation' ? (
+        <>
+          {tile.isLocal && (
+            <div
+              data-cinema-stay
+              className="pointer-events-auto absolute -top-10 left-1/2 z-[150] flex -translate-x-1/2 items-center gap-1.5"
             >
-              @{tile.name}
-            </button>
-            {!tile.panel && (
-              <span className="shrink-0 rounded border border-rose-500/20 bg-rose-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase text-rose-400">
-                Absent
-              </span>
-            )}
-          </div>
-          {isSpeaking && (
-            <div className="w-fit animate-pulse rounded bg-rose-600 px-2 py-0.5 text-[9px] font-black text-white shadow-[0_0_10px_rgba(225,29,72,0.6)]">
-              DIRECT
+              {localControls}
             </div>
           )}
-        </div>
-
-        {tile.isLocal && (
           <div
-            className={`flex shrink-0 items-center gap-1.5 ${tileCount === 3 && tileIndex === 2 && variant === 'nexus' ? 'pointer-events-auto' : ''}`}
+            data-cinema-stay
+            className="pointer-events-auto absolute bottom-2 left-1/2 z-[140] flex w-max max-w-[90%] -translate-x-1/2 flex-col items-center"
           >
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                const isLockedByTurn =
-                  structuredDebateEnabled &&
-                  speakingTurnActive &&
-                  effectiveHotMicSpeakerSlot !== tile.slot;
-                if (micMutedByMediator || mediatorHoldingFloor || isLockedByTurn) {
-                  onToast('Micro verrouillé par le médiateur ou les règles du débat.', 'error');
-                  return;
-                }
-                onToggleMic();
-              }}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-[60px] transition-all duration-300 active:scale-95 ${micEnabled && !micMutedByMediator ? 'border-white/20 bg-white/10 text-white hover:bg-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'border-rose-500/50 bg-rose-950/40 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)]'}`}
-            >
-              <Mic className="h-4 w-4" strokeWidth={1.75} />
-            </button>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleCam();
-              }}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-[60px] transition-all duration-300 active:scale-95 ${camEnabled ? 'border-white/20 bg-white/10 text-white hover:bg-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'border-rose-500/50 bg-rose-950/40 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)]'}`}
-            >
-              <Video className="h-4 w-4" strokeWidth={1.75} />
-            </button>
+            {pseudoBadge}
           </div>
-        )}
-      </div>
+        </>
+      ) : (
+        <div data-cinema-stay className={nexusChromeClass}>
+          <div
+            className={`flex items-start gap-1.5 ${tileCount === 3 && tileIndex === 2 ? 'pointer-events-auto' : ''}`}
+          >
+            {pseudoBadge}
+          </div>
+          {localControls}
+        </div>
+      )}
     </motion.div>
   );
 }

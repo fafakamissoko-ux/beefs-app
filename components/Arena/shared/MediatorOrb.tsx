@@ -29,6 +29,7 @@ export interface MediatorOrbProps {
   onOpenProfile: (username: string, knownUserId?: string | null) => void | Promise<void>;
   onRecoverMediaDevices: () => void | Promise<void>;
   onToggleMediatorSidebar: () => void;
+  isConstellation?: boolean;
 }
 
 export function MediatorOrb({
@@ -54,6 +55,7 @@ export function MediatorOrb({
   onOpenProfile,
   onRecoverMediaDevices,
   onToggleMediatorSidebar,
+  isConstellation = false,
 }: MediatorOrbProps) {
   return (
     <div
@@ -70,7 +72,11 @@ export function MediatorOrb({
         style={{
           filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})`,
         }}
-        className="pointer-events-auto relative h-[155px] w-[155px] overflow-hidden rounded-full sm:h-[220px] sm:w-[220px]"
+        className={`pointer-events-auto relative overflow-hidden rounded-full ${
+          isConstellation
+            ? 'h-[clamp(110px,26vw,10rem)] w-[clamp(110px,26vw,10rem)]'
+            : 'h-[155px] w-[155px] sm:h-[220px] sm:w-[220px]'
+        }`}
       >
         {mediatorIsLocal && isCameraInterrupted && !isViewer && (
           <div className="absolute inset-0 z-[150] flex items-center justify-center bg-slate-950/55 p-2 backdrop-blur-md">

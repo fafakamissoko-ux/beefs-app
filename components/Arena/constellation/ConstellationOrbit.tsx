@@ -27,7 +27,7 @@ export function ConstellationOrbit({
 
   return (
     <div className="relative h-full w-full overflow-visible">
-      <MediatorOrb {...mediator} />
+      <MediatorOrb {...mediator} isConstellation />
 
       {tiles.map((tile, idx) => {
         const pos = getOrbitPositionPercent(idx, tileCount);
@@ -41,7 +41,7 @@ export function ConstellationOrbit({
         return (
           <div
             key={tile.id}
-            className="absolute z-[80] h-[7.5rem] w-[7.5rem] -translate-x-1/2 -translate-y-1/2 overflow-visible sm:h-[9.5rem] sm:w-[9.5rem]"
+            className="absolute z-[80] h-[clamp(140px,38vw,16rem)] w-[clamp(140px,38vw,16rem)] -translate-x-1/2 -translate-y-1/2 overflow-visible"
             style={{ left: pos.left, top: pos.top }}
           >
             <ArenaVideoSurface
