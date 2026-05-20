@@ -2,13 +2,14 @@
 export type ArenaLayoutMode = 'nexus' | 'constellation';
 
 /**
- * Règle d'or : grille uniquement si tous les challengers attendus ont un flux vidéo actif.
+ * Règle d'or : grille si tous les challengers attendus sont présents sur le call (panel != null).
+ * Ne pas exiger videoTrack — la caméra peut mettre ~1s à publier la piste.
  */
 export function resolveArenaLayoutMode(
   expectedCount: number,
-  activeVideoCount: number,
+  connectedCount: number,
 ): ArenaLayoutMode {
-  if (expectedCount > 0 && activeVideoCount === expectedCount) {
+  if (expectedCount > 0 && connectedCount === expectedCount) {
     return 'nexus';
   }
   return 'constellation';

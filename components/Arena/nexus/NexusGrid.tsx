@@ -7,17 +7,15 @@ import { getNexusGridClass } from './nexusGridTemplates';
 
 export type NexusGridProps = Omit<
   ArenaVideoSurfaceProps,
-  'tile' | 'tileCount' | 'tileIndex' | 'variant' | 'isLocal' | 'isSpeaking' | 'isMutedByFocus'
+  'tile' | 'tileCount' | 'tileIndex' | 'variant' | 'isSpeaking' | 'isMutedByFocus'
 > & {
   tiles: ArenaTileVM[];
-  localSessionId: string | null | undefined;
   speakingTurnActive: boolean;
   effectiveHotMicSpeakerSlot: ChallengerSlotId | null;
 };
 
 export function NexusGrid({
   tiles,
-  localSessionId,
   speakingTurnActive,
   effectiveHotMicSpeakerSlot,
   ...surfaceProps
@@ -30,7 +28,6 @@ export function NexusGrid({
       {tiles.map((tile, idx) => {
         const isSpeaking =
           speakingTurnActive && effectiveHotMicSpeakerSlot === tile.slot;
-        const isLocal = tile.panel?.sessionId === localSessionId && !surfaceProps.isViewer;
         const isMutedByFocus =
           speakingTurnActive &&
           Boolean(effectiveHotMicSpeakerSlot) &&
@@ -43,7 +40,6 @@ export function NexusGrid({
             tileCount={tileCount}
             tileIndex={idx}
             variant="nexus"
-            isLocal={isLocal}
             isSpeaking={isSpeaking}
             isMutedByFocus={isMutedByFocus}
             speakingTurnActive={speakingTurnActive}

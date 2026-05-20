@@ -17,10 +17,12 @@ export interface ArenaTileVM {
   id: string;
   slot: ChallengerSlotId;
   name: string;
+  arenaUserId: string | null;
   panel: CallParticipant | null;
   aura: number;
   colorRgb: string;
   hasActiveVideo: boolean;
+  isLocal: boolean;
   cellClass: string;
   uiPosClass: string;
 }
@@ -31,6 +33,9 @@ export interface UseArenaLayoutTilesParams {
   reconciledPeers: ReconciledPeer[];
   participantRoles: Record<string, BeefParticipantRowMeta>;
   auras: Record<ChallengerSlotId, number>;
+  localUserId: string;
+  localSessionId: string | null | undefined;
+  isViewer: boolean;
 }
 
 export interface ArenaLayoutManagerProps {
@@ -39,6 +44,7 @@ export interface ArenaLayoutManagerProps {
   reconciledPeers: ReconciledPeer[];
   participantRoles: Record<string, BeefParticipantRowMeta>;
   auras: Record<ChallengerSlotId, number>;
+  localUserId: string;
   localSessionId: string | null | undefined;
   isViewer: boolean;
   isHost: boolean;

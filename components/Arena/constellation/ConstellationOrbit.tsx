@@ -8,10 +8,9 @@ import { getOrbitPositionPercent } from './orbitGeometry';
 
 export type ConstellationOrbitProps = Omit<
   ArenaVideoSurfaceProps,
-  'tile' | 'tileCount' | 'tileIndex' | 'variant' | 'isLocal' | 'isSpeaking' | 'isMutedByFocus'
+  'tile' | 'tileCount' | 'tileIndex' | 'variant' | 'isSpeaking' | 'isMutedByFocus'
 > & {
   tiles: ArenaTileVM[];
-  localSessionId: string | null | undefined;
   speakingTurnActive: boolean;
   effectiveHotMicSpeakerSlot: ChallengerSlotId | null;
   mediator: MediatorOrbProps;
@@ -19,7 +18,6 @@ export type ConstellationOrbitProps = Omit<
 
 export function ConstellationOrbit({
   tiles,
-  localSessionId,
   speakingTurnActive,
   effectiveHotMicSpeakerSlot,
   mediator,
@@ -28,15 +26,13 @@ export function ConstellationOrbit({
   const tileCount = tiles.length;
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full overflow-visible">
       <MediatorOrb {...mediator} />
 
       {tiles.map((tile, idx) => {
         const pos = getOrbitPositionPercent(idx, tileCount);
         const isSpeaking =
           speakingTurnActive && effectiveHotMicSpeakerSlot === tile.slot;
-        const isLocal =
-          tile.panel?.sessionId === localSessionId && !surfaceProps.isViewer;
         const isMutedByFocus =
           speakingTurnActive &&
           Boolean(effectiveHotMicSpeakerSlot) &&
@@ -45,7 +41,7 @@ export function ConstellationOrbit({
         return (
           <div
             key={tile.id}
-            className="absolute z-[80] h-[7.5rem] w-[7.5rem] -translate-x-1/2 -translate-y-1/2 sm:h-[9.5rem] sm:w-[9.5rem]"
+            className="absolute z-[80] h-[7.5rem] w-[7.5rem] -translate-x-1/2 -translate-y-1/2 overflow-visible sm:h-[9.5rem] sm:w-[9.5rem]"
             style={{ left: pos.left, top: pos.top }}
           >
             <ArenaVideoSurface
@@ -53,7 +49,6 @@ export function ConstellationOrbit({
               tileCount={tileCount}
               tileIndex={idx}
               variant="constellation"
-              isLocal={isLocal}
               isSpeaking={isSpeaking}
               isMutedByFocus={isMutedByFocus}
               speakingTurnActive={speakingTurnActive}

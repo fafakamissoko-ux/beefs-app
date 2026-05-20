@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { userIdsEqual } from '@/lib/user-id-equal';
 import {
   ARENA_CHALLENGER_SLOT_COUNT,
   indexToChallengerSlot,
@@ -41,6 +42,18 @@ function hasActiveVideo(
   return panel?.videoTrack != null;
 }
 
+function resolveIsLocal(
+  uid: string | undefined,
+  panel: UseArenaLayoutTilesParams['challengerRemoteSlots'][number],
+  localUserId: string,
+  localSessionId: string | null | undefined,
+  isViewer: boolean,
+): boolean {
+  if (isViewer) return false;
+  if (uid && userIdsEqual(uid, localUserId)) return true;
+  return panel != null && panel.sessionId === localSessionId;
+}
+
 export function useArenaLayoutTiles(params: UseArenaLayoutTilesParams): ArenaTileVM[] {
   const {
     expectedUids,
@@ -48,6 +61,9 @@ export function useArenaLayoutTiles(params: UseArenaLayoutTilesParams): ArenaTil
     reconciledPeers,
     participantRoles,
     auras,
+    localUserId,
+    localSessionId,
+    isViewer,
   } = params;
 
   return useMemo(() => {
@@ -65,15 +81,18 @@ export function useArenaLayoutTiles(params: UseArenaLayoutTilesParams): ArenaTil
       const panel = challengerRemoteSlots[idx] ?? null;
       const slot = indexToChallengerSlot(idx);
       const name = resolveTileName(idx, uid, panel, reconciledPeers, participantRoles);
+      const arenaUserId = uid ?? panel?.arenaUserId ?? null;
 
       tiles.push({
         id: `arena-tile-${slot}`,
         slot,
         name,
+        arenaUserId,
         panel,
         aura: auras[slot],
         colorRgb: CHALLENGER_SLOT_COLORS[slot],
         hasActiveVideo: hasActiveVideo(panel),
+        isLocal: resolveIsLocal(uid, panel, localUserId, localSessionId, isViewer),
         cellClass: getNexusCellClass(idx, tileCount),
         uiPosClass: getNexusChromeUiPos(idx, tileCount),
       });
@@ -86,5 +105,8 @@ export function useArenaLayoutTiles(params: UseArenaLayoutTilesParams): ArenaTil
     reconciledPeers,
     participantRoles,
     auras,
+    localUserId,
+    localSessionId,
+    isViewer,
   ]);
 }

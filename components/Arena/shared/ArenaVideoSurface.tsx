@@ -13,8 +13,6 @@ export interface ArenaVideoSurfaceProps {
   tileCount: number;
   tileIndex: number;
   variant: ArenaVideoSurfaceVariant;
-  isViewer: boolean;
-  isLocal: boolean;
   isSpeaking: boolean;
   isMutedByFocus: boolean;
   speakingTurnActive: boolean;
@@ -37,7 +35,6 @@ export function ArenaVideoSurface({
   tileCount,
   tileIndex,
   variant,
-  isLocal,
   isSpeaking,
   isMutedByFocus,
   speakingTurnActive,
@@ -63,36 +60,40 @@ export function ArenaVideoSurface({
     : `brightness(${1 + (tile.aura / 300) * 0.4})`;
 
   const roundedClass =
-    variant === 'constellation'
-      ? 'rounded-full'
-      : 'rounded-[2rem]';
+    variant === 'constellation' ? 'rounded-full overflow-visible' : 'rounded-[2rem]';
 
   const chromePointer =
     tileCount === 3 && tileIndex === 2 && variant === 'nexus' ? '' : 'pointer-events-auto';
 
+  const chromeClass =
+    variant === 'constellation'
+      ? 'absolute -bottom-8 left-1/2 z-[140] flex -translate-x-1/2 flex-col items-center overflow-visible pointer-events-auto'
+      : `absolute z-[140] flex gap-1.5 ${tile.uiPosClass} ${chromePointer}`;
+
   return (
     <motion.div
-      className={`relative h-full w-full overflow-hidden bg-transparent backdrop-blur-2xl transition-all duration-300 ${roundedClass} ${tile.cellClass}`}
+      className={`relative h-full w-full bg-transparent backdrop-blur-2xl transition-all duration-300 ${roundedClass} ${variant === 'nexus' ? tile.cellClass : ''} ${variant === 'nexus' ? 'overflow-hidden' : ''}`}
       style={{
         boxShadow: auraShadow,
         zIndex: tile.aura > 0 ? 10 : 1,
         opacity: isMutedByFocus ? 0.4 : 1,
-        filter: filterVal,
       }}
     >
-      {tile.panel?.videoTrack ? (
-        <ParticipantVideo
-          videoTrack={tile.panel.videoTrack}
-          muted={isLocal}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center text-4xl opacity-20">
-          👤
-        </div>
-      )}
+      <div className="absolute inset-0 overflow-hidden rounded-[inherit]" style={{ filter: filterVal }}>
+        {tile.panel?.videoTrack ? (
+          <ParticipantVideo
+            videoTrack={tile.panel.videoTrack}
+            muted={tile.isLocal}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-4xl opacity-20">
+            👤
+          </div>
+        )}
+      </div>
 
-      {!isLocal && (
+      {!tile.isLocal && (
         <motion.button
           type="button"
           data-cinema-stay
@@ -106,10 +107,7 @@ export function ArenaVideoSurface({
         />
       )}
 
-      <div
-        data-cinema-stay
-        className={`absolute z-[140] flex gap-1.5 ${tile.uiPosClass} ${chromePointer}`}
-      >
+      <div data-cinema-stay className={chromeClass}>
         <div
           className={`flex items-start gap-1.5 ${tileCount === 3 && tileIndex === 2 && variant === 'nexus' ? 'pointer-events-auto' : ''}`}
         >
@@ -118,7 +116,7 @@ export function ArenaVideoSurface({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                void onOpenProfile(tile.name, tile.panel?.arenaUserId ?? null);
+                void onOpenProfile(tile.name, tile.arenaUserId);
               }}
               className="truncate text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]"
             >
@@ -137,7 +135,7 @@ export function ArenaVideoSurface({
           )}
         </div>
 
-        {isLocal && (
+        {tile.isLocal && (
           <div
             className={`flex shrink-0 items-center gap-1.5 ${tileCount === 3 && tileIndex === 2 && variant === 'nexus' ? 'pointer-events-auto' : ''}`}
           >

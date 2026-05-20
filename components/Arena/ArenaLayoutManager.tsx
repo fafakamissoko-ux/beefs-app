@@ -16,6 +16,7 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
     reconciledPeers,
     participantRoles,
     auras,
+    localUserId,
     localSessionId,
     isViewer,
     isHost,
@@ -57,14 +58,17 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
     reconciledPeers,
     participantRoles,
     auras,
+    localUserId,
+    localSessionId,
+    isViewer,
   });
 
   const expectedCount = expectedUids.length;
-  const activeVideoCount = useMemo(
-    () => tiles.filter((t) => t.hasActiveVideo).length,
+  const connectedCount = useMemo(
+    () => tiles.filter((t) => t.panel != null).length,
     [tiles],
   );
-  const mode = resolveArenaLayoutMode(expectedCount, activeVideoCount);
+  const mode = resolveArenaLayoutMode(expectedCount, connectedCount);
 
   const surfaceProps = {
     isViewer,
@@ -120,7 +124,6 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
           >
             <NexusGrid
               tiles={tiles}
-              localSessionId={localSessionId}
               speakingTurnActive={speakingTurnActive}
               effectiveHotMicSpeakerSlot={effectiveHotMicSpeakerSlot}
               {...surfaceProps}
@@ -138,7 +141,6 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
           >
             <ConstellationOrbit
               tiles={tiles}
-              localSessionId={localSessionId}
               speakingTurnActive={speakingTurnActive}
               effectiveHotMicSpeakerSlot={effectiveHotMicSpeakerSlot}
               mediator={mediatorProps}

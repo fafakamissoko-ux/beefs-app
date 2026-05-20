@@ -2706,6 +2706,11 @@ export function TikTokStyleArena({
     !beefEnded &&
     !remoteParticipants.some((p) => remoteMatchesMediator(p, host.id, host.name));
 
+  const handleVsComplete = useCallback(() => {
+    setShowVsScreen(false);
+    if (isViewer) setShowPreJoin(false);
+  }, [isViewer]);
+
   const leftChallengerAbsent =
     isJoined &&
     !beefEnded &&
@@ -3014,10 +3019,7 @@ export function TikTokStyleArena({
                   ].filter(Boolean) as string[]
                 }
                 debateTitle={debateTitle}
-                onComplete={() => {
-                  setShowVsScreen(false);
-                  if (isViewer) setShowPreJoin(false);
-                }}
+                onComplete={handleVsComplete}
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center">
@@ -3381,14 +3383,16 @@ export function TikTokStyleArena({
           </div>
         )}
 
-        <ArenaLayoutManager
-          expectedUids={expectedUids}
-          challengerRemoteSlots={displayPanelsFixed}
-          reconciledPeers={reconciledPeers}
-          participantRoles={participantRoles}
-          auras={auras}
-          localSessionId={localParticipant?.sessionId}
-          isViewer={isViewer}
+        {!showVsScreen && (
+          <ArenaLayoutManager
+            expectedUids={expectedUids}
+            challengerRemoteSlots={displayPanelsFixed}
+            reconciledPeers={reconciledPeers}
+            participantRoles={participantRoles}
+            auras={auras}
+            localUserId={userId}
+            localSessionId={localParticipant?.sessionId}
+            isViewer={isViewer}
           isHost={isHost}
           speakingTurnActive={speakingTurnActive}
           effectiveHotMicSpeakerSlot={effectiveHotMicSpeakerSlot}
@@ -3420,7 +3424,8 @@ export function TikTokStyleArena({
           formatBeefTime={formatBeefTime}
           onToggleMediatorSidebar={() => setMediatorSidebarOpen((o) => !o)}
           getMediatorDynamicColor={getMediatorDynamicColor}
-        />
+          />
+        )}
 
         {/* OVERLAY CHAT MOBILE (Intégré à la vidéo, invisible sur PC) */}
         {!isCinematicMode && (
