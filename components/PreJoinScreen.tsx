@@ -7,7 +7,7 @@ import { MutinyProtocol } from './MutinyProtocol';
 interface PreJoinScreenProps {
   userName: string;
   /** Flux déjà autorisé par l’utilisateur — transmis à Daily pour éviter un 2ᵉ getUserMedia sans geste (iOS / Brave). */
-  onJoin: (preAcquiredMedia: MediaStream | null) => void;
+  onJoin: (preAcquiredMedia: MediaStream | null, opts?: { camEnabled: boolean }) => void;
   viewerMode?: boolean;
   mediatorName?: string;
   currentUserSlot?: 'A' | 'B';
@@ -162,7 +162,7 @@ export function PreJoinScreen({
     const acquired = streamRef.current ?? stream;
     /** Ne pas stopper les pistes : Daily les réutilise ; on libère seulement preview + AudioContext. */
     releasePreJoinResources({ stopTracks: false });
-    onJoin(acquired);
+    onJoin(acquired, { camEnabled });
   };
 
   const ambientLayer = (
@@ -281,7 +281,7 @@ export function PreJoinScreen({
         <div className="flex w-full min-w-0 flex-row items-stretch justify-center gap-2 sm:gap-3">
           <div className="min-w-0 flex-1 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-2 backdrop-blur-xl sm:rounded-[2rem] sm:p-3">
             <p className="mb-1.5 text-center font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-white/40 sm:mb-2 sm:text-[9px]">
-              Caméra
+              Montrer mon visage
             </p>
             <button
               type="button"
@@ -289,11 +289,11 @@ export function PreJoinScreen({
               className={`flex w-full touch-manipulation items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition-all sm:gap-2 sm:rounded-2xl sm:px-3 sm:py-2.5 sm:text-sm ${
                 camEnabled
                   ? 'bg-white/[0.06] text-white ring-1 ring-cyan-500/25 hover:bg-white/[0.1]'
-                  : 'border border-red-500/40 bg-red-500/15 text-red-200 hover:bg-red-500/25'
+                  : 'border border-violet-500/40 bg-violet-500/15 text-violet-200 hover:bg-violet-500/25'
               }`}
             >
               {camEnabled ? <Video className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /> : <VideoOff className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />}
-              {camEnabled ? 'ON' : 'OFF'}
+              {camEnabled ? 'Arène (Actif)' : 'Constellation'}
             </button>
           </div>
 

@@ -1,13 +1,17 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import type { ChallengerSlotId } from '@/lib/arena-slots';
 import { resolveArenaLayoutMode } from '@/lib/arena-layout-mode';
 import { ConstellationOrbit } from './constellation/ConstellationOrbit';
 import { NexusGrid } from './nexus/NexusGrid';
 import { MediatorOrb } from './shared/MediatorOrb';
+import { StarField } from './shared/StarField';
 import type { ArenaLayoutManagerProps } from './types';
 import { useArenaLayoutTiles } from './useArenaLayoutTiles';
+
+const LAYOUT_GRACE_MS = 1500;
 
 export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
   const {
@@ -27,6 +31,7 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
     mediatorHoldingFloor,
     micEnabled,
     camEnabled,
+    localCamEnabled = true,
     onTapSupport,
     onPreferSide,
     onOpenProfile,
@@ -63,12 +68,61 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
     isViewer,
   });
 
+  const graceUntilRef = useRef<Partial<Record<ChallengerSlotId, number>>>({});
+  const [graceTick, setGraceTick] = useState(0);
+
+  useEffect(() => {
+    const now = Date.now();
+    let nextExpiry: number | null = null;
+
+    for (const tile of tiles) {
+      if (!tile.panel) {
+        delete graceUntilRef.current[tile.slot];
+        continue;
+      }
+
+      if (tile.hasActiveVideo) {
+        delete graceUntilRef.current[tile.slot];
+        continue;
+      }
+
+      const intentionalCamOff =
+        tile.isLocal && (!camEnabled || !localCamEnabled);
+      if (intentionalCamOff) {
+        delete graceUntilRef.current[tile.slot];
+        continue;
+      }
+
+      if (graceUntilRef.current[tile.slot] == null) {
+        graceUntilRef.current[tile.slot] = now + LAYOUT_GRACE_MS;
+      }
+
+      const until = graceUntilRef.current[tile.slot];
+      if (until && until > now) {
+        nextExpiry = nextExpiry == null ? until : Math.min(nextExpiry, until);
+      }
+    }
+
+    if (nextExpiry == null) return;
+
+    const delay = Math.max(0, nextExpiry - now + 50);
+    const timerId = window.setTimeout(() => setGraceTick((t) => t + 1), delay);
+    return () => window.clearTimeout(timerId);
+  }, [tiles, camEnabled, localCamEnabled]);
+
   const expectedCount = expectedUids.length;
-  const connectedCount = useMemo(
-    () => tiles.filter((t) => t.panel != null).length,
-    [tiles],
-  );
-  const mode = resolveArenaLayoutMode(expectedCount, connectedCount);
+
+  const effectiveVideoCount = useMemo(() => {
+    void graceTick;
+    const now = Date.now();
+    return tiles.filter((tile) => {
+      if (tile.hasActiveVideo) return true;
+      const until = graceUntilRef.current[tile.slot];
+      return until != null && until > now;
+    }).length;
+  }, [tiles, graceTick]);
+
+  const mode = resolveArenaLayoutMode(expectedCount, effectiveVideoCount);
 
   const surfaceProps = {
     isViewer,
@@ -139,6 +193,7 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
             transition={{ duration: 0.2 }}
             className="relative h-full w-full"
           >
+            <StarField />
             <ConstellationOrbit
               tiles={tiles}
               speakingTurnActive={speakingTurnActive}

@@ -317,6 +317,7 @@ export function TikTokStyleArena({
 
   /** MediaStream du pré-joint (médiateur / challenger) — réutilisé par Daily pour éviter un 2ᵉ getUserMedia bloqué sur mobile. */
   const [preJoinMediaStream, setPreJoinMediaStream] = useState<MediaStream | null>(null);
+  const [preJoinCamEnabled, setPreJoinCamEnabled] = useState(true);
   const preJoinMediaStreamRef = useRef<MediaStream | null>(null);
   useEffect(() => {
     preJoinMediaStreamRef.current = preJoinMediaStream;
@@ -2643,8 +2644,9 @@ export function TikTokStyleArena({
 
 
   // Join: enregistre le flux pré-acquis puis lance join() via l’effet ci-dessus
-  const handleJoin = (preAcquired: MediaStream | null) => {
+  const handleJoin = (preAcquired: MediaStream | null, opts?: { camEnabled: boolean }) => {
     setPreJoinMediaStream(preAcquired);
+    setPreJoinCamEnabled(opts?.camEnabled ?? true);
     setHasJoined(true);
     setShowPreJoin(false);
     if (typeof window !== 'undefined') {
@@ -3424,6 +3426,7 @@ export function TikTokStyleArena({
           formatBeefTime={formatBeefTime}
           onToggleMediatorSidebar={() => setMediatorSidebarOpen((o) => !o)}
           getMediatorDynamicColor={getMediatorDynamicColor}
+          localCamEnabled={preJoinCamEnabled}
           />
         )}
 

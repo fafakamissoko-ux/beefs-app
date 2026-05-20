@@ -78,4 +78,6 @@ export interface ArenaLayoutManagerProps {
   formatBeefTime: (seconds: number) => string;
   onToggleMediatorSidebar: () => void;
   getMediatorDynamicColor: (val: number) => string;
+  /** Intention caméra au PreJoin — court-circuite la grâce bootstrap si false. */
+  localCamEnabled?: boolean;
 }
