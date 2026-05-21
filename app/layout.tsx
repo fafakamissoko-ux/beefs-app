@@ -103,9 +103,7 @@ function RootLayoutClient({
               <BetaGate>
                 <PWAManager />
                 <ScrollRestoration />
-                <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-                  <StarField />
-                </div>
+                <StarField />
                 <AppShell>{children}</AppShell>
                 <OnboardingReminder />
                 <PWAInstallPrompt />
