@@ -7,7 +7,6 @@ import { resolveArenaLayoutMode } from '@/lib/arena-layout-mode';
 import { ConstellationOrbit } from './constellation/ConstellationOrbit';
 import { NexusGrid } from './nexus/NexusGrid';
 import { MediatorOrb } from './shared/MediatorOrb';
-import { StarField } from './shared/StarField';
 import type { ArenaLayoutManagerProps } from './types';
 import { useArenaLayoutTiles } from './useArenaLayoutTiles';
 
@@ -197,7 +196,6 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
             transition={{ duration: 0.2 }}
             className="relative h-full w-full"
           >
-            <StarField />
             <ConstellationOrbit
               tiles={tiles}
               speakingTurnActive={speakingTurnActive}

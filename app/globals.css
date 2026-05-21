@@ -17,11 +17,7 @@
   body {
     color: #ececf1;
     letter-spacing: -0.011em;
-    background-color: #08080a;
-    background-image:
-      radial-gradient(ellipse 100% 70% at 50% -15%, rgba(0, 82, 255, 0.09) 0%, transparent 50%),
-      radial-gradient(ellipse 80% 50% at 100% 40%, rgba(255, 77, 0, 0.05) 0%, transparent 45%),
-      linear-gradient(180deg, #08080a 0%, #060608 50%, #040405 100%);
+    background-color: transparent;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;

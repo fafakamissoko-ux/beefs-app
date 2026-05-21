@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
+import { StarField } from "@/components/Arena/shared/StarField";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -102,6 +103,9 @@ function RootLayoutClient({
               <BetaGate>
                 <PWAManager />
                 <ScrollRestoration />
+                <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+                  <StarField />
+                </div>
                 <AppShell>{children}</AppShell>
                 <OnboardingReminder />
                 <PWAInstallPrompt />
@@ -135,7 +139,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Beefs" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className="font-sans overflow-x-hidden bg-black text-white antialiased">
+      <body className="font-sans overflow-x-hidden bg-transparent text-white antialiased">
         <RootLayoutClient>{children}</RootLayoutClient>
       </body>
     </html>
