@@ -60,14 +60,14 @@ const STARS: StarSpec[] = [
 ];
 
 const SIZE_CLASS: Record<StarSize, string> = {
-  sm: 'h-px w-px opacity-40',
-  md: 'h-0.5 w-0.5 opacity-60',
-  lg: 'h-1 w-1 opacity-80 shadow-[0_0_4px_rgba(255,255,255,0.55)]',
+  sm: 'h-[2px] w-[2px] opacity-60',
+  md: 'h-[3px] w-[3px] opacity-80',
+  lg: 'h-[4px] w-[4px] opacity-100 shadow-[0_0_8px_rgba(255,255,255,0.8)]',
 };
 
-function StarLayer({ stars, layerOpacity }: { stars: StarSpec[]; layerOpacity: string }) {
+function StarLayer({ stars }: { stars: StarSpec[] }) {
   return (
-    <div className={`absolute inset-0 ${layerOpacity}`}>
+    <div className="absolute inset-0">
       {stars.map((star, i) => (
         <span
           key={`${star.left}-${star.top}-${i}`}
@@ -88,9 +88,9 @@ export function StarField() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#050505]">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_42%,rgba(30,27,75,0.35),transparent_70%)]" />
-      <StarLayer stars={STARS.filter((s) => s.size === 'sm')} layerOpacity="opacity-70" />
-      <StarLayer stars={STARS.filter((s) => s.size === 'md')} layerOpacity="opacity-80" />
-      <StarLayer stars={STARS.filter((s) => s.size === 'lg')} layerOpacity="opacity-90" />
+      <StarLayer stars={STARS.filter((s) => s.size === 'sm')} />
+      <StarLayer stars={STARS.filter((s) => s.size === 'md')} />
+      <StarLayer stars={STARS.filter((s) => s.size === 'lg')} />
     </div>
   );
 }
