@@ -115,12 +115,16 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
   const effectiveVideoCount = useMemo(() => {
     void graceTick;
     const now = Date.now();
+    const realActive = tiles.filter((t) => t.hasActiveVideo).length;
+    if (realActive === 0 && !localCamEnabled) {
+      return 0;
+    }
     return tiles.filter((tile) => {
       if (tile.hasActiveVideo) return true;
       const until = graceUntilRef.current[tile.slot];
       return until != null && until > now;
     }).length;
-  }, [tiles, graceTick]);
+  }, [tiles, graceTick, localCamEnabled]);
 
   const mode = resolveArenaLayoutMode(expectedCount, effectiveVideoCount);
 

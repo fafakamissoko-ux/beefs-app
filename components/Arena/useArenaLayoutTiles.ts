@@ -39,7 +39,7 @@ function resolveTileName(
 function hasActiveVideo(
   panel: UseArenaLayoutTilesParams['challengerRemoteSlots'][number],
 ): boolean {
-  return panel?.videoTrack != null;
+  return panel?.videoOn === true;
 }
 
 function resolveIsLocal(

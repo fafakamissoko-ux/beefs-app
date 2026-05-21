@@ -1539,8 +1539,8 @@ export function TikTokStyleArena({
   useEffect(() => {
     if (!hasJoined || !effectiveDailyRoomUrl || !meetingTokenForDaily || isJoined || isJoining || joinAttemptedRef.current) return;
     joinAttemptedRef.current = true;
-    void join(preJoinMediaStream);
-  }, [hasJoined, effectiveDailyRoomUrl, meetingTokenForDaily, isJoined, isJoining, join, preJoinMediaStream]);
+    void join(preJoinMediaStream, { camEnabled: preJoinCamEnabled });
+  }, [hasJoined, effectiveDailyRoomUrl, meetingTokenForDaily, isJoined, isJoining, join, preJoinMediaStream, preJoinCamEnabled]);
 
   const handleRaiseHand = useCallback(async () => {
     if (!userId || !roomId) return;

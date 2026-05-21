@@ -160,6 +160,9 @@ export function PreJoinScreen({
   const handleJoin = () => {
     mediaHandedOffRef.current = true;
     const acquired = streamRef.current ?? stream;
+    if (!camEnabled) {
+      acquired?.getVideoTracks().forEach((t) => t.stop());
+    }
     /** Ne pas stopper les pistes : Daily les réutilise ; on libère seulement preview + AudioContext. */
     releasePreJoinResources({ stopTracks: false });
     onJoin(acquired, { camEnabled });

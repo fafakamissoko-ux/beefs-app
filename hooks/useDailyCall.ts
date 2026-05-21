@@ -16,7 +16,7 @@ export interface CallParticipant {
 }
 
 export interface UseDailyCallReturn {
-  join: (preAcquiredStream?: MediaStream | null) => Promise<void>;
+  join: (preAcquiredStream?: MediaStream | null, opts?: { camEnabled?: boolean }) => Promise<void>;
   leave: () => Promise<void>;
   stopCamera: () => void;
   toggleMic: () => void;

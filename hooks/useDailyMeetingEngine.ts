@@ -76,7 +76,7 @@ export interface UseDailyMeetingEngineOptions {
 export interface UseDailyMeetingEngineResult {
   status: MeetingConnectionStatus;
   peersBySessionId: Record<string, PhysicalPeer>;
-  join: (preAcquiredStream?: MediaStream | null) => Promise<void>;
+  join: (preAcquiredStream?: MediaStream | null, opts?: { camEnabled?: boolean }) => Promise<void>;
   leave: () => Promise<void>;
   stopCamera: () => void;
   toggleMic: () => void;
@@ -195,7 +195,7 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
   );
 
   const join = useCallback(
-    async (preAcquiredStream?: MediaStream | null) => {
+    async (preAcquiredStream?: MediaStream | null, opts?: { camEnabled?: boolean }) => {
       const url = roomUrlRef.current;
       const tokRaw = meetingTokenRef.current;
       const token = typeof tokRaw === 'string' && tokRaw.length > 0 ? tokRaw : undefined;
@@ -217,15 +217,25 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
         callRef.current = null;
 
         const vm = viewerModeRef.current;
-        let videoSource: boolean | MediaStreamTrack = !vm;
+        const shouldStartVideoOff = vm || opts?.camEnabled === false;
+
+        let videoSource: boolean | MediaStreamTrack = !vm && !shouldStartVideoOff;
         let audioSource: boolean | MediaStreamTrack = !vm;
         if (!vm && preAcquiredStream) {
-          const vt = preAcquiredStream.getVideoTracks()[0];
           const at = preAcquiredStream.getAudioTracks()[0];
-          if (vt) videoSource = vt;
-          else videoSource = false;
+          if (!shouldStartVideoOff) {
+            const vt = preAcquiredStream.getVideoTracks()[0];
+            if (vt) videoSource = vt;
+            else videoSource = false;
+          } else {
+            videoSource = false;
+          }
           if (at) audioSource = at;
           else audioSource = false;
+        }
+
+        if (opts?.camEnabled === false) {
+          setCamEnabled(false);
         }
 
         const co = DailyIframe.createCallObject(
@@ -250,7 +260,7 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
           token,
           userName: userNameRef.current,
           ...(userData ? { userData } : {}),
-          startVideoOff: vm,
+          startVideoOff: shouldStartVideoOff,
           startAudioOff: vm,
         });
       } catch (err: unknown) {
