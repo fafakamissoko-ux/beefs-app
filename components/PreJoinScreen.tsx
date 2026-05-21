@@ -179,7 +179,7 @@ export function PreJoinScreen({
 
   if (viewerMode) {
     return (
-      <div className="relative flex h-full w-full touch-manipulation items-center justify-center overflow-y-auto overflow-x-hidden bg-obsidian/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+      <div className="relative flex h-full w-full touch-manipulation items-center justify-center overflow-y-auto overflow-x-hidden bg-transparent p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {ambientLayer}
         <div className="relative z-10 w-full max-w-md max-h-[90dvh] overflow-y-auto">
           <div className="relative rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-5 shadow-2xl backdrop-blur-3xl sm:p-6">
@@ -215,7 +215,7 @@ export function PreJoinScreen({
   }
 
   return (
-    <div className="relative flex h-full w-full touch-manipulation items-center justify-center overflow-y-auto overflow-x-hidden bg-obsidian/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:pl-4">
+    <div className="relative flex h-full w-full touch-manipulation items-center justify-center overflow-y-auto overflow-x-hidden bg-transparent p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pl-4">
       {ambientLayer}
       <div className="relative z-10 w-full max-w-2xl max-h-[90dvh] overflow-y-auto">
         <div className="relative space-y-3 rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-3 shadow-2xl backdrop-blur-3xl sm:space-y-4 sm:p-5 md:p-6">

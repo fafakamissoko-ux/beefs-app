@@ -3005,12 +3005,12 @@ export function TikTokStyleArena({
         if (target.closest('button, input, textarea, a, aside, [id^="dock-"], [data-cinema-stay]')) return;
         setIsCinematicMode(true);
       }}
-      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-black/20 backdrop-blur-md lg:flex-row"
+      className="fixed inset-0 z-10 flex flex-col overflow-hidden bg-transparent lg:flex-row"
     >
       {/* --- COUCHE 1 : ÉCRAN VS (Priorité 1) --- */}
       <AnimatePresence>
         {showVsScreen && (
-          <div className="absolute inset-0 z-[9999] bg-black/50 backdrop-blur-3xl">
+          <div className="absolute inset-0 z-[9999] bg-black/15 backdrop-blur-sm">
             {rolesLoaded ? (
               <VsTransition
                 challengers={
@@ -3035,7 +3035,7 @@ export function TikTokStyleArena({
 
       {/* --- COUCHE 2 : PRE-JOIN (Priorité 2) --- */}
       {!showVsScreen && !hasJoined && showPreJoin && (
-        <div className="absolute inset-0 z-[8000] bg-black/50 backdrop-blur-3xl">
+        <div className="absolute inset-0 z-[8000] bg-black/15 backdrop-blur-sm">
           <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer} mediatorName={mediatorName} />
           {!effectiveDailyRoomUrl && (
             <div className="absolute bottom-10 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-slate-900/65 px-4 py-2 text-xs font-semibold text-cyan-400 backdrop-blur-md">
@@ -3083,7 +3083,7 @@ export function TikTokStyleArena({
 
       {/* Instant black overlay when leaving — hides camera before tracks stop */}
       {isLeaving && !beefEnded && (
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-3xl z-[999] flex items-center justify-center">
+        <div className="absolute inset-0 z-[999] flex items-center justify-center bg-black/30 backdrop-blur-md">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
             <span className="text-gray-500 text-sm">Déconnexion...</span>
@@ -3105,7 +3105,7 @@ export function TikTokStyleArena({
       />
       {beefEnded && endSummary && (
         <div
-          className="absolute inset-0 z-[1000] flex flex-col items-center justify-center bg-black/50 p-6 backdrop-blur-3xl"
+          className="absolute inset-0 z-[1000] flex flex-col items-center justify-center bg-black/40 p-6 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-labelledby="beef-end-summary-title"
@@ -3333,7 +3333,7 @@ export function TikTokStyleArena({
       )}
 
       {/* === ZONE 2 : LA VIDÉO (AVEC OVERLAY CHAT MOBILE) === */}
-      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-black/50 backdrop-blur-3xl z-10">
+      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-transparent z-10">
 
         {/* TICKER MOBILE */}
         {!isCinematicMode && arenaHasAnnouncement && (

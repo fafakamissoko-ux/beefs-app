@@ -754,7 +754,7 @@ export default function FeedPage() {
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
       </Suspense>
         {/* Bannière + onglets + filtres (desktop) — dans le flux, repousse le scroll */}
-        <div className="z-[100] flex w-full shrink-0 flex-col bg-black/80 px-4 pb-3 pt-3 backdrop-blur-md md:px-0 md:pt-0 lg:bg-transparent lg:backdrop-blur-none">
+        <div className="z-[100] flex w-full shrink-0 flex-col bg-black/30 px-4 pb-3 pt-3 backdrop-blur-sm md:px-0 md:pt-0 lg:bg-transparent lg:backdrop-blur-none">
           <div className="flex w-full flex-col gap-3 border-b border-white/[0.08] pb-3">
             <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
               <div className="flex items-center gap-4 max-md:flex-nowrap max-md:overflow-x-auto hide-scrollbar max-md:pb-1">
