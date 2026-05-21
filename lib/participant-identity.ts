@@ -83,6 +83,7 @@ export interface BeefParticipantRowMeta {
   role: string;
   name: string;
   matchAliases: string[];
+  avatarUrl: string | null;
 }
 
 /** Remote Daily correspond au médiateur (présence / grâce). */

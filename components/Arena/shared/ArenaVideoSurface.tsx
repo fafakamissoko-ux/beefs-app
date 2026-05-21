@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Mic, Video } from 'lucide-react';
 import { ParticipantVideo } from '@/components/ParticipantVideo';
@@ -139,15 +140,27 @@ export function ArenaVideoSurface({
       }}
     >
       <div className="absolute inset-0 overflow-hidden rounded-[inherit]" style={{ filter: filterVal }}>
-        {tile.panel?.videoTrack ? (
+        {tile.hasActiveVideo && tile.panel?.videoTrack ? (
           <ParticipantVideo
             videoTrack={tile.panel.videoTrack}
             muted={tile.isLocal}
             className="absolute inset-0 h-full w-full object-cover"
           />
+        ) : tile.avatarUrl ? (
+          <div className="absolute inset-0 h-full w-full">
+            <Image
+              src={tile.avatarUrl}
+              alt=""
+              fill
+              className="object-cover opacity-60"
+              sizes="(max-width: 640px) 38vw, 16rem"
+            />
+          </div>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-4xl opacity-20">
-            👤
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80">
+            <span className="text-3xl font-black uppercase text-white/40">
+              {tile.name.replace(/^@/, '')[0] ?? '?'}
+            </span>
           </div>
         )}
       </div>

@@ -23,6 +23,7 @@ export interface ArenaTileVM {
   colorRgb: string;
   hasActiveVideo: boolean;
   isLocal: boolean;
+  avatarUrl: string | null;
   cellClass: string;
   uiPosClass: string;
 }

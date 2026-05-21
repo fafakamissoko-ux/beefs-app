@@ -830,7 +830,7 @@ export function TikTokStyleArena({
     );
     const { fetchUserPublicByIds } = await import('@/lib/fetch-user-public-profile');
     const ids = validData.map((p) => p.user_id).filter(Boolean);
-    const pubMap = await fetchUserPublicByIds(supabase, ids, 'id, username, display_name');
+    const pubMap = await fetchUserPublicByIds(supabase, ids, 'id, username, display_name, avatar_url');
     const roles: Record<string, BeefParticipantRowMeta> = {};
     validData.forEach((p) => {
       const row = p as { user_id: string; role: string };
@@ -842,6 +842,7 @@ export function TikTokStyleArena({
         role: row.role,
         name,
         matchAliases: buildParticipantAliasSet(u?.display_name, u?.username, name),
+        avatarUrl: u?.avatar_url?.trim() || null,
       };
     });
     setParticipantRoles(roles);

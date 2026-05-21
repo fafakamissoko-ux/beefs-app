@@ -82,6 +82,10 @@ export function useArenaLayoutTiles(params: UseArenaLayoutTilesParams): ArenaTil
       const slot = indexToChallengerSlot(idx);
       const name = resolveTileName(idx, uid, panel, reconciledPeers, participantRoles);
       const arenaUserId = uid ?? panel?.arenaUserId ?? null;
+      const avatarUrl =
+        (uid && participantRoles[uid]?.avatarUrl) ||
+        (arenaUserId && participantRoles[arenaUserId]?.avatarUrl) ||
+        null;
 
       tiles.push({
         id: `arena-tile-${slot}`,
@@ -93,6 +97,7 @@ export function useArenaLayoutTiles(params: UseArenaLayoutTilesParams): ArenaTil
         colorRgb: CHALLENGER_SLOT_COLORS[slot],
         hasActiveVideo: hasActiveVideo(panel),
         isLocal: resolveIsLocal(uid, panel, localUserId, localSessionId, isViewer),
+        avatarUrl,
         cellClass: getNexusCellClass(idx, tileCount),
         uiPosClass: getNexusChromeUiPos(idx, tileCount),
       });
