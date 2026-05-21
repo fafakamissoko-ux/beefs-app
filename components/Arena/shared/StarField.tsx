@@ -86,7 +86,7 @@ function StarLayer({ stars, layerOpacity }: { stars: StarSpec[]; layerOpacity: s
 
 export function StarField() {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+    <div aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-[#050505]">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_42%,rgba(30,27,75,0.35),transparent_70%)]" />
       <StarLayer stars={STARS.filter((s) => s.size === 'sm')} layerOpacity="opacity-70" />
       <StarLayer stars={STARS.filter((s) => s.size === 'md')} layerOpacity="opacity-80" />
