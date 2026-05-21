@@ -268,7 +268,7 @@ export default function ArenaPage() {
 
   if (!isAuthLoaded) {
     return (
-      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black">
+      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black/40 backdrop-blur-md">
         <div className="text-center text-white">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-red-600" />
           <p className="text-sm text-white/80">Session…</p>
@@ -279,7 +279,7 @@ export default function ArenaPage() {
 
   if (entryPhase === 'FETCH_TICKET') {
     return (
-      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black">
+      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black/40 backdrop-blur-md">
         <div className="text-center text-white">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-cyan-500" />
         </div>
@@ -292,7 +292,7 @@ export default function ArenaPage() {
   // READY — mur d’auth : pas de billet ni d’arène sans compte (beef live uniquement ; ended géré au-dessus)
   if (entryPhase === 'READY' && !beefEndedInfo && !userId.trim() && !accessError) {
     return (
-      <div className="fixed inset-0 z-40 flex min-h-dvh flex-col items-center justify-center bg-black p-6">
+      <div className="fixed inset-0 z-40 flex min-h-dvh flex-col items-center justify-center bg-black/40 backdrop-blur-md p-6">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -328,7 +328,7 @@ export default function ArenaPage() {
   // READY — erreur billet
   if (accessError) {
     return (
-      <div className="fixed inset-0 z-40 flex min-h-dvh flex-col items-center justify-center bg-black p-6">
+      <div className="fixed inset-0 z-40 flex min-h-dvh flex-col items-center justify-center bg-black/40 backdrop-blur-md p-6">
         <p className="mb-4 max-w-sm text-center text-sm text-amber-200/90">{accessError}</p>
         <button
           type="button"
@@ -357,7 +357,7 @@ export default function ArenaPage() {
 
   if (!ticketOk) {
     return (
-      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black">
+      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black/40 backdrop-blur-md">
         <p className="text-sm text-white/70">Accès vidéo indisponible.</p>
       </div>
     );
@@ -367,7 +367,7 @@ export default function ArenaPage() {
 
   if (needsStaging && !isStagingPassed) {
     return (
-      <div className="fixed inset-0 z-[9999] flex h-dvh w-screen flex-col items-center justify-center bg-[#050505] p-6 text-center">
+      <div className="fixed inset-0 z-[9999] flex h-dvh w-screen flex-col items-center justify-center bg-black/40 p-6 text-center backdrop-blur-md">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-600/20 via-[#050505] to-[#050505]" />
 
         <motion.div
@@ -427,7 +427,7 @@ export default function ArenaPage() {
 
   // État 3 — ARENA_READY : arène avec URL + jeton validés
   return (
-    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-black">
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-transparent">
       <TikTokStyleArena
         host={host}
         roomId={roomId}
