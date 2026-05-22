@@ -3241,7 +3241,7 @@ export function TikTokStyleArena({
             <span className="font-mono text-[11px] font-medium">{liveViewerCount > 0 ? liveViewerCount : '—'}</span>
           </button>
           {showArenaMenu && (
-            <div className="absolute left-4 top-full z-[200] mt-2 flex w-64 flex-col rounded-2xl border border-white/10 bg-slate-900/60 py-2 shadow-[0_0_40px_rgba(0,0,0,0.8)] backdrop-blur-2xl" data-cinema-stay onClick={(e) => e.stopPropagation()}>
+            <div className="absolute left-4 top-full z-[200] mt-2 flex w-64 flex-col rounded-2xl border border-white/10 bg-slate-900/30 py-2 shadow-[0_0_40px_rgba(0,0,0,0.8)] backdrop-blur-md" data-cinema-stay onClick={(e) => e.stopPropagation()}>
               {/* En-tête Monétisation */}
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                 <div>
@@ -3304,7 +3304,7 @@ export function TikTokStyleArena({
                 >
                   {msg.user_name}
                 </span>
-                <div className="inline-block rounded-2xl rounded-tl-sm border border-white/[0.05] bg-white/5 px-3 py-2 text-[13px] leading-snug text-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px]">
+                <div className="inline-block rounded-2xl rounded-tl-sm border border-white/[0.05] bg-white/5 px-3 py-2 text-[13px] leading-snug text-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-md">
                   {msg.content}
                 </div>
               </div>
@@ -3333,7 +3333,7 @@ export function TikTokStyleArena({
       )}
 
       {/* === ZONE 2 : LA VIDÉO (AVEC OVERLAY CHAT MOBILE) === */}
-      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-[#050505]/40 backdrop-blur-md z-10">
+      <div className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-transparent z-10">
 
         {/* TICKER MOBILE */}
         {!isCinematicMode && arenaHasAnnouncement && (
@@ -3352,14 +3352,14 @@ export function TikTokStyleArena({
         {/* INDICATEURS SYSTÈME DISCRETS (Haut Droite) */}
         {!isCinematicMode && (
           <div className="pointer-events-none absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[500] flex items-center gap-2 sm:right-4 sm:top-4">
-            <div className="flex items-center rounded-full border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 shadow-[0_8px_16px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px]">
+            <div className="flex items-center rounded-full border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 shadow-[0_8px_16px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-md">
               <div className={`mr-2 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'animate-pulse bg-rose-500 shadow-[0_0_10px_rgba(225,29,72,0.8)]' : 'bg-amber-400'}`} />
               <span className="font-mono text-[10px] font-black uppercase tracking-widest text-white/90">Live</span>
             </div>
             <button
               type="button"
               onClick={() => setShowViewerList(true)}
-              className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 shadow-[0_8px_16px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px] transition-all hover:bg-white/[0.06]"
+              className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 shadow-[0_8px_16px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-md transition-all hover:bg-white/[0.06]"
             >
               <Eye className="h-3 w-3 text-white" />
               <span className="font-mono text-[10px] font-bold text-white">{liveViewerCount > 0 ? liveViewerCount : '—'}</span>
@@ -4052,7 +4052,7 @@ export function TikTokStyleArena({
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 360 }}
-              className="absolute bottom-0 left-0 right-0 z-10 max-h-[85dvh] overflow-y-auto rounded-t-[2rem] bg-slate-900/40 backdrop-blur-[40px] border-t border-white/[0.08] shadow-[0_-10px_40px_rgba(0,0,0,0.4)]"
+              className="absolute bottom-0 left-0 right-0 z-10 max-h-[85dvh] overflow-y-auto rounded-t-[2rem] bg-slate-900/20 backdrop-blur-md border-t border-white/[0.08] shadow-[0_-10px_40px_rgba(0,0,0,0.4)]"
               onClick={(e) => e.stopPropagation()}
               data-cinema-stay
             >
