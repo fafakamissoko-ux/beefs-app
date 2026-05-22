@@ -254,7 +254,7 @@ export default function LiveBeefRoomPage() {
 
   if (!isAuthLoaded) {
     return (
-      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black/40 backdrop-blur-md">
+      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black/20 backdrop-blur-sm">
         <div className="text-center text-white">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-red-600" />
           <p className="text-sm text-white/80">Session…</p>
@@ -265,7 +265,7 @@ export default function LiveBeefRoomPage() {
 
   if (entryPhase === 'FETCH_TICKET') {
     return (
-      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black/40 backdrop-blur-md">
+      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black/20 backdrop-blur-sm">
         <div className="text-center text-white">
           <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-plasma-500" />
         </div>
@@ -275,7 +275,7 @@ export default function LiveBeefRoomPage() {
 
   if (accessError) {
     return (
-      <div className="fixed inset-0 z-40 flex min-h-dvh flex-col items-center justify-center bg-black/40 backdrop-blur-md p-6">
+      <div className="fixed inset-0 z-40 flex min-h-dvh flex-col items-center justify-center bg-black/20 backdrop-blur-sm p-6">
         <p className="mb-4 max-w-sm text-center text-sm text-amber-200/90">{accessError}</p>
         <button
           type="button"
@@ -299,7 +299,7 @@ export default function LiveBeefRoomPage() {
 
   if (!ticketOk) {
     return (
-      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black/40 backdrop-blur-md">
+      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black/20 backdrop-blur-sm">
         <p className="text-sm text-white/70">Accès vidéo indisponible.</p>
       </div>
     );

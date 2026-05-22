@@ -26,14 +26,14 @@ export function GlobalMessagesDrawer() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeDrawer}
-            className="fixed inset-0 z-[999998] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[999998] bg-black/20 backdrop-blur-sm"
           />
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 z-[999999] flex w-full flex-col overflow-hidden border-l border-white/10 bg-slate-950/80 shadow-2xl backdrop-blur-3xl md:w-[450px] lg:w-[600px]"
+            className="fixed right-0 top-0 bottom-0 z-[999999] flex w-full flex-col overflow-hidden border-l border-white/10 bg-slate-950/50 shadow-2xl backdrop-blur-md md:w-[450px] lg:w-[600px]"
           >
             <Suspense
               fallback={

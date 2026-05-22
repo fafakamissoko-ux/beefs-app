@@ -35,7 +35,7 @@ export default function SplashScreen() {
   }, [router]);
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-black">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-transparent">
       <div className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_center,rgba(0,240,255,0.1)_0%,transparent_60%)]" />
       <div className="relative z-10 flex flex-col items-center">
         <motion.div

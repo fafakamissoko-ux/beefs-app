@@ -117,7 +117,7 @@ export default function WelcomePage() {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-obsidian">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-transparent">
       <div className="absolute top-4 right-4 z-50">
         <div className="relative group">
           <button

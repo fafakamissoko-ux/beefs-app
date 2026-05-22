@@ -292,7 +292,7 @@ export function GlobalDuelAmbush() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black/90 p-4 backdrop-blur-xl"
+        className="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black/60 p-4 backdrop-blur-md"
       >
         <motion.div
           animate={{ opacity: pendingAction ? 0.1 : [0.3, 0.6, 0.3] }}

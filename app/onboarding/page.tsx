@@ -164,7 +164,6 @@ export default function ArenaOnboardingPage() {
   return (
     <div
       className="flex min-h-dvh flex-col items-center justify-center px-6 py-16"
-      style={{ backgroundColor: '#08080A' }}
     >
       <div className="w-full max-w-sm">
         <div className="mb-10 flex justify-center">
