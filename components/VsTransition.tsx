@@ -26,7 +26,7 @@ export function VsTransition({ challengers, debateTitle, onComplete }: VsTransit
 
   return (
     <motion.div
-      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-transparent bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-600/20 via-obsidian-950 to-black backdrop-blur-3xl"
+      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-obsidian-950 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-600/20 via-obsidian-950 to-black backdrop-blur-3xl"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 1.1, filter: 'blur(20px)' }}
       transition={{ duration: 0.6, ease: 'easeInOut' }}
@@ -70,7 +70,7 @@ export function VsTransition({ challengers, debateTitle, onComplete }: VsTransit
         >
           <div className="relative inline-block">
             <div className="absolute inset-0 rounded-full bg-white/20 blur-xl" />
-            <p className="relative rounded-2xl border border-white/20 bg-black/30 px-8 py-4 font-sans text-xs font-bold uppercase tracking-[0.2em] text-white shadow-2xl backdrop-blur-md sm:text-sm md:text-base">
+            <p className="relative rounded-2xl border border-white/20 bg-black/60 px-8 py-4 font-sans text-xs font-bold uppercase tracking-[0.2em] text-white shadow-2xl backdrop-blur-xl sm:text-sm md:text-base">
               {debateTitle}
             </p>
           </div>

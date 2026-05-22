@@ -86,7 +86,7 @@ export function ArenaVideoSurface({
           }
           onToggleMic();
         }}
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-md transition-all duration-300 active:scale-95 ${micEnabled && !micMutedByMediator ? 'border-white/20 bg-white/10 text-white hover:bg-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'border-rose-500/50 bg-rose-950/40 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)]'}`}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-[60px] transition-all duration-300 active:scale-95 ${micEnabled && !micMutedByMediator ? 'border-white/20 bg-white/10 text-white hover:bg-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'border-rose-500/50 bg-rose-950/40 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)]'}`}
       >
         <Mic className="h-4 w-4" strokeWidth={1.75} />
       </button>
@@ -96,7 +96,7 @@ export function ArenaVideoSurface({
           e.stopPropagation();
           onToggleCam();
         }}
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-md transition-all duration-300 active:scale-95 ${camEnabled ? 'border-white/20 bg-white/10 text-white hover:bg-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'border-rose-500/50 bg-rose-950/40 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)]'}`}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border backdrop-blur-[60px] transition-all duration-300 active:scale-95 ${camEnabled ? 'border-white/20 bg-white/10 text-white hover:bg-white/20 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)]' : 'border-rose-500/50 bg-rose-950/40 text-rose-400 shadow-[0_0_15px_rgba(225,29,72,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)]'}`}
       >
         <Video className="h-4 w-4" strokeWidth={1.75} />
       </button>
@@ -132,7 +132,7 @@ export function ArenaVideoSurface({
 
   return (
     <motion.div
-      className={`relative h-full w-full bg-transparent backdrop-blur-sm transition-all duration-300 ${roundedClass} ${variant === 'nexus' ? tile.cellClass : ''} ${variant === 'nexus' ? 'overflow-hidden' : ''}`}
+      className={`relative h-full w-full bg-transparent backdrop-blur-2xl transition-all duration-300 ${roundedClass} ${variant === 'nexus' ? tile.cellClass : ''} ${variant === 'nexus' ? 'overflow-hidden' : ''}`}
       style={{
         boxShadow: auraShadow,
         zIndex: tile.aura > 0 ? 10 : 1,
@@ -157,7 +157,7 @@ export function ArenaVideoSurface({
             />
           </div>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm">
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80">
             <span className="text-3xl font-black uppercase text-white/40">
               {tile.name.replace(/^@/, '')[0] ?? '?'}
             </span>

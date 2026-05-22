@@ -117,7 +117,7 @@ export function MediatorOrb({
               className="h-full w-full object-cover"
             />
           ) : mediatorGraceActive ? (
-            <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-slate-900/25 backdrop-blur-sm p-4">
+            <div className="m-auto flex h-full w-full flex-col items-center justify-center bg-slate-900/65 p-4">
               <span className="text-[12px] font-black text-rose-500 sm:text-[14px]">
                 {mediatorGraceSeconds}s
               </span>
@@ -128,7 +128,7 @@ export function MediatorOrb({
         </button>
       </motion.div>
 
-      <div className="pointer-events-auto mt-2 flex items-center rounded-full border border-white/10 bg-black/20 p-1 shadow-[0_10px_40px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md transition-all duration-300 hover:bg-black/60">
+      <div className="pointer-events-auto mt-2 flex items-center rounded-full border border-white/10 bg-black/50 p-1 shadow-[0_10px_40px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-[60px] transition-all duration-300 hover:bg-black/60">
         <button
           type="button"
           onClick={() => void onOpenProfile(mediatorName, mediatorHostId)}

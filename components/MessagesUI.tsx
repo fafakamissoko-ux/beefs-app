@@ -611,7 +611,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   }
 
   return (
-    <div className={`flex flex-1 overflow-hidden bg-slate-950/20 backdrop-blur-md ${
+    <div className={`flex flex-1 overflow-hidden bg-slate-950/60 backdrop-blur-3xl ${
       isDrawerMode
         ? 'h-full w-full'
         : '-m-4 lg:-m-8 h-[calc(100dvh-3.5rem)] lg:h-[100dvh]'
@@ -764,11 +764,11 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
         </div>
 
         {/* Chat area */}
-        <div className={`flex flex-1 flex-col min-w-0 bg-slate-950/20 backdrop-blur-md ${!selectedConv ? (isDrawerMode ? 'hidden' : 'hidden md:flex') : 'flex'}`}>
+        <div className={`flex flex-1 flex-col min-w-0 bg-slate-950/60 backdrop-blur-3xl ${!selectedConv ? (isDrawerMode ? 'hidden' : 'hidden md:flex') : 'flex'}`}>
           {selectedConv ? (
             <>
               {/* Chat header */}
-              <div className="flex shrink-0 items-center gap-3 border-b border-white/10 bg-slate-950/20 px-4 py-3 z-20 backdrop-blur-md">
+              <div className="flex shrink-0 items-center gap-3 border-b border-white/10 bg-slate-950/60 px-4 py-3 z-20 backdrop-blur-3xl">
                 <button
                   type="button"
                   onClick={() => setSelectedConv(null)}
@@ -829,7 +829,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                        className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/30 shadow-2xl backdrop-blur-2xl"
+                        className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 shadow-2xl backdrop-blur-2xl"
                       >
                         <button
                           type="button"
@@ -957,7 +957,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                                   initial={{ opacity: 0, y: 50, scale: 0.95 }}
                                   animate={{ opacity: 1, y: 0, scale: 1 }}
                                   exit={{ opacity: 0, y: 50, scale: 0.95 }}
-                                  className={`fixed bottom-0 left-0 right-0 z-[100] flex flex-col gap-2 rounded-t-[2rem] border border-white/10 bg-slate-900/30 p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl md:absolute md:top-[calc(100%+0.5rem)] md:bottom-auto md:left-auto md:right-auto md:flex md:w-max md:flex-row md:items-center md:rounded-full md:border md:bg-slate-900/30 md:p-1.5 md:shadow-xl md:backdrop-blur-2xl ${isMine ? 'md:right-0' : 'md:left-0'}`}
+                                  className={`fixed bottom-0 left-0 right-0 z-[100] flex flex-col gap-2 rounded-t-[2rem] border border-white/10 bg-slate-900/80 p-6 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl md:absolute md:top-[calc(100%+0.5rem)] md:bottom-auto md:left-auto md:right-auto md:flex md:w-max md:flex-row md:items-center md:rounded-full md:border md:bg-slate-900/80 md:p-1.5 md:shadow-xl md:backdrop-blur-2xl ${isMine ? 'md:right-0' : 'md:left-0'}`}
                                 >
                                   <div className="mb-4 flex justify-between px-2 md:mb-0 md:justify-start md:gap-1 md:px-0">
                                     {['👍', '❤️', '🔥', '😂', '😮', '😢'].map((emoji) => {
@@ -1064,7 +1064,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
               </div>
 
               {/* Action Bar & Input */}
-              <div className="z-20 flex shrink-0 flex-col border-t border-white/10 bg-slate-900/30 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-2xl">
+              <div className="z-20 flex shrink-0 flex-col border-t border-white/10 bg-slate-900/80 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-2xl">
                 {isSelectionMode ? (
                   <div className="flex items-center justify-between px-4 py-4">
                     <span className="text-sm font-semibold text-gray-400">

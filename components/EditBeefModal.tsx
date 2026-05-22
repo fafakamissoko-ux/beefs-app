@@ -589,7 +589,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
 
   return (
     <div
-      className="fixed inset-0 z-[9999] overflow-y-auto overscroll-contain bg-black/30 backdrop-blur-md [scrollbar-gutter:stable]"
+      className="fixed inset-0 z-[9999] overflow-y-auto overscroll-contain bg-black/80 backdrop-blur-sm [scrollbar-gutter:stable]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="edit-beef-title"
