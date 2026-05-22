@@ -39,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-[100dvh] w-full min-w-0 flex-col overflow-hidden bg-transparent lg:flex-row">
+    <div className="flex h-[100dvh] w-full min-w-0 flex-col overflow-hidden bg-transparent backdrop-blur-none lg:flex-row">
       <Header shell="phone" />
 
       <main className="mx-auto flex h-full min-h-0 w-full max-w-md flex-1 flex-col transition-all overflow-hidden lg:mx-0 lg:max-w-none lg:pt-0">

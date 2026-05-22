@@ -361,12 +361,12 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       <header
         className={
           shell === 'phone'
-            ? `z-[100] relative mx-auto flex w-full max-w-md shrink-0 flex-col rounded-none border-b border-white/10 bg-slate-950/30 backdrop-blur-md lg:mx-0 lg:h-full lg:min-h-0 lg:max-w-none lg:w-64 lg:self-stretch lg:border-b-0 lg:border-r lg:border-white/10 ${
+            ? `z-[100] relative mx-auto flex w-full max-w-md shrink-0 flex-col rounded-none border-b border-white/10 bg-slate-950/15 backdrop-blur-sm lg:mx-0 lg:h-full lg:min-h-0 lg:max-w-none lg:w-64 lg:self-stretch lg:border-b-0 lg:border-r lg:border-white/10 ${
                 isActive('/feed')
-                  ? 'border-none bg-gradient-to-b from-black/90 via-black/40 to-transparent backdrop-blur-md max-lg:from-black/90 max-lg:via-black/40 max-lg:to-transparent lg:bg-slate-950/30 lg:backdrop-blur-md'
-                  : 'border-b border-white/10 bg-slate-950/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md lg:shadow-none lg:border-b-0 lg:border-r lg:border-white/10'
+                  ? 'border-none bg-gradient-to-b from-black/90 via-black/40 to-transparent backdrop-blur-md max-lg:from-black/20 max-lg:via-black/5 max-lg:to-transparent lg:bg-slate-950/15 lg:backdrop-blur-sm'
+                  : 'border-b border-white/10 bg-slate-950/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm lg:shadow-none lg:border-b-0 lg:border-r lg:border-white/10'
               }`
-            : 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-slate-950/30 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
+            : 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-slate-950/15 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
         }
       >
         <div
