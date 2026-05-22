@@ -42,7 +42,7 @@
 
 @layer components {
   .glass-prestige {
-    @apply bg-white/5 backdrop-blur-3xl border border-white/10 shadow-2xl;
+    @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-2xl;
   }
 
   .glass {
@@ -184,13 +184,13 @@
   }
 
   .card {
-    @apply rounded-[2rem] border border-white/10 backdrop-blur-xl transition-all duration-200;
+    @apply rounded-[2rem] border border-white/10 backdrop-blur-md transition-all duration-200;
     background: rgba(12, 12, 15, 0.72);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
   .card-interactive {
-    @apply rounded-[2rem] border border-white/10 backdrop-blur-xl transition-all duration-200 cursor-pointer;
+    @apply rounded-[2rem] border border-white/10 backdrop-blur-md transition-all duration-200 cursor-pointer;
     background: rgba(12, 12, 15, 0.72);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
   }

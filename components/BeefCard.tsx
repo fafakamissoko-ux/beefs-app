@@ -225,7 +225,7 @@ export function BeefCard({
         : 'border-white/[0.08] hover:border-white/20';
 
   const chromeRelative =
-    'relative flex h-full w-full flex-col overflow-hidden rounded-[1.2rem] border bg-black transition-all duration-300 md:rounded-[1.5rem]';
+    'relative flex h-full w-full flex-col overflow-hidden rounded-[1.2rem] border border-white/10 bg-transparent backdrop-blur-sm transition-all duration-300 md:rounded-[1.5rem]';
   const liveRing = status === 'live' ? 'shadow-[0_0_0_1px_rgba(0,240,255,0.35)]' : '';
   const manifestoStroke = isManifesto ? 'border-dashed border-white/20' : '';
   const beefCardChromeClass = [chromeRelative, dynamicBorderClass, liveRing, manifestoStroke].filter(Boolean).join(' ');
@@ -239,11 +239,11 @@ export function BeefCard({
         onClick={() => setIsTeaserOpen(true)}
         onMouseEnter={() => isReplay && setReplayHover(true)}
         onMouseLeave={() => isReplay && setReplayHover(false)}
-        className="group relative aspect-[3/4] max-h-[70dvh] w-full shrink-0 cursor-pointer overflow-hidden bg-black"
+        className="group relative aspect-[3/4] max-h-[70dvh] w-full shrink-0 cursor-pointer overflow-hidden bg-transparent"
       >
         <div
           ref={mediaBlockRef}
-          className="absolute inset-0 z-0 h-full w-full overflow-hidden rounded-[1.2rem] bg-black md:rounded-[1.5rem]"
+          className="absolute inset-0 z-0 h-full w-full overflow-hidden rounded-[1.2rem] bg-transparent md:rounded-[1.5rem]"
         >
           {video_url ? (
             <video
@@ -532,7 +532,7 @@ export function BeefCard({
         )}
         {isTeaserOpen && (
         <div
-          className="fixed inset-0 z-[9999] flex flex-col bg-black/50 backdrop-blur-3xl md:flex-row md:items-center md:justify-center md:p-8"
+          className="fixed inset-0 z-[9999] flex flex-col bg-black/20 backdrop-blur-md md:flex-row md:items-center md:justify-center md:p-8"
           role="presentation"
           onClick={(e) => {
             e.stopPropagation();

@@ -363,7 +363,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
           shell === 'phone'
             ? `z-[100] relative mx-auto flex w-full max-w-md shrink-0 flex-col rounded-none border-b border-white/10 bg-slate-950/30 backdrop-blur-md lg:mx-0 lg:h-full lg:min-h-0 lg:max-w-none lg:w-64 lg:self-stretch lg:border-b-0 lg:border-r lg:border-white/10 ${
                 isActive('/feed')
-                  ? 'border-none bg-gradient-to-b from-black/90 via-black/40 to-transparent backdrop-blur-md max-lg:from-black/90 max-lg:via-black/40 max-lg:to-transparent lg:bg-slate-950/30 lg:backdrop-blur-md'
+                  ? 'border-none bg-gradient-to-b from-black/40 via-black/10 to-transparent backdrop-blur-md max-lg:from-black/40 max-lg:via-black/10 max-lg:to-transparent lg:bg-slate-950/30 lg:backdrop-blur-md'
                   : 'border-b border-white/10 bg-slate-950/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md lg:shadow-none lg:border-b-0 lg:border-r lg:border-white/10'
               }`
             : 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-slate-950/30 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
@@ -565,7 +565,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: -4, scale: 0.97 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute right-0 mt-2 w-60 rounded-2xl border border-white/10 bg-black/80 shadow-card backdrop-blur-2xl overflow-hidden lg:top-auto lg:bottom-full lg:mb-2 lg:mt-0 lg:left-0 lg:right-auto"
+                          className="absolute right-0 mt-2 w-60 rounded-2xl border border-white/10 bg-black/30 shadow-card backdrop-blur-md overflow-hidden lg:top-auto lg:bottom-full lg:mb-2 lg:mt-0 lg:left-0 lg:right-auto"
                         >
                           <div className="px-4 py-3 dropdown-divider-bottom">
                             <p className="text-sm font-semibold text-white">{user.user_metadata?.username || 'Utilisateur'}</p>
@@ -676,14 +676,14 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="lg:hidden border-b border-white/10 bg-slate-950/50 backdrop-blur-md overflow-y-auto max-h-[calc(100dvh-3.5rem)] shadow-2xl"
+              className="lg:hidden border-b border-white/10 bg-slate-950/25 backdrop-blur-sm overflow-y-auto max-h-[calc(100dvh-3.5rem)] shadow-2xl"
             >
               {/* Backdrop */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 top-14 bg-black/60 backdrop-blur-sm z-[-1]"
+                className="fixed inset-0 top-14 bg-black/20 backdrop-blur-sm z-[-1]"
                 onClick={() => setMobileMenuOpen(false)}
               />
               <nav className="px-3 py-3 space-y-0.5">

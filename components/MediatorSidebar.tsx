@@ -73,7 +73,7 @@ type MediatorSidebarProps = {
 };
 
 const SECTION_SHELL =
-  'rounded-3xl border border-white/[0.08] bg-white/[0.02] p-4 shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[60px]';
+  'rounded-3xl border border-white/[0.08] bg-white/[0.02] p-4 shadow-[0_8px_32px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-md';
 
 export function MediatorSidebar({
   open,
@@ -180,7 +180,7 @@ export function MediatorSidebar({
                   animate={{ x: 0, y: 0 }}
                   exit={isSmPanel ? { x: '100%', y: 0 } : { y: '100%', x: 0 }}
                   transition={{ type: 'spring', damping: 34, stiffness: 400 }}
-                  className="fixed inset-x-0 bottom-0 z-[9999] flex h-[85dvh] flex-col overflow-hidden rounded-t-[2.5rem] border border-white/10 bg-black/50 shadow-[0_-20px_80px_rgba(0,0,0,0.6)] backdrop-blur-[80px] sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:left-auto sm:ml-0 sm:h-dvh sm:w-[400px] sm:rounded-none sm:border-l sm:border-t-0"
+                  className="fixed inset-x-0 bottom-0 z-[9999] flex h-[85dvh] flex-col overflow-hidden rounded-t-[2.5rem] border border-white/10 bg-black/30 shadow-[0_-20px_80px_rgba(0,0,0,0.6)] backdrop-blur-md sm:inset-x-auto sm:inset-y-0 sm:right-0 sm:left-auto sm:ml-0 sm:h-dvh sm:w-[400px] sm:rounded-none sm:border-l sm:border-t-0"
                 >
                   <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-white/25 sm:hidden" />
 

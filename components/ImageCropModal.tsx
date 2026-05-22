@@ -57,7 +57,7 @@ export function ImageCropModal({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-md"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 p-4 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
       aria-label="Recadrer l'image"
