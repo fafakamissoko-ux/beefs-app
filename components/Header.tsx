@@ -29,6 +29,7 @@ import { supabase } from '@/lib/supabase/client';
 import { hrefWithFrom } from '@/lib/navigation-return';
 import { useGlobalSearch } from '@/contexts/GlobalSearchContext';
 import { useMessagesDrawer } from '@/contexts/MessagesDrawerContext';
+import { getAuraRank } from '@/lib/prestige';
 
 const buyPointsAnchorClass =
   'flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors';
@@ -146,7 +147,9 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
   const [pendingInvitations, setPendingInvitations] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
-  const [topUsers, setTopUsers] = useState<any[]>([]);
+  const [topUsers, setTopUsers] = useState<
+    { id: string; username: string | null; display_name: string | null; avatar_url: string | null; lifetime_points: number }[]
+  >([]);
   const pathname = usePathname();
   const router = useRouter();
   const { user, userRole, signOut } = useAuth();
@@ -157,7 +160,12 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
 
   useEffect(() => {
     async function fetchElite() {
-      const { data } = await supabase.from('user_public_profile').select('id, username, display_name, avatar_url').not('username', 'is', null).limit(4);
+      const { data } = await supabase
+        .from('user_public_profile')
+        .select('id, username, display_name, avatar_url, lifetime_points')
+        .not('username', 'is', null)
+        .order('lifetime_points', { ascending: false })
+        .limit(4);
       if (data) setTopUsers(data);
     }
     void fetchElite();
@@ -501,7 +509,9 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">L&apos;Élite de l&apos;Agora</h3>
               </div>
               <div className="flex flex-col gap-3.5">
-                {topUsers.map((u, i) => (
+                {topUsers.map((u, i) => {
+                  const eliteRank = getAuraRank(u.lifetime_points || 0);
+                  return (
                   <Link key={u.id} href={`/profile/${u.username}`} className="group flex items-center gap-3">
                     <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-bold text-white transition-colors group-hover:border-cyan-500/50">
                       {u.avatar_url ? (
@@ -514,10 +524,13 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                     </div>
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate text-xs font-bold text-gray-300 transition-colors group-hover:text-cyan-400">{u.display_name || u.username}</span>
-                      <span className="text-[9px] font-medium uppercase tracking-wider text-gray-500">Aura Suprême</span>
+                      <span className={`text-[9px] font-medium uppercase tracking-wider ${eliteRank.colorClass}`}>
+                        {eliteRank.title}
+                      </span>
                     </div>
                   </Link>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

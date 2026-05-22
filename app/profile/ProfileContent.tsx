@@ -22,13 +22,7 @@ import {
   fetchMediatorViewerReviews,
   type MediatorViewerReviewDisplay,
 } from '@/lib/mediator-viewer-reviews';
-
-function getAuraRank(aura: number) {
-  if (aura >= 5000) return { label: 'Archonte', color: 'text-prestige-gold drop-shadow-[0_0_8px_rgba(212,175,55,0.6)]' };
-  if (aura >= 2000) return { label: 'Tribun', color: 'text-plasma-400' };
-  if (aura >= 500) return { label: 'Orateur', color: 'text-cyan-400' };
-  return { label: 'Citoyen', color: 'text-gray-500' };
-}
+import { getAuraRank } from '@/lib/prestige';
 
 interface UserProfile {
   id: string;
@@ -781,9 +775,9 @@ export default function ProfileContent() {
                   const rank = getAuraRank(currentAura);
                   return (
                     <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
-                      <Flame className={`h-3.5 w-3.5 ${rank.color}`} aria-hidden />
-                      <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.color}`}>
-                        {rank.label}
+                      <Flame className={`h-3.5 w-3.5 ${rank.colorClass}`} aria-hidden />
+                      <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.colorClass}`}>
+                        {rank.title}
                       </span>
                     </div>
                   );
@@ -1539,9 +1533,9 @@ export default function ProfileContent() {
                         const rank = getAuraRank(currentAura);
                         return (
                           <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
-                            <Flame className={`h-3.5 w-3.5 ${rank.color}`} aria-hidden />
-                            <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.color}`}>
-                              {rank.label}
+                            <Flame className={`h-3.5 w-3.5 ${rank.colorClass}`} aria-hidden />
+                            <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.colorClass}`}>
+                              {rank.title}
                             </span>
                           </div>
                         );
