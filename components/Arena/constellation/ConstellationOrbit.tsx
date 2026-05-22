@@ -6,6 +6,12 @@ import { ArenaVideoSurface, type ArenaVideoSurfaceProps } from '../shared/ArenaV
 import { MediatorOrb, type MediatorOrbProps } from '../shared/MediatorOrb';
 import { getOrbitPositionPercent } from './orbitGeometry';
 
+const getDynamicSizeClass = (count: number) => {
+  if (count <= 1) return 'h-[clamp(160px,46vw,22rem)] w-[clamp(160px,46vw,22rem)]';
+  if (count === 2) return 'h-[clamp(140px,40vw,18rem)] w-[clamp(140px,40vw,18rem)]';
+  return 'h-[clamp(110px,32vw,14rem)] w-[clamp(110px,32vw,14rem)]';
+};
+
 export type ConstellationOrbitProps = Omit<
   ArenaVideoSurfaceProps,
   'tile' | 'tileCount' | 'tileIndex' | 'variant' | 'isSpeaking' | 'isMutedByFocus'
@@ -41,7 +47,7 @@ export function ConstellationOrbit({
         return (
           <div
             key={tile.id}
-            className="absolute z-[80] h-[clamp(140px,38vw,16rem)] w-[clamp(140px,38vw,16rem)] -translate-x-1/2 -translate-y-1/2 overflow-visible"
+            className={`absolute z-[80] ${getDynamicSizeClass(tileCount)} -translate-x-1/2 -translate-y-1/2 overflow-visible`}
             style={{ left: pos.left, top: pos.top }}
           >
             <ArenaVideoSurface
