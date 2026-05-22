@@ -76,7 +76,7 @@ export function MediatorOrb({
         }}
         className={`pointer-events-auto relative overflow-hidden rounded-full ${
           isConstellation
-            ? 'h-[clamp(130px,30vw,12rem)] w-[clamp(130px,30vw,12rem)]'
+            ? 'h-[clamp(140px,34vw,14rem)] w-[clamp(140px,34vw,14rem)]'
             : 'h-[155px] w-[155px] sm:h-[220px] sm:w-[220px]'
         }`}
       >
