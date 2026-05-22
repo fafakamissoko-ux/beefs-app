@@ -3226,7 +3226,7 @@ export function TikTokStyleArena({
 
       {/* === ASIDE CHAT (DESKTOP SEULEMENT) === */}
       {!isCinematicMode && (
-        <aside className="hidden lg:flex relative min-h-0 w-[350px] min-w-[350px] shrink-0 h-full flex-col bg-gradient-to-b from-white/[0.04] to-white/[0.01] backdrop-blur-[60px] shadow-[-20px_0_40px_rgba(0,0,0,0.5),inset_1px_1px_0_rgba(255,255,255,0.05)] border-l border-white/[0.08] z-[100]">
+        <aside className="hidden lg:flex relative min-h-0 w-[350px] min-w-[350px] shrink-0 h-full flex-col bg-gradient-to-b from-white/[0.04] to-white/[0.01] backdrop-blur-md shadow-[-20px_0_40px_rgba(0,0,0,0.5),inset_1px_1px_0_rgba(255,255,255,0.05)] border-l border-white/[0.08] z-[100]">
         <header className="relative z-30 shrink-0 flex items-center gap-3 border-b border-white/10 px-4 py-3" data-cinema-stay>
           <button type="button" onClick={() => setShowArenaMenu(v => !v)} className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"><Menu className="h-5 w-5" strokeWidth={1.5} /></button>
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -3312,7 +3312,7 @@ export function TikTokStyleArena({
             <div ref={chatMessagesEndRef} className="h-px w-full" />
           </div>
 
-          <div id="dock-desktop" className="mt-auto flex w-full shrink-0 items-center gap-2 p-3 bg-white/[0.02] backdrop-blur-[60px] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <div id="dock-desktop" className="mt-auto flex w-full shrink-0 items-center gap-2 p-3 bg-white/[0.02] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full border border-white/[0.05] bg-black/40 px-4 py-2.5 text-[13px] text-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] placeholder-white/30 focus:bg-black/60 focus:outline-none" />
             <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/10 text-white shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-transform active:scale-95 disabled:opacity-30">😀</button>
             <button
@@ -3495,7 +3495,7 @@ export function TikTokStyleArena({
                 animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
                 exit={{ opacity: 0, x: 12, filter: 'blur(4px)' }}
                 transition={{ type: 'spring', damping: 28, stiffness: 340 }}
-                className="flex flex-row items-center gap-1.5 overflow-hidden rounded-full border border-white/[0.08] bg-white/[0.02] px-2 py-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[60px]"
+                className="flex flex-row items-center gap-1.5 overflow-hidden rounded-full border border-white/[0.08] bg-white/[0.02] px-2 py-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-md"
               >
                 {(
                   [
@@ -3533,7 +3533,7 @@ export function TikTokStyleArena({
             }}
             aria-label="Effets sonores"
             aria-expanded={soundboardExpanded}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05] text-white shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-[60px] transition-all hover:bg-white/[0.1] active:scale-95"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.05] text-white shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md transition-all hover:bg-white/[0.1] active:scale-95"
           >
             <Music className="h-5 w-5" strokeWidth={1.6} />
           </button>
@@ -3619,7 +3619,7 @@ export function TikTokStyleArena({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="pointer-events-auto max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-slate-900/60 p-2 pt-1.5 backdrop-blur-3xl"
+                className="pointer-events-auto max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-slate-900/60 p-2 pt-1.5 backdrop-blur-md"
               >
                 <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2">
                   <span className="pl-0.5 text-[11px] font-semibold text-white/75">Réactions</span>
@@ -3661,7 +3661,7 @@ export function TikTokStyleArena({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.98 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="pointer-events-auto max-h-[min(60dvh,380px)] w-[min(calc(100vw-1rem),340px)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-slate-900/60 p-3 pt-2 backdrop-blur-3xl hide-scrollbar"
+                className="pointer-events-auto max-h-[min(60dvh,380px)] w-[min(calc(100vw-1rem),340px)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-slate-900/60 p-3 pt-2 backdrop-blur-md hide-scrollbar"
               >
                 <div className="mb-3">
                   <div className="mb-2 flex justify-between items-center">
@@ -3964,7 +3964,7 @@ export function TikTokStyleArena({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/50 px-4 backdrop-blur-md"
+            className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/30 px-4 backdrop-blur-md"
             role="dialog"
             aria-modal="true"
             aria-labelledby="mediation-invite-title"
@@ -3973,7 +3973,7 @@ export function TikTokStyleArena({
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 10 }}
-              className="w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-black/50 p-6 text-center shadow-[0_0_80px_rgba(0,240,255,0.12)] backdrop-blur-3xl"
+              className="w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-black/30 p-6 text-center shadow-[0_0_80px_rgba(0,240,255,0.12)] backdrop-blur-md"
             >
               <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-cobalt-500/20">
                 <span className="text-4xl" aria-hidden>
@@ -4130,7 +4130,7 @@ export function TikTokStyleArena({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 px-4 backdrop-blur-3xl"
+            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/30 px-4 backdrop-blur-md"
             onClick={() => {
               if (!authHook?.mandatory) setAuthHook(null);
             }}
@@ -4141,7 +4141,7 @@ export function TikTokStyleArena({
               exit={{ scale: 0.9, y: 30, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-[360px] overflow-hidden rounded-[2.5rem] border border-white/10 bg-black/50 p-8 text-center shadow-[0_0_100px_rgba(0,240,255,0.15)] ring-1 ring-white/20 backdrop-blur-3xl"
+              className="relative w-full max-w-[360px] overflow-hidden rounded-[2.5rem] border border-white/10 bg-black/30 p-8 text-center shadow-[0_0_100px_rgba(0,240,255,0.15)] ring-1 ring-white/20 backdrop-blur-md"
             >
               <h2 className="mb-3 font-sans text-2xl font-black uppercase italic tracking-tighter text-white drop-shadow-md">
                 {authHook.title}
