@@ -30,6 +30,7 @@ import { hrefWithFrom } from '@/lib/navigation-return';
 import { useGlobalSearch } from '@/contexts/GlobalSearchContext';
 import { useMessagesDrawer } from '@/contexts/MessagesDrawerContext';
 import { getAuraRank } from '@/lib/prestige';
+import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 
 const buyPointsAnchorClass =
   'flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors';
@@ -243,6 +244,18 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       setUnreadMessages(parseBadgeCount(dmRpc.data));
     }
   }, [user]);
+
+  /** Retour Stripe : toast succès + nettoyage URL (?purchase=success). */
+  useEffect(() => {
+    if (typeof window === 'undefined' || !pathname) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('purchase') !== 'success') return;
+    toast('Paiement validé ! Lingots crédités.', 'success');
+    void loadUnreadCounts();
+    params.delete('purchase');
+    const q = params.toString();
+    router.replace(`${pathname}${q ? `?${q}` : ''}${window.location.hash}`, { scroll: false });
+  }, [pathname, router, toast, loadUnreadCounts]);
 
   useEffect(() => {
     void loadUnreadCounts();
@@ -593,17 +606,18 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                               ...(userRole === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
                             ].map(item =>
                               item.href === '/buy-points' ? (
-                                <a
+                                <button
                                   key={item.href}
-                                  href="/buy-points"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={() => setUserMenuOpen(false)}
+                                  type="button"
+                                  onClick={() => {
+                                    setUserMenuOpen(false);
+                                    openBuyPointsPage(router, pathname);
+                                  }}
                                   className={buyPointsAnchorClass}
                                 >
                                   <item.icon className="w-4 h-4 text-gray-500" />
                                   <span>{item.label}</span>
-                                </a>
+                                </button>
                               ) : (
                                 <Link
                                   key={item.href}

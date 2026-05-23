@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Check, Sparkles, Zap, Globe } from 'lucide-react';
 import Link from 'next/link';
@@ -15,6 +15,8 @@ import { isProductionBeefsHostname } from '@/lib/stripe-public-ui';
 
 export default function BuyPointsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get('returnTo') || '/feed';
   const { toast } = useToast();
   const [selectedPack, setSelectedPack] = useState<string>(POINT_PACKS[1].id);
   const [loading, setLoading] = useState(false);
@@ -59,6 +61,7 @@ export default function BuyPointsPage() {
         },
         body: JSON.stringify({
           packId: selectedPack,
+          returnTo,
         }),
       });
 

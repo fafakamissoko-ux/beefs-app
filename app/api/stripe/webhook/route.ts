@@ -124,7 +124,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, stripeE
     return;
   }
 
-  const { points: pointsAmount, packId } = packCheck;
+  const { points: basePoints, packId } = packCheck;
+  const totalPointsRaw = session.metadata?.total_points;
+  let pointsAmount = basePoints;
+  if (totalPointsRaw) {
+    const parsed = parseInt(totalPointsRaw, 10);
+    if (Number.isFinite(parsed) && parsed >= 1) {
+      pointsAmount = parsed;
+    }
+  }
 
   const { data: already, error: dupErr } = await supabaseAdmin
     .from('transactions')

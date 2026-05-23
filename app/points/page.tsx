@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Coins, History, ShoppingBag, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppBackButton } from '@/components/AppBackButton';
+import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 
 type TxRow = {
   id: string;
@@ -31,6 +32,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 export default function PointsDashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, loading: authLoading } = useAuth();
   const [balance, setBalance] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<TxRow[]>([]);
@@ -100,16 +102,15 @@ export default function PointsDashboardPage() {
               </p>
             </div>
           </div>
-          <a
-            href="/buy-points"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => openBuyPointsPage(router, pathname)}
             className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white brand-gradient hover:opacity-95 transition-opacity"
           >
             <ShoppingBag className="w-4 h-4" aria-hidden />
             Recharger mes Lingots
             <ArrowRight className="w-4 h-4" aria-hidden />
-          </a>
+          </button>
         </motion.div>
 
         <div className="flex items-center gap-2 mb-4">

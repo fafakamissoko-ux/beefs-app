@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -247,6 +247,7 @@ export function TikTokStyleArena({
   onShare,
 }: TikTokStyleArenaProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
 
   const runBeefManage = useCallback(
@@ -793,8 +794,8 @@ export function TikTokStyleArena({
   }, [isHost, mediatorSidebarOpen, fetchPendingInvites]);
 
   const goBuyPoints = useCallback(() => {
-    openBuyPointsPage(router);
-  }, [router]);
+    openBuyPointsPage(router, pathname);
+  }, [router, pathname]);
 
   // Participant roles from DB — maps Daily.co userNames to beef roles
   const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});

@@ -8,7 +8,11 @@ import { publicAppOrigin } from '@/lib/app-url';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { packId } = body;
+    const { packId, returnTo: returnToRaw } = body;
+    const returnTo =
+      typeof returnToRaw === 'string' && returnToRaw.startsWith('/') && !returnToRaw.startsWith('//')
+        ? returnToRaw
+        : '/feed';
 
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
@@ -126,12 +130,13 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'payment',
-      success_url: `${appOrigin}/live?purchase=success`,
+      success_url: `${appOrigin}${returnTo}?purchase=success`,
       cancel_url: `${appOrigin}/buy-points?purchase=cancelled`,
       metadata: {
         user_id: userId || 'temp',
         pack_id: packId,
         points_amount: pack.points.toString(),
+        total_points: String(pack.points + (pack.points * (pack.bonus || 0) / 100)),
         country_code: country.code,
         detected_price: adaptedPrice.amount.toString(),
         original_price: pack.price.toString(),
