@@ -296,7 +296,7 @@ export function PreJoinScreen({
               }`}
             >
               {camEnabled ? <Video className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /> : <VideoOff className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />}
-              {camEnabled ? 'Arène (Actif)' : 'Constellation'}
+              {camEnabled ? 'Caméra ON' : 'Caméra OFF'}
             </button>
           </div>
 
@@ -386,7 +386,7 @@ export function PreJoinScreen({
           onClick={handleJoin}
           className="w-full touch-manipulation rounded-2xl bg-white py-3 text-sm font-black uppercase tracking-widest text-black transition-[transform,background-color] duration-200 hover:bg-gray-200 active:scale-[0.96] sm:py-3.5 sm:text-base md:py-4"
         >
-          Entrer dans l&apos;Arène
+          Rejoindre le direct
         </button>
         </div>
       </div>

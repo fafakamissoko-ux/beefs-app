@@ -381,7 +381,11 @@ export default function ArenaPage() {
             </div>
             <h2 className="text-2xl font-black uppercase tracking-widest text-white">Check Matériel</h2>
             <p className="text-sm font-semibold text-white/50">
-              Tu entres dans l&apos;Arène en tant que <span className="uppercase text-cyan-400">{userRole}</span>.
+              Tu entres dans l&apos;Arène en tant que{' '}
+              <span className="uppercase text-cyan-400">
+                {userRole === 'mediator' ? 'Arbitre' : userRole === 'challenger' ? 'Combattant' : userRole}
+              </span>
+              .
             </p>
           </div>
 

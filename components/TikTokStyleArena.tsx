@@ -328,7 +328,7 @@ export function TikTokStyleArena({
   /** Chat en overlay bas-gauche (pas de sidebar) */
   const [mediatorSidebarOpen, setMediatorSidebarOpen] = useState(false);
   const [showGiftPicker, setShowGiftPicker] = useState(false);
-  const [giftTarget, setGiftTarget] = useState<'mediator' | 'left' | 'right'>('left');
+  const [giftTarget, setGiftTarget] = useState<string>('');
   const [showViewerList, setShowViewerList] = useState(false);
   const [showArenaMenu, setShowArenaMenu] = useState(false);
   const { openDrawer } = useMessagesDrawer();
@@ -1698,7 +1698,37 @@ export function TikTokStyleArena({
   const mediatorParticipant = isHost ? localParticipant : hostRemoteParticipant;
   const mediatorIsLocal = isHost;
   const mediatorName = isHost ? userName : host.name;
-  /** Micro du médiateur (local ou distant) — bulle prestige « audio-reactive ». */
+
+  const giftRecipients = useMemo(() => {
+    const seen = new Set<string>();
+    const out: { id: string; label: string }[] = [];
+
+    const push = (id: string | undefined | null, label: string) => {
+      if (!id || seen.has(id) || userIdsEqual(id, userId)) return;
+      seen.add(id);
+      out.push({ id, label: label.trim() || 'Participant' });
+    };
+
+    push(host.id, mediatorName || host.name || 'Arbitre');
+
+    challengerRemoteSlots.forEach((p, idx) => {
+      if (!p?.arenaUserId) return;
+      const name = p.userName?.trim();
+      const label =
+        name && !name.startsWith('En attente') ? name : `Combattant ${idx + 1}`;
+      push(p.arenaUserId, label);
+    });
+
+    return out;
+  }, [host.id, host.name, mediatorName, challengerRemoteSlots, userId]);
+
+  useEffect(() => {
+    if (giftRecipients.length === 0) return;
+    if (!giftTarget || !giftRecipients.some((r) => r.id === giftTarget)) {
+      setGiftTarget(giftRecipients[0].id);
+    }
+  }, [giftRecipients, giftTarget]);
+
   const mediatorMicEnabled = mediatorIsLocal ? micEnabled : !!mediatorParticipant?.audioOn;
 
   /** Halos néon (Phase 2) : parole réelle Daily + micro ouvert sur la piste audio. */
@@ -3695,27 +3725,22 @@ export function TikTokStyleArena({
                     </button>
                   </div>
                   <div className="flex w-full items-center gap-1 rounded-xl bg-slate-950/50 p-1">
-                    <button
-                      type="button"
-                      onClick={() => setGiftTarget('left')}
-                      className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'left' ? 'border border-white/20 bg-white/10 text-white' : 'text-white/50 hover:bg-white/10'}`}
-                    >
-                      @{leftPanelName.trim().startsWith('En attente') ? 'Challenger 1' : leftPanelName}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setGiftTarget('mediator')}
-                      className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'mediator' ? 'bg-prestige-gold text-black' : 'text-white/50 hover:bg-white/10'}`}
-                    >
-                      @{mediatorName}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setGiftTarget('right')}
-                      className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${giftTarget === 'right' ? 'border border-white/20 bg-white/10 text-white' : 'text-white/50 hover:bg-white/10'}`}
-                    >
-                      @{rightPanelName.trim().startsWith('En attente') ? 'Challenger 2' : rightPanelName}
-                    </button>
+                    {giftRecipients.map((recipient) => (
+                      <button
+                        key={recipient.id}
+                        type="button"
+                        onClick={() => setGiftTarget(recipient.id)}
+                        className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${
+                          (giftTarget || giftRecipients[0]?.id) === recipient.id
+                            ? userIdsEqual(recipient.id, host.id)
+                              ? 'bg-prestige-gold text-black'
+                              : 'border border-white/20 bg-white/10 text-white'
+                            : 'text-white/50 hover:bg-white/10'
+                        }`}
+                      >
+                        @{recipient.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
@@ -3744,23 +3769,14 @@ export function TikTokStyleArena({
                           return;
                         }
                         try {
-                          const targetUserId =
-                            giftTarget === 'left'
-                              ? leftPanel?.arenaUserId
-                              : giftTarget === 'right'
-                                ? rightPanel?.arenaUserId
-                                : host.id;
+                          const targetUserId = giftTarget || giftRecipients[0]?.id || '';
                           if (!targetUserId) {
                             toast('Participant non connecté', 'error');
                             return;
                           }
 
                           const targetName =
-                            giftTarget === 'left'
-                              ? leftPanelName
-                              : giftTarget === 'right'
-                                ? rightPanelName
-                                : host.name;
+                            giftRecipients.find((r) => r.id === targetUserId)?.label ?? host.name;
 
                           const { data: { session } } = await supabase.auth.getSession();
                           const res = await fetch('/api/gifts/send', {
