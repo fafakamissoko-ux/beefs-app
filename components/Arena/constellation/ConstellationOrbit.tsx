@@ -9,7 +9,8 @@ import { getOrbitPositionPercent } from './orbitGeometry';
 const getDynamicSizeClass = (count: number) => {
   if (count <= 1) return 'h-[clamp(160px,46vw,22rem)] w-[clamp(160px,46vw,22rem)]';
   if (count === 2) return 'h-[clamp(120px,40vw,19rem)] w-[clamp(120px,40vw,19rem)]';
-  return 'h-[clamp(110px,32vw,14rem)] w-[clamp(110px,32vw,14rem)]';
+  if (count === 3) return 'h-[clamp(96px,26vw,12rem)] w-[clamp(96px,26vw,12rem)]';
+  return 'h-[clamp(92px,24vw,11rem)] w-[clamp(92px,24vw,11rem)]';
 };
 
 export type ConstellationOrbitProps = Omit<
