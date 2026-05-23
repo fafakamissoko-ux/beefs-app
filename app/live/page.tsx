@@ -48,17 +48,6 @@ export default function LivePage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [feedType, setFeedType] = useState<'pour-vous' | 'abonnements'>('pour-vous');
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('purchase') !== 'success') return;
-    toast(
-      'Merci ! Ton achat est confirmé. Les points seront crédités sous peu.',
-      'success'
-    );
-    router.replace('/live', { scroll: false });
-  }, [router, toast]);
-
   const [followingIds, setFollowingIds] = useState<string[]>([]);
 
   useEffect(() => {

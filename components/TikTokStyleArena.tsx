@@ -794,8 +794,26 @@ export function TikTokStyleArena({
   }, [isHost, mediatorSidebarOpen, fetchPendingInvites]);
 
   const goBuyPoints = useCallback(() => {
-    openBuyPointsPage(router, pathname);
-  }, [router, pathname]);
+    const width = 450;
+    const height = 750;
+    const left = (window.innerWidth / 2) - (width / 2);
+    const top = (window.innerHeight / 2) - (height / 2);
+    const popup = window.open('/buy-points', 'StripeCheckout', `width=${width},height=${height},top=${top},left=${left}`);
+    
+    const initialPoints = userPoints;
+    const pollTimer = setInterval(async () => {
+      if (popup?.closed) {
+        clearInterval(pollTimer);
+      }
+      const { data } = await supabase.from('users').select('points').eq('id', userId).single();
+      if (data && data.points > initialPoints) {
+        setUserPoints(data.points);
+        toast('Lingots crédités !', 'success');
+        clearInterval(pollTimer);
+        if (popup && !popup.closed) popup.close();
+      }
+    }, 3000);
+  }, [userId, userPoints, toast]);
 
   // Participant roles from DB — maps Daily.co userNames to beef roles
   const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});

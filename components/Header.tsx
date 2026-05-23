@@ -250,12 +250,15 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
     if (typeof window === 'undefined' || !pathname) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('purchase') !== 'success') return;
-    toast('Paiement validé ! Lingots crédités.', 'success');
-    void loadUnreadCounts();
+    
     params.delete('purchase');
     const q = params.toString();
-    router.replace(`${pathname}${q ? `?${q}` : ''}${window.location.hash}`, { scroll: false });
-  }, [pathname, router, toast, loadUnreadCounts]);
+    const newUrl = `${pathname}${q ? `?${q}` : ''}${window.location.hash}`;
+    window.history.replaceState(null, '', newUrl || '/');
+    
+    toast('Paiement validé ! Lingots crédités.', 'success');
+    void loadUnreadCounts();
+  }, [pathname, toast, loadUnreadCounts]);
 
   useEffect(() => {
     void loadUnreadCounts();
