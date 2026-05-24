@@ -1,14 +1,15 @@
 export type ConstellationLayout = { rx: number; ry: number; centerY: number; haloVw: number };
 
 const LAYOUT_TABLE: Record<number, ConstellationLayout> = {
-  1: { rx: 0,  ry: 0,  centerY: 50, haloVw: 38 },
-  // N=2 et N=4 (Diagonales pures) : Orbite poussée aux limites (48) pour des halos massifs (28)
-  2: { rx: 48, ry: 48, centerY: 50, haloVw: 28 },
-  // N=3, N=5, N=6 (Présence de stackers verticaux) : Orbite contrainte par la hauteur (38) et halos à 20
-  3: { rx: 38, ry: 38, centerY: 50, haloVw: 20 },
-  4: { rx: 48, ry: 48, centerY: 50, haloVw: 28 },
-  5: { rx: 38, ry: 38, centerY: 50, haloVw: 20 },
-  6: { rx: 38, ry: 38, centerY: 50, haloVw: 20 },
+  1: { rx: 0,  ry: 0,  centerY: 50, haloVw: 42 },
+  // N=2 : Halos gigantesques (38vw), rapprochés du centre (rx=30)
+  2: { rx: 30, ry: 30, centerY: 50, haloVw: 38 },
+  // N=3 et N=4 : Gros halos (32vw), orbite resserrée (32)
+  3: { rx: 32, ry: 32, centerY: 50, haloVw: 32 },
+  4: { rx: 32, ry: 32, centerY: 50, haloVw: 32 },
+  // N=5 et N=6 : Mêlée (28vw), espace optimisé
+  5: { rx: 34, ry: 34, centerY: 50, haloVw: 28 },
+  6: { rx: 34, ry: 34, centerY: 50, haloVw: 28 },
 };
 
 export function computeConstellationLayout(tileCount: number): ConstellationLayout {
