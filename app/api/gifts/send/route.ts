@@ -76,9 +76,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
+      console.error('[GIFT DB CRASH]', error);
       const mapped = mapRpcError(error.message || '');
-      console.error('[GIFT ERROR DETAILED]', error);
-      return NextResponse.json({ error: mapped.body }, { status: mapped.status });
+      return NextResponse.json({ 
+        error: mapped.body + ' | Détail DB : ' + (error.message || 'inconnu') 
+      }, { status: 500 });
     }
 
     const row = (data as SendGiftResult) ?? {};
