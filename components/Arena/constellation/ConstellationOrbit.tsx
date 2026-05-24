@@ -4,14 +4,7 @@ import type { ChallengerSlotId } from '@/lib/arena-slots';
 import type { ArenaTileVM } from '../types';
 import { ArenaVideoSurface, type ArenaVideoSurfaceProps } from '../shared/ArenaVideoSurface';
 import { MediatorOrb, type MediatorOrbProps } from '../shared/MediatorOrb';
-import { getOrbitPositionPercent } from './orbitGeometry';
-
-const getDynamicSizeClass = (count: number) => {
-  if (count <= 1) return 'h-[clamp(160px,46vw,22rem)] w-[clamp(160px,46vw,22rem)]';
-  if (count === 2) return 'h-[clamp(120px,40vw,19rem)] w-[clamp(120px,40vw,19rem)]';
-  if (count === 3) return 'h-[clamp(96px,26vw,12rem)] w-[clamp(96px,26vw,12rem)]';
-  return 'h-[clamp(92px,24vw,11rem)] w-[clamp(92px,24vw,11rem)]';
-};
+import { computeConstellationLayout, getOrbitPositionPercent } from './orbitGeometry';
 
 export type ConstellationOrbitProps = Omit<
   ArenaVideoSurfaceProps,
@@ -32,12 +25,23 @@ export function ConstellationOrbit({
 }: ConstellationOrbitProps) {
   const tileCount = tiles.length;
 
+  // Layout calculé une seule fois par render pour ce tileCount
+  const layout = computeConstellationLayout(tileCount);
+
+  // Taille physique de la bulle challenger dérivée du layout (style inline pour valeur dynamique)
+  const MIN_PX = 64;
+  const MAX_REM = tileCount <= 1 ? 22 : tileCount === 2 ? 19 : tileCount === 3 ? 12 : 11;
+  const haloStyle: React.CSSProperties = {
+    width: `clamp(${MIN_PX}px, ${layout.haloVw}vw, ${MAX_REM}rem)`,
+    height: `clamp(${MIN_PX}px, ${layout.haloVw}vw, ${MAX_REM}rem)`,
+  };
+
   return (
     <div className="relative h-full w-full overflow-visible">
       <MediatorOrb {...mediator} isConstellation />
 
       {tiles.map((tile, idx) => {
-        const pos = getOrbitPositionPercent(idx, tileCount);
+        const pos = getOrbitPositionPercent(idx, tileCount, layout.rx, layout.ry, layout.centerY);
         const isSpeaking =
           speakingTurnActive && effectiveHotMicSpeakerSlot === tile.slot;
         const isMutedByFocus =
@@ -48,8 +52,8 @@ export function ConstellationOrbit({
         return (
           <div
             key={tile.id}
-            className={`absolute z-[80] ${getDynamicSizeClass(tileCount)} -translate-x-1/2 -translate-y-1/2 overflow-visible`}
-            style={{ left: pos.left, top: pos.top }}
+            className="absolute z-[80] -translate-x-1/2 -translate-y-1/2 overflow-visible"
+            style={{ left: pos.left, top: pos.top, ...haloStyle }}
           >
             <ArenaVideoSurface
               tile={tile}

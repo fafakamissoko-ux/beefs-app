@@ -817,6 +817,8 @@ export function TikTokStyleArena({
 
   // Participant roles from DB — maps Daily.co userNames to beef roles
   const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});
+  // Ordre canonique (accepted first → is_main → created_at) pour coller au feed
+  const [participantUidOrder, setParticipantUidOrder] = useState<string[]>([]);
 
   useEffect(() => {
     if (Object.keys(participantRoles).length > 0) setRolesLoaded(true);
@@ -825,7 +827,7 @@ export function TikTokStyleArena({
   const loadParticipants = useCallback(async () => {
     const { data } = await supabase
       .from('beef_participants')
-      .select('user_id, role, is_main, invite_status')
+      .select('user_id, role, is_main, invite_status, created_at')
       .eq('beef_id', roomId);
 
     // --- DÉTECTEUR D'EXPULSION (LIMBO FIX) ---
@@ -841,30 +843,54 @@ export function TikTokStyleArena({
 
     if (!data?.length) {
       setParticipantRoles({});
+      setParticipantUidOrder([]);
       return;
     }
-    type ParticipantRow = { user_id: string; role: string; invite_status?: string | null };
+
+    type ParticipantRow = {
+      user_id: string;
+      role: string;
+      is_main: boolean | null;
+      invite_status?: string | null;
+      created_at?: string | null;
+    };
+
+    // Inclure pending pour afficher le label dès l'invitation (le titre/pseudo ne doit pas disparaître)
     const validData = (data as ParticipantRow[]).filter(
-      (p) => p.role === 'mediator' || p.role === 'host' || p.invite_status === 'accepted',
+      (p) =>
+        p.role !== 'witness' &&
+        (p.invite_status === 'accepted' || p.invite_status === 'pending'),
     );
+
+    // Même ordre que le feed : accepted → is_main → created_at
+    const sorted = [...validData].sort((a, b) => {
+      const statusA = a.invite_status === 'accepted' ? 0 : 1;
+      const statusB = b.invite_status === 'accepted' ? 0 : 1;
+      if (statusA !== statusB) return statusA - statusB;
+      const mainA = a.is_main ? 0 : 1;
+      const mainB = b.is_main ? 0 : 1;
+      if (mainA !== mainB) return mainA - mainB;
+      return new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime();
+    });
+
     const { fetchUserPublicByIds } = await import('@/lib/fetch-user-public-profile');
-    const ids = validData.map((p) => p.user_id).filter(Boolean);
+    const ids = sorted.map((p) => p.user_id).filter(Boolean);
     const pubMap = await fetchUserPublicByIds(supabase, ids, 'id, username, display_name, avatar_url');
     const roles: Record<string, BeefParticipantRowMeta> = {};
-    validData.forEach((p) => {
-      const row = p as { user_id: string; role: string };
-      const u = pubMap.get(row.user_id);
+    sorted.forEach((p) => {
+      const u = pubMap.get(p.user_id);
       const dn = (u?.display_name ?? '').trim();
       const un = (u?.username ?? '').trim();
       const name = dn || un || 'Participant';
-      roles[row.user_id] = {
-        role: row.role,
+      roles[p.user_id] = {
+        role: p.role,
         name,
         matchAliases: buildParticipantAliasSet(u?.display_name, u?.username, name),
         avatarUrl: u?.avatar_url?.trim() || null,
       };
     });
     setParticipantRoles(roles);
+    setParticipantUidOrder(sorted.map((p) => p.user_id));
   }, [roomId, userId, isViewer, isHost, toast]);
 
   useEffect(() => {
@@ -872,11 +898,14 @@ export function TikTokStyleArena({
   }, [loadParticipants]);
 
   const expectedUids = useMemo(() => {
-    return Object.entries(participantRoles)
-      .filter(([uid]) => uid !== host.id)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map((e) => e[0]);
-  }, [participantRoles, host.id]);
+    // Priorité à l'ordre canonique DB (accepted first → is_main → created_at)
+    // On filtre l'host Ref qui n'occupe pas un slot challenger
+    const mid = host.id?.trim().toLowerCase() ?? '';
+    const ordered = participantUidOrder.filter((uid) => uid !== mid && participantRoles[uid]);
+    if (ordered.length > 0) return ordered;
+    // Fallback si l'état n'est pas encore peuplé
+    return Object.keys(participantRoles).filter((uid) => uid !== mid);
+  }, [participantRoles, participantUidOrder, host.id]);
 
   const [liveViewerCount, setLiveViewerCount] = useState(viewerCount);
   const liveViewerCountRef = useRef(liveViewerCount);

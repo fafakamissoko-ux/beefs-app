@@ -125,17 +125,24 @@ export default function ArenaPage() {
       }
 
       const { fetchUserPublicByIds, displayNameFromPublicRow } = await import('@/lib/fetch-user-public-profile');
-      const medRow =
-        beef.mediator_id
-          ? (await fetchUserPublicByIds(supabase, [beef.mediator_id], 'id, username, display_name, avatar_url')).get(
-              beef.mediator_id,
-            )
-          : undefined;
+
+      // Manifesto sans Ref assigné : l'initiateur joue le rôle d'hôte technique
+      const effectiveHostId: string = beef.mediator_id ?? beef.created_by ?? '';
+      const lookupIds = [...new Set([beef.mediator_id, beef.created_by].filter(Boolean) as string[])];
+      const hostPubMap =
+        lookupIds.length > 0
+          ? await fetchUserPublicByIds(supabase, lookupIds, 'id, username, display_name, avatar_url')
+          : new Map();
+      const medRow = beef.mediator_id ? hostPubMap.get(beef.mediator_id) : undefined;
+      const authorRow = beef.created_by ? hostPubMap.get(beef.created_by) : undefined;
+      const hostDisplayName = beef.mediator_id
+        ? displayNameFromPublicRow(medRow, 'Ref')
+        : displayNameFromPublicRow(authorRow, 'Initiateur');
 
       if (beef.status === 'ended' || beef.status === 'cancelled' || beef.status === 'replay') {
         setBeefEndedInfo({
           title: beef.title || 'Beef',
-          host_name: displayNameFromPublicRow(medRow, 'Ref'),
+          host_name: hostDisplayName,
           started_at: beef.started_at,
           ended_at: beef.ended_at,
         });
@@ -144,8 +151,8 @@ export default function ArenaPage() {
       }
 
       setHost({
-        id: beef.mediator_id,
-        name: displayNameFromPublicRow(medRow, 'Ref'),
+        id: effectiveHostId,
+        name: hostDisplayName,
         isHost: true,
         videoEnabled: true,
         audioEnabled: true,
@@ -161,9 +168,9 @@ export default function ArenaPage() {
         return;
       }
 
-      setIsHost(userIdsEqual(beef.mediator_id, uidTrim));
+      setIsHost(userIdsEqual(effectiveHostId, uidTrim));
 
-      if (userIdsEqual(beef.mediator_id, uidTrim)) {
+      if (userIdsEqual(effectiveHostId, uidTrim)) {
         setUserRole('mediator');
       } else {
         const uidNorm = uidTrim.toLowerCase();
