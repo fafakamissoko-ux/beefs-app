@@ -200,18 +200,9 @@ export function ArenaVideoSurface({
             {pseudoBadge}
           </div>
         </>
-      ) : variant === 'nexus' && tileCount === 3 && tileIndex === 0 ? (
+      ) : variant === 'nexus' && tileCount === 3 && (tileIndex === 0 || tileIndex === 1) ? (
         <div data-cinema-stay className={nexusChromeClass}>
-          <div className="pointer-events-auto flex flex-col items-start gap-1.5">
-            {pseudoBadge}
-            {localControls}
-          </div>
-        </div>
-      ) : variant === 'nexus' && tileCount === 3 && tileIndex === 1 ? (
-        <div data-cinema-stay className={nexusChromeClass}>
-          <div className="pointer-events-auto flex flex-col items-start gap-1 pt-12 sm:pt-14">
-            {pseudoBadge}
-          </div>
+          <div className="pointer-events-auto">{pseudoBadge}</div>
           <div className="pointer-events-auto shrink-0">{localControls}</div>
         </div>
       ) : (
