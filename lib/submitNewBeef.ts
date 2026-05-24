@@ -17,16 +17,30 @@ export interface SubmitBeefPayload {
   teaser_file?: File | null;
 }
 
+/** RFC 4122 UUID v1–v8 — rejet des chaînes arbitraires avant insertion DB. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function assertValidUuid(id: string, context: string): void {
+  if (!UUID_RE.test(id.trim())) {
+    throw new Error(`[submitNewBeef] ${context} — UUID invalide : "${id}"`);
+  }
+}
+
 /**
  * Crée un beef + participants / invitations.
  * — Les lignes `beef_participants` et invitations suivent exactement la liste envoyée par le front
  *   (`invite_status` accepted pour auth.uid(), pending pour les autres).
+ * — Notifications invités : émises automatiquement par le trigger Postgres
+ *   `trigger_notify_beef_invitation` (SECURITY DEFINER) sur `beef_invitations INSERT`.
+ *   La policy RLS `notif_insert_self` empêche les inserts cross-user côté client ;
+ *   le trigger est le chemin fiable pour notifier les tiers.
  */
 export async function submitNewBeef(
   supabase: SupabaseClient,
   userId: string,
   beefData: SubmitBeefPayload
 ) {
+  assertValidUuid(userId, 'userId');
   const { count } = await supabase
     .from('beefs')
     .select('*', { count: 'exact', head: true })
@@ -114,6 +128,11 @@ export async function submitNewBeef(
   const { data: beef, error } = await supabase.from('beefs').insert(insertData).select().single();
   if (error) throw new Error(error.message);
 
+  // Validation UUID de tous les participants avant toute insertion
+  for (const p of beefData.participants ?? []) {
+    assertValidUuid(p.user_id, `participant user_id`);
+  }
+
   const participantRows = (beefData.participants ?? []).map((p) => ({
     beef_id: beef.id,
     user_id: p.user_id,
@@ -147,8 +166,30 @@ export async function submitNewBeef(
         }))
       );
       if (invErr) throw new Error(invErr.message);
+      // ↑ Le trigger `trigger_notify_beef_invitation` (SECURITY DEFINER) envoie
+      //   automatiquement une notification 'invite' à chaque invitee lors de cet INSERT.
     }
   }
+
+  // Notification de confirmation pour le créateur (auth.uid() === userId → RLS OK).
+  // Les notifications invités sont gérées par le trigger DB ci-dessus.
+  await Promise.allSettled([
+    supabase.from('notifications').insert({
+      user_id: userId,
+      type: 'system',
+      title: beefData.intent === 'manifesto' ? 'Manifeste publié !' : 'Convocations envoyées !',
+      body:
+        beefData.intent === 'manifesto'
+          ? `Ton manifeste "${beefData.title}" est en attente d'un Ref.`
+          : `Ton beef "${beefData.title}" est prêt — en attente des confirmations.`,
+      link: `/arena/${beef.id}`,
+      metadata: {
+        subtype: 'beef_created',
+        beef_id: beef.id,
+        intent: beefData.intent,
+      },
+    }),
+  ]);
 
   return beef as { id: string };
 }
