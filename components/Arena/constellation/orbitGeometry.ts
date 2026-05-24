@@ -1,12 +1,12 @@
 export type ConstellationLayout = { rx: number; ry: number; centerY: number; haloVw: number };
 
 const LAYOUT_TABLE: Record<number, ConstellationLayout> = {
-  1: { rx: 0,  ry: 0,  centerY: 50, haloVw: 40 },
-  2: { rx: 32, ry: 28, centerY: 50, haloVw: 36 },
-  3: { rx: 32, ry: 28, centerY: 50, haloVw: 34 },
-  4: { rx: 34, ry: 28, centerY: 50, haloVw: 32 },
-  5: { rx: 34, ry: 28, centerY: 50, haloVw: 28 },
-  6: { rx: 34, ry: 30, centerY: 50, haloVw: 26 },
+  1: { rx: 0,  ry: 0,  centerY: 50, haloVw: 36 },
+  2: { rx: 34, ry: 34, centerY: 50, haloVw: 26 },
+  3: { rx: 34, ry: 34, centerY: 50, haloVw: 26 },
+  4: { rx: 34, ry: 34, centerY: 50, haloVw: 26 },
+  5: { rx: 36, ry: 36, centerY: 50, haloVw: 22 },
+  6: { rx: 36, ry: 36, centerY: 50, haloVw: 22 },
 };
 
 export function computeConstellationLayout(tileCount: number): ConstellationLayout {
