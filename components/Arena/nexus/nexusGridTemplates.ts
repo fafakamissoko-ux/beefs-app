@@ -34,6 +34,12 @@ export function getNexusChromeUiPos(index: number, tileCount: number): string {
   if (tileCount === 2 && index === 1) {
     return 'top-[3.5rem] right-2 sm:top-[4.5rem] sm:right-4 flex-row-reverse items-start';
   }
+  if (tileCount === 3 && index === 0) {
+    return 'bottom-2 left-2 sm:bottom-4 sm:left-4 flex-col items-start gap-1.5 pointer-events-none';
+  }
+  if (tileCount === 3 && index === 1) {
+    return 'inset-x-2 bottom-2 sm:inset-x-4 sm:bottom-4 flex-row items-end justify-between gap-2 pointer-events-none';
+  }
   if (tileCount === 3 && index === 2) {
     return 'left-2 right-2 sm:left-4 sm:right-4 top-2 sm:top-4 flex-row justify-between items-start pointer-events-none';
   }

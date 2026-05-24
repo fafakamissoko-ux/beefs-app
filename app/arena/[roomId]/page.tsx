@@ -135,7 +135,7 @@ export default function ArenaPage() {
       if (beef.status === 'ended' || beef.status === 'cancelled' || beef.status === 'replay') {
         setBeefEndedInfo({
           title: beef.title || 'Beef',
-          host_name: displayNameFromPublicRow(medRow, 'Médiateur'),
+          host_name: displayNameFromPublicRow(medRow, 'Ref'),
           started_at: beef.started_at,
           ended_at: beef.ended_at,
         });
@@ -145,7 +145,7 @@ export default function ArenaPage() {
 
       setHost({
         id: beef.mediator_id,
-        name: displayNameFromPublicRow(medRow, 'Médiateur'),
+        name: displayNameFromPublicRow(medRow, 'Ref'),
         isHost: true,
         videoEnabled: true,
         audioEnabled: true,
@@ -381,9 +381,9 @@ export default function ArenaPage() {
             </div>
             <h2 className="text-2xl font-black uppercase tracking-widest text-white">Check Matériel</h2>
             <p className="text-sm font-semibold text-white/50">
-              Tu entres dans l&apos;Arène en tant que{' '}
+              Tu entres dans l&apos;Agora en tant que{' '}
               <span className="uppercase text-cyan-400">
-                {userRole === 'mediator' ? 'Arbitre' : userRole === 'challenger' ? 'Combattant' : userRole}
+                {userRole === 'mediator' ? 'Ref' : userRole === 'challenger' ? 'Combattant' : userRole}
               </span>
               .
             </p>

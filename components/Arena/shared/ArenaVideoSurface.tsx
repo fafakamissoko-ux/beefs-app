@@ -64,9 +64,13 @@ export function ArenaVideoSurface({
     variant === 'constellation' ? 'rounded-full overflow-visible' : 'rounded-[2rem]';
 
   const chromePointer =
-    tileCount === 3 && tileIndex === 2 && variant === 'nexus' ? '' : 'pointer-events-auto';
+    variant === 'nexus' && tileCount === 3 && tileIndex === 2 ? '' : 'pointer-events-auto';
 
-  const nexusChromeClass = `absolute z-[140] flex gap-1.5 ${tile.uiPosClass} ${chromePointer}`;
+  const nexusChromeClass = `absolute z-[140] flex gap-1.5 ${tile.uiPosClass} ${
+    variant === 'nexus' && tileCount === 3 && (tileIndex === 0 || tileIndex === 1)
+      ? 'pointer-events-none'
+      : chromePointer
+  }`;
 
   const localControls = tile.isLocal ? (
     <div
@@ -81,7 +85,7 @@ export function ArenaVideoSurface({
             speakingTurnActive &&
             effectiveHotMicSpeakerSlot !== tile.slot;
           if (micMutedByMediator || mediatorHoldingFloor || isLockedByTurn) {
-            onToast('Micro verrouillé par le médiateur ou les règles du débat.', 'error');
+            onToast('Micro verrouillé par le Ref ou les règles du débat.', 'error');
             return;
           }
           onToggleMic();
@@ -196,6 +200,20 @@ export function ArenaVideoSurface({
             {pseudoBadge}
           </div>
         </>
+      ) : variant === 'nexus' && tileCount === 3 && tileIndex === 0 ? (
+        <div data-cinema-stay className={nexusChromeClass}>
+          <div className="pointer-events-auto flex flex-col items-start gap-1.5">
+            {pseudoBadge}
+            {localControls}
+          </div>
+        </div>
+      ) : variant === 'nexus' && tileCount === 3 && tileIndex === 1 ? (
+        <div data-cinema-stay className={nexusChromeClass}>
+          <div className="pointer-events-auto flex flex-col items-start gap-1 pt-12 sm:pt-14">
+            {pseudoBadge}
+          </div>
+          <div className="pointer-events-auto shrink-0">{localControls}</div>
+        </div>
       ) : (
         <div data-cinema-stay className={nexusChromeClass}>
           <div

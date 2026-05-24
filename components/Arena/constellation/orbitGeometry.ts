@@ -8,11 +8,9 @@ export function getOrbitPositionPercent(
   }
 
   // 1. Décalage du centre vers le haut (42% au lieu de 50%) pour fuir le chat mobile
-  const centerY = total <= 2 ? 42 : 40;
-
-  // 2. Orbite Elliptique : Ajustement strict des rayons
-  const rx = total <= 2 ? 36 : total === 3 ? 32 : 34;
-  const ry = total <= 2 ? 32 : total === 3 ? 30 : 36;
+  const centerY = total <= 2 ? 42 : total === 3 ? 40 : 45;
+  const rx = total <= 2 ? 36 : total === 3 ? 32 : 32;
+  const ry = total <= 2 ? 32 : total === 3 ? 30 : 28;
 
   let angle: number;
 

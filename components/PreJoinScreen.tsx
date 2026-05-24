@@ -366,7 +366,7 @@ export function PreJoinScreen({
           <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 backdrop-blur-xl sm:gap-3 sm:px-4 sm:py-3">
             <div className="min-w-0 flex-1">
               <p className="font-sans text-xs text-white/40">
-                Médiateur : <span className="font-bold text-white/60">{mediatorName}</span>
+                Ref : <span className="font-bold text-white/60">{mediatorName}</span>
               </p>
             </div>
             <MutinyProtocol

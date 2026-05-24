@@ -51,7 +51,7 @@ export function MutinyProtocol({
         animate={{ opacity: 1, scale: 1 }}
         className="rounded-2xl bg-ember-500/10 border border-ember-500/25 px-4 py-3 text-center"
       >
-        <p className="font-sans text-sm font-bold text-ember-400">Médiateur récusé</p>
+        <p className="font-sans text-sm font-bold text-ember-400">Ref récusé</p>
         <p className="font-mono text-[10px] text-white/35 mt-1 tracking-wider">Le dossier revient à l&apos;état manifeste</p>
       </motion.div>
     );
@@ -66,7 +66,7 @@ export function MutinyProtocol({
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-white/25 hover:text-white/50 hover:bg-white/[0.04] transition-colors"
-            aria-label="Options médiateur"
+            aria-label="Options Ref"
           >
             <span className="text-sm tracking-widest">···</span>
           </button>
@@ -86,7 +86,7 @@ export function MutinyProtocol({
                   className="w-full flex items-center gap-2.5 px-4 py-3 font-sans text-sm text-ember-400 hover:bg-ember-500/10 transition-colors text-left"
                 >
                   <AlertTriangle className="w-4 h-4" />
-                  Récuser le médiateur
+                  Récuser le Ref
                 </button>
               </motion.div>
             )}
@@ -174,7 +174,7 @@ export function MutinyProtocol({
             exit={{ opacity: 0 }}
             className="rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3 mt-2 text-center"
           >
-            <p className="font-sans text-xs text-white/40">Motion rejetée — le médiateur est maintenu</p>
+            <p className="font-sans text-xs text-white/40">Motion rejetée — le Ref est maintenu</p>
           </motion.div>
         )}
       </AnimatePresence>

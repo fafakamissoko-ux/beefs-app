@@ -1139,7 +1139,7 @@ export function TikTokStyleArena({
     [roomId, startingBeef, scheduleBeefGlobalTimerBroadcast, runBeefManage, toast],
   );
 
-  const endBeef = useCallback(async (reason: string = 'Terminé par le médiateur') => {
+  const endBeef = useCallback(async (reason: string = 'Terminé par le Ref') => {
     if (beefEndedRef.current) return;
     stopAllMediaTracksRef.current();
     if (typeof window !== 'undefined') {
@@ -1219,7 +1219,7 @@ export function TikTokStyleArena({
         return;
       }
       if (kind === 'closed') {
-        void endBeef('Clos par le médiateur');
+        void endBeef('Clos par le Ref');
         return;
       }
       playRematchThunderSfx();
@@ -1333,7 +1333,7 @@ export function TikTokStyleArena({
   // Mediator leaving triggers endBeef
   const handleLeaveAsMediator = useCallback(async () => {
     if (isHost) {
-      await endBeef('Le médiateur a mis fin au beef');
+      await endBeef('Le Ref a mis fin au beef');
     }
   }, [isHost, endBeef]);
 
@@ -1518,7 +1518,7 @@ export function TikTokStyleArena({
               mediatorGraceRef.current = null;
               setMediatorGraceActive(false);
               toast(
-                'Le médiateur est toujours absent — le direct reste ouvert jusqu’à son retour ou la fin côté médiateur.',
+                'Le Ref est toujours absent — le direct reste ouvert jusqu’à son retour ou la fin côté Ref.',
                 'info',
               );
               return 0;
@@ -1534,7 +1534,7 @@ export function TikTokStyleArena({
       mediatorGraceRef.current = null;
       setMediatorGraceActive(false);
       setMediatorGraceSeconds(0);
-      toast('Le médiateur est de retour', 'success');
+      toast('Le Ref est de retour', 'success');
     }
 
     // Challengers partis, médiateur toujours présent : ne pas terminer le beef — notification unique.
@@ -1578,7 +1578,7 @@ export function TikTokStyleArena({
       });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error || 'Erreur');
-      toast('Demande envoyée ! Le médiateur va te répondre.', 'success');
+      toast('Demande envoyée ! Le Ref va te répondre.', 'success');
     } catch (error) {
       console.error('Erreur lors de la demande');
       const msg = error instanceof Error ? error.message : 'Impossible d’envoyer la demande.';
@@ -1709,7 +1709,7 @@ export function TikTokStyleArena({
       out.push({ id, label: label.trim() || 'Participant' });
     };
 
-    push(host.id, mediatorName || host.name || 'Arbitre');
+    push(host.id, mediatorName || host.name || 'Ref');
 
     challengerRemoteSlots.forEach((p, idx) => {
       if (!p?.arenaUserId) return;
@@ -2733,7 +2733,7 @@ export function TikTokStyleArena({
     }
     setIsLeaving(true);
     if (isHost) {
-      await endBeef('Le médiateur a mis fin au beef');
+      await endBeef('Le Ref a mis fin au beef');
     } else {
       await leave();
       router.replace('/feed');
@@ -2892,7 +2892,7 @@ export function TikTokStyleArena({
     },
     onMediatorFloor: (active: boolean) => setMediatorHoldingFloor(active),
     onMediationToss: (firstName: string) => {
-      toast(`${firstName} parle en premier (tirage au sort décidé par le médiateur).`, 'success');
+      toast(`${firstName} parle en premier (tirage au sort décidé par le Ref).`, 'success');
     },
     onStructuredDebate: (p: StructuredDebateBroadcastPayload) => {
       if (p.enabled) {
@@ -3203,7 +3203,7 @@ export function TikTokStyleArena({
                 )}
                 <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-prestige-gold/20 bg-prestige-gold/10 p-2">
                   <span className="text-lg font-black tabular-nums text-prestige-gold">{endSummary.resonanceM}</span>
-                  <span className="mt-1 font-mono text-[9px] uppercase text-prestige-gold/60">Arbitre</span>
+                  <span className="mt-1 font-mono text-[9px] uppercase text-prestige-gold/60">Ref</span>
                 </div>
                 {endSummary.resonanceB > 0 && (
                   <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-white/20 bg-white/10 p-2">
@@ -3230,7 +3230,7 @@ export function TikTokStyleArena({
             <div className="space-y-3 pt-2">
               <p className="text-xs text-gray-500 leading-relaxed px-1">
                 Il n’y a pas de fil de commentaires sur cet écran : les spectateurs peuvent{' '}
-                <span className="text-gray-400">noter le médiateur</span> (étoiles + commentaire) depuis le résumé du
+                <span className="text-gray-400">noter le Ref</span> (étoiles + commentaire) depuis le résumé du
                 beef.
               </p>
               <motion.button
@@ -3242,7 +3242,7 @@ export function TikTokStyleArena({
                 }}
                 className="w-full rounded-full border border-white/10 bg-white/10 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/15"
               >
-                Résumé & avis médiateur
+                Résumé & avis Ref
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.96 }}
@@ -4022,7 +4022,7 @@ export function TikTokStyleArena({
                 Invitation à la médiation
               </h2>
               <p className="mb-6 text-sm text-white/60">
-                Le médiateur souhaite t&apos;entendre. Installe-toi à la table des échanges en préparant ta caméra et
+                Le Ref souhaite t&apos;entendre. Installe-toi à la table des échanges en préparant ta caméra et
                 ton micro.
               </p>
               <button
@@ -4074,7 +4074,7 @@ export function TikTokStyleArena({
             key="arena-menu-mobile-drawer"
             role="dialog"
             aria-modal="true"
-            aria-label="Menu Arène"
+            aria-label="Menu Agora"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

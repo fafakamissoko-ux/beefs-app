@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       const mapped = mapRpcError(error.message || '');
+      console.error('[GIFT ERROR DETAILED]', error);
       return NextResponse.json({ error: mapped.body }, { status: mapped.status });
     }
 
