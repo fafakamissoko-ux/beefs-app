@@ -35,10 +35,12 @@ export function getNexusChromeUiPos(index: number, tileCount: number): string {
     return 'top-[3.5rem] right-2 sm:top-[4.5rem] sm:right-4 flex-row-reverse items-start';
   }
   if (tileCount === 3 && index === 0) {
-    return 'bottom-2 left-2 sm:bottom-4 sm:left-4 flex-col items-start gap-1.5 pointer-events-none';
+    // Haut-Gauche : Pseudo Haut-Droite (self-end), Contrôles Bas-Gauche (self-start)
+    return 'inset-2 sm:inset-3 flex-col justify-between !pointer-events-none [&>*:first-child]:self-end [&>*:first-child]:!pointer-events-auto [&>*:last-child]:self-start [&>*:last-child]:!pointer-events-auto';
   }
   if (tileCount === 3 && index === 1) {
-    return 'inset-x-2 bottom-2 sm:inset-x-4 sm:bottom-4 flex-row items-end justify-between gap-2 pointer-events-none';
+    // Haut-Droite : Pseudo Haut-Gauche (self-start), Contrôles Bas-Droite (self-end). pt-12 pour éviter les icônes Live/Share.
+    return 'inset-2 sm:inset-3 pt-12 sm:pt-14 flex-col justify-between !pointer-events-none [&>*:first-child]:self-start [&>*:first-child]:!pointer-events-auto [&>*:last-child]:self-end [&>*:last-child]:!pointer-events-auto';
   }
   if (tileCount === 3 && index === 2) {
     return 'left-2 right-2 sm:left-4 sm:right-4 top-2 sm:top-4 flex-row justify-between items-start pointer-events-none';
