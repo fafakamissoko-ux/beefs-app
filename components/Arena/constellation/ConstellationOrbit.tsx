@@ -28,9 +28,9 @@ export function ConstellationOrbit({
   // Layout calculé une seule fois par render pour ce tileCount
   const layout = computeConstellationLayout(tileCount);
 
-  // Taille physique de la bulle challenger dérivée du layout (style inline pour valeur dynamique)
+  // Taille physique de la bulle challenger dérivée du layout (identique à MediatorOrb)
   const MIN_PX = 64;
-  const MAX_REM = tileCount <= 1 ? 22 : tileCount === 2 ? 19 : tileCount === 3 ? 12 : 11;
+  const MAX_REM = 22;
   const haloStyle: React.CSSProperties = {
     width: `clamp(${MIN_PX}px, ${layout.haloVw}vw, ${MAX_REM}rem)`,
     height: `clamp(${MIN_PX}px, ${layout.haloVw}vw, ${MAX_REM}rem)`,
@@ -38,7 +38,7 @@ export function ConstellationOrbit({
 
   return (
     <div className="relative h-full w-full overflow-visible">
-      <MediatorOrb {...mediator} isConstellation />
+      <MediatorOrb {...mediator} isConstellation constellationHaloVw={layout.haloVw} />
 
       {tiles.map((tile, idx) => {
         const pos = getOrbitPositionPercent(idx, tileCount, layout.rx, layout.ry, layout.centerY);

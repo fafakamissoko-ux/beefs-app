@@ -1,5 +1,6 @@
 'use client';
 
+import type React from 'react';
 import { motion } from 'framer-motion';
 import { Pause, Sliders, Timer } from 'lucide-react';
 import { ParticipantVideo } from '@/components/ParticipantVideo';
@@ -30,6 +31,7 @@ export interface MediatorOrbProps {
   onRecoverMediaDevices: () => void | Promise<void>;
   onToggleMediatorSidebar: () => void;
   isConstellation?: boolean;
+  constellationHaloVw?: number;
 }
 
 export function MediatorOrb({
@@ -56,12 +58,23 @@ export function MediatorOrb({
   onRecoverMediaDevices,
   onToggleMediatorSidebar,
   isConstellation = false,
+  constellationHaloVw,
 }: MediatorOrbProps) {
+  const MIN_PX = 64;
+  const MAX_REM = 22;
+  const orbSizeStyle: React.CSSProperties =
+    isConstellation && constellationHaloVw
+      ? {
+          width: `clamp(${MIN_PX}px, ${constellationHaloVw}vw, ${MAX_REM}rem)`,
+          height: `clamp(${MIN_PX}px, ${constellationHaloVw}vw, ${MAX_REM}rem)`,
+        }
+      : { width: 'clamp(110px, 30vw, 14rem)', height: 'clamp(110px, 30vw, 14rem)' };
+
   return (
     <div
       data-cinema-stay
       className={`pointer-events-none absolute left-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center ${
-        isConstellation ? 'top-[42%]' : 'top-1/2'
+        isConstellation ? 'top-[50%]' : 'top-1/2'
       }`}
     >
       <motion.div
@@ -73,11 +86,10 @@ export function MediatorOrb({
         }}
         style={{
           filter: `brightness(${1 + (auraMed / 300) * 0.6}) saturate(${1 + (auraMed / 300) * 0.4})`,
+          ...orbSizeStyle,
         }}
         className={`pointer-events-auto relative overflow-hidden rounded-full ${
-          isConstellation
-            ? 'h-[clamp(110px,30vw,14rem)] w-[clamp(110px,30vw,14rem)]'
-            : 'h-[155px] w-[155px] sm:h-[220px] sm:w-[220px]'
+          !isConstellation ? 'sm:h-[220px] sm:w-[220px]' : ''
         }`}
       >
         {mediatorIsLocal && isCameraInterrupted && !isViewer && (
