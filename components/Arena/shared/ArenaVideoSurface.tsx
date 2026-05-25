@@ -136,15 +136,26 @@ export function ArenaVideoSurface({
 
   return (
     <motion.div
-      whileTap={{ scale: 0.95 }}
-      className={`relative h-full w-full cursor-pointer bg-transparent backdrop-blur-2xl transition-all duration-300 ${roundedClass} ${variant === 'nexus' ? tile.cellClass : ''} ${variant === 'nexus' ? 'overflow-hidden' : ''}`}
+      className={`relative h-full w-full bg-transparent backdrop-blur-2xl transition-all duration-300 ${roundedClass} ${variant === 'nexus' ? tile.cellClass : ''} ${variant === 'nexus' ? 'overflow-hidden' : ''}`}
       style={{
         boxShadow: auraShadow,
         zIndex: tile.aura > 0 ? 10 : 1,
         opacity: isMutedByFocus ? 0.4 : 1,
       }}
     >
-      <div className="absolute inset-0 overflow-hidden rounded-[inherit]" style={{ filter: filterVal }}>
+      <button
+        type="button"
+        data-cinema-stay
+        onPointerDown={(e) => {
+          if (!tile.isLocal) {
+            e.stopPropagation();
+            onTapSupport(tile.slot);
+            onPreferSide(tile.slot);
+          }
+        }}
+        className={`absolute inset-0 z-[28] h-full w-full touch-manipulation outline-none overflow-hidden rounded-[inherit] ${!tile.isLocal ? 'active:scale-95 transition-transform duration-150 cursor-pointer' : 'cursor-default'}`}
+        style={{ filter: filterVal }}
+      >
         {tile.hasActiveVideo && tile.panel?.videoTrack ? (
           <ParticipantVideo
             videoTrack={tile.panel.videoTrack}
@@ -168,19 +179,7 @@ export function ArenaVideoSurface({
             </span>
           </div>
         )}
-      </div>
-
-      {!tile.isLocal && (
-        <motion.button
-          type="button"
-          data-cinema-stay
-          onPointerDown={(e) => {
-            onTapSupport(tile.slot);
-            onPreferSide(tile.slot);
-          }}
-          className="absolute inset-0 z-[28] h-full w-full touch-manipulation outline-none"
-        />
-      )}
+      </button>
 
       {variant === 'constellation' ? (
         <>
