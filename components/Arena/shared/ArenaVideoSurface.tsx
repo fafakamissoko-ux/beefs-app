@@ -136,7 +136,8 @@ export function ArenaVideoSurface({
 
   return (
     <motion.div
-      className={`relative h-full w-full bg-transparent backdrop-blur-2xl transition-all duration-300 ${roundedClass} ${variant === 'nexus' ? tile.cellClass : ''} ${variant === 'nexus' ? 'overflow-hidden' : ''}`}
+      whileTap={{ scale: 0.95 }}
+      className={`relative h-full w-full cursor-pointer bg-transparent backdrop-blur-2xl transition-all duration-300 ${roundedClass} ${variant === 'nexus' ? tile.cellClass : ''} ${variant === 'nexus' ? 'overflow-hidden' : ''}`}
       style={{
         boxShadow: auraShadow,
         zIndex: tile.aura > 0 ? 10 : 1,
@@ -173,7 +174,6 @@ export function ArenaVideoSurface({
         <motion.button
           type="button"
           data-cinema-stay
-          whileTap={{ scale: 0.96 }}
           onPointerDown={(e) => {
             e.stopPropagation();
             onTapSupport(tile.slot);
