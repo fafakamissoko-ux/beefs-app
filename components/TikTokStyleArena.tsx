@@ -3517,7 +3517,7 @@ export function TikTokStyleArena({
           >
           <div
             ref={chatMessagesMobileScrollRef}
-            className="pointer-events-auto w-[85%] max-h-[30vh] overflow-y-auto overscroll-contain touch-pan-y px-3 mb-2 flex flex-col hide-scrollbar"
+            className="pointer-events-auto w-fit max-w-[85%] min-w-[50%] max-h-[30vh] overflow-y-auto overscroll-contain touch-pan-y px-3 mb-2 flex flex-col hide-scrollbar"
           >
             <div className="mt-auto flex flex-col justify-end">
               {visibleMessages.map((msg) => (
