@@ -3521,11 +3521,11 @@ export function TikTokStyleArena({
           >
             <div className="mt-auto flex flex-col justify-end">
               {visibleMessages.map((msg) => (
-                <div key={msg.id} className="mb-2 pointer-events-auto w-fit max-w-full leading-tight">
+                <div key={msg.id} className="mb-2 pointer-events-auto w-fit max-w-[70%] leading-tight">
                   <span className={`text-[11px] font-bold mr-2 drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${getUsernameColor(msg.user_name)}`}>
                     {msg.user_name}
                   </span>
-                  <span className="text-[13px] text-white font-medium break-words drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
+                  <span className="text-[13px] text-white font-medium break-all drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
                     {msg.content}
                   </span>
                 </div>

@@ -65,10 +65,10 @@ export function MediatorOrb({
   const orbSizeStyle: React.CSSProperties =
     isConstellation && constellationHaloVw
       ? {
-          width: `clamp(${MIN_PX}px, ${constellationHaloVw}vw, ${MAX_REM}rem)`,
-          height: `clamp(${MIN_PX}px, ${constellationHaloVw}vw, ${MAX_REM}rem)`,
+          width: `clamp(${MIN_PX}px, ${constellationHaloVw}vmin, ${MAX_REM}rem)`,
+          height: `clamp(${MIN_PX}px, ${constellationHaloVw}vmin, ${MAX_REM}rem)`,
         }
-      : { width: 'clamp(110px, 30vw, 14rem)', height: 'clamp(110px, 30vw, 14rem)' };
+      : { width: 'clamp(110px, 30vmin, 14rem)', height: 'clamp(110px, 30vmin, 14rem)' };
 
   return (
     <div

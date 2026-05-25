@@ -32,8 +32,8 @@ export function ConstellationOrbit({
   const MIN_PX = 64;
   const MAX_REM = 22;
   const haloStyle: React.CSSProperties = {
-    width: `clamp(${MIN_PX}px, ${layout.haloVw}vw, ${MAX_REM}rem)`,
-    height: `clamp(${MIN_PX}px, ${layout.haloVw}vw, ${MAX_REM}rem)`,
+    width: `clamp(${MIN_PX}px, ${layout.haloVw}vmin, ${MAX_REM}rem)`,
+    height: `clamp(${MIN_PX}px, ${layout.haloVw}vmin, ${MAX_REM}rem)`,
   };
 
   return (
