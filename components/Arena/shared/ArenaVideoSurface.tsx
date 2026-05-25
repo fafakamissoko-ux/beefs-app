@@ -175,7 +175,6 @@ export function ArenaVideoSurface({
           type="button"
           data-cinema-stay
           onPointerDown={(e) => {
-            e.stopPropagation();
             onTapSupport(tile.slot);
             onPreferSide(tile.slot);
           }}
