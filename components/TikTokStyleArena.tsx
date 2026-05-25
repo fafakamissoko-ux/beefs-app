@@ -3517,15 +3517,15 @@ export function TikTokStyleArena({
           >
           <div
             ref={chatMessagesMobileScrollRef}
-            className="pointer-events-auto w-fit max-w-[85%] min-w-[50%] max-h-[30vh] overflow-y-auto overscroll-contain touch-pan-y px-3 mb-2 flex flex-col hide-scrollbar"
+            className="pointer-events-none w-fit max-w-[85%] min-w-[50%] max-h-[30vh] overflow-y-auto overscroll-contain touch-pan-y px-3 mb-2 flex flex-col hide-scrollbar"
           >
             <div className="mt-auto flex flex-col justify-end">
               {visibleMessages.map((msg) => (
-                <div key={msg.id} className="mb-2">
+                <div key={msg.id} className="mb-2 pointer-events-auto w-fit max-w-full leading-tight">
                   <span className={`text-[11px] font-bold mr-2 drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${getUsernameColor(msg.user_name)}`}>
                     {msg.user_name}
                   </span>
-                  <span className="text-[13px] text-white font-medium drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
+                  <span className="text-[13px] text-white font-medium break-words drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
                     {msg.content}
                   </span>
                 </div>
