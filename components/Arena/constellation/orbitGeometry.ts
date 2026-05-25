@@ -36,7 +36,7 @@ export function getOrbitPositionPercent(
     angle = ([(-3 * Math.PI) / 4, -Math.PI / 4, Math.PI / 4, (3 * Math.PI) / 4, -Math.PI / 2, Math.PI / 2] as number[])[index] ?? 0;
 
   return {
-    left: `${50 + rx * Math.cos(angle)}%`,
-    top: `${cy + ry * Math.sin(angle)}%`,
+    left: `calc(50% + ${rx * Math.cos(angle)}vmin)`,
+    top: `calc(${cy}% + ${ry * Math.sin(angle)}vmin)`,
   };
 }
