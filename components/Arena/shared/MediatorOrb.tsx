@@ -68,7 +68,7 @@ export function MediatorOrb({
           width: `clamp(${MIN_PX}px, ${constellationHaloVw}vmin, ${MAX_REM}rem)`,
           height: `clamp(${MIN_PX}px, ${constellationHaloVw}vmin, ${MAX_REM}rem)`,
         }
-      : { width: 'clamp(110px, 30vmin, 14rem)', height: 'clamp(110px, 30vmin, 14rem)' };
+      : { width: `clamp(110px, 30vmin, ${MAX_REM}rem)`, height: `clamp(110px, 30vmin, ${MAX_REM}rem)` };
 
   return (
     <div
