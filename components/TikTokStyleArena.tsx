@@ -3304,8 +3304,8 @@ export function TikTokStyleArena({
 
       {/* === ASIDE CHAT (DESKTOP SEULEMENT) === */}
       {!isCinematicMode && (
-        <aside className="hidden lg:flex absolute left-0 top-0 bottom-0 w-[350px] flex-col bg-gradient-to-b from-white/[0.01] to-transparent backdrop-blur-[3px] shadow-[20px_0_40px_rgba(0,0,0,0.5),inset_1px_1px_0_rgba(255,255,255,0.05)] border-r border-white/[0.08] z-[100]">
-        <header className="relative z-30 shrink-0 flex items-center gap-3 border-b border-white/10 px-4 py-3" data-cinema-stay>
+        <aside className="hidden lg:flex relative min-h-0 w-[350px] min-w-[350px] shrink-0 h-full flex-col bg-gradient-to-r from-black/50 via-white/[0.02] to-transparent backdrop-blur-md shadow-[20px_0_40px_rgba(0,0,0,0.3),inset_1px_1px_0_rgba(255,255,255,0.05)] border-r border-white/[0.08] z-[100]">
+        <header className="relative z-30 shrink-0 flex items-center gap-3 border-b border-white/10 pl-2 pr-4 py-3" data-cinema-stay>
           <button type="button" onClick={() => setShowArenaMenu(v => !v)} className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"><Menu className="h-5 w-5" strokeWidth={1.5} /></button>
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <div className={`flex items-center rounded-full px-2 py-0.5 ${liveBadgeHot ? 'animate-pulse bg-rose-600 shadow-[0_0_15px_rgba(225,29,72,0.5)]' : 'bg-white/10'}`}>
@@ -3374,7 +3374,7 @@ export function TikTokStyleArena({
           )}
         </header>
         <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
-          <div ref={chatMessagesScrollRef} className="flex-1 overflow-y-auto px-4 py-2 hide-scrollbar">
+          <div ref={chatMessagesScrollRef} className="flex-1 overflow-y-auto pl-2 pr-4 py-2 hide-scrollbar">
             {visibleMessages.map((msg) => (
               <div key={msg.id} className="mb-3">
                 <span
@@ -3390,7 +3390,7 @@ export function TikTokStyleArena({
             <div ref={chatMessagesEndRef} className="h-px w-full" />
           </div>
 
-          <div id="dock-desktop" className="mt-auto flex w-full shrink-0 items-center gap-2 p-3 bg-white/[0.02] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <div id="dock-desktop" className="mt-auto flex w-full shrink-0 items-center gap-2 pl-2 pr-3 py-3 bg-white/[0.02] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full border border-white/[0.05] bg-black/40 px-4 py-2.5 text-[13px] text-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] placeholder-white/30 focus:bg-black/60 focus:outline-none" />
             <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/10 text-white shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-transform active:scale-95 disabled:opacity-30">😀</button>
             <button
