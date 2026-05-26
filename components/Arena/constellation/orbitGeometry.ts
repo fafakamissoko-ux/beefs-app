@@ -2,13 +2,10 @@ export type ConstellationLayout = { rx: number; ry: number; centerY: number; hal
 
 const LAYOUT_TABLE: Record<number, ConstellationLayout> = {
   1: { rx: 0,  ry: 0,  centerY: 50, haloVw: 42 },
-  // N=2 : Écartement rx à 40 pour éviter la collision (haloVw 38 + marge 2)
-  2: { rx: 40, ry: 40, centerY: 50, haloVw: 38 },
-  // N=3 : Réduction du halo à 28 et rx à 32 pour éviter l'overflow vertical sur Desktop
+  // N=2 : Écartement rx à 43 pour aérer visuellement les halos
+  2: { rx: 43, ry: 43, centerY: 50, haloVw: 38 },
   3: { rx: 32, ry: 32, centerY: 50, haloVw: 28 },
-  // N=4 : Configuration équilibrée intacte
   4: { rx: 34, ry: 34, centerY: 50, haloVw: 32 },
-  // N=5 et N=6 : Réduction massive du halo à 22 pour éviter la collision des paires à 45°
   5: { rx: 34, ry: 34, centerY: 50, haloVw: 22 },
   6: { rx: 34, ry: 34, centerY: 50, haloVw: 22 },
 };
