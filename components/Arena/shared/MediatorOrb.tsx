@@ -141,7 +141,7 @@ export function MediatorOrb({
       </motion.div>
 
       {/* BADGE SORTI DU CERCLE */}
-      <div className="pointer-events-auto absolute top-[calc(100%+8px)] left-1/2 z-[160] flex w-max max-w-[90%] -translate-x-1/2 flex-col items-center gap-1">
+      <div className="pointer-events-auto absolute top-[calc(100%+8px)] left-1/2 z-[160] flex w-max max-w-[200px] -translate-x-1/2 flex-col items-center gap-1">
         <div className="flex items-center rounded-full border border-white/[0.08] bg-slate-900/40 p-1 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px] transition-all duration-300 hover:bg-black/60 sm:px-2 sm:py-1">
           <button
             type="button"

@@ -7,34 +7,45 @@ export function computeConstellationLayout(tileCount: number, vpW: number, vpH: 
 
   const vmin_px = Math.min(vpW, vpH);
   const isDesktop = vpW >= 1024;
-  const cW = isDesktop ? vpW - 350 : vpW; // 350px pour le panneau de chat
-  const cH = vpH - 80; // Marge sécurisée pour le chrome (header/footer)
+  const cW = isDesktop ? vpW - 350 : vpW;
+  const cH = vpH - 80;
 
-  const badge_vmin = (44 * 100) / vmin_px; // Épaisseur absolue du badge en vmin
+  const badge_vmin = (44 * 100) / vmin_px;
   const V_avail = ((cH / 2) - 44) * 100 / vmin_px;
   const H_avail = ((cW / 2) - 10) * 100 / vmin_px;
 
   const hasStacker = tileCount === 3 || tileCount === 5 || tileCount === 6;
-  const sin_min = 0.7071; // Diagonales (45° / 135°)
-  const sin_max = hasStacker ? 1.0 : 0.7071; // Position Haut/Bas (90°)
+  const sin_min = 0.7071;
+  const sin_max = hasStacker ? 1.0 : 0.7071;
   const cos_max = 0.7071;
 
-  // Équation de maximisation
-  const num = (V_avail * sin_min) - (badge_vmin * sin_max);
-  const den = sin_max + (sin_min / 2);
+  let haloVw = 8;
+  let ry = 0;
 
-  let haloVw = Math.floor(num / den);
-  haloVw = Math.max(8, haloVw); // Seuil de lisibilité minimal
-
-  let ry = Math.floor((V_avail - (haloVw / 2)) / sin_max);
-
-  // BOUCLE DE SÉCURITÉ : Compense les arrondis JS et force un gap de +0.5 vmin
-  while (haloVw > 8 && (ry * sin_min < haloVw + badge_vmin + 0.5)) {
-    haloVw -= 1;
+  if (isDesktop) {
+    // --- DOCTRINE DESKTOP : Contrainte diagonale inutile, optimisation max ---
+    if (hasStacker) {
+      const cH_safe = ((cH / 2) / vmin_px) * 100 - 2;
+      haloVw = Math.floor((cH_safe - badge_vmin) / 1.5);
+      ry = Math.floor(cH_safe - (haloVw / 2));
+    } else {
+      haloVw = 28;
+      ry = Math.floor((V_avail - (haloVw / 2)) / sin_min);
+    }
+  } else {
+    // --- DOCTRINE MOBILE : Contrainte verticale 1D stricte conservée ---
+    const num = (V_avail * sin_min) - (badge_vmin * sin_max);
+    const den = sin_max + (sin_min / 2);
+    haloVw = Math.max(8, Math.floor(num / den));
     ry = Math.floor((V_avail - (haloVw / 2)) / sin_max);
+
+    while (haloVw > 8 && (ry * sin_min < haloVw + badge_vmin + 0.5)) {
+      haloVw -= 1;
+      ry = Math.floor((V_avail - (haloVw / 2)) / sin_max);
+    }
   }
 
-  // Calcul du rayon horizontal (priorise la largeur sans devenir trop plat)
+  // Calcul du rayon horizontal (Bridage à 1.2 pour empêcher l'aplatissement)
   const rx_vert = Math.floor((H_avail - (haloVw / 2)) / cos_max);
   const rx = Math.floor(Math.min(rx_vert, ry * 1.2));
 

@@ -193,7 +193,7 @@ export function ArenaVideoSurface({
           )}
           <div
             data-cinema-stay
-            className="pointer-events-auto absolute top-[calc(100%+8px)] left-1/2 z-[140] flex w-max max-w-[90%] -translate-x-1/2 flex-col items-center"
+            className="pointer-events-auto absolute top-[calc(100%+8px)] left-1/2 z-[140] flex w-max max-w-[200px] -translate-x-1/2 flex-col items-center"
           >
             {pseudoBadge}
           </div>
