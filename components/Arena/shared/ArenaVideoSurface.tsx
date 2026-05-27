@@ -116,7 +116,7 @@ export function ArenaVideoSurface({
             e.stopPropagation();
             void onOpenProfile(tile.name, tile.arenaUserId);
           }}
-          className="truncate text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]"
+          className="truncate max-w-[80px] sm:max-w-[130px] text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]"
         >
           @{tile.name}
         </button>
@@ -186,14 +186,14 @@ export function ArenaVideoSurface({
           {tile.isLocal && (
             <div
               data-cinema-stay
-              className="pointer-events-auto absolute top-[calc(100%+3.2rem)] left-1/2 z-[150] flex -translate-x-1/2 items-center gap-1.5"
+              className="pointer-events-auto absolute bottom-[3.5rem] left-1/2 z-[150] flex -translate-x-1/2 items-center gap-1.5"
             >
               {localControls}
             </div>
           )}
           <div
             data-cinema-stay
-            className="pointer-events-auto absolute top-[calc(100%+8px)] left-1/2 z-[140] flex w-max max-w-[90%] -translate-x-1/2 flex-col items-center"
+            className="pointer-events-auto absolute bottom-2 left-1/2 z-[140] flex w-max max-w-[90%] -translate-x-1/2 flex-col items-center"
           >
             {pseudoBadge}
           </div>
