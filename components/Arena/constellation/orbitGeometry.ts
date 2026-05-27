@@ -36,7 +36,7 @@ export function computeConstellationLayout(tileCount: number, vpW: number, vpH: 
 
   // Calcul du rayon horizontal (priorise la largeur sans devenir trop plat)
   const rx_vert = Math.floor((H_avail - (haloVw / 2)) / cos_max);
-  const rx = Math.floor(Math.min(rx_vert, ry * 2.5));
+  const rx = Math.floor(Math.min(rx_vert, ry * 1.2));
 
   return { rx, ry, centerY: 50, haloVw };
 }

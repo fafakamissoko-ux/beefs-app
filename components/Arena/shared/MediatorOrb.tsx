@@ -73,7 +73,7 @@ export function MediatorOrb({
   return (
     <div
       data-cinema-stay
-      className={`pointer-events-none absolute left-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 justify-center ${
+      className={`pointer-events-none absolute left-1/2 z-[100] flex -translate-x-1/2 -translate-y-1/2 flex-col items-center ${
         isConstellation ? 'top-[50%]' : 'top-1/2'
       }`}
     >
@@ -138,40 +138,41 @@ export function MediatorOrb({
             <span className="m-auto text-4xl opacity-30 sm:text-5xl">⚖️</span>
           )}
         </button>
+      </motion.div>
 
-        <div className="pointer-events-auto absolute bottom-2 left-1/2 z-[160] flex w-max max-w-[90%] -translate-x-1/2 flex-col items-center gap-1">
-          <div className="flex items-center rounded-full border border-white/[0.08] bg-slate-900/40 p-1 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px] transition-all duration-300 hover:bg-black/60 sm:px-2 sm:py-1">
+      {/* BADGE SORTI DU CERCLE */}
+      <div className="pointer-events-auto absolute top-[calc(100%+8px)] left-1/2 z-[160] flex w-max max-w-[90%] -translate-x-1/2 flex-col items-center gap-1">
+        <div className="flex items-center rounded-full border border-white/[0.08] bg-slate-900/40 p-1 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px] transition-all duration-300 hover:bg-black/60 sm:px-2 sm:py-1">
+          <button
+            type="button"
+            onClick={() => void onOpenProfile(mediatorName, mediatorHostId)}
+            className="truncate max-w-[80px] sm:max-w-[130px] px-3 py-0.5 text-[11px] font-black text-prestige-gold transition-colors hover:text-white drop-shadow-md sm:text-[12px]"
+          >
+            @{mediatorName}
+          </button>
+          {isHost && (
             <button
               type="button"
-              onClick={() => void onOpenProfile(mediatorName, mediatorHostId)}
-              className="truncate max-w-[80px] sm:max-w-[130px] px-3 py-0.5 text-[11px] font-black text-prestige-gold transition-colors hover:text-white drop-shadow-md sm:text-[12px]"
+              data-mediator-sidebar-toggle
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleMediatorSidebar();
+              }}
+              className="ml-1 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/5 text-prestige-gold shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] transition-colors hover:bg-white/15 hover:text-white active:scale-95"
+              title="Command Deck"
             >
-              @{mediatorName}
+              <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </button>
-            {isHost && (
-              <button
-                type="button"
-                data-mediator-sidebar-toggle
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleMediatorSidebar();
-                }}
-                className="ml-1 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/5 text-prestige-gold shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] transition-colors hover:bg-white/15 hover:text-white active:scale-95"
-                title="Command Deck"
-              >
-                <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-            )}
-          </div>
-
-          {isJoined && timerActive && (
-            <div className="flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-600/10 px-3 py-1 text-[10px] font-black text-rose-500 backdrop-blur-md tabular-nums shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
-              {timerPaused ? <Pause className="h-3 w-3 text-amber-200" /> : <Timer className="h-3 w-3" />}
-              {formatBeefTime(beefTimeRemaining)}
-            </div>
           )}
         </div>
-      </motion.div>
+
+        {isJoined && timerActive && (
+          <div className="flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-600/10 px-3 py-1 text-[10px] font-black text-rose-500 backdrop-blur-md tabular-nums shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
+            {timerPaused ? <Pause className="h-3 w-3 text-amber-200" /> : <Timer className="h-3 w-3" />}
+            {formatBeefTime(beefTimeRemaining)}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

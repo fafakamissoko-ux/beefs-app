@@ -186,14 +186,14 @@ export function ArenaVideoSurface({
           {tile.isLocal && (
             <div
               data-cinema-stay
-              className="pointer-events-auto absolute bottom-[3.5rem] left-1/2 z-[150] flex -translate-x-1/2 items-center gap-1.5"
+              className="pointer-events-auto absolute top-[calc(100%+3.2rem)] left-1/2 z-[150] flex -translate-x-1/2 items-center gap-1.5"
             >
               {localControls}
             </div>
           )}
           <div
             data-cinema-stay
-            className="pointer-events-auto absolute bottom-2 left-1/2 z-[140] flex w-max max-w-[90%] -translate-x-1/2 flex-col items-center"
+            className="pointer-events-auto absolute top-[calc(100%+8px)] left-1/2 z-[140] flex w-max max-w-[90%] -translate-x-1/2 flex-col items-center"
           >
             {pseudoBadge}
           </div>
