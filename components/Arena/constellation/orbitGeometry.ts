@@ -2,12 +2,15 @@ export type ConstellationLayout = { rx: number; ry: number; centerY: number; hal
 
 const LAYOUT_TABLE: Record<number, ConstellationLayout> = {
   1: { rx: 0,  ry: 0,  centerY: 50, haloVw: 42 },
-  // N=2 : Écartement rx à 43 pour aérer visuellement les halos
-  2: { rx: 43, ry: 43, centerY: 50, haloVw: 38 },
-  3: { rx: 32, ry: 32, centerY: 50, haloVw: 28 },
-  4: { rx: 34, ry: 34, centerY: 50, haloVw: 32 },
-  5: { rx: 34, ry: 34, centerY: 50, haloVw: 22 },
-  6: { rx: 34, ry: 34, centerY: 50, haloVw: 22 },
+  // N=2 : Écartement sécurisé
+  2: { rx: 40, ry: 40, centerY: 50, haloVw: 34 },
+  // N=3 : Aération verticale pour passer le gap du badge haut
+  3: { rx: 34, ry: 34, centerY: 50, haloVw: 24 },
+  // N=4 : Diagonales pures libérant le centre
+  4: { rx: 35, ry: 35, centerY: 50, haloVw: 24 },
+  // N=5 et N=6 : Densité maximale sans sortie d'écran (max 96vmin)
+  5: { rx: 34, ry: 34, centerY: 50, haloVw: 20 },
+  6: { rx: 34, ry: 34, centerY: 50, haloVw: 20 },
 };
 
 export function computeConstellationLayout(tileCount: number): ConstellationLayout {
