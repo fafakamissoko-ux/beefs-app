@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import type { ChallengerSlotId } from '@/lib/arena-slots';
 import type { ArenaTileVM } from '../types';
 import { ArenaVideoSurface, type ArenaVideoSurfaceProps } from '../shared/ArenaVideoSurface';
@@ -25,10 +26,24 @@ export function ConstellationOrbit({
 }: ConstellationOrbitProps) {
   const tileCount = tiles.length;
 
-  // Layout calculé une seule fois par render pour ce tileCount
-  const layout = computeConstellationLayout(tileCount);
+  // 1. Détection dynamique de l'écran
+  const [vp, setVp] = useState({ w: 0, h: 0 });
 
-  // Taille physique de la bulle challenger dérivée du layout (identique à MediatorOrb)
+  useEffect(() => {
+    const handleResize = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // 2. Hydratation sécurisée
+  if (vp.w === 0 || vp.h === 0) {
+    return <div className="relative h-full w-full overflow-visible" />;
+  }
+
+  // 3. Calcul Dynamique
+  const layout = computeConstellationLayout(tileCount, vp.w, vp.h);
+
   const MIN_PX = 64;
   const MAX_REM = 22;
   const haloStyle: React.CSSProperties = {
