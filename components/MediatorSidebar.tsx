@@ -343,25 +343,38 @@ export function MediatorSidebar({
                             <p className="mb-3 text-center text-[11px] text-blue-200/50">
                               Définissez la durée puis lancez le direct.
                             </p>
-                            <div className="mb-4 flex justify-center">
-                              <TimeWheelPicker
-                                valueSec={matchDurationMin * 60}
-                                minSec={60}
-                                maxSec={maxBeefDurationSec}
-                                onChange={(sec) =>
-                                  setMatchDurationMin(
-                                    Math.max(
-                                      1,
-                                      Math.min(
-                                        Math.floor(maxBeefDurationSec / 60),
-                                        Math.floor(sec / 60),
-                                      ),
-                                    ),
-                                  )
-                                }
-                                ariaLabel="Durée du match en minutes"
-                                className="w-full max-w-[220px] rounded-3xl border border-white/12 bg-white/[0.06] py-3"
-                              />
+                            <div className="mb-4 flex justify-center gap-3">
+                              <div className="flex flex-col items-center">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="4"
+                                  value={Math.floor(matchDurationMin / 60)}
+                                  onChange={(e) => {
+                                    const h = Math.max(0, Math.min(4, Number(e.target.value) || 0));
+                                    const m = matchDurationMin % 60;
+                                    setMatchDurationMin(h * 60 + m);
+                                  }}
+                                  className="w-16 rounded-xl border border-white/10 bg-black/40 py-2 text-center text-lg font-black text-white focus:border-sky-400 focus:outline-none"
+                                />
+                                <span className="mt-1 font-mono text-[9px] uppercase tracking-wider text-white/50">Heures</span>
+                              </div>
+                              <span className="self-start pt-2 text-xl font-black text-white/30">:</span>
+                              <div className="flex flex-col items-center">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="59"
+                                  value={matchDurationMin % 60}
+                                  onChange={(e) => {
+                                    const h = Math.floor(matchDurationMin / 60);
+                                    const m = Math.max(0, Math.min(59, Number(e.target.value) || 0));
+                                    setMatchDurationMin(Math.max(1, h * 60 + m));
+                                  }}
+                                  className="w-16 rounded-xl border border-white/10 bg-black/40 py-2 text-center text-lg font-black text-white focus:border-sky-400 focus:outline-none"
+                                />
+                                <span className="mt-1 font-mono text-[9px] uppercase tracking-wider text-white/50">Minutes</span>
+                              </div>
                             </div>
                             <button
                               type="button"
@@ -415,19 +428,46 @@ export function MediatorSidebar({
 
                       <div className="rounded-xl border border-white/10 bg-slate-950/50 p-4">
                         <p className="mb-3 text-center font-mono text-[10px] font-bold uppercase tracking-widest text-blue-200/50">
-                          Durée allouée au tour / Hot mic (TimeWheelPicker)
+                          Durée allouée au tour / Hot mic
                         </p>
-                        <TimeWheelPicker
-                          valueSec={speakingTurnSec}
-                          minSec={15}
-                          maxSec={600}
-                          onChange={(sec) => {
-                            setSpeakingTurnSec(sec);
-                            onParolePresetSecChange(sec);
-                          }}
-                          ariaLabel="Durée du prochain tour de parole"
-                          className="mx-auto mb-5 w-full max-w-[240px] rounded-3xl border border-white/[0.1] bg-white/[0.04] py-3"
-                        />
+                        <div className="mx-auto mb-5 flex justify-center gap-3">
+                          <div className="flex flex-col items-center">
+                            <input
+                              type="number"
+                              min="0"
+                              max="10"
+                              value={Math.floor(speakingTurnSec / 60)}
+                              onChange={(e) => {
+                                const m = Math.max(0, Math.min(10, Number(e.target.value) || 0));
+                                const s = speakingTurnSec % 60;
+                                const total = m * 60 + s;
+                                setSpeakingTurnSec(Math.max(15, total));
+                                onParolePresetSecChange(Math.max(15, total));
+                              }}
+                              className="w-16 rounded-xl border border-white/10 bg-black/40 py-2 text-center text-lg font-black text-cyan-400 focus:border-cyan-300 focus:outline-none"
+                            />
+                            <span className="mt-1 font-mono text-[9px] uppercase tracking-wider text-blue-200/50">Minutes</span>
+                          </div>
+                          <span className="self-start pt-2 text-xl font-black text-blue-200/30">:</span>
+                          <div className="flex flex-col items-center">
+                            <input
+                              type="number"
+                              min="0"
+                              max="59"
+                              step="15"
+                              value={speakingTurnSec % 60}
+                              onChange={(e) => {
+                                const m = Math.floor(speakingTurnSec / 60);
+                                const s = Math.max(0, Math.min(59, Number(e.target.value) || 0));
+                                const total = m * 60 + s;
+                                setSpeakingTurnSec(Math.max(15, total));
+                                onParolePresetSecChange(Math.max(15, total));
+                              }}
+                              className="w-16 rounded-xl border border-white/10 bg-black/40 py-2 text-center text-lg font-black text-cyan-400 focus:border-cyan-300 focus:outline-none"
+                            />
+                            <span className="mt-1 font-mono text-[9px] uppercase tracking-wider text-blue-200/50">Secondes</span>
+                          </div>
+                        </div>
 
                         {speakingTurnActive && (
                           <div className="space-y-3">
