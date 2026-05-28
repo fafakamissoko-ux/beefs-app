@@ -36,7 +36,12 @@ export function computeConstellationLayout(tileCount: number, vpW: number, vpH: 
     // --- DOCTRINE MOBILE : Contrainte verticale 1D stricte conservée ---
     const num = (V_avail * sin_min) - (badge_vmin * sin_max);
     const den = sin_max + (sin_min / 2);
-    haloVw = Math.max(8, Math.floor(num / den));
+    let haloVw_V = Math.max(8, Math.floor(num / den));
+
+    // BOUCLIER HORIZONTAL : Empêche l'explosion de largeur sur N=4
+    const haloVw_H_max = Math.floor(H_avail - 0.5);
+    haloVw = Math.min(haloVw_V, haloVw_H_max);
+
     ry = Math.floor((V_avail - (haloVw / 2)) / sin_max);
 
     while (haloVw > 8 && (ry * sin_min < haloVw + badge_vmin + 0.5)) {
