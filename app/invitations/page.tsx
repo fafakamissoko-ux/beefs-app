@@ -94,6 +94,8 @@ export default function InvitationsPage() {
   const [loading, setLoading] = useState(true);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
   const [transitioningTo, setTransitioningTo] = useState<string | null>(null);
+  const [participantsData, setParticipantsData] = useState<Array<{ beef_id: string; user_id: string }>>([]);
+  const [pubOpponentsMap, setPubOpponentsMap] = useState<Map<string, import('@/lib/fetch-user-public-profile').UserPublicProfileRow>>(new Map());
 
   const loadInvitations = useCallback(async () => {
     if (!user) return;
@@ -136,6 +138,21 @@ export default function InvitationsPage() {
         ),
       ];
       const pubMap = await fetchUserPublicByIds(supabase, [...new Set([...inviterIds, ...mediatorIds])], 'id, username, display_name');
+
+      // --- RÉCUPÉRATION DES VRAIS ADVERSAIRES ---
+      const { data: participantsData } = await supabase
+        .from('beef_participants')
+        .select('beef_id, user_id')
+        .in('beef_id', beefIds)
+        .eq('is_main', true);
+
+      const opponentIds = [...new Set((participantsData || []).map(p => p.user_id))];
+      const opponentsMap = opponentIds.length > 0
+        ? await fetchUserPublicByIds(supabase, opponentIds, 'id, display_name, username')
+        : new Map<string, import('@/lib/fetch-user-public-profile').UserPublicProfileRow>();
+      setParticipantsData(participantsData || []);
+      setPubOpponentsMap(opponentsMap);
+      // ------------------------------------------
 
       const formattedInvitations: Invitation[] = [];
       for (const inv of validInvs) {
@@ -391,7 +408,23 @@ export default function InvitationsPage() {
                           </div>
                         )}
                       <p className="text-sm leading-relaxed text-white/60">
-                        <span className="font-bold text-white">Adversaire :</span> {invitation.inviter_display_name}
+                        {(() => {
+                          const opps = participantsData
+                            .filter((p: { beef_id: string; user_id: string }) => p.beef_id === invitation.beef_id && p.user_id !== user?.id)
+                            .map((p: { beef_id: string; user_id: string }) => {
+                              const u = pubOpponentsMap.get(p.user_id);
+                              return displayNameFromPublicRow(u, 'Inconnu');
+                            });
+
+                          const label = opps.length > 1 ? 'Opps :' : 'Opp :';
+                          const names = opps.length > 0 ? opps.join(', ') : 'En attente';
+
+                          return (
+                            <>
+                              <span className="font-bold text-white">{label}</span> {names}
+                            </>
+                          );
+                        })()}
                         <br />
                         <span
                           className={`mt-1 inline-block font-bold ${invitation.beef.mediator_display_name === 'En attente' ? 'text-gray-500 italic' : 'text-white'}`}
