@@ -8,7 +8,8 @@ export function computeConstellationLayout(tileCount: number, vpW: number, vpH: 
   const vmin_px = Math.min(vpW, vpH);
   const isDesktop = vpW >= 1024;
   const cW = isDesktop ? vpW - 350 : vpW;
-  const cH = vpH - 80;
+  // 220px amputés sur Mobile pour sécuriser la zone de chat (bas) et le header (haut)
+  const cH = isDesktop ? vpH - 80 : vpH - 220;
 
   const badge_vmin = (44 * 100) / vmin_px;
   const V_avail = ((cH / 2) - 44) * 100 / vmin_px;
