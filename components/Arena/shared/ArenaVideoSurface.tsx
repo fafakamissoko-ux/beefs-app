@@ -186,11 +186,11 @@ export function ArenaVideoSurface({
           {tile.isLocal && (
             <div
               data-cinema-stay
-              className={`pointer-events-auto absolute ${
+              className={`pointer-events-auto absolute left-1/2 z-[150] flex -translate-x-1/2 items-center gap-1.5 ${
                 (tileCount === 3 && tileIndex === 0) || ((tileCount === 5 || tileCount === 6) && tileIndex === 4)
-                  ? 'bottom-[calc(100%+3.2rem)]'
-                  : 'top-[calc(100%+3.2rem)]'
-              } left-1/2 z-[150] flex -translate-x-1/2 items-center gap-1.5`}
+                  ? 'bottom-4 flex-row'
+                  : 'top-[calc(100%+3.2rem)] flex-row'
+              }`}
             >
               {localControls}
             </div>
