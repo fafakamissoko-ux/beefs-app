@@ -614,27 +614,22 @@ export function TikTokStyleArena({
 
   const fetchPendingInvites = useCallback(async () => {
     if (!isHost) return;
-    type ParticipantPendingRow = {
-      user_id: string;
-      users:
-        | { username: string | null; display_name: string | null }
-        | { username: string | null; display_name: string | null }[]
-        | null;
-    };
     const { data, error } = await supabase
       .from('beef_participants')
-      .select('user_id, users(username, display_name)')
+      .select('user_id')
       .eq('beef_id', roomId)
       .eq('invite_status', 'pending');
-    if (error) {
+    if (error || !data) {
       console.warn('[Live] Invités en attente : chargement impossible');
       return;
     }
-    const raw = (data ?? []) as unknown as ParticipantPendingRow[];
+    const { fetchUserPublicByIds } = await import('@/lib/fetch-user-public-profile');
+    const ids = data.map((r) => r.user_id);
+    const pubMap = await fetchUserPublicByIds(supabase, ids, 'id, username, display_name');
+
     setPendingInvites(
-      raw.map((r) => {
-        const uJoin = r.users;
-        const u = Array.isArray(uJoin) ? uJoin[0] : uJoin;
+      data.map((r) => {
+        const u = pubMap.get(r.user_id);
         return {
           userId: r.user_id,
           label:
@@ -855,11 +850,11 @@ export function TikTokStyleArena({
       created_at?: string | null;
     };
 
-    // Inclure pending pour afficher le label dès l'invitation (le titre/pseudo ne doit pas disparaître)
+    // Seuls les "accepted" obtiennent un halo dans la grille géométrique
     const validData = (data as ParticipantRow[]).filter(
       (p) =>
         p.role !== 'witness' &&
-        (p.invite_status === 'accepted' || p.invite_status === 'pending'),
+        p.invite_status === 'accepted',
     );
 
     // Même ordre que le feed : accepted → is_main → created_at
