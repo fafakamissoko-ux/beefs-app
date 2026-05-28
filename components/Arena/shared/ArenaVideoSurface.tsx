@@ -188,7 +188,7 @@ export function ArenaVideoSurface({
               data-cinema-stay
               className={`pointer-events-auto absolute left-1/2 z-[150] flex -translate-x-1/2 items-center gap-1.5 ${
                 (tileCount === 3 && tileIndex === 0) || ((tileCount === 5 || tileCount === 6) && tileIndex === 4)
-                  ? 'bottom-[calc(100%+1.5rem)] flex-row'
+                  ? 'bottom-[calc(100%+1.5rem)] lg:bottom-[calc(100%+4px)] flex-row'
                   : 'top-[calc(100%+3.2rem)] flex-row'
               }`}
             >
