@@ -30,7 +30,7 @@ export function AppBackButton({
       type="button"
       onClick={handleClick}
       aria-label={label === 'Retour' ? 'Retour à la page précédente' : `${label} — retour`}
-      className={`inline-flex items-center gap-2 text-brand-400 hover:text-brand-300 transition-colors ${className}`}
+      className={`inline-flex min-h-[44px] min-w-[44px] items-center gap-2 text-brand-400 hover:text-brand-300 transition-colors ${className}`}
     >
       <ArrowLeft className="w-4 h-4 shrink-0 text-gray-500" aria-hidden />
       <span className="font-semibold">{label}</span>

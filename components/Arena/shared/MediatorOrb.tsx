@@ -158,7 +158,7 @@ export function MediatorOrb({
                 e.stopPropagation();
                 onToggleMediatorSidebar();
               }}
-              className="ml-1 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/5 text-prestige-gold shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] transition-colors hover:bg-white/15 hover:text-white active:scale-95"
+              className="relative after:absolute after:-inset-2 ml-1 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/5 text-prestige-gold shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] transition-colors hover:bg-white/15 hover:text-white active:scale-95"
               title="Command Deck"
             >
               <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
