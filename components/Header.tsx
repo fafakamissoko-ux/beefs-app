@@ -706,14 +706,14 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="lg:hidden border-b border-white/10 bg-slate-950/50 backdrop-blur-md overflow-y-auto max-h-[calc(100dvh-3.5rem)] shadow-2xl"
+              className="lg:hidden border-b border-white/10 bg-transparent overflow-y-auto max-h-[calc(100dvh-3.5rem)]"
             >
               {/* Backdrop */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 top-14 bg-black/60 backdrop-blur-sm z-[-1]"
+                className="fixed inset-0 top-14 z-[-1]"
                 onClick={() => setMobileMenuOpen(false)}
               />
               <nav className="px-3 py-3 space-y-0.5">
