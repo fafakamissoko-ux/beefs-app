@@ -217,18 +217,17 @@ export function BeefCard({
   const descText = description?.trim() ?? '';
   const auraTier = engagement_score >= 500 ? 3 : engagement_score >= 50 ? 2 : 1;
 
-  const dynamicBorderClass =
-    auraTier === 3
-      ? 'border-volt-500/80 shadow-[0_0_20px_rgba(223,255,0,0.15)]'
-      : auraTier === 2
-        ? 'border-cyan-500/60 shadow-[0_0_15px_rgba(0,240,255,0.1)]'
-        : 'border-white/[0.08] hover:border-white/20';
+  const baseSystem = 'glass-prestige relative flex h-full w-full flex-col overflow-hidden rounded-[1.2rem] transition-all duration-300 md:rounded-[1.5rem]';
 
-  const chromeRelative =
-    'relative flex h-full w-full flex-col overflow-hidden rounded-[1.2rem] border bg-black transition-all duration-300 md:rounded-[1.5rem]';
-  const liveRing = status === 'live' ? 'shadow-[0_0_0_1px_rgba(0,240,255,0.35)]' : '';
+  let statusVariant = '';
+  if (status === 'live') statusVariant = 'ring-2 ring-cyan-400 border-transparent';
+  else if (status === 'pending' || status === 'scheduled' || status === 'ready') statusVariant = 'ring-1 ring-white/10';
+  else if (status === 'ended' || status === 'replay' || status === 'completed' || status === 'cancelled') statusVariant = 'opacity-60 saturate-75 hover:opacity-100 hover:saturate-100';
+
+  const auraFX = auraTier === 3 ? 'shadow-[0_0_20px_rgba(223,255,0,0.15)]' : auraTier === 2 ? 'shadow-[0_0_15px_rgba(0,240,255,0.1)]' : '';
   const manifestoStroke = isManifesto ? 'border-dashed border-white/20' : '';
-  const beefCardChromeClass = [chromeRelative, dynamicBorderClass, liveRing, manifestoStroke].filter(Boolean).join(' ');
+
+  const beefCardChromeClass = [baseSystem, statusVariant, auraFX, manifestoStroke].filter(Boolean).join(' ');
 
   return (
     <div className={beefCardChromeClass}>
@@ -239,11 +238,11 @@ export function BeefCard({
         onClick={() => setIsTeaserOpen(true)}
         onMouseEnter={() => isReplay && setReplayHover(true)}
         onMouseLeave={() => isReplay && setReplayHover(false)}
-        className="group relative aspect-[3/4] max-h-[70dvh] w-full shrink-0 cursor-pointer overflow-hidden bg-black"
+        className="group relative aspect-[3/4] max-h-[70dvh] w-full shrink-0 cursor-pointer overflow-hidden bg-transparent"
       >
         <div
           ref={mediaBlockRef}
-          className="absolute inset-0 z-0 h-full w-full overflow-hidden rounded-[1.2rem] bg-black md:rounded-[1.5rem]"
+          className="absolute inset-0 z-0 h-full w-full overflow-hidden rounded-[1.2rem] bg-transparent md:rounded-[1.5rem]"
         >
           {video_url ? (
             <video
