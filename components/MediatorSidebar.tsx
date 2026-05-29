@@ -209,7 +209,7 @@ export function MediatorSidebar({
                         e.stopPropagation();
                         onClose();
                       }}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[0.08] text-white transition hover:bg-white/[0.14]"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[0.08] text-white transition hover:bg-white/[0.14]"
                       aria-label="Fermer"
                     >
                       <X className="h-5 w-5" strokeWidth={1.75} />
@@ -273,7 +273,7 @@ export function MediatorSidebar({
                                       if (!row.sessionId) return;
                                       onSetChallengerMuted(row.sessionId, row.debaterId, row.audioOn);
                                     }}
-                                    className={`flex min-h-[40px] min-w-[5.5rem] items-center justify-center rounded-xl border px-3 font-mono text-[10px] font-black uppercase tracking-wide transition disabled:cursor-not-allowed disabled:opacity-35 ${
+                                    className={`flex min-h-[44px] min-w-[5.5rem] items-center justify-center rounded-xl border px-3 font-mono text-[10px] font-black uppercase tracking-wide transition disabled:cursor-not-allowed disabled:opacity-35 ${
                                       muted
                                         ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.2),inset_0_1px_1px_rgba(255,255,255,0.1)] hover:bg-emerald-500/20'
                                         : 'border-rose-500/40 bg-rose-950/40 text-rose-400 shadow-[0_0_10px_rgba(225,29,72,0.3),inset_0_1px_1px_rgba(255,255,255,0.1)] hover:bg-rose-900/50'
@@ -298,7 +298,7 @@ export function MediatorSidebar({
                                       if (!row.sessionId) return;
                                       onHotMic(row.slot, speakingTurnSec);
                                     }}
-                                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3 font-mono text-[10px] font-black uppercase tracking-wide text-cyan-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-35"
+                                    className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3 font-mono text-[10px] font-black uppercase tracking-wide text-cyan-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-35"
                                   >
                                     <Radio className="h-3.5 w-3.5" />
                                     Hot mic
@@ -307,7 +307,7 @@ export function MediatorSidebar({
                                     type="button"
                                     disabled={!row.sessionId}
                                     onClick={() => void onEjectParticipant(row.sessionId)}
-                                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-blue-200/55 transition hover:border-rose-500/40 hover:bg-rose-950/40 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-35"
+                                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-blue-200/55 transition hover:border-rose-500/40 hover:bg-rose-950/40 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-35"
                                     aria-label="Expulser le participant"
                                     title="Expulser"
                                   >
@@ -640,7 +640,7 @@ export function MediatorSidebar({
                                       onRejectPendingInvite?.(inv.userId);
                                       onClose();
                                     }}
-                                    className="flex-1 rounded-xl border border-rose-500/45 bg-rose-600/85 py-2.5 font-mono text-[10px] font-black uppercase tracking-wide text-white hover:bg-rose-500 sm:flex-initial sm:px-6"
+                                    className="flex-1 min-h-[44px] rounded-xl border border-rose-500/45 bg-rose-600/85 py-2.5 font-mono text-[10px] font-black uppercase tracking-wide text-white hover:bg-rose-500 sm:flex-initial sm:px-6"
                                   >
                                     Refuser
                                   </button>
@@ -650,7 +650,7 @@ export function MediatorSidebar({
                                       onAcceptPendingInvite?.(inv.userId);
                                       onClose();
                                     }}
-                                    className="flex-1 rounded-xl bg-white py-2.5 font-mono text-[10px] font-black uppercase tracking-wide text-black hover:bg-gray-200 sm:flex-initial sm:px-6"
+                                    className="flex-1 min-h-[44px] rounded-xl bg-white py-2.5 font-mono text-[10px] font-black uppercase tracking-wide text-black hover:bg-gray-200 sm:flex-initial sm:px-6"
                                   >
                                     Accepter
                                   </button>
