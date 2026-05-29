@@ -57,6 +57,14 @@ const config: Config = {
       backgroundImage: {
         "brand-gradient": "linear-gradient(135deg, #00F0FF 0%, #00B3CC 100%)",
       },
+      zIndex: {
+        base: "10",
+        overlay: "50",
+        modal: "100",
+        "arena-hud": "200",
+        toast: "300",
+        critical: "999",
+      },
     },
   },
   plugins: [],

@@ -34,6 +34,15 @@
     font: inherit;
   }
 
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  a:focus-visible,
+  [role="button"]:focus-visible {
+    @apply outline-none ring-2 ring-cyan-400 ring-offset-2 ring-offset-black transition-shadow;
+  }
+
   ::selection {
     background: rgba(255, 77, 0, 0.28);
     color: white;
