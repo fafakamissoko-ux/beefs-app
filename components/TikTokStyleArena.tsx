@@ -430,6 +430,44 @@ export function TikTokStyleArena({
   const [visibleMessages, setVisibleMessages] = useState<VisibleMessage[]>([]);
   const [contextMenuMsg, setContextMenuMsg] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [unreadDMsCount, setUnreadDMsCount] = useState(0);
+
+  useEffect(() => {
+    if (!userId) return;
+    const fetchUnread = async () => {
+      const { count } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('type', 'message')
+        .or('is_read.is.null,is_read.eq.false');
+      if (count !== null) setUnreadDMsCount(count);
+    };
+    void fetchUnread();
+
+    const channel = supabase
+      .channel(`arena_dms_${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          if (payload.new && payload.new.type === 'message') {
+            setUnreadDMsCount(c => c + 1);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          if (payload.new && payload.new.type === 'message' && payload.new.is_read) {
+            setUnreadDMsCount(c => Math.max(0, c - 1));
+          }
+        }
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [userId]);
   const [showAllReactions, setShowAllReactions] = useState(false); // NEW: Toggle pour afficher toutes les réactions
   /** Portail body : cadeaux / panneau réactions au-dessus de la vidéo (z-50) */
   const [dockPickersMounted, setDockPickersMounted] = useState(false);
@@ -3439,6 +3477,18 @@ export function TikTokStyleArena({
             </button>
             <button
               type="button"
+              onClick={() => openDrawer()}
+              className="pointer-events-auto relative flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-slate-950/50 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-white/10"
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              {unreadDMsCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-black text-white shadow-[0_0_10px_rgba(225,29,72,0.8)]">
+                  {unreadDMsCount > 9 ? '9+' : unreadDMsCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
               onClick={onShare}
               className="pointer-events-auto hidden h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-slate-950/50 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-white/10 sm:flex"
             >
@@ -3947,11 +3997,13 @@ export function TikTokStyleArena({
                     <span className="text-2xl font-black text-white">{selectedProfile.stats.following}</span>
                     <span className="ml-1 text-sm text-gray-400">Abonnements</span>
                   </div>
-                  <div className="flex items-center justify-center gap-2">
-                    <Flame className="h-5 w-5 shrink-0 text-cyan-400" />
-                    <span className="text-2xl font-black text-white">{selectedProfile.stats.points}</span>
-                    <span className="text-sm text-gray-400">Lingots</span>
-                  </div>
+                  {userId && selectedProfile.id === userId && (
+                    <div className="flex items-center justify-center gap-2">
+                      <Flame className="h-5 w-5 shrink-0 text-cyan-400" />
+                      <span className="text-2xl font-black text-white">{selectedProfile.stats.points}</span>
+                      <span className="text-sm text-gray-400">Lingots</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mb-5 flex items-center justify-center gap-2 text-sm text-gray-400">

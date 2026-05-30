@@ -8,14 +8,8 @@ import { MessagesUI } from '@/components/MessagesUI';
 export function GlobalMessagesDrawer() {
   const { isDrawerOpen, closeDrawer } = useMessagesDrawer();
 
-  useEffect(() => {
-    if (isDrawerOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [isDrawerOpen]);
+  // Suppression du verrouillage body.style.overflow pour éviter le Ghost Overlay dans l'Arène.
+  // Le fixed inset-0 gère déjà la capture des clics.
 
   return (
     <AnimatePresence>
