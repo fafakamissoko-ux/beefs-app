@@ -243,19 +243,9 @@ export default function NotificationsPage() {
     if (n.link) router.push(n.link);
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-white font-semibold">Chargement...</p>
-        </div>
-      </div>
-    );
-  }
+  if (!authLoading && !user) return null;
 
-  if (!user) return null;
-
+  const isPageLoading = authLoading || loading;
   const unreadCount = notifications.filter(isNotificationUnread).length;
 
   return (
@@ -288,9 +278,9 @@ export default function NotificationsPage() {
           )}
         </div>
 
-        {loading ? (
-          <div>
-            {Array.from({ length: 5 }).map((_, i) => (
+        {isPageLoading ? (
+          <div className="flex flex-col gap-1">
+            {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </div>
@@ -313,7 +303,7 @@ export default function NotificationsPage() {
           </motion.div>
         ) : (
           <div>
-            <AnimatePresence initial={false}>
+            <AnimatePresence>
               {notifications.map((n, i) => {
                 const mapKey =
                   typeof n.type === 'string' && n.type in ICON_MAP ? (n.type as NotificationType) : 'system';
@@ -323,9 +313,9 @@ export default function NotificationsPage() {
                   <motion.button
                     key={n.id}
                     type="button"
-                    initial={{ opacity: 0, y: 12 }}
+                    initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.03 }}
+                    transition={{ delay: i * 0.04, duration: 0.25, ease: 'easeOut' }}
                     onClick={() => handleRowClick(n)}
                     className={`flex items-start gap-4 w-full text-left px-4 py-3 transition-colors hover:bg-white/[0.04] border-b border-white/5 ${
                       unread ? 'bg-brand-500/5' : ''
