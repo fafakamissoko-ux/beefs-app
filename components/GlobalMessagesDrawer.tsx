@@ -20,6 +20,7 @@ export function GlobalMessagesDrawer() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0 } }}
             onClick={closeDrawer}
+            style={{ pointerEvents: isDrawerOpen ? 'auto' : 'none' }}
             className="fixed inset-0 z-[999998] bg-black/20 backdrop-blur-sm"
           />
           <motion.div

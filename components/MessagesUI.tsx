@@ -86,7 +86,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const pathname = usePathname();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const { targetUserId } = useMessagesDrawer();
+  const { targetUserId, isDrawerOpen } = useMessagesDrawer();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
@@ -116,6 +116,16 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
       router.push(`/login?redirect=${encodeURIComponent(dest)}`);
     }
   }, [user, authLoading, router, searchParams]);
+
+  // Nettoyage immédiat des modales internes dès le début de la fermeture
+  useEffect(() => {
+    if (!isDrawerOpen) {
+      setMessageMenu(null);
+      setShowChatMenu(false);
+      setReplyingTo(null);
+      setIsSelectionMode(false);
+    }
+  }, [isDrawerOpen]);
 
   // Failsafe : nettoyage du body à chaque changement de route et au démontage
   useEffect(() => {
