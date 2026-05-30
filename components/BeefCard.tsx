@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, MoreVertical, Trash2, Edit2, Flag } from 'lucide-react';
@@ -529,7 +530,7 @@ export function BeefCard({
             )}
           </AnimatePresence>
         )}
-        {isTeaserOpen && (
+        {isTeaserOpen && typeof document !== 'undefined' && createPortal(
         <div
           className="fixed inset-0 z-[9999] flex flex-col bg-black/50 backdrop-blur-3xl md:flex-row md:items-center md:justify-center md:p-8"
           role="presentation"
@@ -824,7 +825,7 @@ export function BeefCard({
             </div>
           </div>
         </div>
-        )}
+        , document.body)}
       </motion.div>
 
       <AuraGiversModal
