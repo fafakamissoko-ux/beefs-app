@@ -3337,7 +3337,7 @@ export function TikTokStyleArena({
 
       {/* === ASIDE CHAT (DESKTOP SEULEMENT) === */}
       {!isCinematicMode && (
-        <aside className="hidden lg:flex relative min-h-0 w-[350px] min-w-[350px] shrink-0 h-full flex-col bg-slate-950/75 backdrop-blur-md border-r border-white/10 shadow-2xl z-[100]">
+        <aside className="hidden lg:flex relative min-h-0 w-[350px] min-w-[350px] shrink-0 h-full flex-col bg-black/20 backdrop-blur-[2px] border-r border-white/10 shadow-2xl z-[100]">
         <header className="relative z-30 shrink-0 flex items-center gap-3 border-b border-white/10 pl-2 pr-4 py-3" data-cinema-stay>
           <button type="button" onClick={() => setShowArenaMenu(v => !v)} className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"><Menu className="h-5 w-5" strokeWidth={1.5} /></button>
           <div className="flex min-w-0 flex-1 items-center gap-2">

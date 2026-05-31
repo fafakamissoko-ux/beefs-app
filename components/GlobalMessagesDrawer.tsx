@@ -38,7 +38,7 @@ export function GlobalMessagesDrawer() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 z-[999999] flex w-full flex-col overflow-hidden border-l border-white/10 bg-slate-950/50 shadow-2xl backdrop-blur-md md:w-[450px] lg:w-[600px]"
+              className="fixed right-0 top-0 bottom-0 z-[999999] flex w-full flex-col overflow-hidden border-l border-white/10 bg-black/20 backdrop-blur-[2px] shadow-2xl md:w-[450px] lg:w-[600px]"
             >
               <MessagesUI isDrawerMode={true} onClose={handleClose} />
             </motion.div>

@@ -644,7 +644,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   }
 
   return (
-    <div className={`flex flex-1 overflow-hidden bg-slate-950/60 backdrop-blur-3xl ${
+    <div className={`flex flex-1 overflow-hidden bg-transparent ${
       isDrawerMode
         ? 'h-full w-full'
         : '-m-4 lg:-m-8 h-[calc(100dvh-3.5rem)] lg:h-[100dvh]'
@@ -797,11 +797,11 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
         </div>
 
         {/* Chat area */}
-        <div className={`flex flex-1 flex-col min-w-0 bg-slate-950/60 backdrop-blur-3xl ${!selectedConv ? (isDrawerMode ? 'hidden' : 'hidden md:flex') : 'flex'}`}>
+        <div className={`flex flex-1 flex-col min-w-0 bg-transparent ${!selectedConv ? (isDrawerMode ? 'hidden' : 'hidden md:flex') : 'flex'}`}>
           {selectedConv ? (
             <>
               {/* Chat header */}
-              <div className="flex shrink-0 items-center gap-3 border-b border-white/10 bg-slate-950/60 px-4 py-3 z-20 backdrop-blur-3xl">
+              <div className="flex shrink-0 items-center gap-3 border-b border-white/10 bg-black/40 backdrop-blur-md px-4 py-3 z-20">
                 <button
                   type="button"
                   onClick={() => setSelectedConv(null)}
@@ -1097,7 +1097,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
               </div>
 
               {/* Action Bar & Input */}
-              <div className="z-20 flex shrink-0 flex-col border-t border-white/10 bg-slate-900/80 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-2xl">
+              <div className="z-20 flex shrink-0 flex-col border-t border-white/10 bg-black/60 backdrop-blur-md pb-[max(0.5rem,env(safe-area-inset-bottom))]">
                 {isSelectionMode ? (
                   <div className="flex items-center justify-between px-4 py-4">
                     <span className="text-sm font-semibold text-gray-400">
