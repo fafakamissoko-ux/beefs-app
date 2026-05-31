@@ -776,7 +776,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                     </label>
                   </div>
                   {beefData.is_scheduled && (
-                    <div className="flex flex-col gap-2 pl-8">
+                    <div className="flex flex-col gap-3 pt-2">
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
@@ -814,7 +814,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                             });
                           }}
                           style={{ colorScheme: 'dark' }}
-                          className="w-full cursor-pointer rounded-xl border border-white/20 bg-black/60 px-4 py-2.5 text-sm text-white transition-colors focus:border-cyan-500 focus:outline-none"
+                          className="w-full cursor-pointer text-center rounded-[2rem] border border-white/[0.06] bg-white/[0.04] px-4 py-3 text-sm text-white transition-colors focus:border-cyan-500 focus:outline-none"
                         />
                       </div>
                     </div>

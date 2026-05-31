@@ -535,7 +535,7 @@ export function BeefCard({
         )}
         {isTeaserOpen && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-[9999] flex flex-col bg-black/80 backdrop-blur-sm md:flex-row md:items-center md:justify-center md:p-8"
+          className="fixed inset-0 z-[9999] flex flex-col bg-black/20 backdrop-blur-[2px] md:flex-row md:items-center md:justify-center md:p-8"
           role="presentation"
           onClick={(e) => {
             e.stopPropagation();
