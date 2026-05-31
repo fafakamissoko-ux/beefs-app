@@ -948,8 +948,8 @@ export default function FeedPage() {
         ) : beefs.length === 0 ? (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 py-16 text-center md:justify-center">
             <div className="relative mb-6 group">
-              <div className="absolute inset-0 rounded-full bg-prestige-gold/20 blur-xl transition-all duration-700 group-hover:bg-prestige-gold/30 group-hover:blur-2xl" />
-              <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_30px_rgba(212,175,55,0.15)]">
+              <div className="absolute inset-0 scale-150 rounded-full bg-prestige-gold/10 transition-all duration-700 group-hover:scale-[1.75] group-hover:bg-prestige-gold/20" />
+              <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-sm shadow-[0_0_30px_rgba(212,175,55,0.15)]">
                 <Flame className="h-10 w-10 text-prestige-gold opacity-80" strokeWidth={1.5} />
               </div>
             </div>
