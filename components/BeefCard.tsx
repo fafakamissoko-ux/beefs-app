@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,6 +64,7 @@ interface BeefCardProps {
   intent?: string | null;
   created_by?: string | null;
   index: number;
+  isActiveVideo?: boolean;
 }
 
 export function BeefCard({
@@ -117,6 +118,7 @@ export function BeefCard({
   intent,
   created_by,
   index,
+  isActiveVideo = false,
 }: BeefCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -160,24 +162,6 @@ export function BeefCard({
       modalVideoRef.current.play().catch(() => {});
     }
   };
-
-  useLayoutEffect(() => {
-    if (!video_url?.trim()) return;
-    const el = mediaBlockRef.current;
-    if (!el) return;
-    const v = videoRef.current;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) void v?.play().catch(() => {});
-          else v?.pause();
-        }
-      },
-      { threshold: [0, 0.25, 0.5, 0.75, 1] },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [video_url, id]);
 
   function getPrimaryStatusBadge(): React.ReactNode {
     switch (status) {
@@ -245,10 +229,11 @@ export function BeefCard({
           ref={mediaBlockRef}
           className="absolute inset-0 z-0 h-full w-full overflow-hidden rounded-[1.2rem] bg-transparent md:rounded-[1.5rem]"
         >
-          {video_url ? (
+          {isActiveVideo && video_url ? (
             <video
               ref={videoRef}
               src={video_url}
+              autoPlay
               loop
               muted={isMuted}
               playsInline

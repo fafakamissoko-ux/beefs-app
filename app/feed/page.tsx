@@ -136,6 +136,7 @@ export default function FeedPage() {
   const [beefToDelete, setBeefToDelete] = useState<string | null>(null);
   const [editBeefId, setEditBeefId] = useState<string | null>(null);
   const [beefToForfeit, setBeefToForfeit] = useState<string | null>(null);
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const isLikingCard = useRef(false);
   const isLikingTeaser = useRef(false);
 
@@ -636,6 +637,50 @@ export default function FeedPage() {
     loadBeefs,
   ]);
 
+  useEffect(() => {
+    if (loading) return;
+    const container = document.getElementById('feed-scroll-container');
+    if (!container) return;
+
+    const ratios = new Map<string, number>();
+
+    const pickWinner = () => {
+      let bestId: string | null = null;
+      let bestRatio = 0;
+      for (const [beefId, ratio] of ratios) {
+        if (ratio > bestRatio) {
+          bestRatio = ratio;
+          bestId = beefId;
+        }
+      }
+      setActiveVideoId(bestRatio > 0 ? bestId : null);
+    };
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const beefId = (entry.target as HTMLElement).dataset.beefId;
+          if (!beefId) continue;
+          ratios.set(beefId, entry.isIntersecting ? entry.intersectionRatio : 0);
+        }
+        pickWinner();
+      },
+      {
+        root: container,
+        threshold: [0, 0.25, 0.5, 0.75, 1],
+      },
+    );
+
+    const nodes = container.querySelectorAll('[data-beef-id]');
+    nodes.forEach((node) => {
+      const beefId = (node as HTMLElement).dataset.beefId;
+      if (beefId) ratios.set(beefId, 0);
+      obs.observe(node);
+    });
+
+    return () => obs.disconnect();
+  }, [loading, beefs, mobileViewMode]);
+
   const loadMore = () => {
     if (loadingMore || !hasMore) return;
     loadMoreIntentRef.current = true;
@@ -967,9 +1012,13 @@ export default function FeedPage() {
                   key={beef.id}
                   className={`relative shrink-0 flex justify-center ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
                 >
-                  <div className={mobileViewMode === 'list' ? 'w-full max-w-[380px]' : 'w-full'}>
+                  <div
+                    data-beef-id={beef.id}
+                    className={mobileViewMode === 'list' ? 'w-full max-w-[380px]' : 'w-full'}
+                  >
                     <BeefCard
                     {...beef}
+                    isActiveVideo={beef.id === activeVideoId}
                     onPrepareAudience={
                       beef.status === 'scheduled' && user?.id === beef.mediator_id
                         ? () => router.push(`/live/${beef.id}`)
