@@ -369,7 +369,7 @@ export function BeefCard({
           <div className="pointer-events-none absolute bottom-2 left-2 z-10 flex flex-col items-start gap-1">
             {status === 'scheduled' && scheduled_at && (
               <div
-                className="pointer-events-auto origin-bottom-left scale-90 rounded border border-cyan-500/40 bg-black/70 px-2 py-1 shadow-lg backdrop-blur-md [&_.text-blue-400]:text-cyan-400 [&_svg]:text-cyan-400"
+                className="pointer-events-auto origin-bottom-left scale-90 rounded bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg px-2 py-1 [&_.text-blue-400]:text-cyan-400 [&_svg]:text-cyan-400"
                 aria-live="polite"
               >
                 <Countdown scheduledAt={scheduled_at} />
@@ -403,11 +403,11 @@ export function BeefCard({
 
           <div className="flex flex-wrap items-center justify-between gap-2 pointer-events-auto">
             {mediator_name ? (
-              <span className="w-fit rounded-full border border-white/20 bg-black/40 px-1.5 py-0.5 text-[8px] font-bold tracking-wide text-gray-200 backdrop-blur-md sm:px-2.5 sm:py-1 sm:text-[10px]">
+              <span className="w-fit rounded-full border border-white/20 bg-black/40 px-1.5 py-0.5 text-[8px] font-bold tracking-wide text-gray-200 sm:px-2.5 sm:py-1 sm:text-[10px]">
                 REF: <span className="text-white">@{mediator_name}</span>
               </span>
             ) : (
-              <span className="w-fit rounded-full border border-prestige-gold/40 bg-prestige-gold/20 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-prestige-gold backdrop-blur-md sm:px-2.5 sm:py-1 sm:text-[10px]">
+              <span className="w-fit rounded-full border border-prestige-gold/40 bg-prestige-gold/20 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-prestige-gold sm:px-2.5 sm:py-1 sm:text-[10px]">
                 En attente de Ref
               </span>
             )}

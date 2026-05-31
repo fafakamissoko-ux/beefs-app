@@ -1123,7 +1123,7 @@ export default function FeedPage() {
           <button
             type="button"
             onClick={() => router.push(`/arena/${activeBeef.id}`)}
-            className="group pointer-events-auto flex items-center gap-3 rounded-full border border-cyan-500/40 bg-black/90 p-2 pr-4 shadow-[0_4px_20px_rgba(34,211,238,0.3)] backdrop-blur-xl transition-all hover:scale-105 hover:border-cyan-400"
+            className="group pointer-events-auto flex items-center gap-3 rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg p-2 pr-4 transition-all hover:scale-105 hover:border-cyan-400"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-500/20">
               <Radio className="h-5 w-5 animate-pulse text-cyan-400" />
@@ -1147,7 +1147,7 @@ export default function FeedPage() {
           onClick={() => setBeefToDelete(null)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl border border-blood-500/30 bg-obsidian-900 p-6 shadow-[0_0_40px_rgba(220,38,38,0.15)]"
+            className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950/75 backdrop-blur-md p-6 shadow-[0_0_40px_rgba(220,38,38,0.15)]"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 id="beef-delete-title" className="mb-2 text-xl font-black text-white">
@@ -1178,7 +1178,7 @@ export default function FeedPage() {
           onClick={() => setBeefToForfeit(null)}
         >
           <div
-            className="w-full max-w-sm rounded-2xl border border-prestige-gold/30 bg-obsidian-900 p-6 shadow-[0_0_40px_rgba(212,175,55,0.15)]"
+            className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950/75 backdrop-blur-md p-6 shadow-[0_0_40px_rgba(212,175,55,0.15)]"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 id="beef-forfeit-title" className="mb-2 text-xl font-black text-white">
