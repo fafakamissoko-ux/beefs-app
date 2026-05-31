@@ -170,7 +170,7 @@ export function BeefCard({
     switch (status) {
       case 'pending':
         return (
-          <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white/90 backdrop-blur-md md:text-xs">
+          <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white/90 md:text-xs">
             EN ATTENTE
           </div>
         );
@@ -178,20 +178,20 @@ export function BeefCard({
       case 'replay':
       case 'completed':
         return (
-          <div className="flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-300 backdrop-blur-md md:text-xs">
+          <div className="flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-300 md:text-xs">
             REPLAY
           </div>
         );
       case 'scheduled':
       case 'ready':
         return (
-          <div className="flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-300 backdrop-blur-md md:text-xs">
+          <div className="flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-300 md:text-xs">
             <Calendar className="h-3 w-3 shrink-0" /> À VENIR
           </div>
         );
       case 'cancelled':
         return (
-          <div className="flex items-center gap-1.5 rounded-full border border-gray-500/30 bg-gray-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-300 backdrop-blur-md md:text-xs">
+          <div className="flex items-center gap-1.5 rounded-full border border-gray-500/30 bg-gray-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-300 md:text-xs">
             ANNULÉ
           </div>
         );
@@ -262,7 +262,7 @@ export function BeefCard({
               </div>
             )}
             {auraTier === 3 && (
-              <div className="flex w-fit items-center gap-1 rounded border border-volt-500/40 bg-volt-500/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight text-volt-400 backdrop-blur-md">
+              <div className="flex w-fit items-center gap-1 rounded border border-volt-500/40 bg-volt-500/20 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-tight text-volt-400">
                 <Sparkles className="h-2 w-2" /> Trending
               </div>
             )}
@@ -305,7 +305,7 @@ export function BeefCard({
                       initial={{ opacity: 0, scale: 0.95, y: -10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      className="absolute right-0 z-[70] mt-2 w-40 overflow-hidden rounded-xl border border-white/10 bg-slate-900/80 py-1 shadow-2xl backdrop-blur-xl md:w-48"
+                      className="absolute right-0 z-[70] mt-2 w-40 overflow-hidden rounded-xl bg-slate-950/75 backdrop-blur-md border border-white/10 shadow-2xl py-1 md:w-48"
                     >
                       {onEdit && (
                         <button
@@ -536,7 +536,7 @@ export function BeefCard({
             <button
               type="button"
               onClick={() => setIsTeaserOpen(false)}
-              className="absolute right-4 top-4 z-[9999] flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white backdrop-blur-md transition-colors hover:bg-white/20"
+              className="absolute right-4 top-4 z-[9999] flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg text-white transition-colors hover:bg-white/20"
               aria-label={"Fermer l'aperçu"}
             >
               ✕
@@ -558,7 +558,7 @@ export function BeefCard({
                   <button
                     type="button"
                     onClick={handleToggleMute}
-                    className="absolute bottom-4 right-4 z-[9999] flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white backdrop-blur-md transition-colors hover:bg-white/20"
+                    className="absolute bottom-4 right-4 z-[9999] flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg text-white transition-colors hover:bg-white/20"
                     aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
                   >
                     {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
@@ -611,7 +611,7 @@ export function BeefCard({
                       }
                     }}
                     aria-label="Aura teaser"
-                    className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border bg-black/60 backdrop-blur-md transition-transform active:scale-90 ${
+                    className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-slate-900/40 backdrop-blur-sm border shadow-lg transition-transform active:scale-90 ${
                       has_liked_teaser
                         ? 'border-amber-400/50 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
                         : 'border-white/10 hover:bg-white/20'
