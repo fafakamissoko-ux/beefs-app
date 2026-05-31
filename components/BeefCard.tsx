@@ -13,6 +13,8 @@ import { AuraGiversModal } from '@/components/AuraGiversModal';
 /** Alias pour éviter le motif `}[` dans `useState<…>(…)` sous SWC/TSX. */
 type FloatingAuraChip = { id: number; x: number };
 
+let globalIsMuted = true;
+
 interface BeefCardProps {
   id: string;
   title: string;
@@ -122,7 +124,7 @@ export function BeefCard({
 }: BeefCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(globalIsMuted);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const modalVideoRef = useRef<HTMLVideoElement | null>(null);
   const mediaBlockRef = useRef<HTMLDivElement | null>(null);
@@ -155,6 +157,7 @@ export function BeefCard({
   const handleToggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
     const nextMuted = !isMuted;
+    globalIsMuted = nextMuted;
     setIsMuted(nextMuted);
     if (videoRef.current) videoRef.current.muted = nextMuted;
     if (modalVideoRef.current) {
@@ -202,7 +205,7 @@ export function BeefCard({
   const descText = description?.trim() ?? '';
   const auraTier = engagement_score >= 500 ? 3 : engagement_score >= 50 ? 2 : 1;
 
-  const baseSystem = 'glass-prestige relative flex h-full w-full flex-col overflow-hidden rounded-[1.2rem] transition-all duration-300 md:rounded-[1.5rem]';
+  const baseSystem = 'relative flex h-full w-full flex-col overflow-hidden rounded-[1.2rem] transition-all duration-300 md:rounded-[1.5rem] bg-black/20';
 
   let statusVariant = '';
   if (status === 'live') statusVariant = 'ring-2 ring-cyan-400 border-transparent';
@@ -276,7 +279,7 @@ export function BeefCard({
                   onNotifyClick?.();
                   toast(!isReminded ? 'Rappel activé' : 'Rappel annulé', 'success');
                 }}
-                className={`flex h-7 w-7 items-center justify-center rounded-full border backdrop-blur-md transition-all ${isReminded ? 'border-cyan-400 bg-cyan-500 text-white' : 'border-white/20 bg-black/60 text-white hover:bg-white/20'}`}
+                className={`flex h-7 w-7 items-center justify-center rounded-full transition-all ${isReminded ? 'border-cyan-400 bg-cyan-500 text-white' : 'bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg text-white hover:bg-white/20'}`}
               >
                 <Bell className={`h-3.5 w-3.5 ${isReminded ? 'fill-white' : ''}`} />
               </button>
@@ -290,7 +293,7 @@ export function BeefCard({
                     e.stopPropagation();
                     setIsMenuOpen(!isMenuOpen);
                   }}
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md hover:bg-white/20"
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg text-white hover:bg-white/20"
                   aria-expanded={isMenuOpen}
                   aria-label={"Actions sur l'affaire"}
                 >
@@ -355,7 +358,7 @@ export function BeefCard({
                   e.stopPropagation();
                   handleToggleMute(e);
                 }}
-                className="rounded-full border border-white/20 bg-black/60 p-1.5 backdrop-blur-md transition-colors hover:bg-black/70"
+                className="rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg p-1.5 transition-colors hover:bg-white/20"
                 aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
               >
                 {isMuted ? <VolumeX className="h-3 w-3 text-white" /> : <Volume2 className="h-3 w-3 text-white" />}
@@ -411,7 +414,7 @@ export function BeefCard({
 
             <div className="flex items-center gap-1.5">
               <div
-                className="flex h-6 sm:h-7 cursor-pointer items-center gap-1.5 rounded-full border border-white/20 bg-black/50 px-2.5 font-mono text-[10px] font-bold text-white backdrop-blur-md transition-all hover:bg-white/10 active:scale-95"
+                className="flex h-6 sm:h-7 cursor-pointer items-center gap-1.5 rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg px-2.5 font-mono text-[10px] font-bold text-white transition-all hover:bg-white/10 active:scale-95"
                 onClick={(e) => {
                   e.stopPropagation();
                   setIsViewsModalOpen(true);
@@ -422,8 +425,8 @@ export function BeefCard({
               </div>
               {onAuraClick ? (
                 <div
-                  className={`relative flex h-6 sm:h-7 items-center overflow-hidden rounded-full border bg-black/50 font-mono text-[9px] sm:text-[10px] font-bold backdrop-blur-md ${
-                    has_liked_by_user ? 'border-amber-400/50 text-amber-400' : 'border-white/20 text-white'
+                  className={`relative flex h-6 sm:h-7 items-center overflow-hidden rounded-full bg-slate-900/40 backdrop-blur-sm border shadow-lg font-mono text-[9px] sm:text-[10px] font-bold ${
+                    has_liked_by_user ? 'border-amber-400/50 text-amber-400' : 'border-white/10 text-white'
                   }`}
                 >
                   <AnimatePresence>
@@ -478,7 +481,7 @@ export function BeefCard({
                   </button>
                 </div>
               ) : (
-                <div className="relative flex h-6 sm:h-7 items-center overflow-hidden rounded-full border border-white/20 bg-black/50 font-mono text-[9px] sm:text-[10px] font-bold text-white backdrop-blur-md">
+                <div className="relative flex h-6 sm:h-7 items-center overflow-hidden rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg font-mono text-[9px] sm:text-[10px] font-bold text-white">
                   <div className="flex h-full items-center justify-center pl-2.5 pr-1.5">
                     <Sparkles className="h-3.5 w-3.5" aria-hidden />
                   </div>
@@ -517,7 +520,7 @@ export function BeefCard({
         )}
         {isTeaserOpen && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-[9999] flex flex-col bg-black/50 backdrop-blur-3xl md:flex-row md:items-center md:justify-center md:p-8"
+          className="fixed inset-0 z-[9999] flex flex-col bg-black/80 backdrop-blur-sm md:flex-row md:items-center md:justify-center md:p-8"
           role="presentation"
           onClick={(e) => {
             e.stopPropagation();
@@ -525,7 +528,7 @@ export function BeefCard({
           }}
         >
           <div
-            className="relative flex h-full w-full flex-col overflow-hidden bg-slate-950/30 shadow-2xl backdrop-blur-md md:h-auto md:max-h-[90vh] md:max-w-5xl md:flex-row md:rounded-3xl"
+            className="relative flex h-full w-full flex-col overflow-hidden bg-slate-950/75 backdrop-blur-md border border-white/10 shadow-2xl md:h-auto md:max-h-[90vh] md:max-w-5xl md:flex-row md:rounded-3xl"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
