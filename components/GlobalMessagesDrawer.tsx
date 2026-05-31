@@ -16,16 +16,21 @@ export function GlobalMessagesDrawer() {
   };
 
   return (
-    <Suspense fallback={null}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[200px] flex-1 items-center justify-center bg-transparent">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-500 border-t-transparent" />
+        </div>
+      }
+    >
       <AnimatePresence>
         {isDrawerOpen && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, transition: { duration: 0 } }}
+              animate={{ opacity: 1, pointerEvents: 'auto' }}
+              exit={{ opacity: 0, pointerEvents: 'none', transition: { duration: 0.15 } }}
               onClick={handleClose}
-              style={{ pointerEvents: isDrawerOpen ? 'auto' : 'none' }}
               className="fixed inset-0 z-[999998] bg-black/20 backdrop-blur-sm"
             />
             <motion.div
