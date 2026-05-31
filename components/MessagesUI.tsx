@@ -527,13 +527,21 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     }
   };
 
+  const lastResolvedUserIdRef = useRef<string | null>(null);
+
+  // On réinitialise la sécurité si le tiroir se ferme
+  useEffect(() => {
+    if (isDrawerMode && !isDrawerOpen) {
+      lastResolvedUserIdRef.current = null;
+    }
+  }, [isDrawerOpen, isDrawerMode]);
+
   useEffect(() => {
     if (authLoading || !user || loadingConvs) return;
     if (dmDeepLinkLockRef.current) return;
 
     let raw = searchParams.get('with');
 
-    // Si on est dans le tiroir et qu'un ID cible est demandé, on l'utilise en priorité
     if (isDrawerMode && targetUserId) {
       raw = targetUserId;
     } else if (!raw && typeof window !== 'undefined') {
@@ -544,12 +552,17 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     if (!raw) return;
 
     const withId = raw.trim();
+
+    // COUPE-CIRCUIT ABSOLU DE LA BOUCLE INFINIE
+    if (lastResolvedUserIdRef.current === withId) return;
+
     if (!DM_WITH_UUID_RE.test(withId) || withId === user.id) {
       if (!isDrawerMode) router.replace('/messages', { scroll: false });
       return;
     }
 
     dmDeepLinkLockRef.current = true;
+    lastResolvedUserIdRef.current = withId;
 
     void (async () => {
       try {
