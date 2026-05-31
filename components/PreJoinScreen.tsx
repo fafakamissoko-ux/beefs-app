@@ -182,7 +182,7 @@ export function PreJoinScreen({
       <div className="relative flex h-full w-full touch-manipulation items-center justify-center overflow-y-auto overflow-x-hidden bg-transparent p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {ambientLayer}
         <div className="relative z-10 w-full max-w-md max-h-[90dvh] overflow-y-auto">
-          <div className="relative rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-5 shadow-2xl backdrop-blur-3xl sm:p-6">
+          <div className="relative rounded-[2.5rem] border border-white/10 bg-slate-950/75 p-5 shadow-2xl backdrop-blur-md sm:p-6">
             <button
               type="button"
               onClick={() => {
@@ -218,7 +218,7 @@ export function PreJoinScreen({
     <div className="relative flex h-full w-full touch-manipulation items-center justify-center overflow-y-auto overflow-x-hidden bg-transparent p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pl-4">
       {ambientLayer}
       <div className="relative z-10 w-full max-w-2xl max-h-[90dvh] overflow-y-auto">
-        <div className="relative space-y-3 rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-3 shadow-2xl backdrop-blur-3xl sm:space-y-4 sm:p-5 md:p-6">
+        <div className="relative space-y-3 rounded-[2.5rem] border border-white/10 bg-slate-950/75 p-3 shadow-2xl backdrop-blur-md sm:space-y-4 sm:p-5 md:p-6">
         <button
           type="button"
           onClick={() => {
@@ -235,7 +235,7 @@ export function PreJoinScreen({
         </div>
 
         {/* Camera preview */}
-        <div className="relative aspect-video max-h-[min(42vh,22rem)] overflow-hidden rounded-2xl border border-white/10 bg-black/50 backdrop-blur-3xl sm:max-h-none sm:rounded-3xl">
+        <div className="relative aspect-video max-h-[min(42vh,22rem)] overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 backdrop-blur-md shadow-inner sm:max-h-none sm:rounded-3xl">
           {camEnabled ? (
             <video
               ref={videoRef}
@@ -282,7 +282,7 @@ export function PreJoinScreen({
 
         {/* Controls — cartes glass, côte à côte */}
         <div className="flex w-full min-w-0 flex-row items-stretch justify-center gap-2 sm:gap-3">
-          <div className="min-w-0 flex-1 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-2 backdrop-blur-xl sm:rounded-[2rem] sm:p-3">
+          <div className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-900/40 p-2 backdrop-blur-sm shadow-lg sm:rounded-[2rem] sm:p-3">
             <p className="mb-1.5 text-center font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-white/40 sm:mb-2 sm:text-[9px]">
               Montrer mon visage
             </p>
@@ -300,7 +300,7 @@ export function PreJoinScreen({
             </button>
           </div>
 
-          <div className="min-w-0 flex-1 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-2 backdrop-blur-xl sm:rounded-[2rem] sm:p-3">
+          <div className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-900/40 p-2 backdrop-blur-sm shadow-lg sm:rounded-[2rem] sm:p-3">
             <p className="mb-1.5 text-center font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-white/40 sm:mb-2 sm:text-[9px]">
               Micro
             </p>
@@ -331,7 +331,7 @@ export function PreJoinScreen({
         {(devices.cameras.length > 1 || devices.mics.length > 1) && (
           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:gap-3">
             {devices.cameras.length > 1 && (
-              <div className="relative min-w-0 flex-1 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-0.5 backdrop-blur-xl sm:rounded-[1.75rem]">
+              <div className="relative min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-900/40 p-0.5 backdrop-blur-sm shadow-lg sm:rounded-[1.75rem]">
                 <select
                   value={selectedCam}
                   onChange={e => { setSelectedCam(e.target.value); startPreview(e.target.value, selectedMic); }}
@@ -345,7 +345,7 @@ export function PreJoinScreen({
               </div>
             )}
             {devices.mics.length > 1 && (
-              <div className="relative min-w-0 flex-1 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-0.5 backdrop-blur-xl sm:rounded-[1.75rem]">
+              <div className="relative min-w-0 flex-1 rounded-2xl border border-white/10 bg-slate-900/40 p-0.5 backdrop-blur-sm shadow-lg sm:rounded-[1.75rem]">
                 <select
                   value={selectedMic}
                   onChange={e => { setSelectedMic(e.target.value); startPreview(selectedCam, e.target.value); }}
@@ -363,7 +363,7 @@ export function PreJoinScreen({
 
         {/* Mutiny Protocol — challengers only, pre-live */}
         {mediatorName && currentUserSlot && onMutinyInitiate && onMutinyConfirm && onMutinyRefuse && (
-          <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 backdrop-blur-xl sm:gap-3 sm:px-4 sm:py-3">
+          <div className="flex items-center justify-between gap-2 rounded-2xl border border-white/10 bg-slate-900/40 px-3 py-2.5 backdrop-blur-sm shadow-lg sm:gap-3 sm:px-4 sm:py-3">
             <div className="min-w-0 flex-1">
               <p className="font-sans text-xs text-white/40">
                 Ref : <span className="font-bold text-white/60">{mediatorName}</span>
