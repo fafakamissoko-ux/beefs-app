@@ -88,6 +88,11 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const { toast } = useToast();
   const { targetUserId, isDrawerOpen } = useMessagesDrawer();
 
+  const isDrawerOpenRef = useRef(isDrawerOpen);
+  useEffect(() => {
+    isDrawerOpenRef.current = isDrawerOpen;
+  }, [isDrawerOpen]);
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -119,13 +124,13 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
 
   // Nettoyage immédiat des modales internes dès le début de la fermeture
   useEffect(() => {
-    if (!isDrawerOpen) {
+    if (isDrawerMode && !isDrawerOpen) {
       setMessageMenu(null);
       setShowChatMenu(false);
       setReplyingTo(null);
       setIsSelectionMode(false);
     }
-  }, [isDrawerOpen]);
+  }, [isDrawerOpen, isDrawerMode]);
 
   // Failsafe : nettoyage du body à chaque changement de route et au démontage
   useEffect(() => {
@@ -362,6 +367,11 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
       content: clean,
       reply_to_id: replyToId,
     }).select().single();
+
+    // COUPE-CIRCUIT FRAMER MOTION
+    // Si le tiroir se ferme pendant l'aller-retour serveur, on stoppe net les mises à jour
+    // d'état pour éviter que React/Framer Motion ne gèle le composant en pleine destruction.
+    if (isDrawerMode && !isDrawerOpenRef.current) return;
 
     if (error) {
       toast('Erreur lors de l\'envoi', 'error');
