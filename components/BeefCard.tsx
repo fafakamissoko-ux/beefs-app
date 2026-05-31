@@ -138,6 +138,8 @@ export function BeefCard({
   const [isBeefAuraModalOpen, setIsBeefAuraModalOpen] = useState(false);
   const [isTeaserAuraModalOpen, setIsTeaserAuraModalOpen] = useState(false);
   const [isViewsModalOpen, setIsViewsModalOpen] = useState(false);
+  const localAuraLock = useRef(false);
+  const localTeaserAuraLock = useRef(false);
 
   const isParticipant = user
     ? user.id === created_by ||
@@ -216,6 +218,15 @@ export function BeefCard({
   const manifestoStroke = isManifesto ? 'border-dashed border-white/20' : '';
 
   const beefCardChromeClass = [baseSystem, statusVariant, auraFX, manifestoStroke].filter(Boolean).join(' ');
+
+  const getPendingRefText = () => {
+    if (user?.id === created_by) {
+      return user?.id !== mediator_id ? `En attente de ta validation du Ref (@${mediator_name ?? ''})…` : null;
+    }
+    if (isWaitingForMe) return null;
+    return mediator_name ? 'Ref en cours de validation…' : "En attente d'un Ref…";
+  };
+  const pendingRefText = getPendingRefText();
 
   return (
     <div className={beefCardChromeClass}>
@@ -449,10 +460,14 @@ export function BeefCard({
                     }`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (!has_liked_by_user) {
+                      if (!has_liked_by_user && !localAuraLock.current) {
+                        localAuraLock.current = true;
                         const newId = Date.now() + Math.random();
                         setCardFloatingAuras((p) => [...p, { id: newId, x: Math.random() * 30 - 15 }]);
-                        setTimeout(() => setCardFloatingAuras((p) => p.filter((a) => a.id !== newId)), 1000);
+                        setTimeout(() => {
+                          setCardFloatingAuras((p) => p.filter((a) => a.id !== newId));
+                          localAuraLock.current = false;
+                        }, 1000);
                       }
                       onAuraClick();
                     }}
@@ -596,10 +611,14 @@ export function BeefCard({
                     tabIndex={0}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (!has_liked_teaser) {
+                      if (!has_liked_teaser && !localTeaserAuraLock.current) {
+                        localTeaserAuraLock.current = true;
                         const newId = Date.now() + Math.random();
                         setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
-                        setTimeout(() => setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId)), 1000);
+                        setTimeout(() => {
+                          setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId));
+                          localTeaserAuraLock.current = false;
+                        }, 1000);
                       }
                       onTeaserAuraClick();
                     }}
@@ -781,15 +800,9 @@ export function BeefCard({
                         </div>
                       </div>
                     )}
-                    {status === 'pending' && !!mediator_name && !onValiderRef && !onSaisirAffaire && (
+                    {status === 'pending' && !!mediator_name && !onValiderRef && !onSaisirAffaire && pendingRefText && (
                       <div className="w-full rounded-xl border border-white/10 bg-black/40 py-4 text-center text-[11px] italic text-white/50">
-                        {user?.id === created_by
-                          ? user?.id !== mediator_id
-                            ? `En attente de ta validation du Ref (@${mediator_name ?? ''})…`
-                            : null
-                          : isWaitingForMe
-                            ? null
-                            : "En attente d'un Ref…"}
+                        {pendingRefText}
                       </div>
                     )}
                   </div>
