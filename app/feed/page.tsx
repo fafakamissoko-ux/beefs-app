@@ -619,11 +619,23 @@ export default function FeedPage() {
   useEffect(() => {
     if (authLoading) return;
     void loadBeefs();
+
+    let debounceTimer: NodeJS.Timeout;
+
     const channel = supabase
       .channel('beefs_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'beefs' }, () => void loadBeefs(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'beefs' }, () => {
+        // Bouclier réseau : annule la requête précédente si la DB spamme les événements
+        clearTimeout(debounceTimer);
+        // Attend 1.5s que la base soit stabilisée avant de déclencher le refetch
+        debounceTimer = setTimeout(() => {
+          void loadBeefs(true);
+        }, 1500);
+      })
       .subscribe();
+
     return () => {
+      clearTimeout(debounceTimer);
       channel.unsubscribe();
     };
   }, [
