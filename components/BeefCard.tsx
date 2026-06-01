@@ -63,6 +63,7 @@ interface BeefCardProps {
   onSeDesister?: () => void;
   onPrepareAudience?: () => void;
   liveAudienceAction?: { variant: 'join' | 'return'; onClick: () => void };
+  userInviteStatus?: string | null;
   intent?: string | null;
   created_by?: string | null;
   index: number;
@@ -117,6 +118,7 @@ export function BeefCard({
   onSeDesister,
   onPrepareAudience,
   liveAudienceAction,
+  userInviteStatus,
   intent,
   created_by,
   index,
@@ -730,35 +732,21 @@ export function BeefCard({
                   >
                     {liveAudienceAction?.variant === 'return' ? '⚔️ Retourner dans l\'Agora' : '🔴 Rejoindre le Direct'}
                   </button>
-                ) : status === 'scheduled' ? (
-                  onPrepareAudience ? (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onPrepareAudience();
-                        setIsTeaserOpen(false);
-                      }}
-                      className="w-full rounded-xl bg-white py-4 text-sm font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-transform hover:scale-[1.02] active:scale-95"
-                    >
-                      🎛️ Préparer la Régie
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClick();
-                        setIsTeaserOpen(false);
-                      }}
-                      className="w-full rounded-xl bg-white/10 py-4 text-sm font-bold uppercase tracking-widest text-white transition-colors hover:bg-white/20 active:scale-95"
-                    >
-                      Rejoindre la salle d'attente
-                    </button>
-                  )
-                ) : (
-                  /* PENDING & MANIFESTO */
+                ) : status === 'scheduled' || status === 'pending' ? (
                   <div className="flex flex-col gap-2">
+                    {onPrepareAudience && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPrepareAudience();
+                          setIsTeaserOpen(false);
+                        }}
+                        className="w-full rounded-xl bg-white py-4 text-sm font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-transform hover:scale-[1.02] active:scale-95"
+                      >
+                        🎛️ Préparer la Régie
+                      </button>
+                    )}
                     {isManifesto && onApply && (
                       <button
                         type="button"
@@ -819,23 +807,44 @@ export function BeefCard({
                         {pendingRefText}
                       </div>
                     )}
-                  </div>
-                )}
 
-                {/* Action Secondaire : Désistement */}
-                {status === 'scheduled' && onSeDesister && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSeDesister();
-                      setIsTeaserOpen(false);
-                    }}
-                    className="mt-1 w-full text-center text-[11px] font-semibold text-white/40 hover:text-white"
-                  >
-                    Se désister
-                  </button>
-                )}
+                    {!onPrepareAudience && userInviteStatus === 'pending' ? (
+                      <div className="w-full rounded-xl border border-prestige-gold/40 bg-prestige-gold/10 py-4 text-center text-sm font-bold text-prestige-gold">
+                        ⚠️ Convocation en attente
+                      </div>
+                    ) : !onPrepareAudience && userInviteStatus === 'declined' ? (
+                      <div className="w-full rounded-xl border border-blood-500/40 bg-blood-500/10 py-4 text-center text-sm font-bold text-blood-400">
+                        ❌ Convocation refusée
+                      </div>
+                    ) : !onPrepareAudience && (!onValiderRef && !onSaisirAffaire && !onApply) ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onClick();
+                          setIsTeaserOpen(false);
+                        }}
+                        className="w-full rounded-xl bg-white/10 py-4 text-sm font-bold uppercase tracking-widest text-white transition-colors hover:bg-white/20 active:scale-95"
+                      >
+                        Rejoindre la salle d'attente
+                      </button>
+                    ) : null}
+
+                    {status === 'scheduled' && onSeDesister && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSeDesister();
+                          setIsTeaserOpen(false);
+                        }}
+                        className="mt-1 w-full text-center text-[11px] font-semibold text-white/40 hover:text-white"
+                      >
+                        Se désister
+                      </button>
+                    )}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

@@ -72,6 +72,7 @@ interface Beef {
   video_url?: string | null;
   /** Feed : médiateur ou participant accepté — libellé « Retourner dans l'Arène » sur les cartes live */
   user_is_live_ring?: boolean;
+  user_invite_status?: string | null;
 }
 
 const STATUS_FILTERS = [
@@ -310,6 +311,7 @@ export default function FeedPage() {
       const challengerCAvatarByBeef: Record<string, string | null> = {};
       const challengerDAvatarByBeef: Record<string, string | null> = {};
       let userOnLiveRingByBeef = new Map<string, boolean>();
+      let userInviteStatusByBeef = new Map<string, string | null>();
 
       const publicIds = new Set<string>();
       for (const b of beefList as { mediator_id?: string | null; created_by?: string | null }[]) {
@@ -431,6 +433,7 @@ export default function FeedPage() {
           if (ringUid && partRows) {
             for (const row of partRows as PartRow[]) {
               if (row.user_id !== ringUid) continue;
+              userInviteStatusByBeef.set(row.beef_id, row.invite_status);
               if (row.invite_status !== 'accepted') continue;
               if (row.role === 'witness') continue;
               userOnLiveRingByBeef.set(row.beef_id, true);
@@ -500,6 +503,7 @@ export default function FeedPage() {
             return s || challengerDAvatarByBeef[bid] || null;
           })(),
           user_is_live_ring: onRing,
+          user_invite_status: userInviteStatusByBeef.get(bid) || null,
           video_url: (beef.video_url as string | null | undefined) ?? null,
           has_liked_by_user: hasLiked,
           teaser_score: Number(beef.teaser_score) || 0,
@@ -1048,10 +1052,11 @@ export default function FeedPage() {
                     {...beef}
                     isActiveVideo={beef.id === activeVideoId}
                     onPrepareAudience={
-                      beef.status === 'scheduled' && user?.id === beef.mediator_id
+                      (beef.status === 'scheduled' || beef.status === 'pending') && user?.id === beef.mediator_id
                         ? () => router.push(`/live/${beef.id}`)
                         : undefined
                     }
+                    userInviteStatus={beef.user_invite_status}
                     saisirTab={feedType === 'manifestes'}
                     onSaisirAffaire={
                       beef.status === 'pending' &&
