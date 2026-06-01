@@ -594,8 +594,8 @@ export function BeefCard({
 
               {onTeaserAuraClick && (
                 <div
-                  className={`absolute right-4 z-[60] flex flex-col items-center gap-1.5 ${
-                    video_url ? 'bottom-20' : 'bottom-4'
+                  className={`absolute right-4 z-[9999] flex flex-col items-center gap-1.5 ${
+                    video_url ? 'bottom-24' : 'bottom-4'
                   }`}
                 >
                   <AnimatePresence>
@@ -690,7 +690,7 @@ export function BeefCard({
               {tags.length > 0 && (
                 <div className="mb-4 flex flex-wrap gap-1.5">
                   {tags.map((tag, idx) => (
-                    <span key={idx} className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-bold text-white/40">
+                    <span key={idx} className="rounded border border-white/20 bg-black/40 px-2 py-1 text-[10px] font-bold text-white/80">
                       #{tag}
                     </span>
                   ))}
