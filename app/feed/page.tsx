@@ -736,7 +736,7 @@ export default function FeedPage() {
     }
     setTimeout(() => {
       isLikingCard.current = false;
-    }, 1000);
+    }, 1500);
   };
 
   /** Teaser : pas d’optimiste local (évite conflit avec Realtime sur `beefs`) — trigger SQL + canal `beefs_changes` → loadBeefs. */
@@ -782,7 +782,7 @@ export default function FeedPage() {
     }
     setTimeout(() => {
       isLikingTeaser.current = false;
-    }, 1000);
+    }, 1500);
   };
 
   const handleBeefClick = (beef: Beef) => {

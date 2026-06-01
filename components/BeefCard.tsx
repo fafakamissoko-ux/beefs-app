@@ -473,7 +473,7 @@ export function BeefCard({
                         setTimeout(() => {
                           setCardFloatingAuras((p) => p.filter((a) => a.id !== newId));
                           localAuraLock.current = false;
-                        }, 1000);
+                        }, 1500);
                       }
                       onAuraClick();
                     }}
@@ -624,7 +624,7 @@ export function BeefCard({
                         setTimeout(() => {
                           setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId));
                           localTeaserAuraLock.current = false;
-                        }, 1000);
+                        }, 1500);
                       }
                       onTeaserAuraClick();
                     }}
@@ -744,9 +744,17 @@ export function BeefCard({
                       🎛️ Préparer la Régie
                     </button>
                   ) : (
-                    <div className="w-full rounded-xl border border-white/10 bg-black/40 py-4 text-center text-sm font-bold text-white/50">
-                      En attente du direct
-                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onClick();
+                        setIsTeaserOpen(false);
+                      }}
+                      className="w-full rounded-xl bg-white/10 py-4 text-sm font-bold uppercase tracking-widest text-white transition-colors hover:bg-white/20 active:scale-95"
+                    >
+                      Rejoindre la salle d'attente
+                    </button>
                   )
                 ) : (
                   /* PENDING & MANIFESTO */
