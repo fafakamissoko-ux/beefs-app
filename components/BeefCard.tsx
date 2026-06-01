@@ -220,6 +220,12 @@ export function BeefCard({
   const beefCardChromeClass = [baseSystem, statusVariant, auraFX, manifestoStroke].filter(Boolean).join(' ');
 
   const getPendingRefText = () => {
+    // Si ce n'est pas un manifeste, le Ref est déjà présent. On attend les combattants.
+    if (intent !== 'manifesto') {
+      return "En attente des participants…";
+    }
+
+    // Logique spécifique aux manifestes
     if (user?.id === created_by) {
       return user?.id !== mediator_id ? `En attente de ta validation du Ref (@${mediator_name ?? ''})…` : null;
     }
