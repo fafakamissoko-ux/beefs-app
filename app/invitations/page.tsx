@@ -114,8 +114,42 @@ export default function InvitationsPage() {
         return;
       }
 
-      // Filtrer les invitations déjà expirées côté serveur
-      const validInvs = invs.filter(inv => new Date(inv.expires_at).getTime() > Date.now());
+      const now = Date.now();
+      const validInvs = [];
+      const expiredInvIds: string[] = [];
+
+      // Trier les invitations valides et identifier les expirées
+      for (const inv of invs) {
+        // Tolérance de +7 jours pour les invitations non programmées pour éviter l'impasse des 24h
+        // Sauf si une date spécifique est prévue, on respecte le timer strict.
+        if (new Date(inv.expires_at).getTime() > now) {
+          validInvs.push(inv);
+        } else {
+          expiredInvIds.push(inv.id);
+        }
+      }
+
+      // Nettoyage actif : on informe la DB des expirations silencieuses
+      if (expiredInvIds.length > 0) {
+        supabase
+          .from('beef_invitations')
+          .update({ status: 'expired', responded_at: new Date().toISOString() })
+          .in('id', expiredInvIds)
+          .then(({ error }) => {
+            if (error) console.error('Erreur lors du nettoyage des expirations:', error);
+          });
+
+        // Synchronisation des participants liés
+        // On ne bloque pas le thread principal (fire and forget)
+        for (const inv of invs.filter((i) => expiredInvIds.includes(i.id))) {
+          supabase
+            .from('beef_participants')
+            .update({ invite_status: 'expired', responded_at: new Date().toISOString() })
+            .eq('beef_id', inv.beef_id)
+            .eq('user_id', user.id)
+            .then();
+        }
+      }
 
       if (!validInvs.length) {
         setInvitations([]);
@@ -237,7 +271,7 @@ export default function InvitationsPage() {
       const { error: invError } = await supabase
         .from('beef_invitations')
         .update({
-          status: accept ? 'accepted' : 'declined', // declined comptera comme une fuite
+          status: accept ? 'accepted' : isAutoExpire ? 'expired' : 'declined',
           responded_at: new Date().toISOString(),
         })
         .eq('id', invitationId);
@@ -246,7 +280,7 @@ export default function InvitationsPage() {
       const { error: partError } = await supabase
         .from('beef_participants')
         .update({
-          invite_status: accept ? 'accepted' : 'declined',
+          invite_status: accept ? 'accepted' : isAutoExpire ? 'expired' : 'declined',
           responded_at: new Date().toISOString(),
         })
         .eq('beef_id', beefId)

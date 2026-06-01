@@ -474,6 +474,9 @@ export function BeefCard({
                         setCardFloatingAuras((p) => [...p, { id: newId, x: Math.random() * 30 - 15 }]);
                         setTimeout(() => {
                           setCardFloatingAuras((p) => p.filter((a) => a.id !== newId));
+                        }, 800);
+
+                        setTimeout(() => {
                           localAuraLock.current = false;
                         }, 1500);
                       }
@@ -625,6 +628,9 @@ export function BeefCard({
                         setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
                         setTimeout(() => {
                           setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId));
+                        }, 800);
+
+                        setTimeout(() => {
                           localTeaserAuraLock.current = false;
                         }, 1500);
                       }
