@@ -570,26 +570,16 @@ export function BeefCard({
 
             <div className="relative flex min-h-[40vh] flex-[1.5] items-center justify-center bg-black/20">
               {video_url ? (
-                <>
-                  <video
-                    ref={modalVideoRef}
-                    src={video_url}
-                    autoPlay
-                    loop
-                    playsInline
-                    muted={isMuted}
-                    onClick={handleToggleMute}
-                    className="h-full w-full object-contain"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleToggleMute}
-                    className="absolute bottom-4 right-4 z-[9999] flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg text-white transition-colors hover:bg-white/20"
-                    aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
-                  >
-                    {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                  </button>
-                </>
+                <video
+                  ref={modalVideoRef}
+                  src={video_url}
+                  autoPlay
+                  loop
+                  playsInline
+                  muted={isMuted}
+                  onClick={handleToggleMute}
+                  className="h-full w-full object-contain"
+                />
               ) : thumbnail ? (
                 // eslint-disable-next-line @next/next/no-img-element -- teaser modal pleine page
                 <img src={thumbnail} alt={title} className="max-h-[50vh] w-full bg-black object-contain md:h-full md:max-h-none" />
@@ -597,90 +587,102 @@ export function BeefCard({
                 <div className="text-white/40">Aucun média</div>
               )}
 
-              {onTeaserAuraClick && (
-                <div
-                  className={`absolute right-4 z-[9999] flex flex-col items-center gap-1.5 ${
-                    video_url ? 'bottom-24' : 'bottom-4'
-                  }`}
-                >
-                  <AnimatePresence>
-                    {teaserFloatingAuras.map((aura) => (
-                      <motion.span
-                        key={aura.id}
-                        initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
-                        animate={{ opacity: 0, y: -40, scale: 1.5 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.65 }}
-                        className="pointer-events-none absolute -top-8 left-1/2 z-50 -translate-x-1/2 text-sm font-black text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]"
-                      >
-                        +1
-                      </motion.span>
-                    ))}
-                  </AnimatePresence>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!has_liked_teaser && !localTeaserAuraLock.current) {
-                        localTeaserAuraLock.current = true;
-                        const newId = Date.now() + Math.random();
-                        setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
-                        setTimeout(() => {
-                          setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId));
-                        }, 800);
+              {/* Conteneur fusionné anti-collision */}
+              {(video_url || onTeaserAuraClick) && (
+                <div className="absolute bottom-4 right-4 z-[9999] flex flex-col-reverse items-center gap-3">
+                  {video_url && (
+                    <button
+                      type="button"
+                      onClick={handleToggleMute}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg text-white transition-colors hover:bg-white/20"
+                      aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
+                    >
+                      {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                    </button>
+                  )}
 
-                        setTimeout(() => {
-                          localTeaserAuraLock.current = false;
-                        }, 1500);
-                      }
-                      onTeaserAuraClick();
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onTeaserAuraClick();
-                      }
-                    }}
-                    aria-label="Aura teaser"
-                    className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-slate-900/40 backdrop-blur-sm border shadow-lg transition-transform active:scale-90 ${
-                      has_liked_teaser
-                        ? 'border-amber-400/50 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
-                        : 'border-white/10 hover:bg-white/20'
-                    }`}
-                  >
-                    <Sparkles
-                      className={`h-6 w-6 ${
-                        has_liked_teaser
-                          ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
-                          : 'text-white'
-                      }`}
-                    />
-                  </div>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsTeaserAuraModalOpen(true);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setIsTeaserAuraModalOpen(true);
-                      }
-                    }}
-                    aria-label="Voir les donateurs d'Aura teaser"
-                    className={`cursor-pointer px-3 py-2 -mx-3 -my-2 font-mono text-xs font-bold drop-shadow-md transition-transform active:scale-95 ${
-                      has_liked_teaser
-                        ? 'text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
-                        : 'text-white'
-                    }`}
-                  >
-                    {(teaser_score || 0).toLocaleString()}
-                  </span>
+                  {onTeaserAuraClick && (
+                    <div className="relative flex flex-col items-center gap-1.5">
+                      <AnimatePresence>
+                        {teaserFloatingAuras.map((aura) => (
+                          <motion.span
+                            key={aura.id}
+                            initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
+                            animate={{ opacity: 0, y: -40, scale: 1.5 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.65 }}
+                            className="pointer-events-none absolute -top-8 left-1/2 z-50 -translate-x-1/2 text-sm font-black text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]"
+                          >
+                            +1
+                          </motion.span>
+                        ))}
+                      </AnimatePresence>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!has_liked_teaser && !localTeaserAuraLock.current) {
+                            localTeaserAuraLock.current = true;
+                            const newId = Date.now() + Math.random();
+                            setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
+                            setTimeout(() => {
+                              setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId));
+                            }, 800);
+
+                            setTimeout(() => {
+                              localTeaserAuraLock.current = false;
+                            }, 1500);
+                          }
+                          onTeaserAuraClick();
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onTeaserAuraClick();
+                          }
+                        }}
+                        aria-label="Aura teaser"
+                        className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-slate-900/40 backdrop-blur-sm border shadow-lg transition-transform active:scale-90 ${
+                          has_liked_teaser
+                            ? 'border-amber-400/50 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
+                            : 'border-white/10 hover:bg-white/20'
+                        }`}
+                      >
+                        <Sparkles
+                          className={`h-6 w-6 ${
+                            has_liked_teaser
+                              ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
+                              : 'text-white'
+                          }`}
+                        />
+                      </div>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsTeaserAuraModalOpen(true);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setIsTeaserAuraModalOpen(true);
+                          }
+                        }}
+                        aria-label="Voir les donateurs d'Aura teaser"
+                        className={`cursor-pointer px-3 py-2 -mx-3 -my-2 font-mono text-xs font-bold drop-shadow-md transition-transform active:scale-95 ${
+                          has_liked_teaser
+                            ? 'text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
+                            : 'text-white'
+                        }`}
+                      >
+                        {(teaser_score || 0).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
