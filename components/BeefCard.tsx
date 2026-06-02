@@ -739,7 +739,7 @@ export function BeefCard({
                   >
                     {liveAudienceAction?.variant === 'return' ? '⚔️ Retourner dans l\'Agora' : '🔴 Rejoindre le Direct'}
                   </button>
-                ) : status === 'scheduled' || status === 'pending' ? (
+                ) : status === 'scheduled' || status === 'pending' || status === 'ready' ? (
                   <div className="flex flex-col gap-2">
                     {onPrepareAudience ? (
                       <button
@@ -821,7 +821,7 @@ export function BeefCard({
                               <div className="w-full rounded-xl border border-blood-500/40 bg-blood-500/10 py-4 text-center text-sm font-bold text-blood-400">
                                 ❌ Convocation refusée
                               </div>
-                            ) : (
+                            ) : userInviteStatus === 'accepted' ? (
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -831,9 +831,30 @@ export function BeefCard({
                                 }}
                                 className="w-full rounded-xl bg-white/10 py-4 text-sm font-bold uppercase tracking-widest text-white transition-colors hover:bg-white/20 active:scale-95"
                               >
-                                Rejoindre la salle d'attente
+                                Salle d'attente Combattant
+                              </button>
+                            ) : status === 'ready' ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onClick();
+                                  setIsTeaserOpen(false);
+                                }}
+                                className="w-full rounded-xl bg-white/10 py-4 text-sm font-bold uppercase tracking-widest text-white transition-colors hover:bg-white/20 active:scale-95"
+                              >
+                                Rejoindre le sas public
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled
+                                className="w-full cursor-not-allowed rounded-xl border border-white/5 bg-white/5 py-4 text-sm font-bold uppercase tracking-widest text-white/30"
+                              >
+                                Ouverture prochaine...
                               </button>
                             )}
+
                             {status === 'pending' && pendingRefText && userInviteStatus !== 'pending' && (
                               <div className="w-full rounded-xl border border-white/10 bg-black/40 py-4 text-center text-[11px] italic text-white/50">
                                 {pendingRefText}
