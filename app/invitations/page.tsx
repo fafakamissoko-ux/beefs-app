@@ -274,7 +274,8 @@ export default function InvitationsPage() {
           status: accept ? 'accepted' : isAutoExpire ? 'expired' : 'declined',
           responded_at: new Date().toISOString(),
         })
-        .eq('id', invitationId);
+        .eq('id', invitationId)
+        .eq('beef_id', beefId);
       if (invError) throw invError;
 
       const { error: partError } = await supabase

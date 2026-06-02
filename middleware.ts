@@ -146,7 +146,7 @@ export async function middleware(request: NextRequest) {
     error: getUserError,
   } = await supabase.auth.getUser();
 
-  const protectedPrefixes = ['/create', '/settings', '/invitations', '/messages', '/admin', '/notifications'];
+  const protectedPrefixes = ['/create', '/settings', '/invitations', '/messages', '/admin', '/notifications', '/arena', '/live'];
 
   /** Hub « Mon profil » uniquement — les pages `/profile/:username` restent publiques. */
   const isProtectedPath =

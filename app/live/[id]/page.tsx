@@ -145,12 +145,13 @@ export default function LiveBeefRoomPage() {
       if (userIdsEqual(beef.mediator_id, userId)) {
         setUserRole('mediator');
       } else {
-        const uidNorm = userId.trim().toLowerCase();
+        const uidTrim = userId.trim();
         const { data: participation } = await supabase
           .from('beef_participants')
           .select('role, invite_status, is_main')
           .eq('beef_id', roomId)
-          .eq('user_id', uidNorm)
+          .eq('user_id', uidTrim)
+          .eq('is_main', true)
           .maybeSingle();
 
         if (participation && participation.invite_status === 'accepted') {
@@ -177,6 +178,14 @@ export default function LiveBeefRoomPage() {
         setAccessError(ticket.message);
         setEntryPhase('READY');
         return;
+      }
+
+      if (ticket.role === 'spectator') {
+        setUserRole('viewer');
+      } else if (ticket.role === 'participant') {
+        setUserRole('challenger');
+      } else if (ticket.role === 'mediator') {
+        setUserRole('mediator');
       }
 
       setDailyRoomUrl(ticket.dailyRoomUrl);
