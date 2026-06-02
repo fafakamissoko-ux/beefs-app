@@ -1053,7 +1053,7 @@ export default function FeedPage() {
                     isActiveVideo={beef.id === activeVideoId}
                     onPrepareAudience={
                       (beef.status === 'scheduled' || beef.status === 'pending') && user?.id === beef.mediator_id
-                        ? () => router.push(`/live/${beef.id}`)
+                        ? () => router.push(`/arena/${beef.id}`)
                         : undefined
                     }
                     userInviteStatus={beef.user_invite_status}

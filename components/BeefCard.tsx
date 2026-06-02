@@ -742,7 +742,7 @@ export function BeefCard({
                   </button>
                 ) : status === 'scheduled' || status === 'pending' ? (
                   <div className="flex flex-col gap-2">
-                    {onPrepareAudience && (
+                    {onPrepareAudience ? (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -754,89 +754,96 @@ export function BeefCard({
                       >
                         🎛️ Préparer la Régie
                       </button>
-                    )}
-                    {isManifesto && onApply && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onApply?.();
-                          setIsTeaserOpen(false);
-                        }}
-                        className="w-full rounded-xl border border-prestige-gold/40 bg-prestige-gold/10 py-3 text-xs font-bold uppercase tracking-widest text-prestige-gold transition-colors hover:bg-prestige-gold/20"
-                      >
-                        + Rôle au ring
-                      </button>
-                    )}
-                    {status === 'pending' && onSaisirAffaire && !mediator_name && !isParticipant && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSaisirAffaire();
-                          setIsTeaserOpen(false);
-                        }}
-                        className="w-full rounded-xl bg-prestige-gold py-4 text-sm font-black uppercase tracking-widest text-black shadow-[0_0_15px_rgba(212,175,55,0.5)] transition-transform hover:scale-[1.02] active:scale-95"
-                      >
-                        Devenir le Ref
-                      </button>
-                    )}
-                    {status === 'pending' && !!mediator_name && onValiderRef && (
-                      <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                        <span className="text-center text-[11px] text-gray-300">@{mediator_name} postule.</span>
-                        <div className="flex gap-2">
+                    ) : (
+                      <>
+                        {isManifesto && onApply && (
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onRefuserRef?.();
+                              onApply?.();
                               setIsTeaserOpen(false);
                             }}
-                            className="flex-1 rounded-lg bg-white/10 py-2.5 text-xs font-bold text-white hover:bg-white/20"
+                            className="w-full rounded-xl border border-prestige-gold/40 bg-prestige-gold/10 py-3 text-xs font-bold uppercase tracking-widest text-prestige-gold transition-colors hover:bg-prestige-gold/20"
                           >
-                            Refuser
+                            + Rôle au ring
                           </button>
+                        )}
+                        {status === 'pending' && onSaisirAffaire && !mediator_name && !isParticipant && (
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onValiderRef();
+                              onSaisirAffaire();
                               setIsTeaserOpen(false);
                             }}
-                            className="flex-1 rounded-lg bg-prestige-gold py-2.5 text-xs font-bold text-black shadow-[0_0_10px_rgba(212,175,55,0.4)] hover:bg-yellow-500"
+                            className="w-full rounded-xl bg-prestige-gold py-4 text-sm font-black uppercase tracking-widest text-black shadow-[0_0_15px_rgba(212,175,55,0.5)] transition-transform hover:scale-[1.02] active:scale-95"
                           >
-                            Valider
+                            Devenir le Ref
                           </button>
-                        </div>
-                      </div>
-                    )}
-                    {status === 'pending' && !!mediator_name && !onValiderRef && !onSaisirAffaire && pendingRefText && (
-                      <div className="w-full rounded-xl border border-white/10 bg-black/40 py-4 text-center text-[11px] italic text-white/50">
-                        {pendingRefText}
-                      </div>
-                    )}
+                        )}
+                        {status === 'pending' && !!mediator_name && onValiderRef && (
+                          <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                            <span className="text-center text-[11px] text-gray-300">@{mediator_name} postule.</span>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onRefuserRef?.();
+                                  setIsTeaserOpen(false);
+                                }}
+                                className="flex-1 rounded-lg bg-white/10 py-2.5 text-xs font-bold text-white hover:bg-white/20"
+                              >
+                                Refuser
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onValiderRef();
+                                  setIsTeaserOpen(false);
+                                }}
+                                className="flex-1 rounded-lg bg-prestige-gold py-2.5 text-xs font-bold text-black shadow-[0_0_10px_rgba(212,175,55,0.4)] hover:bg-yellow-500"
+                              >
+                                Valider
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
-                    {!onPrepareAudience && userInviteStatus === 'pending' ? (
-                      <div className="w-full rounded-xl border border-prestige-gold/40 bg-prestige-gold/10 py-4 text-center text-sm font-bold text-prestige-gold">
-                        ⚠️ Convocation en attente
-                      </div>
-                    ) : !onPrepareAudience && userInviteStatus === 'declined' ? (
-                      <div className="w-full rounded-xl border border-blood-500/40 bg-blood-500/10 py-4 text-center text-sm font-bold text-blood-400">
-                        ❌ Convocation refusée
-                      </div>
-                    ) : !onPrepareAudience && (!onValiderRef && !onSaisirAffaire && !onApply) ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onClick();
-                          setIsTeaserOpen(false);
-                        }}
-                        className="w-full rounded-xl bg-white/10 py-4 text-sm font-bold uppercase tracking-widest text-white transition-colors hover:bg-white/20 active:scale-95"
-                      >
-                        Rejoindre la salle d'attente
-                      </button>
-                    ) : null}
+                        {(!isManifesto || (!onApply && !onSaisirAffaire && !onValiderRef)) && (
+                          <>
+                            {userInviteStatus === 'pending' ? (
+                              <div className="w-full rounded-xl border border-prestige-gold/40 bg-prestige-gold/10 py-4 text-center text-sm font-bold text-prestige-gold">
+                                ⚠️ Convocation en attente
+                              </div>
+                            ) : userInviteStatus === 'declined' ? (
+                              <div className="w-full rounded-xl border border-blood-500/40 bg-blood-500/10 py-4 text-center text-sm font-bold text-blood-400">
+                                ❌ Convocation refusée
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onClick();
+                                  setIsTeaserOpen(false);
+                                }}
+                                className="w-full rounded-xl bg-white/10 py-4 text-sm font-bold uppercase tracking-widest text-white transition-colors hover:bg-white/20 active:scale-95"
+                              >
+                                Rejoindre la salle d'attente
+                              </button>
+                            )}
+                            {status === 'pending' && pendingRefText && (
+                              <div className="w-full rounded-xl border border-white/10 bg-black/40 py-4 text-center text-[11px] italic text-white/50">
+                                {pendingRefText}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )}
 
                     {status === 'scheduled' && onSeDesister && (
                       <button

@@ -173,12 +173,11 @@ export default function ArenaPage() {
       if (userIdsEqual(effectiveHostId, uidTrim)) {
         setUserRole('mediator');
       } else {
-        const uidNorm = uidTrim.toLowerCase();
         const { data: participation } = await supabase
           .from('beef_participants')
           .select('role, invite_status, is_main')
           .eq('beef_id', roomId)
-          .eq('user_id', uidNorm)
+          .eq('user_id', uidTrim)
           .maybeSingle();
 
         if (participation && participation.invite_status === 'accepted') {
