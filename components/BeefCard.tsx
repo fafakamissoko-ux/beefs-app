@@ -222,12 +222,15 @@ export function BeefCard({
   const beefCardChromeClass = [baseSystem, statusVariant, auraFX, manifestoStroke].filter(Boolean).join(' ');
 
   const getPendingRefText = () => {
-    // Si ce n'est pas un manifeste, le Ref est déjà présent. On attend les combattants.
+    // Logique pour les Médiations standards
     if (intent !== 'manifesto') {
-      return "En attente des participants…";
+      if (user?.id === mediator_id) return 'En attente des combattants…';
+      if (userInviteStatus === 'pending') return null; // Masqué pour éviter le doublon avec le bouton d'action
+      if (userInviteStatus === 'accepted') return 'En attente de ton adversaire…';
+      return 'En attente des participants…'; // Spectateurs
     }
 
-    // Logique spécifique aux manifestes
+    // Logique spécifique aux Manifestes
     if (user?.id === created_by) {
       return user?.id !== mediator_id ? `En attente de ta validation du Ref (@${mediator_name ?? ''})…` : null;
     }

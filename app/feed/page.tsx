@@ -754,21 +754,21 @@ export default function FeedPage() {
     }
     const isCurrentlyLiked = !!targetBeef.has_liked_teaser;
 
-    // --- AJOUT OPTIMISTIC UI ---
+    // --- AJOUT OPTIMISTIC UI (Partiel) ---
     setBeefs((prev) =>
       prev.map((b) => {
         if (b.id === beefId) {
-          const wasLiked = !!b.has_liked_teaser;
           return {
             ...b,
-            has_liked_teaser: !wasLiked,
-            teaser_score: Math.max(0, (b.teaser_score || 0) + (wasLiked ? -1 : 1)),
+            has_liked_teaser: !b.has_liked_teaser,
+            // On retire l'incrémentation locale du score pour éviter le glitch "+2".
+            // Le Realtime se chargera de fetcher le compte exact après 1500ms.
           };
         }
         return b;
       }),
     );
-    // ---------------------------
+    // -------------------------------------
 
     try {
       if (isCurrentlyLiked) {
