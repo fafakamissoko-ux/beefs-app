@@ -140,9 +140,6 @@ export function BeefCard({
   const [isBeefAuraModalOpen, setIsBeefAuraModalOpen] = useState(false);
   const [isTeaserAuraModalOpen, setIsTeaserAuraModalOpen] = useState(false);
   const [isViewsModalOpen, setIsViewsModalOpen] = useState(false);
-  const localAuraLock = useRef(false);
-  const localTeaserAuraLock = useRef(false);
-
   const isParticipant = user
     ? user.id === created_by ||
       user.user_metadata?.username === challenger_a_username ||
@@ -470,20 +467,16 @@ export function BeefCard({
                       !has_liked_by_user ? 'hover:text-amber-400' : ''
                     }`}
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
-                      if (!has_liked_by_user && !localAuraLock.current) {
-                        localAuraLock.current = true;
+                      if (!has_liked_by_user) {
                         const newId = Date.now() + Math.random();
                         setCardFloatingAuras((p) => [...p, { id: newId, x: Math.random() * 30 - 15 }]);
                         setTimeout(() => {
                           setCardFloatingAuras((p) => p.filter((a) => a.id !== newId));
                         }, 800);
-
-                        setTimeout(() => {
-                          localAuraLock.current = false;
-                        }, 1500);
                       }
-                      onAuraClick();
+                      onAuraClick?.();
                     }}
                     aria-label={has_liked_by_user ? "Retirer l'Aura" : "Envoyer de l'Aura"}
                   >
@@ -624,38 +617,29 @@ export function BeefCard({
                         role="button"
                         tabIndex={0}
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
-                          if (!has_liked_teaser && !localTeaserAuraLock.current) {
-                            localTeaserAuraLock.current = true;
-                            onTeaserAuraClick();
+                          if (!has_liked_teaser) {
                             const newId = Date.now() + Math.random();
                             setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
                             setTimeout(() => {
                               setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId));
                             }, 800);
-
-                            setTimeout(() => {
-                              localTeaserAuraLock.current = false;
-                            }, 1500);
                           }
+                          onTeaserAuraClick?.();
                         }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
                             e.stopPropagation();
-                            if (!has_liked_teaser && !localTeaserAuraLock.current) {
-                              localTeaserAuraLock.current = true;
-                              onTeaserAuraClick();
+                            if (!has_liked_teaser) {
                               const newId = Date.now() + Math.random();
                               setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
                               setTimeout(() => {
                                 setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId));
                               }, 800);
-
-                              setTimeout(() => {
-                                localTeaserAuraLock.current = false;
-                              }, 1500);
                             }
+                            onTeaserAuraClick?.();
                           }
                         }}
                         aria-label="Aura teaser"

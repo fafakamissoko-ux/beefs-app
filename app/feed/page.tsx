@@ -138,8 +138,6 @@ export default function FeedPage() {
   const [editBeefId, setEditBeefId] = useState<string | null>(null);
   const [beefToForfeit, setBeefToForfeit] = useState<string | null>(null);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
-  const isLikingCard = useRef(false);
-  const isLikingTeaser = useRef(false);
 
   useEffect(() => {
     try {
@@ -704,23 +702,19 @@ export default function FeedPage() {
   };
 
   const handleAuraClick = async (beefId: string) => {
-    if (!user?.id || isLikingCard.current) return;
-    isLikingCard.current = true;
+    if (!user?.id) return;
     const targetBeef = beefs.find((b) => b.id === beefId);
-    if (!targetBeef) {
-      isLikingCard.current = false;
-      return;
-    }
+    if (!targetBeef) return;
+
     const isCurrentlyLiked = !!targetBeef.has_liked_by_user;
 
     setBeefs((prev) =>
       prev.map((b) => {
         if (b.id === beefId) {
-          const wasLiked = !!b.has_liked_by_user;
           return {
             ...b,
-            has_liked_by_user: !wasLiked,
-            engagement_score: Math.max(0, (b.engagement_score || 0) + (wasLiked ? -1 : 1)),
+            has_liked_by_user: !isCurrentlyLiked,
+            engagement_score: Math.max(0, (b.engagement_score || 0) + (isCurrentlyLiked ? -1 : 1)),
           };
         }
         return b;
@@ -729,64 +723,44 @@ export default function FeedPage() {
 
     try {
       if (isCurrentlyLiked) {
-        const { error } = await supabase.from('beef_likes').delete().match({ beef_id: beefId, user_id: user.id });
-        if (error) throw error;
+        await supabase.from('beef_likes').delete().match({ beef_id: beefId, user_id: user.id });
       } else {
-        const { error } = await supabase.from('beef_likes').insert({ beef_id: beefId, user_id: user.id });
-        if (error) throw error;
+        await supabase.from('beef_likes').insert({ beef_id: beefId, user_id: user.id });
       }
     } catch (error) {
-      console.error('Erreur lors du vote Aura:', error);
+      console.error('Erreur API Aura:', error);
     }
-    setTimeout(() => {
-      isLikingCard.current = false;
-    }, 1500);
   };
 
-  /** Teaser : pas d’optimiste local (évite conflit avec Realtime sur `beefs`) — trigger SQL + canal `beefs_changes` → loadBeefs. */
   const handleTeaserAuraClick = async (beefId: string) => {
-    if (!user?.id || isLikingTeaser.current) return;
-    isLikingTeaser.current = true;
+    if (!user?.id) return;
     const targetBeef = beefs.find((b) => b.id === beefId);
-    if (!targetBeef) {
-      isLikingTeaser.current = false;
-      return;
-    }
+    if (!targetBeef) return;
+
     const isCurrentlyLiked = !!targetBeef.has_liked_teaser;
 
-    // --- AJOUT OPTIMISTIC UI (Partiel) ---
     setBeefs((prev) =>
       prev.map((b) => {
         if (b.id === beefId) {
           return {
             ...b,
-            has_liked_teaser: !b.has_liked_teaser,
-            // On retire l'incrémentation locale du score pour éviter le glitch "+2".
-            // Le Realtime se chargera de fetcher le compte exact après 1500ms.
+            has_liked_teaser: !isCurrentlyLiked,
+            teaser_score: Math.max(0, (b.teaser_score || 0) + (isCurrentlyLiked ? -1 : 1)),
           };
         }
         return b;
       }),
     );
-    // -------------------------------------
 
     try {
       if (isCurrentlyLiked) {
-        const { error } = await supabase
-          .from('teaser_likes')
-          .delete()
-          .match({ beef_id: beefId, user_id: user.id });
-        if (error) throw error;
+        await supabase.from('teaser_likes').delete().match({ beef_id: beefId, user_id: user.id });
       } else {
-        const { error } = await supabase.from('teaser_likes').insert({ beef_id: beefId, user_id: user.id });
-        if (error) throw error;
+        await supabase.from('teaser_likes').insert({ beef_id: beefId, user_id: user.id });
       }
     } catch (error) {
-      console.error('Erreur lors du vote Aura (teaser):', error);
+      console.error('Erreur API Aura Teaser:', error);
     }
-    setTimeout(() => {
-      isLikingTeaser.current = false;
-    }, 1500);
   };
 
   const handleBeefClick = (beef: Beef) => {
