@@ -406,7 +406,7 @@ export function BeefCard({
             {title}
           </h3>
           <div className="mb-3 flex flex-wrap items-center gap-x-2 font-sans text-[10px] font-black uppercase tracking-widest text-white/90 sm:text-xs drop-shadow-md">
-            <span className="italic">{challenger_a_name || 'Challenger 1'}</span>
+            <span className="italic">{challenger_a_name || (intent === 'manifesto' ? 'À Saisir' : 'Challenger 1')}</span>
             <span className="text-brand-400">VS</span>
             <span className="italic">{challenger_b_name || 'Challenger 2'}</span>
             {challenger_c_name && (
@@ -627,6 +627,7 @@ export function BeefCard({
                           e.stopPropagation();
                           if (!has_liked_teaser && !localTeaserAuraLock.current) {
                             localTeaserAuraLock.current = true;
+                            onTeaserAuraClick();
                             const newId = Date.now() + Math.random();
                             setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
                             setTimeout(() => {
@@ -637,13 +638,24 @@ export function BeefCard({
                               localTeaserAuraLock.current = false;
                             }, 1500);
                           }
-                          onTeaserAuraClick();
                         }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
                             e.stopPropagation();
-                            onTeaserAuraClick();
+                            if (!has_liked_teaser && !localTeaserAuraLock.current) {
+                              localTeaserAuraLock.current = true;
+                              onTeaserAuraClick();
+                              const newId = Date.now() + Math.random();
+                              setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
+                              setTimeout(() => {
+                                setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId));
+                              }, 800);
+
+                              setTimeout(() => {
+                                localTeaserAuraLock.current = false;
+                              }, 1500);
+                            }
                           }
                         }}
                         aria-label="Aura teaser"
@@ -838,7 +850,7 @@ export function BeefCard({
                                 Rejoindre la salle d'attente
                               </button>
                             )}
-                            {status === 'pending' && pendingRefText && (
+                            {status === 'pending' && pendingRefText && userInviteStatus !== 'pending' && (
                               <div className="w-full rounded-xl border border-white/10 bg-black/40 py-4 text-center text-[11px] italic text-white/50">
                                 {pendingRefText}
                               </div>
