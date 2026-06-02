@@ -178,6 +178,7 @@ export default function ArenaPage() {
           .select('role, invite_status, is_main')
           .eq('beef_id', roomId)
           .eq('user_id', uidTrim)
+          .eq('is_main', true)
           .maybeSingle();
 
         if (participation && participation.invite_status === 'accepted') {
@@ -198,6 +199,14 @@ export default function ArenaPage() {
         setAccessError(ticket.message);
         setEntryPhase('READY');
         return;
+      }
+
+      if (ticket.role === 'spectator') {
+        setUserRole('viewer');
+      } else if (ticket.role === 'participant') {
+        setUserRole('challenger');
+      } else if (ticket.role === 'mediator') {
+        setUserRole('mediator');
       }
 
       setDailyRoomUrl(ticket.dailyRoomUrl);

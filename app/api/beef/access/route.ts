@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
 
     const { data: beef, error: beefErr } = await supabaseAdmin
       .from('beefs')
-      .select('id, mediator_id, status')
+      .select('id, mediator_id, created_by, status')
       .eq('id', beefId)
       .single();
 
@@ -152,7 +152,9 @@ export async function GET(request: NextRequest) {
     let tokenRole: DailyTokenRole = 'spectator';
     let isCreator = false;
 
-    if (userIdsEqual(beef.mediator_id, user.id)) {
+    const effectiveHostId = beef.mediator_id ?? beef.created_by ?? '';
+
+    if (userIdsEqual(effectiveHostId, user.id)) {
       tokenRole = 'mediator';
       isCreator = true;
     } else {
