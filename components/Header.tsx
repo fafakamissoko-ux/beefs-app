@@ -301,37 +301,53 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
           headerCallbacksRef.current.toast('Nouvelle invitation reçue !', 'info');
         }
       )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          const n = payload.new as { type?: string; body?: string; title?: string };
-          const prefs = getNotifPrefs();
-          const typeMap: Record<string, string> = {
-            message: 'messages',
-            follow: 'follows',
-            invite: 'invites',
-            beef_live: 'beefs_live',
-            gift: 'gifts',
-            aura: 'aura',
-          };
-          const prefKey = typeMap[n.type || ''];
-          if (prefKey && prefs[prefKey] === false) return;
+      .subscribe();
 
-          void headerCallbacksRef.current.loadUnreadCounts();
-          showBrowserNotification(n.title || 'Beefs', n.body || '');
-        }
-      )
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let debounceTimer: ReturnType<typeof setTimeout>;
+
+    const channel = supabase
+      .channel('notifications_header')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        () => {
-          void headerCallbacksRef.current.loadUnreadCounts();
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            void headerCallbacksRef.current.loadUnreadCounts();
+          }, 500);
+
+          if (payload.eventType === 'INSERT') {
+            const n = payload.new as { type?: string; body?: string; title?: string };
+            const prefs = getNotifPrefs();
+            const typeMap: Record<string, string> = {
+              message: 'messages',
+              follow: 'follows',
+              invite: 'invites',
+              beef_live: 'beefs_live',
+              gift: 'gifts',
+              aura: 'aura',
+            };
+            const prefKey = typeMap[n.type || ''];
+            if (prefKey && prefs[prefKey] === false) return;
+
+            showBrowserNotification(n.title || 'Beefs', n.body || '');
+          }
         }
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   /** Liens masqués jusqu’à xl sur la barre horizontale (shell full) — évite le carambolage laptop. */
