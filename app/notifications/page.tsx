@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -39,6 +39,15 @@ export interface AppNotification {
   link: string | null;
   is_read: boolean | null;
   metadata: Record<string, unknown> | null;
+}
+
+interface AuraSparkNotification {
+  id: string;
+  created_at: string;
+  is_read: boolean | null;
+  giver_name?: string | null;
+  giver_username?: string | null;
+  aura_kind?: string | null;
 }
 
 function shortTimeAgo(date: string): string {
@@ -84,6 +93,7 @@ export default function NotificationsPage() {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [auraNotifications, setAuraNotifications] = useState<AuraSparkNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
 
@@ -98,15 +108,24 @@ export default function NotificationsPage() {
     if (!user) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(4000);
+      const [notifRes, auraRes] = await Promise.all([
+        supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(4000),
+        supabase
+          .from('aura_notifications')
+          .select('id, created_at, giver_name, giver_username, aura_kind, is_read')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(4000),
+      ]);
 
-      if (error) throw error;
-      setNotifications((data ?? []) as AppNotification[]);
+      if (notifRes.error) throw notifRes.error;
+      setNotifications((notifRes.data ?? []) as AppNotification[]);
+      setAuraNotifications(auraRes.error ? [] : ((auraRes.data ?? []) as AuraSparkNotification[]));
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
@@ -171,6 +190,7 @@ export default function NotificationsPage() {
     setMarkingAll(true);
     try {
       const { error: rpcErr } = await supabase.rpc('mark_all_notifications_read');
+
       if (rpcErr) {
         const { error: upErr } = await supabase
           .from('notifications')
@@ -183,12 +203,17 @@ export default function NotificationsPage() {
           return;
         }
       }
-      setNotifications((prev) =>
-        prev.map((n) => ({ ...n, is_read: true }))
-      );
+
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setAuraNotifications((prev) => prev.map((a) => ({ ...a, is_read: true })));
+
+      toast('Toutes les notifications ont été marquées comme lues', 'success');
+
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
       }
+    } catch (err) {
+      console.error('[notifications] markAllRead', err);
     } finally {
       setMarkingAll(false);
     }
@@ -215,8 +240,11 @@ export default function NotificationsPage() {
         window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
       }
     } else if (!n.is_read && isSparkRow) {
-      setNotifications((prev) =>
-        prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))
+      setAuraNotifications((prev) =>
+        prev.map((x) => {
+          const sparkId = x.id.startsWith('spark-') ? x.id : `spark-${x.id}`;
+          return sparkId === n.id ? { ...x, is_read: true } : x;
+        }),
       );
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
@@ -243,10 +271,36 @@ export default function NotificationsPage() {
     if (n.link) router.push(n.link);
   };
 
-  if (!authLoading && !user) return null;
+  const auraAsAppNotifications = useMemo((): AppNotification[] => {
+    if (!user) return [];
+    return auraNotifications.map((a) => {
+      const giverLabel = a.giver_name || a.giver_username || 'Quelqu\'un';
+      return {
+        id: a.id.startsWith('spark-') ? a.id : `spark-${a.id}`,
+        created_at: a.created_at,
+        user_id: user.id,
+        type: 'aura' as const,
+        title: 'Étincelle d\'Aura',
+        body: `${giverLabel} t'a transmis de l'Aura`,
+        link: a.giver_username ? `/profile/${a.giver_username}` : null,
+        is_read: a.is_read,
+        metadata: a.aura_kind ? { aura_kind: a.aura_kind } : null,
+      };
+    });
+  }, [auraNotifications, user]);
+
+  const displayNotifications = useMemo(
+    () =>
+      [...notifications, ...auraAsAppNotifications].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      ),
+    [notifications, auraAsAppNotifications],
+  );
 
   const isPageLoading = authLoading || loading;
-  const unreadCount = notifications.filter(isNotificationUnread).length;
+  const unreadCount = displayNotifications.filter(isNotificationUnread).length;
+
+  if (!authLoading && !user) return null;
 
   return (
     <div className="min-h-screen">
@@ -266,7 +320,7 @@ export default function NotificationsPage() {
             </div>
             <Bell className="w-6 h-6 text-gray-500 shrink-0" />
           </div>
-          {notifications.length > 0 && unreadCount > 0 && (
+          {displayNotifications.length > 0 && unreadCount > 0 && (
             <button
               type="button"
               onClick={markAllRead}
@@ -284,7 +338,7 @@ export default function NotificationsPage() {
               <SkeletonCard key={i} />
             ))}
           </div>
-        ) : notifications.length === 0 ? (
+        ) : displayNotifications.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -304,7 +358,7 @@ export default function NotificationsPage() {
         ) : (
           <div>
             <AnimatePresence>
-              {notifications.map((n, i) => {
+              {displayNotifications.map((n, i) => {
                 const mapKey =
                   typeof n.type === 'string' && n.type in ICON_MAP ? (n.type as NotificationType) : 'system';
                 const { icon: Icon, color, bg } = ICON_MAP[mapKey];
