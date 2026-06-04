@@ -121,6 +121,7 @@ export default function PublicProfilePage() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showFollowModal, setShowFollowModal] = useState<null | 'followers' | 'following'>(null);
   const [isAuraModalOpen, setIsAuraModalOpen] = useState(false);
+  const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
   const [mediatorReviews, setMediatorReviews] = useState<MediatorViewerReviewDisplay[]>([]);
   const [activeTab, setActiveTab] = useState<'debates' | 'participations' | 'reviews'>('debates');
   const [viewingImage, setViewingImage] = useState<{ url: string; type: 'avatar' | 'banner' } | null>(null);
@@ -534,6 +535,25 @@ export default function PublicProfilePage() {
   useEffect(() => {
     void loadProfile();
   }, [loadProfile]);
+
+  useEffect(() => {
+    if (!profile || typeof window === 'undefined') return;
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const viewType = searchParams.get('view');
+
+    if (viewType === 'avatar' && profile.avatar_url) {
+      setViewingImage({
+        url: profile.avatar_original_url || profile.avatar_url,
+        type: 'avatar',
+      });
+    } else if (viewType === 'banner' && profile.banner_url) {
+      setViewingImage({
+        url: profile.banner_original_url || profile.banner_url,
+        type: 'banner',
+      });
+    }
+  }, [profile]);
 
   /** Ancres #beefs / #followers / #following / #participations / #reviews / #vox-populi */
   useEffect(() => {
@@ -1033,6 +1053,16 @@ export default function PublicProfilePage() {
         />
       )}
 
+      {profile && viewingImage && (
+        <AuraGiversModal
+          isOpen={isMediaModalOpen}
+          onClose={() => setIsMediaModalOpen(false)}
+          targetId={profile.id}
+          type={viewingImage.type}
+          ownerId={profile.id}
+        />
+      )}
+
       <AnimatePresence>
         {viewingImage && (
           <motion.div
@@ -1094,43 +1124,53 @@ export default function PublicProfilePage() {
                     ))}
                 </AnimatePresence>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleMediaAuraClick();
-                  }}
-                  disabled={mediaAuraLoading || !!isOwnProfile || !profile}
-                  title={
-                    isOwnProfile ? 'Tu ne peux pas liker ton propre média' : 'Aura sur ce média'
-                  }
-                  aria-pressed={mediaLikes[viewingImage.type].liked}
-                  aria-label={
-                    viewingImage.type === 'avatar'
-                      ? 'Aura sur la photo de profil'
-                      : 'Aura sur la bannière'
-                  }
-                  className={`relative flex items-center gap-3 rounded-full border-2 px-8 py-4 font-black text-lg outline-none select-none [-webkit-tap-highlight-color:transparent] transition-transform hover:scale-105 disabled:pointer-events-none disabled:opacity-45 ${
-                    mediaLikes[viewingImage.type].liked && !isOwnProfile
-                      ? 'border-yellow-400/50 bg-black/40 text-yellow-400 shadow-[0_0_12px_rgba(250,204,21,0.9)] hover:bg-black/55'
-                      : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
-                  }`}
-                >
-                  <Sparkles
-                    className={`h-6 w-6 ${
-                      mediaLikes[viewingImage.type].liked && !isOwnProfile
-                        ? 'fill-yellow-400 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
-                        : 'text-white'
-                    }`}
-                  />
-                  <InlineAuraGivers
-                    targetId={profile.id}
-                    type={viewingImage.type}
-                    ownerId={profile.id}
-                  />
-                  <span className="font-mono tabular-nums">
-                    {(mediaLikes[viewingImage.type].count ?? 0).toLocaleString()}
-                  </span>
-                </button>
+                <div className="flex items-center gap-1.5 rounded-full border-2 border-white/20 bg-slate-900/60 p-1 pr-3">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void handleMediaAuraClick();
+                    }}
+                    disabled={mediaAuraLoading || !!isOwnProfile || !profile}
+                    aria-pressed={mediaLikes[viewingImage.type].liked}
+                    aria-label={
+                      viewingImage.type === 'avatar'
+                        ? 'Aura sur la photo de profil'
+                        : 'Aura sur la bannière'
+                    }
+                    title={
+                      isOwnProfile ? 'Tu ne peux pas liker ton propre média' : 'Aura sur ce média'
+                    }
+                    className="flex items-center justify-center rounded-full p-3 transition-colors hover:bg-white/10 disabled:pointer-events-none disabled:opacity-45"
+                  >
+                    <Sparkles
+                      className={`h-6 w-6 ${
+                        mediaLikes[viewingImage.type].liked && !isOwnProfile
+                          ? 'fill-yellow-400 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
+                          : 'text-white'
+                      }`}
+                    />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMediaModalOpen(true);
+                    }}
+                    aria-label="Voir les donateurs"
+                    className="flex items-center gap-2 rounded-full px-1 py-1 transition-colors hover:bg-white/10"
+                  >
+                    <InlineAuraGivers
+                      targetId={profile.id}
+                      type={viewingImage.type}
+                      ownerId={profile.id}
+                    />
+                    <span className="font-mono tabular-nums text-white">
+                      {(mediaLikes[viewingImage.type].count ?? 0).toLocaleString()}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
