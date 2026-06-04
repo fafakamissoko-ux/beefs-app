@@ -96,6 +96,7 @@ export default function NotificationsPage() {
   const [auraNotifications, setAuraNotifications] = useState<AuraSparkNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'aura' | 'mentions'>('all');
 
   useEffect(() => {
     if (authLoading) return;
@@ -189,41 +190,67 @@ export default function NotificationsPage() {
     if (!user || markingAll) return;
     setMarkingAll(true);
     try {
-      const { error: rpcErr } = await supabase.rpc('mark_all_notifications_read');
-
-      if (rpcErr) {
-        const { error: upErr } = await supabase
+      if (activeTab === 'all') {
+        await supabase.rpc('mark_all_notifications_read');
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+        setAuraNotifications((prev) => prev.map((a) => ({ ...a, is_read: true })));
+      } else if (activeTab === 'aura') {
+        await supabase
           .from('notifications')
           .update({ is_read: true })
           .eq('user_id', user.id)
+          .eq('type', 'aura')
           .or('is_read.is.null,is_read.eq.false');
-        if (upErr) {
-          console.error('[notifications] markAllRead', rpcErr, upErr);
-          toast('Impossible de tout marquer comme lu. Réessaie dans un instant.', 'error');
-          return;
-        }
+        await supabase
+          .from('aura_sparks')
+          .update({ is_read: true })
+          .eq('receiver_id', user.id)
+          .or('is_read.is.null,is_read.eq.false');
+        setNotifications((prev) =>
+          prev.map((n) => (n.type === 'aura' ? { ...n, is_read: true } : n)),
+        );
+        setAuraNotifications((prev) => prev.map((a) => ({ ...a, is_read: true })));
+      } else {
+        await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', user.id)
+          .neq('type', 'aura')
+          .or('is_read.is.null,is_read.eq.false');
+        setNotifications((prev) =>
+          prev.map((n) => (n.type !== 'aura' ? { ...n, is_read: true } : n)),
+        );
       }
-
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      setAuraNotifications((prev) => prev.map((a) => ({ ...a, is_read: true })));
-
-      toast('Toutes les notifications ont été marquées comme lues', 'success');
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
       }
+      toast('Notifications marquées comme lues', 'success');
     } catch (err) {
       console.error('[notifications] markAllRead', err);
+      toast('Impossible de marquer comme lu. Réessaie dans un instant.', 'error');
     } finally {
       setMarkingAll(false);
     }
   };
 
   const handleRowClick = async (n: AppNotification) => {
-    const isSparkRow = n.type === 'aura' || n.id.startsWith('spark-');
+    const isSparkRow = n.id.startsWith('spark-');
 
     if (!n.is_read) {
-      if (!isSparkRow) {
+      if (isSparkRow) {
+        const pureId = n.id.replace('spark-', '');
+        const { error: sparkErr } = await supabase
+          .from('aura_sparks')
+          .update({ is_read: true })
+          .eq('id', pureId);
+        if (sparkErr) {
+          console.error('[notifications] mark spark read', sparkErr);
+        }
+        setAuraNotifications((prev) =>
+          prev.map((x) => (x.id === n.id || x.id === pureId ? { ...x, is_read: true } : x)),
+        );
+      } else {
         const { error: rpcErr } = await supabase.rpc('mark_notification_read', { p_id: n.id });
         if (rpcErr && user) {
           const { error: upErr } = await supabase
@@ -237,22 +264,6 @@ export default function NotificationsPage() {
         }
         setNotifications((prev) =>
           prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)),
-        );
-      } else {
-        const pureId = n.id.replace('spark-', '');
-        const { error: sparkErr } = await supabase
-          .from('aura_sparks')
-          .update({ is_read: true })
-          .eq('id', pureId);
-        if (sparkErr) {
-          console.error('[notifications] mark spark read', sparkErr);
-        }
-
-        setAuraNotifications((prev) =>
-          prev.map((x) => {
-            const sparkId = x.id.startsWith('spark-') ? x.id : `spark-${x.id}`;
-            return sparkId === n.id ? { ...x, is_read: true } : x;
-          }),
         );
       }
 
@@ -309,8 +320,21 @@ export default function NotificationsPage() {
     [notifications, auraAsAppNotifications],
   );
 
+  const filteredNotifications = useMemo(() => {
+    if (activeTab === 'all') return displayNotifications;
+    if (activeTab === 'aura') return displayNotifications.filter((n) => n.type === 'aura');
+    return displayNotifications.filter((n) => n.type !== 'aura');
+  }, [displayNotifications, activeTab]);
+
   const isPageLoading = authLoading || loading;
   const unreadCount = displayNotifications.filter(isNotificationUnread).length;
+  const unreadFilteredCount = filteredNotifications.filter(isNotificationUnread).length;
+
+  const TAB_OPTIONS: { id: 'all' | 'aura' | 'mentions'; label: string }[] = [
+    { id: 'all', label: 'Tout' },
+    { id: 'aura', label: 'Aura' },
+    { id: 'mentions', label: 'Mentions' },
+  ];
 
   if (!authLoading && !user) return null;
 
@@ -332,7 +356,23 @@ export default function NotificationsPage() {
             </div>
             <Bell className="w-6 h-6 text-gray-500 shrink-0" />
           </div>
-          {displayNotifications.length > 0 && unreadCount > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {TAB_OPTIONS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? 'border border-white/10 bg-slate-900/40 text-white shadow-lg backdrop-blur-sm'
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          {filteredNotifications.length > 0 && unreadFilteredCount > 0 && (
             <button
               type="button"
               onClick={markAllRead}
@@ -350,7 +390,7 @@ export default function NotificationsPage() {
               <SkeletonCard key={i} />
             ))}
           </div>
-        ) : displayNotifications.length === 0 ? (
+        ) : filteredNotifications.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -370,7 +410,7 @@ export default function NotificationsPage() {
         ) : (
           <div>
             <AnimatePresence>
-              {displayNotifications.map((n, i) => {
+              {filteredNotifications.map((n, i) => {
                 const mapKey =
                   typeof n.type === 'string' && n.type in ICON_MAP ? (n.type as NotificationType) : 'system';
                 const { icon: Icon, color, bg } = ICON_MAP[mapKey];
