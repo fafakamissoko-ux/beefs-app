@@ -478,6 +478,9 @@ export function BeefCard({
                         }, 800);
                       }
                       onAuraClick?.();
+                      if (typeof window !== 'undefined') {
+                        window.dispatchEvent(new CustomEvent('aura-refresh', { detail: { targetId: id } }));
+                      }
                     }}
                     aria-label={has_liked_by_user ? "Retirer l'Aura" : "Envoyer de l'Aura"}
                   >
@@ -638,6 +641,9 @@ export function BeefCard({
                             }, 800);
                           }
                           onTeaserAuraClick?.();
+                          if (typeof window !== 'undefined') {
+                            window.dispatchEvent(new CustomEvent('aura-refresh', { detail: { targetId: id } }));
+                          }
                         }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
@@ -651,6 +657,9 @@ export function BeefCard({
                               }, 800);
                             }
                             onTeaserAuraClick?.();
+                            if (typeof window !== 'undefined') {
+                              window.dispatchEvent(new CustomEvent('aura-refresh', { detail: { targetId: id } }));
+                            }
                           }
                         }}
                         aria-label="Aura teaser"

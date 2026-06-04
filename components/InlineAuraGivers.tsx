@@ -26,6 +26,20 @@ interface InlineAuraGiversProps {
 
 export function InlineAuraGivers({ targetId, type, ownerId }: InlineAuraGiversProps) {
   const [givers, setGivers] = useState<AuraGiverRow[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleRefresh = (e: CustomEvent<{ targetId: string }>) => {
+      if (e.detail.targetId === targetId) {
+        setRefreshKey((prev) => prev + 1);
+      }
+    };
+
+    window.addEventListener('aura-refresh', handleRefresh as EventListener);
+    return () => window.removeEventListener('aura-refresh', handleRefresh as EventListener);
+  }, [targetId]);
 
   useEffect(() => {
     if (!targetId || !ownerId) {
@@ -50,7 +64,7 @@ export function InlineAuraGivers({ targetId, type, ownerId }: InlineAuraGiversPr
     return () => {
       cancelled = true;
     };
-  }, [targetId, type, ownerId]);
+  }, [targetId, type, ownerId, refreshKey]);
 
   if (givers.length === 0) return null;
 

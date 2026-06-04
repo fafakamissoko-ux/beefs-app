@@ -511,6 +511,9 @@ export default function PublicProfilePage() {
         });
         if (error) throw error;
       }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('aura-refresh', { detail: { targetId: profile.id } }));
+      }
     } catch {
       toast('Impossible de mettre à jour ce like.', 'error');
       setMediaLikes((prev) => ({
