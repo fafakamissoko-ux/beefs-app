@@ -54,6 +54,7 @@ interface Beef {
   /** Aura du teaser plein écran (table `teaser_likes`, colonne `teaser_score`). */
   teaser_score?: number;
   has_liked_teaser?: boolean;
+  comment_count?: number;
   participants_count?: number;
   challenger_a_name?: string | null;
   challenger_b_name?: string | null;
@@ -506,6 +507,7 @@ export default function FeedPage() {
           has_liked_by_user: hasLiked,
           teaser_score: Number(beef.teaser_score) || 0,
           has_liked_teaser: hasLikedTeaser,
+          comment_count: Number(beef.comment_count) || 0,
         };
       }) as Beef[];
 
@@ -1077,6 +1079,8 @@ export default function FeedPage() {
                         : undefined
                     }
                     onClick={() => handleBeefClick(beef)}
+                    comment_count={beef.comment_count || 0}
+                    onCommentClick={() => console.log('Ouverture Drawer Commentaires', beef.id)}
                     onAuraClick={() => handleAuraClick(beef.id)}
                     teaser_score={beef.teaser_score}
                     has_liked_teaser={beef.has_liked_teaser}

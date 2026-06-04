@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, MoreVertical, Trash2, Edit2, Flag } from 'lucide-react';
+import { Play, Calendar, Sparkles, Volume2, VolumeX, Bell, Eye, MessageCircle, MoreVertical, Trash2, Edit2, Flag } from 'lucide-react';
 import { Countdown } from '@/components/Countdown';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -57,6 +57,8 @@ interface BeefCardProps {
   onNotifyClick?: () => void;
   onApply?: () => void;
   onAuraClick?: () => void;
+  comment_count?: number;
+  onCommentClick?: () => void;
   saisirTab?: boolean;
   onSaisirAffaire?: () => void;
   onValiderRef?: () => void;
@@ -111,6 +113,8 @@ export function BeefCard({
   onNotifyClick,
   onApply,
   onAuraClick,
+  comment_count = 0,
+  onCommentClick,
   onTeaserAuraClick,
   saisirTab = false,
   onSaisirAffaire,
@@ -442,6 +446,26 @@ export function BeefCard({
               >
                 <Eye className="h-3.5 w-3.5" aria-hidden strokeWidth={2.25} />
                 <span>{viewer_count.toLocaleString()}</span>
+              </div>
+              <div
+                className="flex h-6 sm:h-7 cursor-pointer items-center gap-1.5 rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg px-2.5 font-mono text-[10px] font-bold text-white transition-all hover:bg-white/10 active:scale-95"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCommentClick?.();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onCommentClick?.();
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label="Voir les commentaires"
+              >
+                <MessageCircle className="h-3.5 w-3.5" aria-hidden strokeWidth={2.25} />
+                <span>{comment_count.toLocaleString()}</span>
               </div>
               {onAuraClick ? (
                 <div

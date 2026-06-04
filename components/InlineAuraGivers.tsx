@@ -16,7 +16,8 @@ export type InlineAuraGiversTargetType =
   | 'teaser'
   | 'profile'
   | 'avatar'
-  | 'banner';
+  | 'banner'
+  | 'comment';
 
 interface InlineAuraGiversProps {
   targetId: string;
