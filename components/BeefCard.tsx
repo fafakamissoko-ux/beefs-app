@@ -9,6 +9,7 @@ import { Countdown } from '@/components/Countdown';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
+import { InlineAuraGivers } from '@/components/InlineAuraGivers';
 
 /** Alias pour éviter le motif `}[` dans `useState<…>(…)` sous SWC/TSX. */
 type FloatingAuraChip = { id: number; x: number };
@@ -492,13 +493,18 @@ export function BeefCard({
                   </button>
                   <button
                     type="button"
-                    className="flex h-full items-center justify-center pl-1.5 pr-2.5 transition-all hover:bg-white/10 active:bg-white/20"
+                    className="flex h-full items-center justify-center gap-1.5 pl-1.5 pr-2.5 transition-all hover:bg-white/10 active:bg-white/20"
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsBeefAuraModalOpen(true);
                     }}
                     aria-label="Voir les donateurs d'Aura"
                   >
+                    <InlineAuraGivers
+                      targetId={id}
+                      type="beef"
+                      ownerId={mediator_id || created_by || ''}
+                    />
                     <span>{engagement_score.toLocaleString()}</span>
                   </button>
                 </div>
@@ -509,13 +515,18 @@ export function BeefCard({
                   </div>
                   <button
                     type="button"
-                    className="flex h-full items-center justify-center pl-1.5 pr-2.5 transition-all hover:bg-white/10 active:bg-white/20"
+                    className="flex h-full items-center justify-center gap-1.5 pl-1.5 pr-2.5 transition-all hover:bg-white/10 active:bg-white/20"
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsBeefAuraModalOpen(true);
                     }}
                     aria-label="Voir les donateurs d'Aura"
                   >
+                    <InlineAuraGivers
+                      targetId={id}
+                      type="beef"
+                      ownerId={mediator_id || created_by || ''}
+                    />
                     <span>{engagement_score.toLocaleString()}</span>
                   </button>
                 </div>
