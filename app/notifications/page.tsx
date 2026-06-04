@@ -221,31 +221,41 @@ export default function NotificationsPage() {
 
   const handleRowClick = async (n: AppNotification) => {
     const isSparkRow = n.type === 'aura' || n.id.startsWith('spark-');
-    if (!n.is_read && !isSparkRow) {
-      const { error: rpcErr } = await supabase.rpc('mark_notification_read', { p_id: n.id });
-      if (rpcErr && user) {
-        const { error: upErr } = await supabase
-          .from('notifications')
-          .update({ is_read: true })
-          .eq('id', n.id)
-          .eq('user_id', user.id);
-        if (upErr) {
-          console.error('[notifications] mark one read', rpcErr, upErr);
+
+    if (!n.is_read) {
+      if (!isSparkRow) {
+        const { error: rpcErr } = await supabase.rpc('mark_notification_read', { p_id: n.id });
+        if (rpcErr && user) {
+          const { error: upErr } = await supabase
+            .from('notifications')
+            .update({ is_read: true })
+            .eq('id', n.id)
+            .eq('user_id', user.id);
+          if (upErr) {
+            console.error('[notifications] mark one read', rpcErr, upErr);
+          }
         }
+        setNotifications((prev) =>
+          prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)),
+        );
+      } else {
+        const pureId = n.id.replace('spark-', '');
+        const { error: sparkErr } = await supabase
+          .from('aura_sparks')
+          .update({ is_read: true })
+          .eq('id', pureId);
+        if (sparkErr) {
+          console.error('[notifications] mark spark read', sparkErr);
+        }
+
+        setAuraNotifications((prev) =>
+          prev.map((x) => {
+            const sparkId = x.id.startsWith('spark-') ? x.id : `spark-${x.id}`;
+            return sparkId === n.id ? { ...x, is_read: true } : x;
+          }),
+        );
       }
-      setNotifications((prev) =>
-        prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))
-      );
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
-      }
-    } else if (!n.is_read && isSparkRow) {
-      setAuraNotifications((prev) =>
-        prev.map((x) => {
-          const sparkId = x.id.startsWith('spark-') ? x.id : `spark-${x.id}`;
-          return sparkId === n.id ? { ...x, is_read: true } : x;
-        }),
-      );
+
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
       }
@@ -268,7 +278,9 @@ export default function NotificationsPage() {
       }
     }
 
-    if (n.link) router.push(n.link);
+    if (n.link) {
+      router.push(n.link);
+    }
   };
 
   const auraAsAppNotifications = useMemo((): AppNotification[] => {
