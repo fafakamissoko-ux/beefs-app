@@ -211,7 +211,8 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
       supabase
         .from('aura_notifications')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id),
+        .eq('user_id', user.id)
+        .or('is_read.is.null,is_read.eq.false'),
     ]);
 
     setPendingInvitations(invRes.count ?? 0);
