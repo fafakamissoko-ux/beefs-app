@@ -18,6 +18,7 @@ import { mediationCategoryForBeef } from '@/lib/mediation-resolution';
 import { MediationBeefEditorPanel } from '@/components/MediationBeefEditorPanel';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
+import { InlineAuraGivers } from '@/components/InlineAuraGivers';
 import {
   fetchMediatorViewerReviews,
   type MediatorViewerReviewDisplay,
@@ -783,6 +784,11 @@ export default function ProfileContent() {
                   );
                 })()}
                 <div className="flex items-center gap-1.5 text-sm text-gray-400">
+                  <InlineAuraGivers
+                    targetId={profile.id}
+                    type="profile"
+                    ownerId={profile.id}
+                  />
                   <Flame className="h-4 w-4 text-brand-500" aria-hidden />
                   <span className="font-bold text-white">
                     {(profile.lifetime_points ?? profile.points).toLocaleString('fr-FR')}
@@ -1541,6 +1547,11 @@ export default function ProfileContent() {
                         );
                       })()}
                       <div className="flex items-center gap-1.5 text-sm text-gray-400">
+                        <InlineAuraGivers
+                          targetId={profile.id}
+                          type="profile"
+                          ownerId={profile.id}
+                        />
                         <Flame className="h-4 w-4 text-brand-500" aria-hidden />
                         <span className="font-bold text-white">
                           {(profile.lifetime_points ?? profile.points).toLocaleString('fr-FR')}

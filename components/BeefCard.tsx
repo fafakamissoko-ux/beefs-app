@@ -689,7 +689,14 @@ export function BeefCard({
                             : 'text-white'
                         }`}
                       >
-                        {(teaser_score || 0).toLocaleString()}
+                        <div className="flex items-center gap-1.5">
+                          <InlineAuraGivers
+                            targetId={id}
+                            type="teaser"
+                            ownerId={created_by || ''}
+                          />
+                          <span>{(teaser_score || 0).toLocaleString()}</span>
+                        </div>
                       </span>
                     </div>
                   )}

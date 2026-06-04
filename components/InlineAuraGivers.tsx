@@ -11,9 +11,16 @@ interface AuraGiverRow {
   created_at: string;
 }
 
+export type InlineAuraGiversTargetType =
+  | 'beef'
+  | 'teaser'
+  | 'profile'
+  | 'avatar'
+  | 'banner';
+
 interface InlineAuraGiversProps {
   targetId: string;
-  type: 'beef' | 'teaser' | 'profile';
+  type: InlineAuraGiversTargetType;
   ownerId: string;
 }
 

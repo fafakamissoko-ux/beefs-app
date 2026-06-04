@@ -12,6 +12,7 @@ import { BeefCard } from '@/components/BeefCard';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { FollowListModal } from '@/components/FollowListModal';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
+import { InlineAuraGivers } from '@/components/InlineAuraGivers';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { FollowButton } from '@/components/FollowButton';
 import { AppBackButton } from '@/components/AppBackButton';
@@ -787,6 +788,11 @@ export default function PublicProfilePage() {
                   );
                 })()}
                 <div className="flex items-center gap-1.5 text-sm text-gray-400">
+                  <InlineAuraGivers
+                    targetId={profile.id}
+                    type="profile"
+                    ownerId={profile.id}
+                  />
                   <Flame className="h-4 w-4 text-brand-500" aria-hidden />
                   <span className="font-bold text-white">
                     {prestigeAuraDisplay(profile).toLocaleString('fr-FR')}
@@ -1112,6 +1118,11 @@ export default function PublicProfilePage() {
                         ? 'fill-yellow-400 text-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.9)]'
                         : 'text-white'
                     }`}
+                  />
+                  <InlineAuraGivers
+                    targetId={profile.id}
+                    type={viewingImage.type}
+                    ownerId={profile.id}
                   />
                   <span className="font-mono tabular-nums">
                     {(mediaLikes[viewingImage.type].count ?? 0).toLocaleString()}
