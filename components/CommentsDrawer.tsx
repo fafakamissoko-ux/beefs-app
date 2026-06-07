@@ -37,6 +37,7 @@ function resolveCommentUser(users: BeefComment['users']): CommentUser | null {
 export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [isMobile, setIsMobile] = useState(false);
   const [comments, setComments] = useState<BeefComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
@@ -53,7 +54,7 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
     try {
       const { data, error } = await supabase
         .from('beef_comments')
-        .select('*, users(username, display_name, avatar_url)')
+        .select('*, users!beef_comments_user_id_fkey(username, display_name, avatar_url)')
         .eq('beef_id', beefId)
         .order('created_at', { ascending: true });
 
@@ -88,6 +89,15 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
   useEffect(() => {
     void fetchComments();
   }, [fetchComments]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 767px)');
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -262,22 +272,26 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/60"
+        className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
       <motion.div
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-        className="fixed inset-x-0 bottom-0 z-50 flex h-[80vh] w-full flex-col rounded-t-3xl border-t border-white/10 bg-slate-950"
+        initial={
+          isMobile ? { opacity: 0, y: '100%' } : { opacity: 0, x: '100%' }
+        }
+        animate={{ opacity: 1, y: 0, x: 0 }}
+        exit={
+          isMobile ? { opacity: 0, y: '100%' } : { opacity: 0, x: '100%' }
+        }
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="fixed z-[101] flex flex-col overflow-hidden border-white/10 bg-slate-950 shadow-2xl max-md:bottom-0 max-md:left-0 max-md:h-[80vh] max-md:w-full max-md:rounded-t-3xl max-md:border-t md:top-0 md:right-0 md:h-full md:w-[450px] md:border-l"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label="Commentaires"
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
+        <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-white/10 bg-slate-950 px-4 py-3">
           <h2 className="font-sans text-sm font-black uppercase tracking-widest text-white">
             Commentaires
           </h2>
@@ -291,7 +305,7 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-3">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
           {loading ? (
             <div className="flex justify-center py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
@@ -314,7 +328,7 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
           )}
         </div>
 
-        <div className="sticky bottom-0 shrink-0 border-t border-white/10 bg-slate-950 p-4">
+        <div className="sticky bottom-0 z-10 shrink-0 border-t border-white/10 bg-slate-950 p-4">
           {replyingTo && (
             <div className="mb-2 flex items-center justify-between rounded-lg bg-slate-900/60 px-3 py-2 text-xs text-gray-300">
               <span>
