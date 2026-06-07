@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Users, Flame, X, Radio, Coins, FileText, Swords, LayoutGrid, List } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { BeefCard } from '@/components/BeefCard';
+import { CommentsDrawer } from '@/components/CommentsDrawer';
 import { EditBeefModal } from '@/components/EditBeefModal';
 import dynamic from 'next/dynamic';
 import { submitNewBeef } from '@/lib/submitNewBeef';
@@ -139,6 +140,7 @@ export default function FeedPage() {
   const [editBeefId, setEditBeefId] = useState<string | null>(null);
   const [beefToForfeit, setBeefToForfeit] = useState<string | null>(null);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const [activeCommentsBeefId, setActiveCommentsBeefId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -1080,7 +1082,7 @@ export default function FeedPage() {
                     }
                     onClick={() => handleBeefClick(beef)}
                     comment_count={beef.comment_count || 0}
-                    onCommentClick={() => console.log('Ouverture Drawer Commentaires', beef.id)}
+                    onCommentClick={() => setActiveCommentsBeefId(beef.id)}
                     onAuraClick={() => handleAuraClick(beef.id)}
                     teaser_score={beef.teaser_score}
                     has_liked_teaser={beef.has_liked_teaser}
@@ -1223,6 +1225,15 @@ export default function FeedPage() {
         />
       )}
       {showCreateModal && <CreateBeefForm onSubmit={handleCreateBeef} onCancel={() => setShowCreateModal(false)} />}
+
+      <AnimatePresence>
+        {activeCommentsBeefId && (
+          <CommentsDrawer
+            beefId={activeCommentsBeefId}
+            onClose={() => setActiveCommentsBeefId(null)}
+          />
+        )}
+      </AnimatePresence>
 
     </div>
   );
