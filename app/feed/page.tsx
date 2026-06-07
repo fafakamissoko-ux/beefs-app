@@ -932,7 +932,7 @@ export default function FeedPage() {
         {loading ? (
           <div
             id="feed-scroll-container"
-            className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-28 md:pb-32 md:p-6 md:pt-4 ${
+            className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-32 md:p-6 md:pt-4 ${
               mobileViewMode === 'grid'
                 ? 'grid grid-cols-2 gap-3 px-3 pt-3 items-start md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5'
                 : 'flex flex-col snap-y snap-mandatory gap-4 items-stretch px-0 pt-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start'
@@ -977,7 +977,7 @@ export default function FeedPage() {
           <>
             <div
               id="feed-scroll-container"
-              className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-28 md:pb-32 md:p-6 md:pt-4 ${
+              className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-32 md:p-6 md:pt-4 ${
                 mobileViewMode === 'grid'
                   ? 'grid grid-cols-2 gap-3 px-3 pt-3 items-start md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5'
                   : 'flex flex-col snap-y snap-mandatory gap-4 items-stretch px-0 pt-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start'

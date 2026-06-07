@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, Fragment } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Send, Sparkles, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -47,6 +48,11 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
   const [replyingTo, setReplyingTo] = useState<{ commentId: string; username: string } | null>(
     null,
   );
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchComments = useCallback(async () => {
     if (!beefId) return;
@@ -54,7 +60,7 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
     try {
       const { data, error } = await supabase
         .from('beef_comments')
-        .select('*, users!beef_comments_user_id_fkey(username, display_name, avatar_url)')
+        .select('*, users:users!beef_comments_user_id_fkey(username, display_name, avatar_url)')
         .eq('beef_id', beefId)
         .order('created_at', { ascending: true });
 
@@ -266,13 +272,15 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
     );
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
@@ -285,7 +293,7 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
           isMobile ? { opacity: 0, y: '100%' } : { opacity: 0, x: '100%' }
         }
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="fixed z-[101] flex flex-col overflow-hidden border-white/10 bg-slate-950 shadow-2xl max-md:bottom-0 max-md:left-0 max-md:h-[80vh] max-md:w-full max-md:rounded-t-3xl max-md:border-t md:top-0 md:right-0 md:h-full md:w-[450px] md:border-l"
+        className="fixed z-[10000] flex flex-col overflow-hidden border-white/10 bg-slate-950 shadow-2xl max-md:bottom-0 max-md:left-0 max-md:h-[80dvh] max-md:w-full max-md:rounded-t-3xl max-md:border-t md:top-0 md:right-0 md:h-full md:w-[450px] md:border-l"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -328,7 +336,7 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
           )}
         </div>
 
-        <div className="sticky bottom-0 z-10 shrink-0 border-t border-white/10 bg-slate-950 p-4">
+        <div className="sticky bottom-0 z-10 shrink-0 border-t border-white/10 bg-slate-950 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {replyingTo && (
             <div className="mb-2 flex items-center justify-between rounded-lg bg-slate-900/60 px-3 py-2 text-xs text-gray-300">
               <span>
@@ -377,6 +385,7 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
           </div>
         </div>
       </motion.div>
-    </>
+    </>,
+    document.body,
   );
 }
