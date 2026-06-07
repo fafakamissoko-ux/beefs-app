@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, Fragment } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Sparkles, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -20,6 +20,7 @@ interface BeefComment {
   user_id: string;
   content: string;
   created_at: string;
+  parent_id: string | null;
   users: CommentUser | CommentUser[] | null;
 }
 
@@ -42,6 +43,9 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
   const [sending, setSending] = useState(false);
   const [likedCommentIds, setLikedCommentIds] = useState<Set<string>>(new Set());
   const [auraLoadingId, setAuraLoadingId] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ commentId: string; username: string } | null>(
+    null,
+  );
 
   const fetchComments = useCallback(async () => {
     if (!beefId) return;
@@ -161,9 +165,11 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
         beef_id: beefId,
         user_id: user.id,
         content: text,
+        parent_id: replyingTo?.commentId ?? null,
       });
       if (error) throw error;
       setDraft('');
+      setReplyingTo(null);
       await fetchComments();
     } catch (err) {
       console.error('[CommentsDrawer] handleSend', err);
@@ -171,6 +177,83 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
     } finally {
       setSending(false);
     }
+  };
+
+  const rootComments = comments.filter((c) => c.parent_id == null);
+  const repliesByParent = comments.reduce<Map<string, BeefComment[]>>((acc, c) => {
+    if (c.parent_id) {
+      const list = acc.get(c.parent_id) ?? [];
+      list.push(c);
+      acc.set(c.parent_id, list);
+    }
+    return acc;
+  }, new Map());
+
+  const renderComment = (comment: BeefComment, isReply: boolean) => {
+    const author = resolveCommentUser(comment.users);
+    const displayName = author?.display_name || author?.username || 'Anonyme';
+    const username = author?.username || 'user';
+    const liked = likedCommentIds.has(comment.id);
+    const isOwn = user?.id === comment.user_id;
+    const replyTargetId = comment.parent_id ?? comment.id;
+
+    return (
+      <li
+        key={comment.id}
+        className={`rounded-2xl border border-white/10 bg-slate-900/40 p-3 backdrop-blur-sm ${
+          isReply ? 'ml-8 border-l-2 border-l-white/10 pl-4' : ''
+        }`}
+      >
+        <div className="mb-2 flex items-start gap-2.5">
+          {author?.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={author.avatar_url}
+              alt=""
+              className="h-9 w-9 shrink-0 rounded-full border border-white/10 object-cover"
+            />
+          ) : (
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-cyan-500/30 to-slate-800 text-xs font-bold uppercase text-cyan-300">
+              {displayName[0] || '?'}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold text-white">{displayName}</p>
+            <p className="text-xs text-gray-500">@{username}</p>
+          </div>
+        </div>
+        <p className="mb-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-200">
+          {comment.content}
+        </p>
+        <div className="mb-2 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => void toggleCommentAura(comment.id, comment.user_id)}
+            disabled={auraLoadingId === comment.id || isOwn}
+            aria-label={liked ? "Retirer l'Aura" : "Donner de l'Aura"}
+            className={`flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-slate-900/40 transition-colors hover:bg-white/10 disabled:opacity-45 ${
+              liked && !isOwn ? 'border-amber-400/50 text-amber-400' : 'text-white'
+            }`}
+          >
+            <Sparkles
+              className={`h-3.5 w-3.5 ${liked && !isOwn ? 'fill-amber-400 text-amber-400' : ''}`}
+            />
+          </button>
+          <InlineAuraGivers
+            targetId={comment.id}
+            type="comment"
+            ownerId={comment.user_id}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setReplyingTo({ commentId: replyTargetId, username })}
+          className="text-xs font-semibold text-gray-400 transition-colors hover:text-gray-200"
+        >
+          Répondre
+        </button>
+      </li>
+    );
   };
 
   return (
@@ -219,67 +302,34 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
             </p>
           ) : (
             <ul className="space-y-4">
-              {comments.map((comment) => {
-                const author = resolveCommentUser(comment.users);
-                const displayName = author?.display_name || author?.username || 'Anonyme';
-                const username = author?.username || 'user';
-                const liked = likedCommentIds.has(comment.id);
-                const isOwn = user?.id === comment.user_id;
-
-                return (
-                  <li
-                    key={comment.id}
-                    className="rounded-2xl border border-white/10 bg-slate-900/40 p-3 backdrop-blur-sm"
-                  >
-                    <div className="mb-2 flex items-start gap-2.5">
-                      {author?.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={author.avatar_url}
-                          alt=""
-                          className="h-9 w-9 shrink-0 rounded-full border border-white/10 object-cover"
-                        />
-                      ) : (
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-cyan-500/30 to-slate-800 text-xs font-bold uppercase text-cyan-300">
-                          {displayName[0] || '?'}
-                        </span>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-white">{displayName}</p>
-                        <p className="text-xs text-gray-500">@{username}</p>
-                      </div>
-                    </div>
-                    <p className="mb-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-200">
-                      {comment.content}
-                    </p>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => void toggleCommentAura(comment.id, comment.user_id)}
-                        disabled={auraLoadingId === comment.id || isOwn}
-                        aria-label={liked ? "Retirer l'Aura" : "Donner de l'Aura"}
-                        className={`flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-slate-900/40 transition-colors hover:bg-white/10 disabled:opacity-45 ${
-                          liked && !isOwn ? 'border-amber-400/50 text-amber-400' : 'text-white'
-                        }`}
-                      >
-                        <Sparkles
-                          className={`h-3.5 w-3.5 ${liked && !isOwn ? 'fill-amber-400 text-amber-400' : ''}`}
-                        />
-                      </button>
-                      <InlineAuraGivers
-                        targetId={comment.id}
-                        type="comment"
-                        ownerId={comment.user_id}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
+              {rootComments.map((comment) => (
+                <Fragment key={comment.id}>
+                  {renderComment(comment, false)}
+                  {(repliesByParent.get(comment.id) ?? []).map((reply) =>
+                    renderComment(reply, true),
+                  )}
+                </Fragment>
+              ))}
             </ul>
           )}
         </div>
 
         <div className="sticky bottom-0 shrink-0 border-t border-white/10 bg-slate-950 p-4">
+          {replyingTo && (
+            <div className="mb-2 flex items-center justify-between rounded-lg bg-slate-900/60 px-3 py-2 text-xs text-gray-300">
+              <span>
+                En réponse à <span className="font-semibold text-white">@{replyingTo.username}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setReplyingTo(null)}
+                className="rounded-full p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Annuler la réponse"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
           <div className="flex gap-2">
             <input
               type="text"
@@ -291,7 +341,13 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
                   void handleSend();
                 }
               }}
-              placeholder={user ? 'Écrire un commentaire…' : 'Connecte-toi pour commenter'}
+              placeholder={
+                user
+                  ? replyingTo
+                    ? `Répondre à @${replyingTo.username}…`
+                    : 'Écrire un commentaire…'
+                  : 'Connecte-toi pour commenter'
+              }
               disabled={!user || sending}
               className="flex-1 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-white/20 focus:outline-none disabled:opacity-50"
             />

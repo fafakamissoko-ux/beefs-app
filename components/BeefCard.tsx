@@ -651,26 +651,11 @@ export function BeefCard({
                           </motion.span>
                         ))}
                       </AnimatePresence>
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (!has_liked_teaser) {
-                            const newId = Date.now() + Math.random();
-                            setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
-                            setTimeout(() => {
-                              setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId));
-                            }, 800);
-                          }
-                          onTeaserAuraClick?.();
-                          if (typeof window !== 'undefined') {
-                            window.dispatchEvent(new CustomEvent('aura-refresh', { detail: { targetId: id } }));
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
+                      <div className="flex items-center gap-1.5">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             if (!has_liked_teaser) {
@@ -684,22 +669,59 @@ export function BeefCard({
                             if (typeof window !== 'undefined') {
                               window.dispatchEvent(new CustomEvent('aura-refresh', { detail: { targetId: id } }));
                             }
-                          }
-                        }}
-                        aria-label="Aura teaser"
-                        className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-slate-900/40 backdrop-blur-sm border shadow-lg transition-transform active:scale-90 ${
-                          has_liked_teaser
-                            ? 'border-amber-400/50 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
-                            : 'border-white/10 hover:bg-white/20'
-                        }`}
-                      >
-                        <Sparkles
-                          className={`h-6 w-6 ${
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (!has_liked_teaser) {
+                                const newId = Date.now() + Math.random();
+                                setTeaserFloatingAuras((prev) => [...prev, { id: newId, x: Math.random() * 40 - 20 }]);
+                                setTimeout(() => {
+                                  setTeaserFloatingAuras((prev) => prev.filter((a) => a.id !== newId));
+                                }, 800);
+                              }
+                              onTeaserAuraClick?.();
+                              if (typeof window !== 'undefined') {
+                                window.dispatchEvent(new CustomEvent('aura-refresh', { detail: { targetId: id } }));
+                              }
+                            }
+                          }}
+                          aria-label="Aura teaser"
+                          className={`flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-slate-900/40 backdrop-blur-sm border shadow-lg transition-transform active:scale-90 ${
                             has_liked_teaser
-                              ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
-                              : 'text-white'
+                              ? 'border-amber-400/50 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
+                              : 'border-white/10 hover:bg-white/20'
                           }`}
-                        />
+                        >
+                          <Sparkles
+                            className={`h-6 w-6 ${
+                              has_liked_teaser
+                                ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
+                                : 'text-white'
+                            }`}
+                          />
+                        </div>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onCommentClick?.();
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onCommentClick?.();
+                            }
+                          }}
+                          aria-label="Voir les commentaires"
+                          className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-slate-900/40 shadow-lg backdrop-blur-sm text-white transition-all hover:bg-white/10 active:scale-95"
+                        >
+                          <MessageCircle className="h-6 w-6" strokeWidth={2.25} />
+                        </div>
                       </div>
                       <span
                         role="button"
