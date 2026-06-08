@@ -84,9 +84,14 @@ function StarLayer({ stars }: { stars: StarSpec[] }) {
   );
 }
 
-export function StarField() {
+export function StarField({ isOverlay = false }: { isOverlay?: boolean }) {
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#050505]">
+    <div
+      aria-hidden
+      className={`pointer-events-none overflow-hidden ${
+        isOverlay ? 'absolute inset-0 z-0' : 'fixed inset-0 -z-10 bg-[#050505]'
+      }`}
+    >
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_42%,rgba(30,27,75,0.35),transparent_70%)]" />
       <StarLayer stars={STARS.filter((s) => s.size === 'sm')} />
       <StarLayer stars={STARS.filter((s) => s.size === 'md')} />

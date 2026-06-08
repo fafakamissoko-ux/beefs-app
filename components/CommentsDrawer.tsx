@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { InlineAuraGivers } from '@/components/InlineAuraGivers';
+import { StarField } from '@/components/Arena/shared/StarField';
 
 interface CommentUser {
   username: string;
@@ -310,6 +311,8 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
         aria-modal="true"
         aria-label="Commentaires"
       >
+        <StarField isOverlay={true} />
+
         <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-white/10 bg-transparent px-4 py-3">
           <h2 className="font-sans text-sm font-black uppercase tracking-widest text-white">
             Commentaires
