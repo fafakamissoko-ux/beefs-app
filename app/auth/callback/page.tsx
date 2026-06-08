@@ -3,7 +3,6 @@
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import { ensurePublicUserProfile } from '@/lib/ensure-public-user-profile';
 
 function AuthCallbackInner() {
   const router = useRouter();
@@ -42,8 +41,6 @@ function AuthCallbackInner() {
           return;
         }
 
-        await ensurePublicUserProfile(supabase, session.user);
-
         const { data: profile, error: profileErr } = await supabase
           .from('users')
           .select('needs_arena_username')
@@ -67,7 +64,7 @@ function AuthCallbackInner() {
   }, [router, searchParams]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-transparent">
       <div className="text-center">
         <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
         <p className="font-semibold text-white">Vérification en cours...</p>
@@ -80,7 +77,7 @@ export default function AuthCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center">
+        <div className="flex min-h-[100dvh] items-center justify-center bg-transparent">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
         </div>
       }

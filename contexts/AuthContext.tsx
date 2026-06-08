@@ -4,7 +4,6 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { supabase } from '@/lib/supabase/client';
 import { validateSignupEmail } from '@/lib/email-signup-policy';
 import { hydrateLocalPrefsFromUser } from '@/lib/sync-user-client-prefs';
-import { ensurePublicUserProfile } from '@/lib/ensure-public-user-profile';
 import { getBrowserSiteOrigin } from '@/lib/site-origin';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -13,14 +12,16 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   userRole: 'user' | 'admin' | 'moderator' | null;
-  signUp: (email: string, password: string, username: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signInWithGoogle: () => Promise<{ error: any }>;
+  signUp: (email: string, password: string, username: string) => Promise<{ error: unknown }>;
+  signIn: (email: string, password: string) => Promise<{ error: unknown }>;
+  signInWithGoogle: () => Promise<{ error: unknown }>;
+  signInWithApple: () => Promise<{ error: unknown }>;
+  signInWithMagicLink: (email: string) => Promise<{ error: unknown }>;
   /** SMS — nécessite Phone activé dans Supabase + fournisseur (Twilio, etc.). */
-  sendPhoneOtp: (phoneE164: string) => Promise<{ error: any }>;
-  verifyPhoneOtp: (phoneE164: string, token: string) => Promise<{ error: any }>;
+  sendPhoneOtp: (phoneE164: string) => Promise<{ error: unknown }>;
+  verifyPhoneOtp: (phoneE164: string, token: string) => Promise<{ error: unknown }>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error: any }>;
+  resetPassword: (email: string) => Promise<{ error: unknown }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,7 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        void ensurePublicUserProfile(supabase, session.user);
         hydrateLocalPrefsFromUser(session.user);
         await loadUserRole(session.user.id);
       } else {
@@ -70,7 +70,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session?.user ?? null);
 
           if (session?.user) {
-            void ensurePublicUserProfile(supabase, session.user);
             hydrateLocalPrefsFromUser(session.user);
             await loadUserRole(session.user.id);
           } else {
@@ -96,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: emailPolicy.message, name: 'EmailNotAllowed' } };
       }
 
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -108,22 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       });
 
-      if (error) return { error };
-
-      // Create user profile in database
-      if (data.user) {
-        await supabase.from('users').insert({
-          id: data.user.id,
-          email: data.user.email,
-          username,
-          display_name: username,
-          points: 0,
-          is_verified: false,
-          needs_arena_username: false,
-        });
-      }
-
-      return { error: null };
+      return { error: error ?? null };
     } catch (error) {
       return { error };
     }
@@ -141,14 +125,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Requires Google OAuth setup in Supabase Dashboard:
-  // Authentication → Providers → Google → Enable + add Client ID & Secret from Google Cloud Console
   const signInWithGoogle = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${getBrowserSiteOrigin()}/auth/callback`,
+        },
+      });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const signInWithApple = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: `${getBrowserSiteOrigin()}/auth/callback`,
+        },
+      });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const signInWithMagicLink = async (email: string) => {
+    try {
+      const emailPolicy = validateSignupEmail(email);
+      if (!emailPolicy.ok) {
+        return { error: { message: emailPolicy.message, name: 'EmailNotAllowed' } };
+      }
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${getBrowserSiteOrigin()}/auth/callback`,
         },
       });
       return { error };
@@ -210,6 +225,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signIn,
     signInWithGoogle,
+    signInWithApple,
+    signInWithMagicLink,
     sendPhoneOtp,
     verifyPhoneOtp,
     signOut,
