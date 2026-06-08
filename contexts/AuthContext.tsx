@@ -13,7 +13,7 @@ interface AuthContextType {
   loading: boolean;
   userRole: 'user' | 'admin' | 'moderator' | null;
   signUp: (email: string, password: string, username: string) => Promise<{ error: unknown }>;
-  signIn: (email: string, password: string) => Promise<{ error: unknown }>;
+  signIn: (identifier: string, password: string) => Promise<{ error: unknown }>;
   signInWithGoogle: () => Promise<{ error: unknown }>;
   signInWithApple: () => Promise<{ error: unknown }>;
   signInWithMagicLink: (email: string) => Promise<{ error: unknown }>;
@@ -113,10 +113,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (identifier: string, password: string) => {
     try {
+      let targetEmail = identifier;
+
+      if (!identifier.includes('@')) {
+        const { data, error: rpcError } = await supabase.rpc('login_precheck', {
+          p_identifier: identifier,
+        });
+        if (rpcError || !data || data.length === 0 || !data[0].email) {
+          return { error: { message: 'Identifiant introuvable ou compte banni.' } };
+        }
+        targetEmail = data[0].email;
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: targetEmail,
         password,
       });
       return { error };

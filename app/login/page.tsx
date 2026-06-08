@@ -14,6 +14,11 @@ function loginPostAuthPath(searchParams: ReturnType<typeof useSearchParams>): st
   return sanitizeReturnPath(raw) ?? '/feed';
 }
 
+function normalizeIdentifier(raw: string): string {
+  const trimmed = raw.trim();
+  return trimmed.startsWith('@') ? trimmed.slice(1) : trimmed;
+}
+
 function AppleIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -38,12 +43,12 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const { signIn, signInWithGoogle, signInWithApple, signInWithMagicLink, user } = useAuth();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [showPasswordField, setShowPasswordField] = useState(false);
+  const [isMagicLinkMode, setIsMagicLinkMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [oauthError, setOauthError] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
+  const [identifierError, setIdentifierError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
@@ -66,7 +71,7 @@ function LoginPageContent() {
     setOauthError(msg);
   }, [searchParams]);
 
-  const trimmedEmail = email.trim();
+  const trimmedIdentifier = normalizeIdentifier(identifier);
 
   const handleApple = async () => {
     setAppleLoading(true);
@@ -96,22 +101,23 @@ function LoginPageContent() {
     }
   };
 
-  const handleMagicLink = async () => {
-    setEmailError(null);
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIdentifierError(null);
     setMagicLinkSent(false);
-    if (!trimmedEmail) {
-      setEmailError('Indique ton adresse e-mail.');
+    if (!trimmedIdentifier) {
+      setIdentifierError('Indique ton adresse e-mail.');
       return;
     }
     setMagicLoading(true);
-    const { error } = await signInWithMagicLink(trimmedEmail);
+    const { error } = await signInWithMagicLink(trimmedIdentifier);
     setMagicLoading(false);
     if (error) {
       const msg =
         typeof error === 'object' && error !== null && 'message' in error
           ? String((error as { message?: string }).message)
-          : 'Impossible d\'envoyer le lien magique.';
-      setEmailError(msg);
+          : "Impossible d'envoyer le lien magique.";
+      setIdentifierError(msg);
       return;
     }
     setMagicLinkSent(true);
@@ -119,10 +125,10 @@ function LoginPageContent() {
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setEmailError(null);
+    setIdentifierError(null);
     setPasswordError(null);
-    if (!trimmedEmail) {
-      setEmailError('Indique ton adresse e-mail.');
+    if (!trimmedIdentifier) {
+      setIdentifierError('Indique ton e-mail ou @pseudo.');
       return;
     }
     if (!password) {
@@ -130,10 +136,18 @@ function LoginPageContent() {
       return;
     }
     setPasswordLoading(true);
-    const { error } = await signIn(trimmedEmail, password);
+    const { error } = await signIn(trimmedIdentifier, password);
     setPasswordLoading(false);
     if (error) {
-      setPasswordError('E-mail ou mot de passe incorrect.');
+      const msg =
+        typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message?: string }).message)
+          : 'Identifiant ou mot de passe incorrect.';
+      if (msg.includes('introuvable') || msg.includes('banni')) {
+        setIdentifierError(msg);
+      } else {
+        setPasswordError('Identifiant ou mot de passe incorrect.');
+      }
       return;
     }
     router.push(loginPostAuthPath(searchParams));
@@ -210,33 +224,33 @@ function LoginPageContent() {
             <div className="h-px flex-1 bg-white/10" />
           </div>
 
-          <div className="space-y-4">
+          <form
+            onSubmit={isMagicLinkMode ? handleMagicLink : handlePasswordLogin}
+            className="space-y-4"
+          >
             <div>
-              <label htmlFor="login-email" className="mb-1.5 block text-sm font-medium text-white/70">
-                E-mail
-              </label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" aria-hidden />
                 <input
-                  id="login-email"
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  value={email}
+                  id="login-identifier"
+                  type={isMagicLinkMode ? 'email' : 'text'}
+                  name={isMagicLinkMode ? 'email' : 'username'}
+                  autoComplete={isMagicLinkMode ? 'email' : 'username'}
+                  value={identifier}
                   onChange={(e) => {
-                    setEmail(e.target.value);
-                    setEmailError(null);
+                    setIdentifier(e.target.value);
+                    setIdentifierError(null);
                     setMagicLinkSent(false);
                   }}
-                  placeholder="toi@exemple.com"
-                  aria-invalid={!!emailError}
+                  placeholder={isMagicLinkMode ? 'toi@exemple.com' : 'E-mail ou @pseudo...'}
+                  aria-invalid={!!identifierError}
                   className="w-full rounded-full border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/25"
                 />
               </div>
-              {emailError && (
+              {identifierError && (
                 <p role="alert" className="mt-1.5 flex items-start gap-1.5 text-xs text-red-400">
                   <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                  <span>{emailError}</span>
+                  <span>{identifierError}</span>
                 </p>
               )}
               {magicLinkSent && (
@@ -247,33 +261,8 @@ function LoginPageContent() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => void handleMagicLink()}
-                disabled={magicLoading}
-                className="rounded-full border border-white/10 bg-white/5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10 disabled:opacity-50"
-              >
-                {magicLoading ? 'Envoi…' : 'Recevoir un Lien Magique'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPasswordField((v) => !v);
-                  setPasswordError(null);
-                }}
-                className={`rounded-full border py-3 text-sm font-semibold transition-colors ${
-                  showPasswordField
-                    ? 'border-brand-500/50 bg-brand-500/10 text-brand-300'
-                    : 'border-white/10 bg-white/5 text-white hover:bg-white/10'
-                }`}
-              >
-                Utiliser un Mot de passe
-              </button>
-            </div>
-
-            {showPasswordField && (
-              <form onSubmit={handlePasswordLogin} className="space-y-3 pt-1">
+            {!isMagicLinkMode && (
+              <>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" aria-hidden />
                   <input
@@ -305,30 +294,51 @@ function LoginPageContent() {
                     <span>{passwordError}</span>
                   </p>
                 )}
-                <div className="flex items-center justify-between">
-                  <Link
-                    href="/forgot-password"
-                    className="text-xs font-medium text-white/45 transition-colors hover:text-white/70"
-                  >
-                    Mot de passe oublié ?
-                  </Link>
-                </div>
-                <button
-                  type="submit"
-                  disabled={passwordLoading}
-                  className="brand-gradient flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
-                >
-                  {passwordLoading ? (
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  ) : (
-                    <>
-                      <span>Se connecter</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
-              </form>
+              </>
             )}
+
+            {!isMagicLinkMode && (
+              <div className="flex justify-end">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-medium text-white/45 transition-colors hover:text-white/70"
+                >
+                  Mot de passe oublié ?
+                </Link>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={magicLoading || passwordLoading}
+              className="brand-gradient flex w-full items-center justify-center gap-2 rounded-full py-3 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
+            >
+              {magicLoading || passwordLoading ? (
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : (
+                <>
+                  <span>{isMagicLinkMode ? 'Recevoir le lien magique' : 'Se connecter'}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMagicLinkMode(!isMagicLinkMode);
+                setIdentifierError(null);
+                setPasswordError(null);
+                setMagicLinkSent(false);
+              }}
+              className="text-xs font-medium text-white/50 transition-colors hover:text-white"
+            >
+              {isMagicLinkMode
+                ? 'Utiliser un mot de passe à la place'
+                : 'Connexion sans mot de passe (Lien Magique)'}
+            </button>
           </div>
         </main>
       </motion.div>
