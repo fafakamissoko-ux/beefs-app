@@ -291,7 +291,7 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
@@ -304,7 +304,7 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
           isMobile ? { opacity: 0, y: '100%' } : { opacity: 0, x: '100%' }
         }
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="fixed z-[10000] flex flex-col overflow-hidden border-white/10 bg-slate-950/70 backdrop-blur-md shadow-2xl max-md:bottom-0 max-md:left-0 max-md:h-[80dvh] max-md:w-full max-md:rounded-t-3xl max-md:border-t md:top-0 md:right-0 md:h-full md:w-[450px] md:border-l"
+        className="fixed z-[10000] flex flex-col overflow-hidden border-white/10 bg-black/40 backdrop-blur-sm shadow-2xl max-md:bottom-0 max-md:left-0 max-md:h-[80dvh] max-md:w-full max-md:rounded-t-3xl max-md:border-t md:top-0 md:right-0 md:h-full md:w-[450px] md:border-l"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -347,7 +347,7 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
           )}
         </div>
 
-        <div className="sticky bottom-0 z-10 shrink-0 border-t border-white/10 bg-slate-950/80 backdrop-blur-md p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="sticky bottom-0 z-10 shrink-0 border-t border-white/10 bg-black/60 backdrop-blur-md p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {replyingTo && (
             <div className="mb-2 flex items-center justify-between rounded-lg bg-slate-900/60 px-3 py-2 text-xs text-gray-300">
               <span>
