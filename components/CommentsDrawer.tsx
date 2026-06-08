@@ -216,58 +216,69 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
     return (
       <li
         key={comment.id}
-        className={`rounded-2xl border border-white/10 bg-slate-900/40 p-3 backdrop-blur-sm ${
-          isReply ? 'ml-8 border-l-2 border-l-white/10 pl-4' : ''
-        }`}
+        className={`relative py-3 group ${isReply ? 'ml-11' : ''}`}
       >
-        <div className="mb-2 flex items-start gap-2.5">
-          {author?.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={author.avatar_url}
-              alt=""
-              className="h-9 w-9 shrink-0 rounded-full border border-white/10 object-cover"
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 mt-1">
+            {author?.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={author.avatar_url}
+                alt=""
+                className="h-9 w-9 rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500/30 to-slate-800 text-xs font-bold uppercase text-cyan-300">
+                {displayName[0] || '?'}
+              </span>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0 flex flex-col items-start">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-xs font-bold text-gray-300 truncate">{displayName}</span>
+            </div>
+
+            <p className="text-[14px] leading-snug text-white whitespace-pre-wrap break-words mb-1">
+              {comment.content}
+            </p>
+
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-[11px] text-gray-500 font-medium">
+                {new Date(comment.created_at).toLocaleDateString('fr-FR', {
+                  day: 'numeric',
+                  month: 'short',
+                })}
+              </span>
+              <button
+                type="button"
+                onClick={() => setReplyingTo({ commentId: replyTargetId, username })}
+                className="text-[12px] font-semibold text-gray-400 hover:text-white transition-colors"
+              >
+                Répondre
+              </button>
+            </div>
+          </div>
+
+          <div className="shrink-0 flex flex-col items-center justify-start ml-2">
+            <button
+              type="button"
+              onClick={() => void toggleCommentAura(comment.id, comment.user_id)}
+              disabled={auraLoadingId === comment.id || isOwn}
+              aria-label={liked ? "Retirer l'Aura" : "Donner de l'Aura"}
+              className="p-1.5 transition-colors disabled:opacity-45"
+            >
+              <Sparkles
+                className={`h-4 w-4 ${liked && !isOwn ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]' : 'text-gray-400 hover:text-white'}`}
+              />
+            </button>
+            <InlineAuraGivers
+              targetId={comment.id}
+              type="comment"
+              ownerId={comment.user_id}
             />
-          ) : (
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-gradient-to-br from-cyan-500/30 to-slate-800 text-xs font-bold uppercase text-cyan-300">
-              {displayName[0] || '?'}
-            </span>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-white">{displayName}</p>
-            <p className="text-xs text-gray-500">@{username}</p>
           </div>
         </div>
-        <p className="mb-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-200">
-          {comment.content}
-        </p>
-        <div className="mb-2 flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => void toggleCommentAura(comment.id, comment.user_id)}
-            disabled={auraLoadingId === comment.id || isOwn}
-            aria-label={liked ? "Retirer l'Aura" : "Donner de l'Aura"}
-            className={`flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-slate-900/40 transition-colors hover:bg-white/10 disabled:opacity-45 ${
-              liked && !isOwn ? 'border-amber-400/50 text-amber-400' : 'text-white'
-            }`}
-          >
-            <Sparkles
-              className={`h-3.5 w-3.5 ${liked && !isOwn ? 'fill-amber-400 text-amber-400' : ''}`}
-            />
-          </button>
-          <InlineAuraGivers
-            targetId={comment.id}
-            type="comment"
-            ownerId={comment.user_id}
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => setReplyingTo({ commentId: replyTargetId, username })}
-          className="text-xs font-semibold text-gray-400 transition-colors hover:text-gray-200"
-        >
-          Répondre
-        </button>
       </li>
     );
   };
@@ -293,13 +304,13 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
           isMobile ? { opacity: 0, y: '100%' } : { opacity: 0, x: '100%' }
         }
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="fixed z-[10000] flex flex-col overflow-hidden border-white/10 bg-slate-950 shadow-2xl max-md:bottom-0 max-md:left-0 max-md:h-[80dvh] max-md:w-full max-md:rounded-t-3xl max-md:border-t md:top-0 md:right-0 md:h-full md:w-[450px] md:border-l"
+        className="fixed z-[10000] flex flex-col overflow-hidden border-white/10 bg-slate-950/70 backdrop-blur-md shadow-2xl max-md:bottom-0 max-md:left-0 max-md:h-[80dvh] max-md:w-full max-md:rounded-t-3xl max-md:border-t md:top-0 md:right-0 md:h-full md:w-[450px] md:border-l"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label="Commentaires"
       >
-        <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-white/10 bg-slate-950 px-4 py-3">
+        <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-white/10 bg-transparent px-4 py-3">
           <h2 className="font-sans text-sm font-black uppercase tracking-widest text-white">
             Commentaires
           </h2>
@@ -323,7 +334,7 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
               Aucun commentaire pour le moment. Sois le premier.
             </p>
           ) : (
-            <ul className="space-y-4">
+            <ul className="space-y-0">
               {rootComments.map((comment) => (
                 <Fragment key={comment.id}>
                   {renderComment(comment, false)}
@@ -336,7 +347,7 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
           )}
         </div>
 
-        <div className="sticky bottom-0 z-10 shrink-0 border-t border-white/10 bg-slate-950 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="sticky bottom-0 z-10 shrink-0 border-t border-white/10 bg-slate-950/80 backdrop-blur-md p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {replyingTo && (
             <div className="mb-2 flex items-center justify-between rounded-lg bg-slate-900/60 px-3 py-2 text-xs text-gray-300">
               <span>
@@ -371,13 +382,13 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
                   : 'Connecte-toi pour commenter'
               }
               disabled={!user || sending}
-              className="flex-1 rounded-xl border border-white/10 bg-slate-900/60 px-4 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-white/20 focus:outline-none disabled:opacity-50"
+              className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-[14px] text-white placeholder:text-gray-500 focus:border-white/20 focus:outline-none disabled:opacity-50"
             />
             <button
               type="button"
               onClick={() => void handleSend()}
               disabled={!user || sending || !draft.trim()}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-500 text-white transition-colors hover:bg-brand-400 disabled:opacity-45"
+              className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-brand-500 text-white transition-colors hover:bg-brand-400 disabled:opacity-45"
               aria-label="Envoyer"
             >
               <Send className="h-4 w-4" />
