@@ -291,13 +291,21 @@ export default function NotificationsPage() {
 
     if (n.link) {
       let finalLink = n.link;
-      if (finalLink.startsWith('/beef/') && finalLink.includes('view=comments')) {
+
+      if (finalLink.startsWith('/beef/') && !finalLink.includes('/summary')) {
         const match = finalLink.match(/^\/beef\/([a-zA-Z0-9-]+)(\?.*)?$/);
         if (match) {
           const beefId = match[1];
-          finalLink = `/feed?beefId=${beefId}&view=comments`;
+          const query = match[2] || '';
+
+          if (query.includes('view=comments')) {
+            finalLink = `/feed?beefId=${beefId}&view=comments`;
+          } else {
+            finalLink = `/arena/${beefId}`;
+          }
         }
       }
+
       router.push(finalLink);
     }
   };
