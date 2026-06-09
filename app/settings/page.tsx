@@ -15,6 +15,19 @@ import { PASSWORD_POLICY_SHORT_HINT, validatePasswordPolicy } from '@/lib/passwo
 /** Préférence locale : prépare l’affichage des outils médiateur (pas de droit serveur à ce stade). */
 const MEDIATION_ACCESS_STORAGE_KEY = 'beefs_mediation_access';
 
+const SETTINGS_GLASS_CARD =
+  'w-full rounded-[2rem] border border-white/10 bg-black/40 p-6 md:p-8 shadow-2xl backdrop-blur-md';
+const SETTINGS_GLASS_CARD_DANGER =
+  'w-full rounded-[2rem] border border-red-500/20 bg-red-950/20 p-6 md:p-8 shadow-2xl backdrop-blur-md';
+const SETTINGS_INPUT =
+  'w-full rounded-full border border-white/10 bg-white/5 py-3 px-4 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/25 transition-colors';
+const SETTINGS_TEXTAREA =
+  'w-full rounded-2xl border border-white/10 bg-white/5 py-3 px-4 text-sm text-white placeholder:text-white/30 outline-none focus:border-white/25 transition-colors resize-none';
+const SETTINGS_BTN_PRIMARY =
+  'brand-gradient flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed';
+const SETTINGS_BTN_DANGER =
+  'w-full rounded-xl border border-red-500/30 bg-red-500/10 py-3 text-sm font-bold text-red-400 transition-colors hover:bg-red-500/20 active:scale-[0.98]';
+
 type PasswordFieldKey = 'current' | 'new' | 'confirm' | 'otp';
 
 function focusFirstPasswordFieldError(errors: Partial<Record<PasswordFieldKey, string>>) {
@@ -449,7 +462,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-transparent">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header with Back button */}
         <div className="flex items-center gap-4 mb-8">
@@ -509,15 +522,15 @@ export default function SettingsPage() {
                   type="button"
                   onClick={() => setActiveTab(id)}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors shrink-0 md:w-full ${
+                  className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors shrink-0 md:w-full border ${
                     isActive
-                      ? 'bg-white/10 text-white'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]'
+                      ? 'bg-white/10 text-white border-white/20'
+                      : 'border-transparent text-white/40 hover:bg-white/5 hover:text-white'
                   }`}
                 >
                   <Icon
                     className={`w-4 h-4 shrink-0 ${
-                      isActive ? 'text-white' : isDanger ? 'text-red-400' : 'text-gray-500'
+                      isActive ? 'text-white' : isDanger ? 'text-red-400' : 'text-white/40'
                     }`}
                     aria-hidden
                   />
@@ -532,7 +545,7 @@ export default function SettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="card rounded-2xl p-6"
+            className={SETTINGS_GLASS_CARD}
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-cyan-500/20 rounded-full flex items-center justify-center">
@@ -553,7 +566,7 @@ export default function SettingsPage() {
                   disabled
                   readOnly
                   aria-describedby="settings-username-hint"
-                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 text-gray-500 cursor-not-allowed"
+                  className={`${SETTINGS_INPUT} text-white/40 cursor-not-allowed opacity-60`}
                 />
                 <p id="settings-username-hint" className="text-gray-500 text-xs mt-1">
                   Le nom d&apos;utilisateur ne peut pas être modifié
@@ -571,7 +584,7 @@ export default function SettingsPage() {
                   onChange={(e) => setProfile({ ...profile, display_name: e.target.value })}
                   placeholder="Comment voulez-vous être appelé?"
                   autoComplete="nickname"
-                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors"
+                  className={SETTINGS_INPUT}
                   maxLength={50}
                 />
               </div>
@@ -587,7 +600,7 @@ export default function SettingsPage() {
                   placeholder="Parlez-nous de vous..."
                   rows={3}
                   aria-describedby="settings-bio-count"
-                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors resize-none"
+                  className={SETTINGS_TEXTAREA}
                   maxLength={200}
                 />
                 <p id="settings-bio-count" className="text-gray-400 text-xs mt-1">
@@ -610,7 +623,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={handleSaveProfile}
                 disabled={saving}
-                className="w-full brand-gradient text-black font-bold py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:opacity-90 flex items-center justify-center gap-2"
+                className={SETTINGS_BTN_PRIMARY}
               >
                 <Save className="w-5 h-5" />
                 {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
@@ -624,7 +637,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="card rounded-2xl p-6"
+            className={SETTINGS_GLASS_CARD}
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
@@ -666,7 +679,7 @@ export default function SettingsPage() {
                     aria-describedby={
                       passwordFieldErrors.current ? 'settings-current-password-error' : undefined
                     }
-                    className={`w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50 ${
+                    className={`${SETTINGS_INPUT} pr-12 disabled:opacity-50 ${
                       passwordFieldErrors.current ? 'beefs-field-invalid' : ''
                     }`}
                   />
@@ -714,7 +727,7 @@ export default function SettingsPage() {
                     }
                     aria-invalid={!!passwordFieldErrors.new}
                     disabled={passwordStep === 'otp'}
-                    className={`w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50 ${
+                    className={`${SETTINGS_INPUT} pr-12 disabled:opacity-50 ${
                       passwordFieldErrors.new ? 'beefs-field-invalid' : ''
                     }`}
                   />
@@ -763,7 +776,7 @@ export default function SettingsPage() {
                       passwordFieldErrors.confirm ? 'settings-confirm-password-error' : undefined
                     }
                     disabled={passwordStep === 'otp'}
-                    className={`w-full bg-white/[0.04] border border-white/[0.06] rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-50 ${
+                    className={`${SETTINGS_INPUT} pr-12 disabled:opacity-50 ${
                       passwordFieldErrors.confirm ? 'beefs-field-invalid' : ''
                     }`}
                   />
@@ -810,7 +823,7 @@ export default function SettingsPage() {
                         .join(' ') || undefined
                     }
                     aria-invalid={!!passwordFieldErrors.otp}
-                    className={`w-full bg-white/[0.04] border border-brand-500/40 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 transition-colors tracking-widest text-center text-lg ${
+                    className={`${SETTINGS_INPUT} tracking-widest text-center text-lg ${
                       passwordFieldErrors.otp ? 'beefs-field-invalid' : ''
                     }`}
                   />
@@ -839,7 +852,7 @@ export default function SettingsPage() {
                       ? !passwords.current || !passwords.new || !passwords.confirm
                       : !passwordOtp.trim())
                   }
-                  className="w-full bg-white text-black font-bold py-3 rounded-lg shadow-[0_0_15px_rgba(255,255,255,0.4)] transition-all hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={SETTINGS_BTN_PRIMARY}
                 >
                   {saving
                     ? 'Modification...'
@@ -873,7 +886,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
-            className="card rounded-2xl p-6"
+            className={SETTINGS_GLASS_CARD}
           >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-brand-500/20 rounded-full flex items-center justify-center">
@@ -933,7 +946,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="card rounded-2xl p-6"
+            className={SETTINGS_GLASS_CARD}
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-cyan-500/20 rounded-full flex items-center justify-center">
@@ -1083,7 +1096,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.16 }}
-            className="card rounded-2xl p-6"
+            className={SETTINGS_GLASS_CARD}
           >
             <div className="mb-6 flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/20">
@@ -1147,7 +1160,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.17 }}
-            className="card rounded-2xl p-6"
+            className={SETTINGS_GLASS_CARD}
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-cyan-500/20 rounded-full flex items-center justify-center">
@@ -1203,7 +1216,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="card rounded-2xl p-6"
+            className={SETTINGS_GLASS_CARD}
           >
             <h3 className="text-white font-bold text-lg mb-2">Guides d&apos;utilisation</h3>
             <p className="text-gray-400 text-sm mb-4">Réafficher les guides contextuels pour redécouvrir les fonctionnalités.</p>
@@ -1225,7 +1238,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="rounded-2xl bg-white/[0.04] backdrop-blur-xl border border-white/[0.08] p-6"
+            className={SETTINGS_GLASS_CARD}
           >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-prestige-gold/15 rounded-xl flex items-center justify-center">
@@ -1280,7 +1293,7 @@ export default function SettingsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-red-900/10 rounded-2xl p-6 border border-red-500/30"
+            className={SETTINGS_GLASS_CARD_DANGER}
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
@@ -1293,7 +1306,7 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={handleDeleteAccount}
-                className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 font-bold py-3 rounded-lg transition-all"
+                className={SETTINGS_BTN_DANGER}
               >
                 Supprimer mon compte
               </button>
