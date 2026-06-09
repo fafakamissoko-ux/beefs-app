@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, LayoutTemplate, Type, Zap, MessageSquare, UserPlus, Gift, Flame, History, AlertCircle, Sparkles } from 'lucide-react';
+import { User, Lock, Mail, Save, Eye, EyeOff, Shield, Bell, X, Check, LayoutTemplate, Type, Zap, MessageSquare, UserPlus, Gift, Flame, History, AlertCircle, Sparkles, Wallet, Settings as SettingsIcon, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -49,6 +49,8 @@ function PasswordInlineError({ id, message }: { id: string; message: string | un
 }
 
 type InvitationPrivacy = 'everyone' | 'following' | 'nobody';
+
+type SettingTab = 'profile' | 'security' | 'wallet' | 'preferences' | 'danger';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -106,6 +108,7 @@ export default function SettingsPage() {
     created_at: string;
   };
   const [pointTx, setPointTx] = useState<PointTx[]>([]);
+  const [activeTab, setActiveTab] = useState<SettingTab>('profile');
 
   const loadProfile = useCallback(async () => {
     if (!user) return;
@@ -447,7 +450,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header with Back button */}
         <div className="flex items-center gap-4 mb-8">
           <AppBackButton />
@@ -484,8 +487,48 @@ export default function SettingsPage() {
           )}
         </AnimatePresence>
 
-        <div className="space-y-6">
-          {/* Profile Settings */}
+        <div className="flex flex-col md:grid md:grid-cols-[16rem_1fr] gap-6 md:gap-8">
+          <nav
+            aria-label="Sections des paramètres"
+            className="flex md:flex-col flex-row gap-2 md:gap-1 overflow-x-auto hide-scrollbar shrink-0 md:w-64 pb-1 md:pb-0"
+          >
+            {(
+              [
+                { id: 'profile' as const, label: 'Profil', icon: User },
+                { id: 'security' as const, label: 'Sécurité', icon: Shield },
+                { id: 'wallet' as const, label: 'Portefeuille', icon: Wallet },
+                { id: 'preferences' as const, label: 'Préférences', icon: SettingsIcon },
+                { id: 'danger' as const, label: 'Zone de danger', icon: AlertTriangle, danger: true },
+              ] as const
+            ).map(({ id, label, icon: Icon, ...rest }) => {
+              const isActive = activeTab === id;
+              const isDanger = 'danger' in rest && rest.danger;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setActiveTab(id)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors shrink-0 md:w-full ${
+                    isActive
+                      ? 'bg-white/10 text-white'
+                      : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <Icon
+                    className={`w-4 h-4 shrink-0 ${
+                      isActive ? 'text-white' : isDanger ? 'text-red-400' : 'text-gray-500'
+                    }`}
+                    aria-hidden
+                  />
+                  {label}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="space-y-6 min-w-0">
+          {activeTab === 'profile' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -574,8 +617,9 @@ export default function SettingsPage() {
               </button>
             </div>
           </motion.div>
+          )}
 
-          {/* Password Change */}
+          {activeTab === 'security' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -822,8 +866,9 @@ export default function SettingsPage() {
               </div>
             </div>
           </motion.div>
+          )}
 
-          {/* Historique des points */}
+          {activeTab === 'wallet' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -881,8 +926,9 @@ export default function SettingsPage() {
               </ul>
             )}
           </motion.div>
+          )}
 
-          {/* Display & Accessibility */}
+          {activeTab === 'preferences' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1030,8 +1076,9 @@ export default function SettingsPage() {
               </div>
             </div>
           </motion.div>
+          )}
 
-          {/* Bouclier Anti-Spam (Confidentialité) */}
+          {activeTab === 'profile' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1093,8 +1140,9 @@ export default function SettingsPage() {
               ))}
             </div>
           </motion.div>
+          )}
 
-          {/* Notification Preferences */}
+          {activeTab === 'preferences' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1148,8 +1196,9 @@ export default function SettingsPage() {
               ))}
             </div>
           </motion.div>
+          )}
 
-          {/* Reset guides */}
+          {activeTab === 'preferences' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1169,8 +1218,9 @@ export default function SettingsPage() {
               Réinitialiser les guides
             </button>
           </motion.div>
+          )}
 
-          {/* Accès Médiation */}
+          {activeTab === 'preferences' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1223,8 +1273,9 @@ export default function SettingsPage() {
               </button>
             </div>
           </motion.div>
+          )}
 
-          {/* Danger Zone */}
+          {activeTab === 'danger' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1251,6 +1302,8 @@ export default function SettingsPage() {
               </p>
             </div>
           </motion.div>
+          )}
+          </div>
         </div>
       </div>
     </div>
