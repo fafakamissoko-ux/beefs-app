@@ -33,6 +33,21 @@ function OpenCreateModalFromQuery({ setOpen }: { setOpen: (open: boolean) => voi
   return null;
 }
 
+/** Ouvre le tiroir des commentaires quand on arrive depuis une notification (ex. /feed?beefId=123&view=comments). */
+function OpenCommentsFromQuery({ setOpenId }: { setOpenId: (id: string | null) => void }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  useEffect(() => {
+    const beefId = searchParams.get('beefId');
+    const view = searchParams.get('view');
+    if (beefId && view === 'comments') {
+      setOpenId(beefId);
+      router.replace('/feed', { scroll: false });
+    }
+  }, [searchParams, router, setOpenId]);
+  return null;
+}
+
 interface Beef {
   id: string;
   title: string;
@@ -807,6 +822,7 @@ export default function FeedPage() {
     <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       <Suspense fallback={null}>
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
+        <OpenCommentsFromQuery setOpenId={setActiveCommentsBeefId} />
       </Suspense>
         {/* Bannière + onglets + filtres (desktop) — dans le flux, repousse le scroll */}
         <div className="z-[100] flex w-full shrink-0 flex-col bg-black/30 px-4 pb-3 pt-3 backdrop-blur-sm md:px-0 md:pt-0 lg:bg-transparent lg:backdrop-blur-none">

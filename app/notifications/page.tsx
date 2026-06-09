@@ -290,7 +290,15 @@ export default function NotificationsPage() {
     }
 
     if (n.link) {
-      router.push(n.link);
+      let finalLink = n.link;
+      if (finalLink.startsWith('/beef/') && finalLink.includes('view=comments')) {
+        const match = finalLink.match(/^\/beef\/([a-zA-Z0-9-]+)(\?.*)?$/);
+        if (match) {
+          const beefId = match[1];
+          finalLink = `/feed?beefId=${beefId}&view=comments`;
+        }
+      }
+      router.push(finalLink);
     }
   };
 
