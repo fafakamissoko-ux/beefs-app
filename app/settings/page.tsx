@@ -10,10 +10,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase/client';
 import { FeatureGuide } from '@/components/FeatureGuide';
 import { AppBackButton } from '@/components/AppBackButton';
+import { WithdrawalWizard } from '@/components/settings/WithdrawalWizard';
 import { PASSWORD_POLICY_SHORT_HINT, validatePasswordPolicy } from '@/lib/password-policy';
-
-/** Préférence locale : prépare l’affichage des outils médiateur (pas de droit serveur à ce stade). */
-const MEDIATION_ACCESS_STORAGE_KEY = 'beefs_mediation_access';
 
 const SETTINGS_GLASS_CARD =
   'w-full rounded-[2rem] border border-white/10 bg-black/40 p-6 md:p-8 shadow-2xl backdrop-blur-md';
@@ -95,7 +93,7 @@ export default function SettingsPage() {
   });
   
   const [accentColor, setAccentColor] = useState('#E83A14');
-  const [mediationAccess, setMediationAccess] = useState(false);
+  const [walletPoints, setWalletPoints] = useState(0);
   const [notifPrefs, setNotifPrefs] = useState({
     messages: true,
     follows: true,
@@ -130,7 +128,7 @@ export default function SettingsPage() {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('username, display_name, bio, accent_color, invitation_privacy')
+        .select('username, display_name, bio, accent_color, invitation_privacy, points')
         .eq('id', user.id)
         .single();
 
@@ -147,6 +145,7 @@ export default function SettingsPage() {
           invitation_privacy,
         });
         if (data.accent_color) setAccentColor(data.accent_color);
+        setWalletPoints(Number(data.points) || 0);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -167,11 +166,6 @@ export default function SettingsPage() {
       const parsed = saved ? (JSON.parse(saved) as Partial<typeof notifPrefs>) : {};
       setNotifPrefs((prev) => ({ ...prev, ...parsed, aura: typeof parsed.aura === 'boolean' ? parsed.aura : prev.aura }));
     } catch {}
-    try {
-      setMediationAccess(localStorage.getItem(MEDIATION_ACCESS_STORAGE_KEY) === 'true');
-    } catch {
-      setMediationAccess(false);
-    }
   }, [user, authLoading, router, loadProfile]);
 
   useEffect(() => {
@@ -881,7 +875,13 @@ export default function SettingsPage() {
           </motion.div>
           )}
 
-          {activeTab === 'wallet' && (
+          {activeTab === 'wallet' && user && (
+          <div className="space-y-6">
+          <WithdrawalWizard
+            user={user}
+            points={walletPoints}
+            onPointsDeducted={(euros) => setWalletPoints((prev) => prev - euros * 100)}
+          />
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -939,6 +939,7 @@ export default function SettingsPage() {
               </ul>
             )}
           </motion.div>
+          </div>
           )}
 
           {activeTab === 'preferences' && (
@@ -1230,61 +1231,6 @@ export default function SettingsPage() {
             >
               Réinitialiser les guides
             </button>
-          </motion.div>
-          )}
-
-          {activeTab === 'preferences' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className={SETTINGS_GLASS_CARD}
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-prestige-gold/15 rounded-xl flex items-center justify-center">
-                <Shield className="w-5 h-5 text-prestige-gold" />
-              </div>
-              <div>
-                <h3 className="font-sans text-lg font-bold text-white">Accès Médiation</h3>
-                <p className="font-sans text-xs text-white/40">Débloque les outils de médiation sans changer ton profil public</p>
-              </div>
-            </div>
-            <p className="font-sans text-xs text-white/45 leading-relaxed mb-4 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2.5">
-              Ce réglage est <span className="text-white/70 font-semibold">sauvegardé sur cet appareil</span> (navigateur). Il indique
-              que tu veux voir les parcours et outils « médiation » dans l&apos;app dès qu&apos;ils seront reliés au produit.{' '}
-              <span className="text-white/55">Il ne donne pas encore de privilège côté serveur</span> : les vrais droits
-              (hôte, médiateur d&apos;un beef, etc.) viennent des rôles sur chaque session.
-            </p>
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p id="mediation-access-label" className="font-sans text-sm text-white/60">Activer l&apos;accès médiateur</p>
-                <p className="font-mono text-[10px] text-white/25 tracking-wider mt-0.5">Aucun badge public · état : {mediationAccess ? 'activé localement' : 'désactivé'}</p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={mediationAccess}
-                aria-labelledby="mediation-access-label"
-                onClick={() => {
-                  const next = !mediationAccess;
-                  setMediationAccess(next);
-                  try {
-                    localStorage.setItem(MEDIATION_ACCESS_STORAGE_KEY, next ? 'true' : 'false');
-                  } catch {
-                    /* ignore quota / private mode */
-                  }
-                }}
-                className={`relative shrink-0 w-12 h-7 rounded-full transition-all ${
-                  mediationAccess ? 'bg-prestige-gold' : 'bg-white/10'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${
-                    mediationAccess ? 'translate-x-5' : ''
-                  }`}
-                />
-              </button>
-            </div>
           </motion.div>
           )}
 
