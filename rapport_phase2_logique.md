@@ -1,3 +1,24 @@
+# Rapport Phase 2 — Logique Email & Bouclier Anti-Spam
+
+**Date :** 2026-05-31  
+**Fichier cible :** `app/settings/page.tsx`  
+**Commande :** `npx tsc --noEmit`
+
+## Statut de compilation TypeScript
+
+**Résultat : SUCCÈS** (exit code 0, aucune erreur TypeScript)
+
+## Modifications appliquées (résumé)
+
+1. **États locaux** — `emailForm`, `emailChangeStatus`, `emailError`, `privacyUpdating`
+2. **`handleSaveProfile`** — ne persiste plus que `display_name` et `bio`
+3. **`handleUpdatePrivacy`** — sauvegarde asynchrone immédiate de `invitation_privacy`
+4. **`handleChangeEmail`** — ré-authentification + `supabase.auth.updateUser({ email })`
+5. **JSX Bouclier** — `onClick={() => handleUpdatePrivacy(opt.id)}` + `disabled={!!privacyUpdating}`
+
+## Code source intégral — `app/settings/page.tsx`
+
+```tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -1331,3 +1352,5 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+```
