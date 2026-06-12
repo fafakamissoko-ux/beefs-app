@@ -19,6 +19,7 @@ import { MediationBeefEditorPanel } from '@/components/MediationBeefEditorPanel'
 import { ImageCropModal } from '@/components/ImageCropModal';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { ProfileTabs } from '@/components/profile/ProfileTabs';
 import {
   fetchMediatorViewerReviews,
   type MediatorViewerReviewDisplay,
@@ -621,30 +622,16 @@ export default function ProfileContent() {
 
         {/* Tabs */}
         <div className="rounded-[2rem] bg-white/[0.04] border border-white/[0.08] backdrop-blur-2xl p-6">
-          <div className="flex max-w-full flex-nowrap items-center gap-1 overflow-x-auto rounded-full bg-white/[0.05] p-1 [scrollbar-width:none] backdrop-blur-md [-ms-overflow-style:none] mb-6 [&::-webkit-scrollbar]:hidden">
-            <button
-              onClick={() => setActiveTab('stats')}
-              className={`flex items-center gap-2 rounded-full px-5 py-2 font-sans text-xs font-bold transition-all duration-200 ${
-                activeTab === 'stats'
-                  ? 'text-white bg-white/10 ring-1 ring-white/[0.12]'
-                  : 'text-gray-500 hover:text-gray-200'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              Statistiques
-            </button>
-            <button
-              onClick={() => setActiveTab('debates')}
-              className={`flex items-center gap-2 rounded-full px-5 py-2 font-sans text-xs font-bold transition-all duration-200 ${
-                activeTab === 'debates'
-                  ? 'text-white bg-white/10 ring-1 ring-white/[0.12]'
-                  : 'text-gray-500 hover:text-gray-200'
-              }`}
-            >
-              <Flame className="w-4 h-4" />
-              Mes Affaires
-            </button>
-          </div>
+          {/* Navigation Unifiée */}
+          <ProfileTabs
+            className="mb-6"
+            activeTab={activeTab}
+            onTabChange={(id) => setActiveTab(id as 'stats' | 'debates')}
+            tabs={[
+              { id: 'stats', label: 'Statistiques', icon: TrendingUp },
+              { id: 'debates', label: 'Mes Affaires', icon: Flame },
+            ]}
+          />
 
           {activeTab === 'stats' && (
             <div>

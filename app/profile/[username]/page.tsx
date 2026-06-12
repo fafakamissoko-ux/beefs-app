@@ -13,6 +13,7 @@ import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { FollowListModal } from '@/components/FollowListModal';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { ProfileTabs } from '@/components/profile/ProfileTabs';
 import { InlineAuraGivers } from '@/components/InlineAuraGivers';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { FollowButton } from '@/components/FollowButton';
@@ -772,46 +773,22 @@ export default function PublicProfilePage() {
 
         {/* Tabs Publics */}
         <div className="rounded-[2rem] bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700 p-6 mt-6 mb-6">
-          <div className="flex max-w-full flex-nowrap items-center gap-1 overflow-x-auto rounded-full bg-white/[0.05] p-1 [scrollbar-width:none] backdrop-blur-md [-ms-overflow-style:none] mb-6 [&::-webkit-scrollbar]:hidden">
-            <button
-              type="button"
-              onClick={() => setActiveTab('debates')}
-              className={`flex shrink-0 items-center gap-2 rounded-full px-5 py-2 font-sans text-xs font-bold transition-all duration-200 ${
-                activeTab === 'debates'
-                  ? 'text-white bg-white/10 ring-1 ring-white/[0.12]'
-                  : 'text-gray-500 hover:text-gray-200'
-              }`}
-            >
-              <Flame className="w-4 h-4" />
-              Médiations
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('participations')}
-              className={`flex shrink-0 items-center gap-2 rounded-full px-5 py-2 font-sans text-xs font-bold transition-all duration-200 ${
-                activeTab === 'participations'
-                  ? 'text-white bg-white/10 ring-1 ring-white/[0.12]'
-                  : 'text-gray-500 hover:text-gray-200'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              Affaires
-            </button>
-            {(stats.beefs_hosted > 0 || mediatorReviews.length > 0) && (
-              <button
-                type="button"
-                onClick={() => setActiveTab('reviews')}
-                className={`flex shrink-0 items-center gap-2 rounded-full px-5 py-2 font-sans text-xs font-bold transition-all duration-200 ${
-                  activeTab === 'reviews'
-                    ? 'text-white bg-white/10 ring-1 ring-white/[0.12]'
-                    : 'text-gray-500 hover:text-gray-200'
-                }`}
-              >
-                <Star className="w-4 h-4" />
-                Vox Populi
-              </button>
-            )}
-          </div>
+          {/* Navigation Unifiée */}
+          <ProfileTabs
+            className="mb-6"
+            activeTab={activeTab}
+            onTabChange={(id) => setActiveTab(id as 'debates' | 'participations' | 'reviews')}
+            tabs={[
+              { id: 'debates', label: 'Médiations', icon: Flame },
+              { id: 'participations', label: 'Affaires', icon: TrendingUp },
+              {
+                id: 'reviews',
+                label: 'Vox Populi',
+                icon: Star,
+                isHidden: !(stats.beefs_hosted > 0 || mediatorReviews.length > 0),
+              },
+            ]}
+          />
 
           {/* Contenu des Onglets */}
           {activeTab === 'debates' && (
