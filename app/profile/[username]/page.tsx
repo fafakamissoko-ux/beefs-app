@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
-import { Share2, Flame, Calendar, MoreVertical, Star, TrendingUp, X, Sparkles } from 'lucide-react';
+import { Share2, Flame, MoreVertical, Star, TrendingUp, X, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +12,7 @@ import { BeefCard } from '@/components/BeefCard';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { FollowListModal } from '@/components/FollowListModal';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
+import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { InlineAuraGivers } from '@/components/InlineAuraGivers';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { FollowButton } from '@/components/FollowButton';
@@ -25,7 +26,6 @@ import {
   type MediatorViewerReviewDisplay,
 } from '@/lib/mediator-viewer-reviews';
 import { escapeForIlikeExact } from '@/lib/ilike-exact';
-import { getAuraRank } from '@/lib/prestige';
 
 /** Prestige Affiché « Aura » Radar (lifetime_points ; compat si colonne legacy absente). */
 function prestigeAuraDisplay(profile: Pick<UserProfile, 'lifetime_points' | 'points'>): number {
@@ -42,6 +42,7 @@ interface UserProfile {
   /** Upload brut avant recadrage (lightbox HD si présent). */
   avatar_original_url?: string | null;
   banner_original_url?: string | null;
+  accent_color?: string;
   /** Compteurs agrégés (trigger `profile_media_likes`). */
   avatar_likes?: number;
   banner_likes?: number;
@@ -644,213 +645,130 @@ export default function PublicProfilePage() {
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-4 py-8">
 
-        {/* Profile Header */}
-        <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-3xl border border-gray-700 overflow-hidden mb-6">
-          {/* Cover Image & Back Button */}
-          <div className="h-48 bg-gradient-to-r from-brand-500/20 via-brand-400/20 to-brand-600/20 relative rounded-t-3xl overflow-hidden">
-            <div className="absolute top-4 left-4 z-10">
-              <AppBackButton className="backdrop-blur-md bg-black/40 hover:bg-black/60 border border-white/10 rounded-full text-white [&_span]:hidden p-2" fallback="/feed" />
-            </div>
-            {profile.banner_url ? (
+        {/* Profile Header Unifié */}
+        <ProfileHeader
+          mode="public"
+          profile={{
+            id: profile.id,
+            username: profile.username,
+            display_name: profile.display_name,
+            bio: profile.bio,
+            avatar_url: profile.avatar_url,
+            banner_url: profile.banner_url,
+            accent_color: profile.accent_color,
+            is_premium: profile.is_premium,
+            lifetime_points: prestigeAuraDisplay(profile),
+            created_at: profile.created_at,
+          }}
+          stats={{
+            beefs_participated: stats.beefs_participated,
+            beefs_hosted: stats.beefs_hosted,
+            followers: stats.followers,
+            following: stats.following,
+          }}
+          backButton={
+            <AppBackButton className="backdrop-blur-md bg-black/40 hover:bg-black/60 border border-white/10 rounded-full text-white [&_span]:hidden p-2" fallback="/feed" />
+          }
+          actionButtons={
+            <>
               <button
                 type="button"
-                onClick={() =>
+                onClick={handleShare}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition-colors hover:bg-white/10"
+                title="Partager"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
+              {!isOwnProfile && (
+                <button
+                  type="button"
+                  onClick={() => setShowReportModal(true)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition-colors hover:bg-white/10"
+                  aria-label="Signaler ou bloquer"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              )}
+              {!isOwnProfile && profile && (
+                <div className="relative inline-flex items-center justify-center">
+                  <AnimatePresence>
+                    {dopamineBursts
+                      .filter((b) => b.anchor === 'follow')
+                      .map((b) => (
+                        <motion.span
+                          key={b.id}
+                          initial={{ opacity: 1, y: 0 }}
+                          animate={{ opacity: 0, y: -20 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.5 }}
+                          className={`pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-black text-xl ${
+                            b.minus ? 'text-gray-400' : 'text-brand-300'
+                          }`}
+                        >
+                          {b.text}
+                        </motion.span>
+                      ))}
+                  </AnimatePresence>
+                  <FollowButton
+                    followingId={profile.id}
+                    initialFollowing={isFollowing}
+                    currentFollowersCount={stats.followers}
+                    currentLifetimePoints={profile.lifetime_points ?? profile.points}
+                    loginRedirectPath={pathname}
+                    classNameWhenFollowing="relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-white/10 text-white hover:bg-white/20"
+                    classNameWhenNotFollowing="relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-[#00F0FF] text-black shadow-[0_0_18px_rgba(0,240,255,0.45)] hover:brightness-110"
+                    onSynced={(p) => {
+                      setIsFollowing(p.following);
+                      if (p.recipientFollowersCount != null) {
+                        setStats((prev) => ({ ...prev, followers: p.recipientFollowersCount! }));
+                      }
+                      if (p.recipientLifetimePoints != null) {
+                        setProfile((prev) =>
+                          prev ? { ...prev, lifetime_points: p.recipientLifetimePoints! } : null,
+                        );
+                      }
+                      queueBurst(p.following ? '+10 ✨' : '-10 ✨', 'follow', !p.following);
+                    }}
+                    onError={(msg) => {
+                      toast(msg || "Erreur lors de l'action", 'error');
+                    }}
+                  />
+                </div>
+              )}
+              {isOwnProfile && (
+                <Link
+                  href={hrefWithFrom('/profile', pathname)}
+                  className="rounded-full bg-brand-500 px-5 py-2 font-semibold text-white transition-colors hover:bg-brand-600"
+                >
+                  Modifier
+                </Link>
+              )}
+            </>
+          }
+          onBannerClick={
+            profile.banner_url
+              ? () =>
                   setViewingImage({
                     url: profile.banner_original_url || profile.banner_url!,
                     type: 'banner',
                   })
-                }
-                className="absolute inset-0 z-0 h-full w-full cursor-pointer border-0 p-0"
-                aria-label="Voir la bannière en grand"
-              >
-                <Image src={profile.banner_url} alt="Bannière" fill className="object-cover" sizes="100vw" priority />
-              </button>
-            ) : (
-              <div className="pointer-events-none absolute inset-0 z-0 bg-white/5" />
-            )}
-          </div>
-
-          <div className="px-6 pb-6 -mt-16 relative">
-            {/* Avatar */}
-            <div className="flex items-end justify-between mb-4">
-              <div className="relative flex h-32 w-32 items-center justify-center overflow-hidden rounded-full border-4 border-gray-900 bg-gradient-to-br from-gray-700 to-gray-800 text-4xl font-black text-white">
-                {profile.avatar_url ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setViewingImage({
-                        url: profile.avatar_original_url || profile.avatar_url!,
-                        type: 'avatar',
-                      })
-                    }
-                    className="relative block h-full w-full cursor-pointer border-0 p-0"
-                    aria-label="Voir la photo de profil en grand"
-                  >
-                    <Image src={profile.avatar_url} alt={profile.display_name} fill className="object-cover" sizes="128px" priority />
-                  </button>
-                ) : (
-                  profile.username[0].toUpperCase()
-                )}
-              </div>
-
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={handleShare}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition-colors hover:bg-white/10"
-                  title="Partager"
-                >
-                  <Share2 className="h-4 w-4" />
-                </button>
-
-                {!isOwnProfile && (
-                  <button
-                    type="button"
-                    onClick={() => setShowReportModal(true)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white transition-colors hover:bg-white/10"
-                    aria-label="Signaler ou bloquer"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </button>
-                )}
-
-                {!isOwnProfile && profile && (
-                  <div className="relative inline-flex items-center justify-center">
-                    <AnimatePresence>
-                      {dopamineBursts
-                        .filter((b) => b.anchor === 'follow')
-                        .map((b) => (
-                          <motion.span
-                            key={b.id}
-                            initial={{ opacity: 1, y: 0 }}
-                            animate={{ opacity: 0, y: -20 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.5 }}
-                            className={`pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap font-black text-xl ${
-                              b.minus ? 'text-gray-400' : 'text-brand-300'
-                            }`}
-                          >
-                            {b.text}
-                          </motion.span>
-                        ))}
-                    </AnimatePresence>
-                    <FollowButton
-                      followingId={profile.id}
-                      initialFollowing={isFollowing}
-                      currentFollowersCount={stats.followers}
-                      currentLifetimePoints={profile.lifetime_points ?? profile.points}
-                      loginRedirectPath={pathname}
-                      classNameWhenFollowing="relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-white/10 text-white hover:bg-white/20"
-                      classNameWhenNotFollowing="relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-[#00F0FF] text-black shadow-[0_0_18px_rgba(0,240,255,0.45)] hover:brightness-110"
-                      onSynced={(p) => {
-                        setIsFollowing(p.following);
-                        const nextFollowers = p.recipientFollowersCount;
-                        if (nextFollowers != null) {
-                          setStats((prev) => ({ ...prev, followers: nextFollowers }));
-                        }
-                        const nextLp = p.recipientLifetimePoints;
-                        if (nextLp != null) {
-                          setProfile((prev) =>
-                            prev ? { ...prev, lifetime_points: nextLp } : null,
-                          );
-                        }
-                        queueBurst(
-                          p.following ? '+10 ✨' : '-10 ✨',
-                          'follow',
-                          !p.following,
-                        );
-                      }}
-                      onError={(msg) => {
-                        toast(msg || 'Erreur lors de l\'action', 'error');
-                      }}
-                    />
-                  </div>
-                )}
-
-                {isOwnProfile && (
-                  <Link
-                    href={hrefWithFrom('/profile', pathname)}
-                    className="rounded-full bg-brand-500 px-5 py-2 font-semibold text-white transition-colors hover:bg-brand-600"
-                  >
-                    Modifier
-                  </Link>
-                )}
-              </div>
-            </div>
-
-            {/* User Info & Bio */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="font-sans text-2xl font-black text-white">{profile.display_name}</h1>
-              </div>
-              <p className="text-gray-400 text-sm mb-2">@{profile.username}</p>
-
-              {profile.bio && (
-                <p className="text-gray-200 text-sm mb-4 leading-relaxed">{profile.bio}</p>
-              )}
-
-              {/* Aura — prestige (lifetime) vs Lingots ≠ affichés ici */}
-              <div
-                className="flex flex-wrap items-center gap-3 mb-4 cursor-pointer transition-transform active:scale-95 hover:opacity-80"
-                onClick={() => setIsAuraModalOpen(true)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && setIsAuraModalOpen(true)}
-                aria-label="Voir les donateurs d'Aura"
-              >
-                {(() => {
-                  const currentAura = profile.lifetime_points ?? profile.points;
-                  const rank = getAuraRank(currentAura);
-                  return (
-                    <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md">
-                      <Flame className={`h-3.5 w-3.5 ${rank.colorClass}`} aria-hidden />
-                      <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.colorClass}`}>
-                        {rank.title}
-                      </span>
-                    </div>
-                  );
-                })()}
-                <div className="flex items-center gap-1.5 text-sm text-gray-400">
-                  <InlineAuraGivers
-                    targetId={profile.id}
-                    type="profile"
-                    ownerId={profile.id}
-                  />
-                  <Flame className="h-4 w-4 text-brand-500" aria-hidden />
-                  <span className="font-bold text-white">
-                    {prestigeAuraDisplay(profile).toLocaleString('fr-FR')}
-                  </span>{' '}
-                  Aura
-                </div>
-              </div>
-
-              {/* Métriques Standard (X/Instagram style) */}
-              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <div className="flex gap-1.5">
-                  <span className="font-bold text-white">{stats.beefs_participated}</span>
-                  <span className="text-gray-400">Affaires</span>
-                </div>
-                <div className="flex gap-1.5">
-                  <span className="font-bold text-white">{stats.beefs_hosted}</span>
-                  <span className="text-gray-400">Médiations</span>
-                </div>
-                <button type="button" onClick={() => setShowFollowModal('followers')} className="flex gap-1.5 hover:underline">
-                  <span className="font-bold text-white">{stats.followers}</span>
-                  <span className="text-gray-400">Abonnés</span>
-                </button>
-                <button type="button" onClick={() => setShowFollowModal('following')} className="flex gap-1.5 hover:underline">
-                  <span className="font-bold text-white">{stats.following}</span>
-                  <span className="text-gray-400">Abonnements</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 text-gray-500 text-xs mt-4">
-                <Calendar className="w-3.5 h-3.5" />
-                <span>Rejoint en {new Date(profile.created_at).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+              : undefined
+          }
+          onAvatarClick={
+            profile.avatar_url
+              ? () =>
+                  setViewingImage({
+                    url: profile.avatar_original_url || profile.avatar_url!,
+                    type: 'avatar',
+                  })
+              : undefined
+          }
+          onAuraClick={() => setIsAuraModalOpen(true)}
+          onStatsClick={(type) => {
+            if (type === 'followers') setShowFollowModal('followers');
+            if (type === 'following') setShowFollowModal('following');
+          }}
+        />
 
         {/* Tabs Publics */}
         <div className="rounded-[2rem] bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700 p-6 mt-6 mb-6">
