@@ -8,12 +8,12 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
-import { BeefCard } from '@/components/BeefCard';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { FollowListModal } from '@/components/FollowListModal';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
+import { ProfileBeefGrid } from '@/components/profile/ProfileBeefGrid';
 import { InlineAuraGivers } from '@/components/InlineAuraGivers';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { FollowButton } from '@/components/FollowButton';
@@ -792,88 +792,36 @@ export default function PublicProfilePage() {
 
           {/* Contenu des Onglets */}
           {activeTab === 'debates' && (
-            <div id="profile-section-beefs" className="scroll-mt-24">
-              {beefs.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {beefs.map((beef, idx) => (
-                    <div key={beef.id} className="space-y-2">
-                      <BeefCard
-                        id={beef.id}
-                        index={idx}
-                        title={beef.title}
-                        host_name={beef.host_name}
-                        host_username={beef.host_username}
-                        status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
-                        created_at={beef.created_at}
-                        viewer_count={beef.viewer_count || 0}
-                        tags={beef.tags}
-                        scheduled_at={beef.scheduled_at}
-                        onClick={() => {
-                        if (['ended', 'replay', 'completed', 'cancelled'].includes(beef.status)) {
-                          router.push(`/beef/${beef.id}/summary`);
-                        } else {
-                          router.push(`/arena/${beef.id}`);
-                        }
-                      }}
-                      />
-                      {(beef.resolution_status && beef.resolution_status !== 'in_progress') || beef.mediation_summary?.trim() ? (
-                        <div className="pl-1 space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                          {beef.resolution_status && beef.resolution_status !== 'in_progress' && (
-                            <p className="text-[11px] text-gray-500">
-                              Issue de la médiation :{' '}
-                              <span className="text-gray-400 font-medium">
-                                {resolutionStatusLabel(beef.resolution_status)}
-                              </span>
-                            </p>
-                          )}
-                          <MediationSummaryPublic text={beef.mediation_summary ?? ''} />
-                        </div>
-                      ) : null}
+            <div id="profile-section-beefs" className="scroll-mt-24 mt-4">
+              <ProfileBeefGrid
+                beefs={beefs}
+                emptyMessage="Aucune médiation pour le moment"
+                renderExtra={(beef) =>
+                  (beef.resolution_status && beef.resolution_status !== 'in_progress') || beef.mediation_summary?.trim() ? (
+                    <div className="pl-1 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                      {beef.resolution_status && beef.resolution_status !== 'in_progress' && (
+                        <p className="text-[11px] text-gray-500">
+                          Issue de la médiation :{' '}
+                          <span className="text-gray-400 font-medium">
+                            {resolutionStatusLabel(beef.resolution_status)}
+                          </span>
+                        </p>
+                      )}
+                      <MediationSummaryPublic text={beef.mediation_summary ?? ''} />
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Flame className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400">Aucune médiation pour le moment</p>
-                </div>
-              )}
+                  ) : null
+                }
+              />
             </div>
           )}
 
           {activeTab === 'participations' && (
-            <div id="profile-section-participations" className="scroll-mt-24">
-              {participantBeefs.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {participantBeefs.map((beef, idx) => (
-                    <BeefCard
-                      key={beef.id}
-                      id={beef.id}
-                      index={idx}
-                      title={beef.title}
-                      host_name={beef.host_name}
-                      host_username={beef.host_username}
-                      status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
-                      created_at={beef.created_at}
-                      viewer_count={beef.viewer_count || 0}
-                      tags={beef.tags}
-                      scheduled_at={beef.scheduled_at}
-                      onClick={() => {
-                        if (['ended', 'replay', 'completed', 'cancelled'].includes(beef.status)) {
-                          router.push(`/beef/${beef.id}/summary`);
-                        } else {
-                          router.push(`/arena/${beef.id}`);
-                        }
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <TrendingUp className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400">Aucune affaire pour le moment</p>
-                </div>
-              )}
+            <div id="profile-section-participations" className="scroll-mt-24 mt-4">
+              <ProfileBeefGrid
+                beefs={participantBeefs}
+                emptyMessage="Aucune affaire pour le moment"
+                emptyIcon={TrendingUp}
+              />
             </div>
           )}
 

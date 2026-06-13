@@ -9,7 +9,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { PremiumBadge, PremiumAvatarFrame } from '@/components/PremiumBadge';
-import { BeefCard } from '@/components/BeefCard';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { AppBackButton } from '@/components/AppBackButton';
 import { hrefWithFrom } from '@/lib/navigation-return';
@@ -20,6 +19,7 @@ import { ImageCropModal } from '@/components/ImageCropModal';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
+import { ProfileBeefGrid } from '@/components/profile/ProfileBeefGrid';
 import {
   fetchMediatorViewerReviews,
   type MediatorViewerReviewDisplay,
@@ -700,38 +700,17 @@ export default function ProfileContent() {
                       Réinitialiser
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 gap-4">
-                    {mediationBeefs
-                      .filter((beef) => mediationCategoryForBeef(beef) === selectedResolutionFilter)
-                      .map((beef, idx) => (
-                        <BeefCard
-                          key={beef.id}
-                          id={beef.id}
-                          index={idx}
-                          title={beef.title}
-                          host_name={beef.card_host_name || profile?.display_name || profile?.username || 'Utilisateur'}
-                          host_username={beef.card_host_username}
-                          status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
-                          created_at={beef.created_at}
-                          viewer_count={beef.viewer_count || 0}
-                          tags={beef.tags}
-                          scheduled_at={beef.scheduled_at}
-                          onClick={() => {
-                          if (['ended', 'replay', 'completed', 'cancelled'].includes(beef.status)) {
-                            router.push(`/beef/${beef.id}/summary`);
-                          } else {
-                            router.push(`/arena/${beef.id}`);
-                          }
-                        }}
-                        />
-                      ))}
-                    {mediationBeefs.filter((beef) => mediationCategoryForBeef(beef) === selectedResolutionFilter)
-                      .length === 0 && (
-                      <div className="text-center py-12 bg-white/5 rounded-[2px]">
-                        <Flame className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                        <p className="text-gray-400">Aucun beef dans cette catégorie</p>
-                      </div>
-                    )}
+                  <div className="mt-4">
+                    <ProfileBeefGrid
+                      beefs={mediationBeefs
+                        .filter((beef) => mediationCategoryForBeef(beef) === selectedResolutionFilter)
+                        .map((b) => ({
+                          ...b,
+                          host_name: (b as { card_host_name?: string }).card_host_name || profile?.display_name || profile?.username || 'Utilisateur',
+                          host_username: (b as { card_host_username?: string | null }).card_host_username,
+                        }))}
+                      emptyMessage="Aucun beef dans cette catégorie"
+                    />
                   </div>
                 </motion.div>
               )}
@@ -778,53 +757,33 @@ export default function ProfileContent() {
           )}
 
           {activeTab === 'debates' && (
-            <div>
-              {beefs.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {beefs.map((beef, idx) => (
-                    <div key={beef.id} className="space-y-2">
-                      <BeefCard
-                        id={beef.id}
-                        index={idx}
-                        title={beef.title}
-                        host_name={beef.card_host_name || profile?.display_name || profile?.username || 'Utilisateur'}
-                        host_username={beef.card_host_username}
-                        status={beef.status as 'live' | 'ended' | 'replay' | 'scheduled'}
-                        created_at={beef.created_at}
-                        viewer_count={beef.viewer_count || 0}
-                        tags={beef.tags}
-                        scheduled_at={beef.scheduled_at}
-                        onClick={() => {
-                          if (['ended', 'replay', 'completed', 'cancelled'].includes(beef.status)) {
-                            router.push(`/beef/${beef.id}/summary`);
-                          } else {
-                            router.push(`/arena/${beef.id}`);
-                          }
-                        }}
-                      />
-                      {user && beef.mediator_id === user.id && (
-                        <MediationBeefEditorPanel
-                          beefId={beef.id}
-                          resolutionStatus={beef.resolution_status}
-                          mediationSummary={beef.mediation_summary ?? ''}
-                          onSaved={(patch) => applyMediationBeefPatch(beef.id, patch)}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Flame className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400 mb-4">Aucun beef pour le moment</p>
+            <div className="mt-4">
+              <ProfileBeefGrid
+                beefs={beefs.map((b) => ({
+                  ...b,
+                  host_name: b.card_host_name || profile?.display_name || profile?.username || 'Utilisateur',
+                  host_username: b.card_host_username,
+                }))}
+                emptyMessage="Aucun beef pour le moment"
+                emptyAction={
                   <Link
                     href={hrefWithFrom('/create', pathname)}
-                    className="inline-block px-6 py-3 brand-gradient hover:opacity-90 text-black font-bold rounded-[2px] transition-all"
+                    className="inline-block px-6 py-3 brand-gradient hover:opacity-90 text-black font-bold rounded-[2px] transition-all mt-4"
                   >
                     Créer un beef
                   </Link>
-                </div>
-              )}
+                }
+                renderExtra={(beef) =>
+                  user && beef.mediator_id === user.id ? (
+                    <MediationBeefEditorPanel
+                      beefId={beef.id}
+                      resolutionStatus={beef.resolution_status}
+                      mediationSummary={beef.mediation_summary ?? ''}
+                      onSaved={(patch) => applyMediationBeefPatch(beef.id, patch)}
+                    />
+                  ) : null
+                }
+              />
             </div>
           )}
 
