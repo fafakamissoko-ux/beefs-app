@@ -20,7 +20,6 @@ export interface ProfileHeaderData {
 export interface ProfileHeaderStats {
   beefs_participated: number;
   beefs_hosted: number;
-  beefs_abandoned?: number; // Optionnel (affiché uniquement sur le privé)
   followers: number;
   following: number;
 }
@@ -146,14 +145,6 @@ export function ProfileHeader({
               <span className="font-bold text-white">{stats.beefs_hosted}</span>
               <span className="text-white/50">Médiations</span>
             </button>
-
-            {/* Réputation (affiché conditionnellement si abandon renseigné) */}
-            {stats.beefs_abandoned !== undefined && (stats.beefs_participated > 0 || stats.beefs_hosted > 0) && (
-              <div className="flex gap-1.5 cursor-help" title="Forfaits ou désistements">
-                <span className="font-bold text-white">{stats.beefs_abandoned}</span>
-                <span className="text-white/50">Réputation</span>
-              </div>
-            )}
 
             <button type="button" onClick={() => onStatsClick?.('followers')} className={`flex gap-1.5 ${onStatsClick ? 'hover:underline' : 'cursor-default'}`}>
               <span className="font-bold text-white">{stats.followers}</span>

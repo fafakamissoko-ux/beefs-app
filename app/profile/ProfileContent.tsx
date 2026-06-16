@@ -548,7 +548,6 @@ export default function ProfileContent() {
           stats={{
             beefs_participated: stats.beefs_participated,
             beefs_hosted: stats.beefs_hosted,
-            beefs_abandoned: stats.beefs_abandoned,
             followers: stats.followers,
             following: stats.following,
           }}
@@ -835,7 +834,6 @@ export default function ProfileContent() {
                 stats={{
                   beefs_participated: stats.beefs_participated,
                   beefs_hosted: stats.beefs_hosted,
-                  beefs_abandoned: stats.beefs_abandoned,
                   followers: stats.followers,
                   following: stats.following,
                 }}
