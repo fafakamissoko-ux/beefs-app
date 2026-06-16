@@ -143,7 +143,7 @@ export function ProfileHeader({
             </button>
             <button type="button" onClick={() => onStatsClick?.('hosted')} className={`flex gap-1.5 ${onStatsClick ? 'hover:underline' : 'cursor-default'}`}>
               <span className="font-bold text-white">{stats.beefs_hosted}</span>
-              <span className="text-white/50">Médiations</span>
+              <span className="text-white/50">Ref</span>
             </button>
 
             <button type="button" onClick={() => onStatsClick?.('followers')} className={`flex gap-1.5 ${onStatsClick ? 'hover:underline' : 'cursor-default'}`}>

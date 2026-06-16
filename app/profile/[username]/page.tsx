@@ -3,12 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
-import { Share2, Flame, MoreVertical, Star, TrendingUp, X, Sparkles } from 'lucide-react';
+import { Share2, Flame, MoreVertical, TrendingUp, X, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
-import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { FollowListModal } from '@/components/FollowListModal';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
@@ -22,10 +21,6 @@ import { hrefWithFrom } from '@/lib/navigation-return';
 import { useToast } from '@/components/Toast';
 import { MediationSummaryPublic } from '@/components/MediationSummaryPublic';
 import { resolutionStatusLabel } from '@/lib/mediation-outcome-labels';
-import {
-  fetchMediatorViewerReviews,
-  type MediatorViewerReviewDisplay,
-} from '@/lib/mediator-viewer-reviews';
 import { escapeForIlikeExact } from '@/lib/ilike-exact';
 
 /** Prestige Affiché « Aura » Radar (lifetime_points ; compat si colonne legacy absente). */
@@ -124,8 +119,7 @@ export default function PublicProfilePage() {
   const [showFollowModal, setShowFollowModal] = useState<null | 'followers' | 'following'>(null);
   const [isAuraModalOpen, setIsAuraModalOpen] = useState(false);
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
-  const [mediatorReviews, setMediatorReviews] = useState<MediatorViewerReviewDisplay[]>([]);
-  const [activeTab, setActiveTab] = useState<'debates' | 'participations' | 'reviews'>('debates');
+  const [activeTab, setActiveTab] = useState<'debates' | 'participations'>('debates');
   const [viewingImage, setViewingImage] = useState<{ url: string; type: 'avatar' | 'banner' } | null>(null);
   const [mediaAuraLoading, setMediaAuraLoading] = useState(false);
   const [mediaLikes, setMediaLikes] = useState({
@@ -330,8 +324,6 @@ export default function PublicProfilePage() {
           }),
         );
 
-        const viewerReviewsGuest = await fetchMediatorViewerReviews(supabase, pd.id);
-        setMediatorReviews(viewerReviewsGuest);
         setMediaLikes({
           avatar: { count: pd.avatar_likes ?? 0, liked: false },
           banner: { count: pd.banner_likes ?? 0, liked: false },
@@ -436,9 +428,6 @@ export default function PublicProfilePage() {
 
         setIsFollowing(!!followData);
       }
-
-      const viewerReviews = await fetchMediatorViewerReviews(supabase, pd.id);
-      setMediatorReviews(viewerReviews);
 
       let likedAvatar = false;
       let likedBanner = false;
@@ -557,7 +546,7 @@ export default function PublicProfilePage() {
     }
   }, [profile]);
 
-  /** Ancres #beefs / #followers / #following / #participations / #reviews / #vox-populi */
+  /** Ancres #beefs / #followers / #following / #participations */
   useEffect(() => {
     if (!profile) return;
 
@@ -579,20 +568,13 @@ export default function PublicProfilePage() {
         setTimeout(() => {
           document.getElementById('profile-section-participations')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 150);
-      } else if (raw === 'reviews' || raw === 'vox-populi') {
-        if (stats.beefs_hosted > 0 || mediatorReviews.length > 0) {
-          setActiveTab('reviews');
-          setTimeout(() => {
-            document.getElementById('profile-section-reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 150);
-        }
       }
     };
 
     syncFromHash();
     window.addEventListener('hashchange', syncFromHash);
     return () => window.removeEventListener('hashchange', syncFromHash);
-  }, [profile, stats.beefs_hosted, mediatorReviews.length]);
+  }, [profile]);
 
   const handleShare = () => {
     const url = `${window.location.origin}/profile/${username}`;
@@ -777,16 +759,10 @@ export default function PublicProfilePage() {
           <ProfileTabs
             className="mb-6"
             activeTab={activeTab}
-            onTabChange={(id) => setActiveTab(id as 'debates' | 'participations' | 'reviews')}
+            onTabChange={(id) => setActiveTab(id as 'debates' | 'participations')}
             tabs={[
-              { id: 'debates', label: 'Médiations', icon: Flame },
+              { id: 'debates', label: 'Ref', icon: Flame },
               { id: 'participations', label: 'Affaires', icon: TrendingUp },
-              {
-                id: 'reviews',
-                label: 'Vox Populi',
-                icon: Star,
-                isHidden: !(stats.beefs_hosted > 0 || mediatorReviews.length > 0),
-              },
             ]}
           />
 
@@ -825,48 +801,6 @@ export default function PublicProfilePage() {
             </div>
           )}
 
-          {activeTab === 'reviews' && (
-            <div id="profile-section-reviews" className="scroll-mt-24">
-              <h2 className="mb-3 flex items-center gap-2 font-black text-xl text-white">
-                <Star className="h-5 w-5 text-prestige-gold" aria-hidden strokeWidth={1.5} />
-                Vox Populi · Évaluations
-              </h2>
-              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                Les spectateurs déposent un avis depuis la page résumé d&apos;un direct terminé (une fois par beef).
-              </p>
-              {mediatorReviews.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">Aucun avis pour le moment.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {mediatorReviews.map((review) => (
-                    <li
-                      key={review.id}
-                      className="rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3 backdrop-blur-sm"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                        <ProfileUserLink
-                          username={review.authorUsername}
-                          className="text-sm font-semibold text-white/80"
-                        >
-                          {review.authorName}
-                        </ProfileUserLink>
-                        <span className="flex gap-0.5" aria-label={`${review.rating} sur 5`}>
-                          {Array.from({ length: review.rating }).map((_, i) => (
-                            <Star key={i} className="w-3.5 h-3.5 fill-prestige-gold text-prestige-gold" />
-                          ))}
-                        </span>
-                      </div>
-                      {review.comment ? (
-                        <p className="text-sm text-gray-400 italic leading-relaxed">&ldquo;{review.comment}&rdquo;</p>
-                      ) : (
-                        <p className="text-xs text-gray-600">Note sans commentaire</p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
         </div>
       </div>
 

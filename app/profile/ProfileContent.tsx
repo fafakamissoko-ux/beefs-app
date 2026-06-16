@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Edit, Share2, Settings, TrendingUp, Users, MessageCircle, Trophy, Crown, Flame, Upload, X, Check, Clock, AlertCircle, Eye, Star } from 'lucide-react';
+import { Camera, Edit, Share2, Settings, TrendingUp, Users, MessageCircle, Trophy, Crown, Flame, Upload, X, Check, Clock, AlertCircle, Eye } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { PremiumBadge, PremiumAvatarFrame } from '@/components/PremiumBadge';
-import { ProfileUserLink } from '@/components/ProfileUserLink';
 import { AppBackButton } from '@/components/AppBackButton';
 import { hrefWithFrom } from '@/lib/navigation-return';
 import { useToast } from '@/components/Toast';
@@ -20,10 +19,6 @@ import { AuraGiversModal } from '@/components/AuraGiversModal';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
 import { ProfileBeefGrid } from '@/components/profile/ProfileBeefGrid';
-import {
-  fetchMediatorViewerReviews,
-  type MediatorViewerReviewDisplay,
-} from '@/lib/mediator-viewer-reviews';
 
 interface UserProfile {
   id: string;
@@ -107,7 +102,6 @@ export default function ProfileContent() {
   const [cropType, setCropType] = useState<'avatar' | 'banner' | null>(null);
   const [cropOriginalFile, setCropOriginalFile] = useState<File | null>(null);
 
-  const [mediatorReviews, setMediatorReviews] = useState<MediatorViewerReviewDisplay[]>([]);
   const [isAuraModalOpen, setIsAuraModalOpen] = useState(false);
 
   // Load user profile
@@ -269,9 +263,6 @@ export default function ProfileContent() {
 
           setBeefs(mergedSorted.map(attachHost));
           setMediationBeefs(mediatedList.map((b) => attachHost({ ...b, card_host_name: displayNameSelf })));
-
-          const viewerReviews = await fetchMediatorViewerReviews(supabase, data.id);
-          setMediatorReviews(viewerReviews);
         }
 
       } catch (error) {
@@ -853,48 +844,6 @@ export default function ProfileContent() {
                     <span className="font-bold text-prestige-gold">
                       ✦ Indice de Sagesse : {(stats.beefs_resolved / Math.max(stats.beefs_hosted, 1) * 100).toFixed(0)}
                     </span>
-                  </div>
-                )}
-
-                {/* Vox Populi */}
-                {(stats.beefs_hosted > 0 || mediatorReviews.length > 0) && (
-                  <div className="mb-6 pt-4 border-t border-white/[0.08]">
-                    <h4 className="font-sans text-xs font-bold text-white mb-2 flex items-center gap-2">
-                      <Star className="w-3.5 h-3.5 text-prestige-gold" aria-hidden />
-                      Vox Populi (Évaluations)
-                    </h4>
-                    {mediatorReviews.length === 0 ? (
-                      <p className="font-sans text-xs text-white/25 italic">
-                        Aucun avis pour le moment — déposés après un direct sur la page résumé.
-                      </p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {mediatorReviews.slice(0, 3).map((review) => (
-                          <li
-                            key={review.id}
-                            className="rounded-xl bg-white/[0.04] border border-white/[0.06] px-3 py-2 backdrop-blur-xl"
-                          >
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                              <ProfileUserLink username={review.authorUsername} className="font-sans text-[10px] font-bold text-white/60">
-                                {review.authorName}
-                              </ProfileUserLink>
-                              <span className="flex gap-0.5" aria-label={`${review.rating} sur 5`}>
-                                {Array.from({ length: review.rating }).map((_, i) => (
-                                  <Star key={i} className="w-2 h-2 fill-prestige-gold text-prestige-gold" />
-                                ))}
-                              </span>
-                            </div>
-                            {review.comment ? (
-                              <p className="font-sans text-xs text-white/40 font-light italic leading-relaxed">
-                                &ldquo;{review.comment}&rdquo;
-                              </p>
-                            ) : (
-                              <p className="font-sans text-[10px] text-white/20">Note sans commentaire</p>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
                   </div>
                 )}
 
