@@ -1,7 +1,7 @@
 {
-  "name": "Beefs - Règle tes conflits en live",
+  "name": "Beefs - L'Agora du règlement de comptes",
   "short_name": "Beefs",
-  "description": "La plateforme pour résoudre tes beefs en direct avec un médiateur professionnel",
+  "description": "L'arène ultime pour régler tes conflits en direct avec un Ref.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
@@ -9,15 +9,15 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icon-192.svg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-512.svg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ],
@@ -28,14 +28,14 @@
       "short_name": "Live",
       "description": "Voir les beefs en direct",
       "url": "/live",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
     },
     {
       "name": "Mon Profil",
       "short_name": "Profil",
       "description": "Accéder à mon profil",
       "url": "/profile",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
     }
   ],
   "share_target": {

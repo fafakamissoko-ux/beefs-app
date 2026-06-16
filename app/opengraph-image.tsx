@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'Beefs - Débats en live';
+export const alt = "Beefs - L'Agora du règlement de comptes";
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -85,7 +85,7 @@ export default async function Image() {
             fontFamily: '"Space Grotesk", sans-serif',
           }}
         >
-          Débats en live
+          L&apos;Agora du règlement de comptes
         </p>
         <p
           style={{
@@ -97,7 +97,7 @@ export default async function Image() {
             fontWeight: 400,
           }}
         >
-          Crée un beef, invite des challengers et laisse le public voter
+          Lance un beef, affronte tes adversaires et laisse l&apos;Agora trancher.
         </p>
 
         {/* Bottom accent */}
