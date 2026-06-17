@@ -16,7 +16,7 @@ function isRoomImmersiveRoute(pathname: string | null): boolean {
 /** Pages plein écran sans chrome app (sas pseudo, carrousel d’accueil). */
 function isStandalonePublicPage(pathname: string | null): boolean {
   if (!pathname) return false;
-  return pathname === '/onboarding' || pathname === '/welcome';
+  return pathname === '/onboarding';
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {

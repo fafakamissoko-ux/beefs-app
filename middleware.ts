@@ -152,7 +152,7 @@ export async function middleware(request: NextRequest) {
   const isProtectedPath =
     pathname === '/profile' ||
     protectedPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-  const authPaths = ['/login', '/signup', '/welcome'];
+  const authPaths = ['/login', '/signup'];
   const isAuthPath = authPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   // 1. Bloquer les non-connectés hors des zones sécurisées
@@ -186,6 +186,13 @@ export async function middleware(request: NextRequest) {
     const feedUrl = request.nextUrl.clone();
     feedUrl.pathname = '/feed';
     return NextResponse.redirect(feedUrl);
+  }
+
+  if (pathname === '/welcome') {
+    const onboard = request.nextUrl.clone();
+    onboard.pathname = '/onboarding';
+    onboard.search = '';
+    return NextResponse.redirect(onboard);
   }
 
   if (pathname === '/onboarding') {

@@ -100,8 +100,7 @@ function hideGlobalSearchOnPath(pathname: string | null): boolean {
     pathname === '/login' ||
     pathname === '/signup' ||
     pathname === '/forgot-password' ||
-    pathname === '/onboarding' ||
-    pathname === '/welcome'
+    pathname === '/onboarding'
   ) {
     return true;
   }

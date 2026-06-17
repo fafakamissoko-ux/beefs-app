@@ -29,7 +29,7 @@ export default function CreateBeefPage() {
     if (!user) {
       const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
       if (hasSeenOnboarding !== 'true') {
-        router.push('/welcome');
+        router.push('/onboarding');
         return;
       }
       router.push('/login');
