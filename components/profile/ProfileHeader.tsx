@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import { Flame, Calendar } from 'lucide-react';
+import { Flame, Calendar, ShieldCheck } from 'lucide-react';
 import { InlineAuraGivers } from '@/components/InlineAuraGivers';
 import { getAuraRank } from '@/lib/prestige';
 
@@ -55,6 +55,8 @@ export function ProfileHeader({
 }: ProfileHeaderProps) {
   const rank = getAuraRank(profile.lifetime_points);
   const accent = profile.accent_color || '#E83A14';
+  const totalWisdom = stats.beefs_resolved + stats.beefs_abandoned;
+  const reliabilityRate = totalWisdom > 0 ? Math.round((stats.beefs_resolved / totalWisdom) * 100) : null;
 
   return (
     <div className="relative overflow-hidden rounded-[2rem] bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg mb-8">
@@ -135,6 +137,21 @@ export function ProfileHeader({
               <Flame className="h-4 w-4 text-brand-500" aria-hidden />
               <span className="font-bold text-white">{profile.lifetime_points.toLocaleString('fr-FR')}</span> Aura
             </div>
+          </div>
+
+          {/* Taux de Fiabilité (Sagesse) */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-900/40 px-3 py-1 backdrop-blur-sm shadow-lg" title="Taux de Fiabilité (Sagesse)">
+              <ShieldCheck className={`h-4 w-4 ${reliabilityRate !== null && reliabilityRate >= 80 ? 'text-green-400' : reliabilityRate !== null && reliabilityRate >= 50 ? 'text-orange-400' : 'text-slate-400'}`} aria-hidden />
+              <span className="font-sans text-xs font-bold uppercase tracking-wide text-white">
+                {totalWisdom < 3 ? 'Ref en évaluation' : `Fiabilité : ${reliabilityRate}%`}
+              </span>
+            </div>
+            {totalWisdom >= 3 && (
+              <span className="text-xs text-white/40">
+                ({stats.beefs_resolved} résolus)
+              </span>
+            )}
           </div>
 
           {/* Métriques Sociales */}

@@ -33,7 +33,7 @@ const WELCOME_SLIDES = [
   {
     Icon: Shield,
     title: "L'arbitre du conflit.",
-    text: 'Pas de chaos. Chaque règlement de compte est encadré par un Ref qui gère les temps de parole, sanctionne les débordements et contrôle le direct.',
+    text: "Chaque règlement de compte est encadré par un Ref. Son Taux de Fiabilité, affiché publiquement sur son profil, garantit l'impartialité des débats et sanctionne les abandons.",
     color: 'from-brand-500 to-yellow-500',
   },
   {

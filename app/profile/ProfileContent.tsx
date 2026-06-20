@@ -1,18 +1,15 @@
 ﻿'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Edit, Share2, Settings, TrendingUp, Users, MessageCircle, Trophy, Crown, Flame, Upload, X, Check, Clock, AlertCircle, Eye } from 'lucide-react';
+import { Camera, Share2, Settings, TrendingUp, Users, Trophy, Flame, X, Eye } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
-import { PremiumBadge, PremiumAvatarFrame } from '@/components/PremiumBadge';
 import { AppBackButton } from '@/components/AppBackButton';
 import { hrefWithFrom } from '@/lib/navigation-return';
 import { useToast } from '@/components/Toast';
-import { mediationCategoryForBeef } from '@/lib/mediation-resolution';
 import { MediationBeefEditorPanel } from '@/components/MediationBeefEditorPanel';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
@@ -45,8 +42,6 @@ interface UserStats {
   beefs_participated: number;
   beefs_hosted: number;
   beefs_resolved: number;
-  beefs_unresolved: number;
-  beefs_in_progress: number;
   beefs_abandoned: number;
   total_views: number;
   followers: number;
@@ -83,8 +78,6 @@ export default function ProfileContent() {
     beefs_participated: 0,
     beefs_hosted: 0,
     beefs_resolved: 0,
-    beefs_unresolved: 0,
-    beefs_in_progress: 0,
     beefs_abandoned: 0,
     total_views: 0,
     followers: 0,
@@ -96,7 +89,6 @@ export default function ProfileContent() {
   const [activeTab, setActiveTab] = useState<'stats' | 'debates'>('stats');
   const [showEditModal, setShowEditModal] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [selectedResolutionFilter, setSelectedResolutionFilter] = useState<string | null>(null);
   const [publicPreviewOpen, setPublicPreviewOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [cropType, setCropType] = useState<'avatar' | 'banner' | null>(null);
@@ -239,23 +231,11 @@ export default function ProfileContent() {
           const beefsParticipatedCount = new Set((participantRows || []).map((r: { beef_id: string }) => r.beef_id)).size;
           const beefsHostedCount = mediatedList.length;
 
-          // Résolution stats = uniquement beefs médiés (catégorie dérivée status + resolution_status)
-          const resolvedBeefs =
-            mediatedList.filter((beef) => mediationCategoryForBeef(beef) === 'resolved').length || 0;
-          const unresolvedBeefs =
-            mediatedList.filter((beef) => mediationCategoryForBeef(beef) === 'unresolved').length || 0;
-          const inProgressBeefs =
-            mediatedList.filter((beef) => mediationCategoryForBeef(beef) === 'in_progress').length || 0;
-          const abandonedBeefs =
-            mediatedList.filter((beef) => mediationCategoryForBeef(beef) === 'abandoned').length || 0;
-
           setStats({
             beefs_participated: beefsParticipatedCount,
             beefs_hosted: beefsHostedCount,
-            beefs_resolved: resolvedBeefs,
-            beefs_unresolved: unresolvedBeefs,
-            beefs_in_progress: inProgressBeefs,
-            beefs_abandoned: abandonedBeefs,
+            beefs_resolved: data.beefs_resolved ?? 0,
+            beefs_abandoned: data.beefs_abandoned ?? 0,
             total_views: 0,
             followers: followersData?.length || 0,
             following: followingData?.length || 0,
@@ -289,17 +269,7 @@ export default function ProfileContent() {
   const applyMediationBeefPatch = useCallback(
     (beefId: string, patch: { resolution_status?: string; mediation_summary?: string | null }) => {
       setBeefs((prev) => prev.map((b) => (b.id === beefId ? { ...b, ...patch } : b)));
-      setMediationBeefs((prev) => {
-        const next = prev.map((b) => (b.id === beefId ? { ...b, ...patch } : b));
-        setStats((s) => ({
-          ...s,
-          beefs_resolved: next.filter((b) => mediationCategoryForBeef(b) === 'resolved').length,
-          beefs_unresolved: next.filter((b) => mediationCategoryForBeef(b) === 'unresolved').length,
-          beefs_in_progress: next.filter((b) => mediationCategoryForBeef(b) === 'in_progress').length,
-          beefs_abandoned: next.filter((b) => mediationCategoryForBeef(b) === 'abandoned').length,
-        }));
-        return next;
-      });
+      setMediationBeefs((prev) => prev.map((b) => (b.id === beefId ? { ...b, ...patch } : b)));
     },
     [],
   );
@@ -515,9 +485,6 @@ export default function ProfileContent() {
     );
   }
 
-  const showPremiumBadge = profile.is_premium && profile.premium_settings?.showPremiumBadge;
-  const showPremiumFrame = profile.is_premium && profile.premium_settings?.showPremiumFrame;
-
   return (
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-4 py-8">
@@ -541,8 +508,8 @@ export default function ProfileContent() {
             beefs_hosted: stats.beefs_hosted,
             followers: stats.followers,
             following: stats.following,
-            beefs_resolved: 0,
-            beefs_abandoned: 0,
+            beefs_resolved: stats.beefs_resolved,
+            beefs_abandoned: stats.beefs_abandoned,
           }}
           backButton={
             <AppBackButton className="backdrop-blur-md bg-black/40 hover:bg-black/60 border border-white/10 rounded-full text-white [&_span]:hidden p-2" fallback="/feed" />
@@ -627,110 +594,12 @@ export default function ProfileContent() {
 
           {activeTab === 'stats' && (
             <div>
-              <h3 className="text-white font-bold text-lg mb-2">⚖️ Historique des Jugements</h3>
-              <p className="text-gray-500 text-xs leading-relaxed mb-4 max-w-3xl">
-                Chaque beef médié est classé selon son statut en base :{' '}
-                <strong className="text-gray-400">En cours</strong> (live, programmé, préparation),{' '}
-                <strong className="text-gray-400">Résolu</strong> quand la session se termine avec une clôture « succès »
-                (fin explicite par le médiateur, temps max, etc.),{' '}
-                <strong className="text-gray-400">Non résolu</strong> si personne n’a pu débattre jusqu’au bout,{' '}
-                <strong className="text-gray-400">Abandonné</strong> si la room s’arrête sans médiation aboutie (déconnexion, bug, fin sans statut).
-                Les anciens tests marqués « résolus » par défaut peuvent encore apparaître ainsi jusqu’à correction des données.
+              <h3 className="text-white font-bold text-lg mb-4">📈 Statistiques</h3>
+              <p className="text-gray-500 text-xs leading-relaxed mb-6 max-w-3xl">
+                Le Taux de Fiabilité (Sagesse) est affiché sur ton en-tête de profil public et provient des compteurs
+                synchronisés en base (<strong className="text-gray-400">beefs résolus</strong> /{' '}
+                <strong className="text-gray-400">abandons</strong>).
               </p>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                {([
-                  { id: 'resolved', value: stats.beefs_resolved, label: 'Verdicts', desc: 'Conflits tranchés', color: 'green', icon: Check },
-                  { id: 'in_progress', value: stats.beefs_in_progress, label: 'En cours', desc: 'Beefs actifs ou programmés', color: 'blue', icon: Clock },
-                  { id: 'unresolved', value: stats.beefs_unresolved, label: 'Impasses', desc: 'Médiation sans accord', color: 'brand', icon: X },
-                  { id: 'abandoned', value: stats.beefs_abandoned, label: 'Désertions', desc: 'Beefs annulés/forfaits', color: 'gray', icon: Flame },
-                ] as const).map((tile) => {
-                  const Icon = tile.icon;
-                  const active = selectedResolutionFilter === tile.id;
-                  const accent = tile.color === 'brand' ? 'brand-500' : tile.color === 'gray' ? 'gray-500' : `${tile.color}-500`;
-                  return (
-                    <button
-                      key={tile.id}
-                      onClick={() => setSelectedResolutionFilter(active ? null : tile.id)}
-                      className={`rounded-2xl bg-white/[0.04] backdrop-blur-xl border p-4 text-left transition-all duration-200 hover:scale-[0.98] hover:bg-white/[0.06] ${
-                        active ? `border-${accent} ring-2 ring-${accent}/50` : 'border-white/[0.08]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className={`w-10 h-10 bg-${accent}/15 rounded-xl flex items-center justify-center`}>
-                          <Icon className={`w-5 h-5 text-${tile.color === 'brand' ? 'brand-400' : tile.color === 'gray' ? 'gray-400' : `${tile.color}-400`}`} />
-                        </div>
-                        <div>
-                          <p className="font-mono text-2xl font-black text-white tabular-nums">{tile.value}</p>
-                          <p className={`font-sans text-[10px] font-bold uppercase tracking-[0.12em] text-${tile.color === 'brand' ? 'brand-400' : tile.color === 'gray' ? 'gray-400' : `${tile.color}-400`}`}>{tile.label}</p>
-                        </div>
-                      </div>
-                      <p className="font-sans text-[11px] text-white/35">{tile.desc}</p>
-                      {active && <p className={`font-mono text-[10px] mt-2 font-bold tracking-wider text-${tile.color === 'brand' ? 'brand-400' : tile.color === 'gray' ? 'gray-400' : `${tile.color}-400`}`}>FILTRE ACTIF</p>}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Filtered Beefs List */}
-              {selectedResolutionFilter && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-8"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-white font-bold text-lg">
-                      {selectedResolutionFilter === 'resolved' && '✅ Verdicts'}
-                      {selectedResolutionFilter === 'in_progress' && '⏳ Beefs En Cours'}
-                      {selectedResolutionFilter === 'unresolved' && '❌ Impasses'}
-                      {selectedResolutionFilter === 'abandoned' && '🚫 Désertions'}
-                    </h3>
-                    <button
-                      onClick={() => setSelectedResolutionFilter(null)}
-                      className="text-gray-400 hover:text-white text-sm font-semibold"
-                    >
-                      Réinitialiser
-                    </button>
-                  </div>
-                  <div className="mt-4">
-                    <ProfileBeefGrid
-                      beefs={mediationBeefs
-                        .filter((beef) => mediationCategoryForBeef(beef) === selectedResolutionFilter)
-                        .map((b) => ({
-                          ...b,
-                          host_name: (b as { card_host_name?: string }).card_host_name || profile?.display_name || profile?.username || 'Utilisateur',
-                          host_username: (b as { card_host_username?: string | null }).card_host_username,
-                        }))}
-                      emptyMessage="Aucun beef dans cette catégorie"
-                    />
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Success Rate */}
-              <div className="bg-white/5 rounded-[2px] p-6 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-white mb-1">Taux de réussite</h3>
-                    <p className="text-gray-400 text-sm">Pourcentage de beefs résolus avec succès</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-4xl font-black bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
-                      {stats.beefs_hosted > 0 ? Math.round((stats.beefs_resolved / stats.beefs_hosted) * 100) : 0}%
-                    </p>
-                  </div>
-                </div>
-                {/* Progress bar */}
-                <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-green-500 to-blue-500 transition-all duration-500"
-                    style={{ width: `${stats.beefs_hosted > 0 ? (stats.beefs_resolved / stats.beefs_hosted) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Other Stats */}
-              <h3 className="text-white font-bold text-lg mb-4">📈 Autres statistiques</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white/5 rounded-[2px] p-6">
                   <Trophy className="w-8 h-8 text-yellow-500 mb-3" />
@@ -829,8 +698,8 @@ export default function ProfileContent() {
                   beefs_hosted: stats.beefs_hosted,
                   followers: stats.followers,
                   following: stats.following,
-                  beefs_resolved: 0,
-                  beefs_abandoned: 0,
+                  beefs_resolved: stats.beefs_resolved,
+                  beefs_abandoned: stats.beefs_abandoned,
                 }}
                 onAuraClick={undefined}
                 onStatsClick={(type) => {
@@ -842,16 +711,6 @@ export default function ProfileContent() {
               />
 
               <div className="px-2">
-                {/* Indice de Sagesse (Spécifique Modale / Médiateur) */}
-                {stats.beefs_resolved >= 3 && (
-                  <div className="mb-6 flex items-center gap-1.5 text-sm text-gray-400 bg-white/[0.04] p-3 rounded-xl border border-white/5 w-fit" title="Indice de Sagesse">
-                    <span className="font-bold text-prestige-gold">
-                      ✦ Indice de Sagesse : {(stats.beefs_resolved / Math.max(stats.beefs_hosted, 1) * 100).toFixed(0)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Lien Externe */}
                 <p className="text-center mt-2">
                   <Link
                     href={`/profile/${encodeURIComponent(profile.username)}`}
