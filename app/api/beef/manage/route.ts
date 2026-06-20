@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       toggle?: string;
       endReason?: string;
       mediationSummary?: string;
+      summary?: Record<string, unknown>;
     };
 
     const rawBeefId = typeof body.beefId === 'string' ? body.beefId : '';
@@ -320,14 +321,20 @@ export async function POST(request: NextRequest) {
             ? body.endReason.trim()
             : 'Terminé par le médiateur';
         const resolution = resolutionFromEndReason(reason);
-        const { error } = await supabaseAdmin
-          .from('beefs')
-          .update({
-            status: 'ended',
-            ended_at: new Date().toISOString(),
-            resolution_status: resolution,
-          })
-          .eq('id', beefId);
+        const updatePayload: {
+          status: 'ended';
+          ended_at: string;
+          resolution_status: 'resolved' | 'unresolved' | 'abandoned';
+          live_summary?: Record<string, unknown>;
+        } = {
+          status: 'ended',
+          ended_at: new Date().toISOString(),
+          resolution_status: resolution,
+        };
+        if (body.summary && typeof body.summary === 'object' && !Array.isArray(body.summary)) {
+          updatePayload.live_summary = body.summary;
+        }
+        const { error } = await supabaseAdmin.from('beefs').update(updatePayload).eq('id', beefId);
         if (error) {
           return NextResponse.json({ error: 'Fin de beef impossible' }, { status: 500 });
         }

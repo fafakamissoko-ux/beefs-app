@@ -31,6 +31,8 @@ export type BeefManageAction =
         | 'END_BEEF';
       /** Libellé côté client (même logique que endBeef) pour END_BEEF */
       endReason?: string;
+      /** Stats taps audience (resonanceA–F, resonanceM, viewers…) persistées dans beefs.live_summary */
+      summary?: Record<string, unknown>;
       /** Surcharge optionnelle pour REMATCH_MEDIATION_SUMMARY */
       mediationSummary?: string;
     }

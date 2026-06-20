@@ -1212,27 +1212,12 @@ export function TikTokStyleArena({
       }
     }
 
-    const r = await runBeefManage({
-      action: 'TOGGLE_STATUS',
-      beefId: roomId,
-      toggle: 'END_BEEF',
-      endReason: reason,
-    });
-    if (!r.ok) {
-      stopAllMediaTracksRef.current();
-      return;
-    }
-
-    beefEndedRef.current = true;
-
     const s = statsRef.current;
     const wall = beefWallClockStartedAtRef.current;
     const elapsed =
       wall != null
         ? Math.max(0, Math.floor((Date.now() - wall) / 1000))
         : Math.max(0, DEFAULT_BEEF_DURATION - s.beefTimeRemaining);
-    beefEndsAtMsRef.current = null;
-    beefWallClockStartedAtRef.current = null;
     const mins = Math.floor(elapsed / 60);
     const secs = elapsed % 60;
 
@@ -1250,6 +1235,22 @@ export function TikTokStyleArena({
       messages: s.messagesCount,
       endReason: reason,
     };
+
+    const r = await runBeefManage({
+      action: 'TOGGLE_STATUS',
+      beefId: roomId,
+      toggle: 'END_BEEF',
+      endReason: reason,
+      summary,
+    });
+    if (!r.ok) {
+      stopAllMediaTracksRef.current();
+      return;
+    }
+
+    beefEndedRef.current = true;
+    beefEndsAtMsRef.current = null;
+    beefWallClockStartedAtRef.current = null;
     setEndSummary(summary);
     setBeefEnded(true);
 
