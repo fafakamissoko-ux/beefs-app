@@ -22,6 +22,8 @@ export interface ProfileHeaderStats {
   beefs_hosted: number;
   followers: number;
   following: number;
+  beefs_resolved: number;
+  beefs_abandoned: number;
 }
 
 export interface ProfileHeaderProps {

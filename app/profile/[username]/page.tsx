@@ -46,6 +46,8 @@ interface UserProfile {
   lifetime_points?: number;
   is_premium: boolean;
   created_at: string;
+  beefs_resolved?: number;
+  beefs_abandoned?: number;
 }
 
 interface UserStats {
@@ -53,6 +55,15 @@ interface UserStats {
   beefs_hosted: number;
   followers: number;
   following: number;
+  beefs_resolved: number;
+  beefs_abandoned: number;
+}
+
+function wisdomFromRaw(raw: Record<string, unknown>): Pick<UserStats, 'beefs_resolved' | 'beefs_abandoned'> {
+  return {
+    beefs_resolved: Number(raw.beefs_resolved ?? 0),
+    beefs_abandoned: Number(raw.beefs_abandoned ?? 0),
+  };
 }
 
 interface Beef {
@@ -110,6 +121,8 @@ export default function PublicProfilePage() {
     beefs_hosted: 0,
     followers: 0,
     following: 0,
+    beefs_resolved: 0,
+    beefs_abandoned: 0,
   });
   const [beefs, setBeefs] = useState<Beef[]>([]);
   const [participantBeefs, setParticipantBeefs] = useState<Beef[]>([]);
@@ -222,6 +235,8 @@ export default function PublicProfilePage() {
           created_at: string;
           avatar_likes?: number | null;
           banner_likes?: number | null;
+          beefs_resolved?: number | null;
+          beefs_abandoned?: number | null;
         };
         profileData = {
           id: p.id,
@@ -238,6 +253,8 @@ export default function PublicProfilePage() {
           created_at: p.created_at,
           avatar_likes: Number(p.avatar_likes ?? 0),
           banner_likes: Number(p.banner_likes ?? 0),
+          beefs_resolved: Number(p.beefs_resolved ?? 0),
+          beefs_abandoned: Number(p.beefs_abandoned ?? 0),
         };
       }
 
@@ -247,6 +264,7 @@ export default function PublicProfilePage() {
       }
 
       const raw = profileData as Record<string, unknown>;
+      const wisdom = wisdomFromRaw(raw);
       const lpFromRow = Number(raw.lifetime_points ?? 0);
       const pd: UserProfile = {
         ...(profileData as unknown as UserProfile),
@@ -255,6 +273,8 @@ export default function PublicProfilePage() {
         banner_likes: Number(raw.banner_likes ?? 0),
         avatar_original_url: typeof raw.avatar_original_url === 'string' ? raw.avatar_original_url : null,
         banner_original_url: typeof raw.banner_original_url === 'string' ? raw.banner_original_url : null,
+        beefs_resolved: wisdom.beefs_resolved,
+        beefs_abandoned: wisdom.beefs_abandoned,
       };
 
       setProfile(pd);
@@ -301,6 +321,8 @@ export default function PublicProfilePage() {
           beefs_hosted: Number(bundle.hosted_count ?? 0),
           followers: followersCount,
           following: followingCount,
+          beefs_resolved: wisdom.beefs_resolved,
+          beefs_abandoned: wisdom.beefs_abandoned,
         });
 
         setBeefs(
@@ -348,6 +370,8 @@ export default function PublicProfilePage() {
         beefs_hosted: beefsData?.length || 0,
         followers: followersCount,
         following: followingCount,
+        beefs_resolved: wisdom.beefs_resolved,
+        beefs_abandoned: wisdom.beefs_abandoned,
       });
 
       // Load user's beefs
@@ -648,6 +672,8 @@ export default function PublicProfilePage() {
             beefs_hosted: stats.beefs_hosted,
             followers: stats.followers,
             following: stats.following,
+            beefs_resolved: stats.beefs_resolved,
+            beefs_abandoned: stats.beefs_abandoned,
           }}
           backButton={
             <AppBackButton className="backdrop-blur-md bg-black/40 hover:bg-black/60 border border-white/10 rounded-full text-white [&_span]:hidden p-2" fallback="/feed" />

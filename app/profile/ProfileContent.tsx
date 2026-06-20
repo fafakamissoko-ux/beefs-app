@@ -541,6 +541,8 @@ export default function ProfileContent() {
             beefs_hosted: stats.beefs_hosted,
             followers: stats.followers,
             following: stats.following,
+            beefs_resolved: 0,
+            beefs_abandoned: 0,
           }}
           backButton={
             <AppBackButton className="backdrop-blur-md bg-black/40 hover:bg-black/60 border border-white/10 rounded-full text-white [&_span]:hidden p-2" fallback="/feed" />
@@ -827,6 +829,8 @@ export default function ProfileContent() {
                   beefs_hosted: stats.beefs_hosted,
                   followers: stats.followers,
                   following: stats.following,
+                  beefs_resolved: 0,
+                  beefs_abandoned: 0,
                 }}
                 onAuraClick={undefined}
                 onStatsClick={(type) => {
