@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, Flame, X, Radio, Coins, FileText, Swords, LayoutGrid, List } from 'lucide-react';
+import { TrendingUp, Users, Flame, X, Radio, Coins, FileText, Swords } from 'lucide-react';
+import { StarField } from '@/components/Arena/shared/StarField';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { BeefCard } from '@/components/BeefCard';
@@ -150,7 +151,6 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [showHero, setShowHero] = useState(false);
-  const [mobileViewMode, setMobileViewMode] = useState<'list' | 'grid'>('grid');
   const [beefToDelete, setBeefToDelete] = useState<string | null>(null);
   const [editBeefId, setEditBeefId] = useState<string | null>(null);
   const [beefToForfeit, setBeefToForfeit] = useState<string | null>(null);
@@ -712,7 +712,7 @@ export default function FeedPage() {
     });
 
     return () => obs.disconnect();
-  }, [loading, beefs, mobileViewMode]);
+  }, [loading, beefs]);
 
   const loadMore = () => {
     if (loadingMore || !hasMore) return;
@@ -820,6 +820,9 @@ export default function FeedPage() {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+      <div className="fixed inset-0 z-[-1] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-obsidian-950 to-black overflow-hidden">
+        <StarField isOverlay />
+      </div>
       <Suspense fallback={null}>
         <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
         <OpenCommentsFromQuery setOpenId={setActiveCommentsBeefId} />
@@ -889,23 +892,6 @@ export default function FeedPage() {
                   </button>
                 ))}
               </div>
-
-              <div className="ml-2 flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-black/40 p-1 md:hidden">
-                <button
-                  type="button"
-                  onClick={() => setMobileViewMode('list')}
-                  className={`rounded-full p-1.5 transition-colors ${mobileViewMode === 'list' ? 'bg-white/20 text-white' : 'text-gray-500 hover:text-white'}`}
-                >
-                  <List className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMobileViewMode('grid')}
-                  className={`rounded-full p-1.5 transition-colors ${mobileViewMode === 'grid' ? 'bg-white/20 text-white' : 'text-gray-500 hover:text-white'}`}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
-              </div>
             </div>
           </div>
 
@@ -948,16 +934,15 @@ export default function FeedPage() {
         {loading ? (
           <div
             id="feed-scroll-container"
-            className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-32 md:p-6 md:pt-4 ${
-              mobileViewMode === 'grid'
-                ? 'grid grid-cols-2 gap-3 px-3 pt-3 items-start md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5'
-                : 'flex flex-col snap-y snap-mandatory gap-4 items-stretch px-0 pt-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start'
-            }`}
+            className="relative z-10 flex-1 min-h-0 h-[100dvh] w-full snap-y snap-mandatory overflow-y-auto hide-scrollbar"
           >
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}
-                className={`overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.04] ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
+                className="flex h-[100dvh] w-full shrink-0 snap-center snap-always items-center justify-center"
+              >
+              <div
+                className="h-full w-full max-w-[450px] overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.04]"
               >
                 <div className="skeleton h-48 rounded-none" />
                 <div className="space-y-3 p-5">
@@ -968,6 +953,7 @@ export default function FeedPage() {
                     <div className="skeleton h-5 w-12 rounded-full" />
                   </div>
                 </div>
+              </div>
               </div>
             ))}
           </div>
@@ -993,16 +979,13 @@ export default function FeedPage() {
           <>
             <div
               id="feed-scroll-container"
-              className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-32 md:p-6 md:pt-4 ${
-                mobileViewMode === 'grid'
-                  ? 'grid grid-cols-2 gap-3 px-3 pt-3 items-start md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5'
-                  : 'flex flex-col snap-y snap-mandatory gap-4 items-stretch px-0 pt-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start'
-              }`}
+              className="relative z-10 flex-1 min-h-0 h-[100dvh] w-full snap-y snap-mandatory overflow-y-auto hide-scrollbar"
             >
               {/* === CARTE APPÂT (Visiteurs) === */}
               {!user && showHero && (
+                <div className="flex h-[100dvh] w-full shrink-0 snap-center snap-always items-center justify-center">
                 <div
-                  className={`relative flex h-auto min-h-[380px] shrink-0 flex-col items-center justify-between overflow-hidden border border-white/20 bg-gradient-to-br from-white/5 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(255,255,255,0.08)] max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
+                  className="relative flex h-full w-full max-w-[450px] flex-col items-center justify-between overflow-hidden border border-white/20 bg-gradient-to-br from-white/5 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(255,255,255,0.08)] max-md:rounded-none md:rounded-2xl"
                 >
                   <button
                     type="button"
@@ -1032,15 +1015,16 @@ export default function FeedPage() {
                     Call Out
                   </button>
                 </div>
+                </div>
               )}
               {beefs.map((beef, index) => (
                 <div
                   key={beef.id}
-                  className={`relative shrink-0 flex justify-center ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
+                  className="flex h-[100dvh] w-full shrink-0 snap-center snap-always items-center justify-center"
                 >
                   <div
                     data-beef-id={beef.id}
-                    className={mobileViewMode === 'list' ? 'w-full max-w-[380px]' : 'w-full'}
+                    className="h-full w-full max-w-[450px]"
                   >
                     <BeefCard
                     {...beef}
