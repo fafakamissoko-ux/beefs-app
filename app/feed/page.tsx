@@ -1020,7 +1020,7 @@ export default function FeedPage() {
               {beefs.map((beef, index) => (
                 <div
                   key={beef.id}
-                  className="relative shrink-0 flex justify-center h-full w-full snap-start snap-always md:h-auto md:block md:snap-align-none"
+                  className="relative flex-none flex justify-center h-full w-full snap-center snap-always md:flex-auto md:h-auto md:block md:snap-align-none"
                 >
                   <div
                     data-beef-id={beef.id}

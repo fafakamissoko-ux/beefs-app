@@ -254,8 +254,20 @@ export function BeefCard({
       >
         <div
           ref={mediaBlockRef}
-          className="absolute inset-0 z-0 h-full w-full overflow-hidden bg-transparent md:rounded-[1.5rem]"
+          className="absolute inset-0 z-0 h-full w-full overflow-hidden bg-black md:rounded-[1.5rem]"
         >
+          {/* Fond flouté immersif pour combler l'espace vide */}
+          {thumbnail && (
+            <Image
+              src={thumbnail}
+              alt=""
+              fill
+              className="object-cover opacity-40 blur-2xl scale-110 pointer-events-none"
+              sizes="(max-width: 768px) 100vw, 384px"
+            />
+          )}
+
+          {/* Média principal contenu SANS rognage */}
           {isActiveVideo && video_url ? (
             <video
               ref={videoRef}
@@ -264,18 +276,18 @@ export function BeefCard({
               loop
               muted={isMuted}
               playsInline
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="absolute inset-0 z-10 h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
             />
           ) : thumbnail ? (
             <Image
               src={thumbnail}
               alt={title}
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              className="z-10 object-contain transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, 384px"
             />
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-b from-obsidian-900 to-black" />
+            <div className="absolute inset-0 z-10 bg-gradient-to-b from-obsidian-900 to-black" />
           )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent z-[5]" aria-hidden />
 
@@ -602,7 +614,14 @@ export function BeefCard({
               ✕
             </button>
 
-            <div className="relative flex min-h-[40vh] flex-[1.5] items-center justify-center bg-black/20">
+            <div className="relative flex min-h-[40vh] flex-[1.5] items-center justify-center bg-black overflow-hidden">
+              {/* Fond flouté Modal */}
+              {thumbnail && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={thumbnail} alt="" className="absolute inset-0 h-full w-full object-cover opacity-30 blur-2xl scale-110 pointer-events-none" />
+              )}
+
+              {/* Média principal Modal */}
               {video_url ? (
                 <video
                   ref={modalVideoRef}
@@ -612,13 +631,13 @@ export function BeefCard({
                   playsInline
                   muted={isMuted}
                   onClick={handleToggleMute}
-                  className="h-full w-full object-contain"
+                  className="relative z-10 h-full w-full object-contain"
                 />
               ) : thumbnail ? (
                 // eslint-disable-next-line @next/next/no-img-element -- teaser modal pleine page
-                <img src={thumbnail} alt={title} className="max-h-[50vh] w-full bg-black object-contain md:h-full md:max-h-none" />
+                <img src={thumbnail} alt={title} className="relative z-10 max-h-[50vh] w-full object-contain md:h-full md:max-h-none" />
               ) : (
-                <div className="text-white/40">Aucun média</div>
+                <div className="relative z-10 text-white/40">Aucun média</div>
               )}
 
               {/* Conteneur fusionné anti-collision */}
