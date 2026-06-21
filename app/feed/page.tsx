@@ -934,15 +934,15 @@ export default function FeedPage() {
         {loading ? (
           <div
             id="feed-scroll-container"
-            className="relative z-10 flex-1 min-h-0 h-[100dvh] w-full snap-y snap-mandatory overflow-y-auto hide-scrollbar"
+            className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory items-stretch px-0 pt-0 pb-[calc(7rem+env(safe-area-inset-bottom))] md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start md:pb-32 md:p-6 md:pt-4"
           >
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}
-                className="flex h-[100dvh] w-full shrink-0 snap-center snap-always items-center justify-center"
+                className="relative shrink-0 flex justify-center h-full w-full snap-start snap-always md:h-auto md:block md:snap-align-none"
               >
               <div
-                className="h-full w-full max-w-[450px] overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.04]"
+                className="h-full w-full overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.04] md:rounded-[1.5rem]"
               >
                 <div className="skeleton h-48 rounded-none" />
                 <div className="space-y-3 p-5">
@@ -979,13 +979,13 @@ export default function FeedPage() {
           <>
             <div
               id="feed-scroll-container"
-              className="relative z-10 flex-1 min-h-0 h-[100dvh] w-full snap-y snap-mandatory overflow-y-auto hide-scrollbar"
+              className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory items-stretch px-0 pt-0 pb-[calc(7rem+env(safe-area-inset-bottom))] md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start md:pb-32 md:p-6 md:pt-4"
             >
               {/* === CARTE APPÂT (Visiteurs) === */}
               {!user && showHero && (
-                <div className="flex h-[100dvh] w-full shrink-0 snap-center snap-always items-center justify-center">
+                <div className="relative shrink-0 flex justify-center h-full w-full snap-start snap-always md:h-auto md:block md:snap-align-none">
                 <div
-                  className="relative flex h-full w-full max-w-[450px] flex-col items-center justify-between overflow-hidden border border-white/20 bg-gradient-to-br from-white/5 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(255,255,255,0.08)] max-md:rounded-none md:rounded-2xl"
+                  className="relative flex h-full w-full flex-col items-center justify-between overflow-hidden border border-white/20 bg-gradient-to-br from-white/5 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(255,255,255,0.08)] md:min-h-[380px] md:rounded-[1.5rem]"
                 >
                   <button
                     type="button"
@@ -1020,11 +1020,11 @@ export default function FeedPage() {
               {beefs.map((beef, index) => (
                 <div
                   key={beef.id}
-                  className="flex h-[100dvh] w-full shrink-0 snap-center snap-always items-center justify-center"
+                  className="relative shrink-0 flex justify-center h-full w-full snap-start snap-always md:h-auto md:block md:snap-align-none"
                 >
                   <div
                     data-beef-id={beef.id}
-                    className="h-full w-full max-w-[450px]"
+                    className="h-full w-full"
                   >
                     <BeefCard
                     {...beef}

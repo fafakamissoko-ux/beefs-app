@@ -250,11 +250,11 @@ export function BeefCard({
         onClick={() => setIsTeaserOpen(true)}
         onMouseEnter={() => isReplay && setReplayHover(true)}
         onMouseLeave={() => isReplay && setReplayHover(false)}
-        className="group relative h-[100dvh] w-full max-w-[450px] shrink-0 cursor-pointer overflow-hidden bg-transparent shadow-2xl"
+        className="group relative h-full w-full shrink-0 cursor-pointer overflow-hidden bg-transparent md:aspect-[3/4] md:h-auto md:max-h-[70dvh] md:rounded-[1.5rem]"
       >
         <div
           ref={mediaBlockRef}
-          className="absolute inset-0 z-0 h-full w-full overflow-hidden bg-transparent md:rounded-2xl"
+          className="absolute inset-0 z-0 h-full w-full overflow-hidden bg-transparent md:rounded-[1.5rem]"
         >
           {isActiveVideo && video_url ? (
             <video
