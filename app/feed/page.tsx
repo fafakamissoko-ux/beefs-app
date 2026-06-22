@@ -17,6 +17,9 @@ import type { SubmitBeefPayload } from '@/lib/submitNewBeef';
 import { postBeefManage } from '@/lib/beef-manage-client';
 import { hrefWithFrom } from '@/lib/navigation-return';
 import { useClientArenaOnboardingGuard } from '@/lib/client-arena-onboarding-guard';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
+import { FeedTutorial } from '@/components/tutorial/FeedTutorial';
 
 const CreateBeefForm = dynamic(() => import('@/components/CreateBeefForm').then(m => m.CreateBeefForm), {
   loading: () => <div className="flex items-center justify-center p-8"><div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>,
@@ -156,6 +159,14 @@ export default function FeedPage() {
   const [beefToForfeit, setBeefToForfeit] = useState<string | null>(null);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [activeCommentsBeefId, setActiveCommentsBeefId] = useState<string | null>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
 
   useEffect(() => {
     try {
@@ -712,7 +723,7 @@ export default function FeedPage() {
     });
 
     return () => obs.disconnect();
-  }, [loading, beefs]);
+  }, [loading, beefs, isDesktop]);
 
   const loadMore = () => {
     if (loadingMore || !hasMore) return;
@@ -809,6 +820,127 @@ export default function FeedPage() {
       throw new Error(error.message || 'Erreur lors de la création');
     }
   };
+
+  const dismissHero = () => {
+    setShowHero(false);
+    try {
+      localStorage.setItem('hideAgoraHero', 'true');
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const renderHeroContent = () => (
+    <>
+      <button
+        type="button"
+        onClick={dismissHero}
+        className="absolute right-3 top-3 z-20 p-2 text-white/40 hover:text-white"
+        aria-label="Fermer"
+      >
+        <X className="h-5 w-5" />
+      </button>
+      <Flame className="mb-4 h-12 w-12 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]" aria-hidden />
+      <h2 className="mb-2 font-sans text-xl font-black uppercase italic text-white md:text-2xl">Un compte à régler ?</h2>
+      <p className="mx-auto mb-8 max-w-sm text-xs text-gray-400 md:text-sm">
+        Ne laisse plus une affaire sans réponse. Convoque ton adversaire dans l&apos;Agora.
+      </p>
+      <button
+        type="button"
+        onClick={() => router.push('/signup?next=/feed')}
+        className="w-full max-w-[220px] rounded-xl bg-white py-3.5 text-sm font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-transform hover:scale-105 active:scale-95"
+      >
+        Call Out
+      </button>
+    </>
+  );
+
+  const renderBeefCard = (beef: Beef, index: number) => (
+    <BeefCard
+      {...beef}
+      isActiveVideo={beef.id === activeVideoId}
+      onPrepareAudience={
+        (beef.status === 'scheduled' || beef.status === 'pending' || beef.status === 'ready') &&
+        (user?.id === beef.mediator_id || (!beef.mediator_id && user?.id === beef.created_by))
+          ? () => router.push(`/arena/${beef.id}`)
+          : undefined
+      }
+      userInviteStatus={beef.user_invite_status}
+      saisirTab={feedType === 'manifestes'}
+      onSaisirAffaire={
+        beef.status === 'pending' &&
+        beef.intent === 'manifesto' &&
+        user?.id &&
+        beef.created_by &&
+        beef.created_by !== user.id &&
+        !beef.mediator_id
+          ? () => void handleClaimManifesto(beef.id)
+          : undefined
+      }
+      onValiderRef={
+        beef.status === 'pending' &&
+        beef.intent === 'manifesto' &&
+        user?.id &&
+        beef.created_by === user.id &&
+        beef.mediator_id
+          ? () => void handleApproveRef(beef.id)
+          : undefined
+      }
+      onRefuserRef={
+        beef.status === 'pending' &&
+        beef.intent === 'manifesto' &&
+        user?.id &&
+        beef.created_by === user.id &&
+        beef.mediator_id
+          ? () => void handleRejectRef(beef.id)
+          : undefined
+      }
+      onSeDesister={
+        beef.status === 'scheduled' &&
+        user?.id === beef.mediator_id &&
+        beef.intent === 'manifesto'
+          ? () => void handleWithdrawManifesto(beef.id)
+          : undefined
+      }
+      liveAudienceAction={
+        beef.status === 'live'
+          ? {
+              variant: beef.user_is_live_ring ? 'return' : 'join',
+              onClick: () => router.push(`/arena/${beef.id}`),
+            }
+          : undefined
+      }
+      onClick={() => handleBeefClick(beef)}
+      comment_count={beef.comment_count || 0}
+      onCommentClick={() => setActiveCommentsBeefId(beef.id)}
+      onAuraClick={() => handleAuraClick(beef.id)}
+      teaser_score={beef.teaser_score}
+      has_liked_teaser={beef.has_liked_teaser}
+      onTeaserAuraClick={() => handleTeaserAuraClick(beef.id)}
+      onTagClick={handleTagClick}
+      onDelete={
+        beef.status === 'pending' && user?.id === beef.created_by
+          ? () => setBeefToDelete(beef.id)
+          : undefined
+      }
+      onEdit={
+        beef.status === 'pending' && user?.id === beef.created_by
+          ? () => setEditBeefId(beef.id)
+          : undefined
+      }
+      onForfeit={
+        beef.status === 'scheduled' && user?.id === beef.created_by
+          ? () => setBeefToForfeit(beef.id)
+          : undefined
+      }
+      onNotifyClick={
+        beef.status === 'scheduled' || (beef.status === 'pending' && !!beef.scheduled_at)
+          ? () => toast('Bientôt : rappel quand l’heure approche.', 'info')
+          : undefined
+      }
+      index={index}
+    />
+  );
 
   if (authLoading) {
     return (
@@ -977,143 +1109,47 @@ export default function FeedPage() {
           </div>
         ) : (
           <>
-            <div
-              id="feed-scroll-container"
-              className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar flex flex-col snap-y snap-mandatory items-stretch px-0 pt-0 pb-[calc(7rem+env(safe-area-inset-bottom))] md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start md:pb-32 md:p-6 md:pt-4"
-            >
-              {/* === CARTE APPÂT (Visiteurs) === */}
-              {!user && showHero && (
-                <div className="relative shrink-0 flex justify-center h-full w-full snap-start snap-always md:h-auto md:block md:snap-align-none">
-                <div
-                  className="relative flex h-full w-full flex-col items-center justify-between overflow-hidden border border-white/20 bg-gradient-to-br from-white/5 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(255,255,255,0.08)] md:min-h-[380px] md:rounded-[1.5rem]"
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowHero(false);
-                      try {
-                        localStorage.setItem('hideAgoraHero', 'true');
-                      } catch {
-                        /* ignore */
-                      }
-                    }}
-                    className="absolute right-3 top-3 z-20 p-2 text-white/40 hover:text-white"
-                    aria-label="Fermer"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                  <Flame className="mb-4 h-12 w-12 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]" aria-hidden />
-                  <h2 className="mb-2 font-sans text-xl font-black uppercase italic text-white md:text-2xl">Un compte à régler ?</h2>
-                  <p className="mx-auto mb-8 max-w-sm text-xs text-gray-400 md:text-sm">
-                    Ne laisse plus une affaire sans réponse. Convoque ton adversaire dans l&apos;Agora.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => router.push('/signup?next=/feed')}
-                    className="w-full max-w-[220px] rounded-xl bg-white py-3.5 text-sm font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-transform hover:scale-105 active:scale-95"
-                  >
-                    Call Out
-                  </button>
-                </div>
-                </div>
-              )}
-              {beefs.map((beef, index) => (
-                <div
-                  key={beef.id}
-                  className="relative flex-none flex justify-center h-full w-full snap-center snap-always md:flex-auto md:h-auto md:block md:snap-align-none"
-                >
-                  <div
-                    data-beef-id={beef.id}
-                    className="h-full w-full"
-                  >
-                    <BeefCard
-                    {...beef}
-                    isActiveVideo={beef.id === activeVideoId}
-                    onPrepareAudience={
-                      (beef.status === 'scheduled' || beef.status === 'pending' || beef.status === 'ready') &&
-                      (user?.id === beef.mediator_id || (!beef.mediator_id && user?.id === beef.created_by))
-                        ? () => router.push(`/arena/${beef.id}`)
-                        : undefined
-                    }
-                    userInviteStatus={beef.user_invite_status}
-                    saisirTab={feedType === 'manifestes'}
-                    onSaisirAffaire={
-                      beef.status === 'pending' &&
-                      beef.intent === 'manifesto' &&
-                      user?.id &&
-                      beef.created_by &&
-                      beef.created_by !== user.id &&
-                      !beef.mediator_id
-                        ? () => void handleClaimManifesto(beef.id)
-                        : undefined
-                    }
-                    onValiderRef={
-                      beef.status === 'pending' &&
-                      beef.intent === 'manifesto' &&
-                      user?.id &&
-                      beef.created_by === user.id &&
-                      beef.mediator_id
-                        ? () => void handleApproveRef(beef.id)
-                        : undefined
-                    }
-                    onRefuserRef={
-                      beef.status === 'pending' &&
-                      beef.intent === 'manifesto' &&
-                      user?.id &&
-                      beef.created_by === user.id &&
-                      beef.mediator_id
-                        ? () => void handleRejectRef(beef.id)
-                        : undefined
-                    }
-                    onSeDesister={
-                      beef.status === 'scheduled' &&
-                      user?.id === beef.mediator_id &&
-                      beef.intent === 'manifesto'
-                        ? () => void handleWithdrawManifesto(beef.id)
-                        : undefined
-                    }
-                    liveAudienceAction={
-                      beef.status === 'live'
-                        ? {
-                            variant: beef.user_is_live_ring ? 'return' : 'join',
-                            onClick: () => router.push(`/arena/${beef.id}`),
-                          }
-                        : undefined
-                    }
-                    onClick={() => handleBeefClick(beef)}
-                    comment_count={beef.comment_count || 0}
-                    onCommentClick={() => setActiveCommentsBeefId(beef.id)}
-                    onAuraClick={() => handleAuraClick(beef.id)}
-                    teaser_score={beef.teaser_score}
-                    has_liked_teaser={beef.has_liked_teaser}
-                    onTeaserAuraClick={() => handleTeaserAuraClick(beef.id)}
-                    onTagClick={handleTagClick}
-                    onDelete={
-                      beef.status === 'pending' && user?.id === beef.created_by
-                        ? () => setBeefToDelete(beef.id)
-                        : undefined
-                    }
-                    onEdit={
-                      beef.status === 'pending' && user?.id === beef.created_by
-                        ? () => setEditBeefId(beef.id)
-                        : undefined
-                    }
-                    onForfeit={
-                      beef.status === 'scheduled' && user?.id === beef.created_by
-                        ? () => setBeefToForfeit(beef.id)
-                        : undefined
-                    }
-                    onNotifyClick={
-                      beef.status === 'scheduled' || (beef.status === 'pending' && !!beef.scheduled_at)
-                        ? () => toast('Bientôt : rappel quand l’heure approche.', 'info')
-                        : undefined
-                    }
-                    index={index}
-                  />
+            {isDesktop ? (
+              /* --- Rendu DESKTOP (Grille) --- */
+              <div
+                id="feed-scroll-container"
+                className="flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:items-start md:p-6 md:pt-4 md:pb-32"
+              >
+                {!user && showHero && (
+                  <div className="relative flex h-auto min-h-[380px] w-full shrink-0 flex-col items-center justify-between overflow-hidden border border-white/20 bg-gradient-to-br from-white/5 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(255,255,255,0.08)] md:rounded-[1.5rem]">
+                    {renderHeroContent()}
                   </div>
-                </div>
-              ))}
-            </div>
+                )}
+                {beefs.map((beef, index) => (
+                  <div key={beef.id} data-beef-id={beef.id} className="w-full">
+                    {renderBeefCard(beef, index)}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* --- Rendu MOBILE (Swiper.js) --- */
+              <div id="feed-scroll-container" className="relative z-10 min-h-0 w-full flex-1 bg-transparent">
+                <Swiper direction="vertical" slidesPerView={1} className="h-[100dvh] w-full">
+                  {!user && showHero && (
+                    <SwiperSlide className="flex h-full w-full items-center justify-center p-4">
+                      <div className="relative flex h-auto min-h-[380px] w-full shrink-0 flex-col items-center justify-between overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-white/5 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(255,255,255,0.08)]">
+                        {renderHeroContent()}
+                      </div>
+                    </SwiperSlide>
+                  )}
+                  {beefs.map((beef, index) => (
+                    <SwiperSlide key={beef.id} className="h-full w-full">
+                      <div
+                        data-beef-id={beef.id}
+                        className="relative flex h-full w-full shrink-0 snap-start snap-always justify-center"
+                      >
+                        {renderBeefCard(beef, index)}
+                      </div>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
+            )}
             {hasMore && (
               <div className="flex justify-center mt-12">
                 <button
@@ -1234,6 +1270,8 @@ export default function FeedPage() {
           />
         )}
       </AnimatePresence>
+
+      <FeedTutorial />
 
     </div>
   );
