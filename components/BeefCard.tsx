@@ -415,7 +415,7 @@ export function BeefCard({
         </div>
 
         {/* OVERLAY D'INFORMATIONS TIKTOK */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end p-2.5 pt-12 sm:p-4 sm:pt-20">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col justify-end p-4 pb-[110px] sm:pb-[120px] md:pb-6 pt-20">
           <h3 className="mb-1 sm:mb-2 line-clamp-2 font-sans text-[13px] sm:text-[15px] leading-tight font-bold text-white md:text-[17px] drop-shadow-md">
             {title}
           </h3>
