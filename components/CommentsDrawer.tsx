@@ -1,8 +1,7 @@
 'use client';
 
+import { Drawer } from 'vaul';
 import { useCallback, useEffect, useState, Fragment } from 'react';
-import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
 import { Send, Sparkles, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -104,14 +103,6 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
     sync();
     mq.addEventListener('change', sync);
     return () => mq.removeEventListener('change', sync);
-  }, []);
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
   }, []);
 
   const toggleCommentAura = async (commentId: string, authorId: string) => {
@@ -286,120 +277,113 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
 
   if (!mounted) return null;
 
-  return createPortal(
-    <>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden
-      />
-      <motion.div
-        initial={
-          isMobile ? { opacity: 0, y: '100%' } : { opacity: 0, x: '100%' }
-        }
-        animate={{ opacity: 1, y: 0, x: 0 }}
-        exit={
-          isMobile ? { opacity: 0, y: '100%' } : { opacity: 0, x: '100%' }
-        }
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="fixed z-[10000] flex flex-col overflow-hidden border-white/10 bg-black/40 backdrop-blur-sm shadow-2xl max-md:bottom-0 max-md:left-0 max-md:h-[80dvh] max-md:w-full max-md:rounded-t-3xl max-md:border-t md:top-0 md:right-0 md:h-full md:w-[450px] md:border-l"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Commentaires"
-      >
-        <StarField isOverlay={true} />
+  return (
+    <Drawer.Root
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      direction={isMobile ? 'bottom' : 'right'}
+    >
+      <Drawer.Portal>
+        <Drawer.Overlay className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm" />
+        <Drawer.Content
+          className="fixed z-[10000] flex flex-col overflow-hidden border-white/10 bg-black/40 backdrop-blur-sm shadow-2xl max-md:bottom-0 max-md:left-0 max-md:h-[80dvh] max-md:w-full max-md:rounded-t-3xl max-md:border-t md:top-0 md:right-0 md:h-full md:w-[450px] md:border-l outline-none"
+        >
+          <StarField isOverlay={true} />
 
-        <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-white/10 bg-transparent px-4 py-3">
-          <h2 className="font-sans text-sm font-black uppercase tracking-widest text-white">
-            Commentaires
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-            aria-label="Fermer"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+          {/* Poignée de drag pour mobile */}
+          <div className="absolute top-0 left-0 right-0 z-20 flex justify-center pt-3 md:hidden pointer-events-none">
+            <div className="h-1.5 w-12 rounded-full bg-white/20" />
+          </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-            </div>
-          ) : comments.length === 0 ? (
-            <p className="py-12 text-center text-sm text-gray-500">
-              Aucun commentaire pour le moment. Sois le premier.
-            </p>
-          ) : (
-            <ul className="space-y-0">
-              {rootComments.map((comment) => (
-                <Fragment key={comment.id}>
-                  {renderComment(comment, false)}
-                  {(repliesByParent.get(comment.id) ?? []).map((reply) =>
-                    renderComment(reply, true),
-                  )}
-                </Fragment>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="sticky bottom-0 z-10 shrink-0 border-t border-white/10 bg-black/60 backdrop-blur-md p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {replyingTo && (
-            <div className="mb-2 flex items-center justify-between rounded-lg bg-slate-900/60 px-3 py-2 text-xs text-gray-300">
-              <span>
-                En réponse à <span className="font-semibold text-white">@{replyingTo.username}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setReplyingTo(null)}
-                className="rounded-full p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-                aria-label="Annuler la réponse"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  void handleSend();
-                }
-              }}
-              placeholder={
-                user
-                  ? replyingTo
-                    ? `Répondre à @${replyingTo.username}…`
-                    : 'Écrire un commentaire…'
-                  : 'Connecte-toi pour commenter'
-              }
-              disabled={!user || sending}
-              className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-[14px] text-white placeholder:text-gray-500 focus:border-white/20 focus:outline-none disabled:opacity-50"
-            />
+          <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-white/10 bg-transparent px-4 py-3 max-md:pt-8">
+            <h2 className="font-sans text-sm font-black uppercase tracking-widest text-white">
+              Commentaires
+            </h2>
             <button
               type="button"
-              onClick={() => void handleSend()}
-              disabled={!user || sending || !draft.trim()}
-              className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-brand-500 text-white transition-colors hover:bg-brand-400 disabled:opacity-45"
-              aria-label="Envoyer"
+              onClick={onClose}
+              className="rounded-full p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Fermer"
             >
-              <Send className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
           </div>
-        </div>
-      </motion.div>
-    </>,
-    document.body,
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+              </div>
+            ) : comments.length === 0 ? (
+              <p className="py-12 text-center text-sm text-gray-500">
+                Aucun commentaire pour le moment. Sois le premier.
+              </p>
+            ) : (
+              <ul className="space-y-0">
+                {rootComments.map((comment) => (
+                  <Fragment key={comment.id}>
+                    {renderComment(comment, false)}
+                    {(repliesByParent.get(comment.id) ?? []).map((reply) =>
+                      renderComment(reply, true),
+                    )}
+                  </Fragment>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="sticky bottom-0 z-10 shrink-0 border-t border-white/10 bg-black/60 backdrop-blur-md p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {replyingTo && (
+              <div className="mb-2 flex items-center justify-between rounded-lg bg-slate-900/60 px-3 py-2 text-xs text-gray-300">
+                <span>
+                  En réponse à <span className="font-semibold text-white">@{replyingTo.username}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setReplyingTo(null)}
+                  className="rounded-full p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                  aria-label="Annuler la réponse"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    void handleSend();
+                  }
+                }}
+                placeholder={
+                  user
+                    ? replyingTo
+                      ? `Répondre à @${replyingTo.username}…`
+                      : 'Écrire un commentaire…'
+                    : 'Connecte-toi pour commenter'
+                }
+                disabled={!user || sending}
+                className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-[14px] text-white placeholder:text-gray-500 focus:border-white/20 focus:outline-none disabled:opacity-50"
+              />
+              <button
+                type="button"
+                onClick={() => void handleSend()}
+                disabled={!user || sending || !draft.trim()}
+                className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full bg-brand-500 text-white transition-colors hover:bg-brand-400 disabled:opacity-45"
+                aria-label="Envoyer"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
   );
 }
