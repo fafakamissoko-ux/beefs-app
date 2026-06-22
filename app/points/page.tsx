@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Coins, History, ShoppingBag, ArrowRight } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppBackButton } from '@/components/AppBackButton';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 
-type TxRow = {
+type Transaction = {
   id: string;
   type: string;
   amount: number;
@@ -34,20 +35,23 @@ export default function PointsDashboardPage() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading: authLoading } = useAuth();
-  const [balance, setBalance] = useState<number | null>(null);
-  const [transactions, setTransactions] = useState<TxRow[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       router.replace('/login?redirect=/points');
-      return;
     }
+  }, [user, authLoading, router]);
 
-    let cancelled = false;
-    (async () => {
-      const [{ data: u }, { data: tx, error }] = await Promise.all([
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['wallet', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      if (!user?.id) {
+        return { points: 0, transactions: [] as Transaction[] };
+      }
+
+      const [{ data: pointsData }, { data: txData, error }] = await Promise.all([
         supabase.from('users').select('points').eq('id', user.id).single(),
         supabase
           .from('transactions')
@@ -56,16 +60,18 @@ export default function PointsDashboardPage() {
           .order('created_at', { ascending: false })
           .limit(80),
       ]);
-      if (cancelled) return;
-      if (u) setBalance(u.points ?? 0);
-      if (!error && tx) setTransactions(tx as TxRow[]);
-      setLoading(false);
-    })();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [user, authLoading, router]);
+      if (error) throw error;
+
+      return {
+        points: pointsData?.points ?? 0,
+        transactions: (txData ?? []) as Transaction[],
+      };
+    },
+  });
+
+  const points = data?.points ?? 0;
+  const transactions = data?.transactions ?? [];
 
   if (authLoading || !user) {
     return (
@@ -97,7 +103,7 @@ export default function PointsDashboardPage() {
             <div>
               <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Solde actuel</p>
               <p className="text-3xl font-black text-white tabular-nums" aria-live="polite">
-                {loading ? '…' : (balance ?? 0).toLocaleString('fr-FR')}
+                {loading ? '…' : points.toLocaleString('fr-FR')}
                 <span className="text-lg font-bold text-gray-400 ml-1">Lingots</span>
               </p>
             </div>

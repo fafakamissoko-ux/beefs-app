@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
 
 interface AuraGiver {
@@ -22,6 +23,11 @@ interface BeefViewerRow {
   viewed_at: string;
 }
 
+type AuraGiversQueryData = {
+  givers: AuraGiver[];
+  currentUserId: string | null;
+};
+
 interface AuraGiversModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -38,68 +44,52 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
   ownerId,
 }) => {
   const router = useRouter();
-  const [givers, setGivers] = useState<AuraGiver[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    let cancelled = false;
-
-    async function load() {
-      setIsLoading(true);
-
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['aura-givers', targetId, type],
+    enabled: isOpen && !!targetId,
+    queryFn: async (): Promise<AuraGiversQueryData> => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (cancelled) return;
+      const currentUserId = session?.user?.id ?? null;
 
-      setCurrentUser(session?.user?.id || null);
-
-      if (session?.user?.id) {
-        if (type === 'views') {
-          const { data } = await supabase.rpc('get_beef_viewers', {
-            p_beef_id: targetId,
-            p_owner_id: ownerId,
-          });
-          if (!cancelled) {
-            const rows = (data as BeefViewerRow[] | null) || [];
-            const mappedData: AuraGiver[] = rows.map((v) => ({
-              giver_id: v.viewer_id,
-              display_name: v.display_name,
-              username: v.username,
-              avatar_url: v.avatar_url,
-              created_at: v.viewed_at,
-            }));
-            setGivers(mappedData);
-          }
-        } else {
-          const { data } = await supabase.rpc('get_universal_aura_givers', {
-            p_target_id: targetId,
-            p_type: type,
-            p_owner_id: ownerId,
-          });
-          if (!cancelled) {
-            setGivers((data as AuraGiver[] | null) || []);
-          }
-        }
-      } else {
-        setGivers([]);
+      if (!currentUserId) {
+        return { givers: [], currentUserId: null };
       }
 
-      if (!cancelled) {
-        setIsLoading(false);
+      if (type === 'views') {
+        const { data: viewerRows } = await supabase.rpc('get_beef_viewers', {
+          p_beef_id: targetId,
+          p_owner_id: ownerId,
+        });
+        const rows = (viewerRows as BeefViewerRow[] | null) || [];
+        const givers: AuraGiver[] = rows.map((v) => ({
+          giver_id: v.viewer_id,
+          display_name: v.display_name,
+          username: v.username,
+          avatar_url: v.avatar_url,
+          created_at: v.viewed_at,
+        }));
+        return { givers, currentUserId };
       }
-    }
 
-    void load();
+      const { data: auraRows } = await supabase.rpc('get_universal_aura_givers', {
+        p_target_id: targetId,
+        p_type: type,
+        p_owner_id: ownerId,
+      });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, targetId, type, ownerId]);
+      return {
+        givers: (auraRows as AuraGiver[] | null) || [],
+        currentUserId,
+      };
+    },
+  });
+
+  const items = data?.givers ?? [];
+  const currentUser = data?.currentUserId ?? null;
 
   return (
     <AnimatePresence>
@@ -144,7 +134,7 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
         </div>
 
         <div className="hide-scrollbar flex-1 space-y-4 overflow-y-auto overscroll-contain p-5">
-          {isLoading ? (
+          {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="mb-4 h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
               <p className="text-sm font-bold text-cyan-400">Déchiffrement de l&apos;Aura...</p>
@@ -167,13 +157,13 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
                 Rejoindre l&apos;Agora
               </button>
             </div>
-          ) : givers.length === 0 ? (
+          ) : items.length === 0 ? (
             <p className="py-12 text-center text-sm text-gray-500">
               {type === 'views' ? 'Aucun spectateur enregistré.' : "Personne n'a encore envoyé d'Aura."}
             </p>
           ) : (
             <>
-              {givers.map((giver) => (
+              {items.map((giver) => (
                 <div
                   key={giver.giver_id}
                   className="flex items-center justify-between gap-3 rounded-2xl border border-white/5 bg-white/[0.02] p-3"
@@ -204,7 +194,7 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
                   </button>
                 </div>
               ))}
-              {currentUser !== ownerId && givers.length === 7 && (
+              {currentUser !== ownerId && items.length === 7 && (
                 <p className="mt-4 text-center text-[10px] font-bold uppercase tracking-wider text-white/40">
                   Seul le propriétaire peut voir la liste complète.
                 </p>

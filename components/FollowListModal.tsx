@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, UserPlus, UserMinus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -19,37 +20,53 @@ interface ListedUser {
   avatar_url: string | null;
 }
 
+type FollowListQueryData = {
+  users: ListedUser[];
+  isFollowingMap: Record<string, boolean>;
+};
+
 interface FollowListModalProps {
   userId: string;
   type: ListType;
   onClose: () => void;
 }
 
+function followListQueryKey(type: ListType, userId: string, viewerId: string | undefined) {
+  return ['follow-list', type, userId, viewerId] as const;
+}
+
 export function FollowListModal({ userId, type, onClose }: FollowListModalProps) {
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [rows, setRows] = useState<ListedUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
   const [actionId, setActionId] = useState<string | null>(null);
 
   const title = type === 'followers' ? 'Abonnés' : 'Abonnements';
 
-  const loadList = useCallback(async () => {
-    setLoading(true);
-    try {
+  const { data, isLoading: loading, isError } = useQuery({
+    queryKey: followListQueryKey(type, userId, user?.id),
+    enabled: !!userId,
+    queryFn: async (): Promise<FollowListQueryData> => {
+      let loadedUsers: ListedUser[] = [];
+
       if (type === 'followers') {
-        const { data, error } = await supabase
+        const { data: followerRows, error } = await supabase
           .from('followers')
           .select('follower_id')
           .eq('following_id', userId)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        const followerIds = (data || []).map((r: { follower_id: string }) => r.follower_id).filter(Boolean);
-        const pubMap = await fetchUserPublicByIds(supabase, followerIds, 'id, username, display_name, avatar_url');
-        const list: ListedUser[] = followerIds.map((id) => {
+        const followerIds = (followerRows || [])
+          .map((r: { follower_id: string }) => r.follower_id)
+          .filter(Boolean);
+        const pubMap = await fetchUserPublicByIds(
+          supabase,
+          followerIds,
+          'id, username, display_name, avatar_url',
+        );
+        loadedUsers = followerIds.map((id) => {
           const u = pubMap.get(id);
           return {
             id,
@@ -58,18 +75,23 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
             avatar_url: u?.avatar_url ?? null,
           };
         });
-        setRows(list);
       } else {
-        const { data, error } = await supabase
+        const { data: followingRows, error } = await supabase
           .from('followers')
           .select('following_id')
           .eq('follower_id', userId)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        const followingIdsList = (data || []).map((r: { following_id: string }) => r.following_id).filter(Boolean);
-        const pubMap = await fetchUserPublicByIds(supabase, followingIdsList, 'id, username, display_name, avatar_url');
-        const list: ListedUser[] = followingIdsList.map((id) => {
+        const followingIdsList = (followingRows || [])
+          .map((r: { following_id: string }) => r.following_id)
+          .filter(Boolean);
+        const pubMap = await fetchUserPublicByIds(
+          supabase,
+          followingIdsList,
+          'id, username, display_name, avatar_url',
+        );
+        loadedUsers = followingIdsList.map((id) => {
           const u = pubMap.get(id);
           return {
             id,
@@ -78,46 +100,35 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
             avatar_url: u?.avatar_url ?? null,
           };
         });
-        setRows(list);
       }
-    } catch {
-      console.error('FollowListModal load error');
+
+      const followingMap: Record<string, boolean> = {};
+      if (user && loadedUsers.length > 0) {
+        const ids = loadedUsers.map((r) => r.id).filter((id) => id !== user.id);
+        if (ids.length > 0) {
+          const { data: followRows } = await supabase
+            .from('followers')
+            .select('following_id')
+            .eq('follower_id', user.id)
+            .in('following_id', ids);
+          for (const row of followRows || []) {
+            followingMap[row.following_id] = true;
+          }
+        }
+      }
+
+      return { users: loadedUsers, isFollowingMap: followingMap };
+    },
+  });
+
+  useEffect(() => {
+    if (isError) {
       toast('Impossible de charger la liste', 'error');
-      setRows([]);
-    } finally {
-      setLoading(false);
     }
-  }, [userId, type, toast]);
+  }, [isError, toast]);
 
-  useEffect(() => {
-    loadList();
-  }, [loadList]);
-
-  useEffect(() => {
-    if (!user || rows.length === 0) {
-      setFollowingIds(new Set());
-      return;
-    }
-    const ids = rows.map((r) => r.id).filter((id) => id !== user.id);
-    if (ids.length === 0) {
-      setFollowingIds(new Set());
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from('followers')
-        .select('following_id')
-        .eq('follower_id', user.id)
-        .in('following_id', ids);
-      if (!cancelled) {
-        setFollowingIds(new Set((data || []).map((d) => d.following_id)));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user, rows]);
+  const users = data?.users ?? [];
+  const isFollowingMap = data?.isFollowingMap ?? {};
 
   const handleToggleFollow = async (targetId: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -126,20 +137,30 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
       router.push('/login');
       return;
     }
+
+    const wasFollowing = Boolean(isFollowingMap[targetId]);
+    const queryKey = followListQueryKey(type, userId, user.id);
+
+    queryClient.setQueryData<FollowListQueryData>(queryKey, (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        isFollowingMap: {
+          ...old.isFollowingMap,
+          [targetId]: !wasFollowing,
+        },
+      };
+    });
+
     setActionId(targetId);
     try {
-      if (followingIds.has(targetId)) {
+      if (wasFollowing) {
         const { error } = await supabase
           .from('followers')
           .delete()
           .eq('follower_id', user.id)
           .eq('following_id', targetId);
         if (error) throw error;
-        setFollowingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(targetId);
-          return next;
-        });
         toast('Vous ne suivez plus cet utilisateur', 'success');
       } else {
         const { error } = await supabase.from('followers').insert({
@@ -147,12 +168,21 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
           following_id: targetId,
         });
         if (error) throw error;
-        setFollowingIds((prev) => new Set(prev).add(targetId));
         toast('Vous suivez cet utilisateur', 'success');
       }
     } catch {
       console.error('FollowListModal follow action error');
-      toast('Erreur lors de l\'action', 'error');
+      queryClient.setQueryData<FollowListQueryData>(queryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          isFollowingMap: {
+            ...old.isFollowingMap,
+            [targetId]: wasFollowing,
+          },
+        };
+      });
+      toast("Erreur lors de l'action", 'error');
     } finally {
       setActionId(null);
     }
@@ -206,10 +236,10 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
               <div className="flex justify-center py-16">
                 <div className="w-10 h-10 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : rows.length === 0 ? (
+            ) : users.length === 0 ? (
               <p className="text-center text-gray-500 text-sm py-12">Aucun compte pour le moment.</p>
             ) : (
-              rows.map((u, index) => (
+              users.map((u, index) => (
                 <motion.div
                   key={u.id}
                   initial={{ opacity: 0, y: 8 }}
@@ -240,12 +270,12 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
                       disabled={actionId === u.id}
                       onClick={(e) => handleToggleFollow(u.id, e)}
                       className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                        followingIds.has(u.id)
+                        isFollowingMap[u.id]
                           ? 'bg-white/10 hover:bg-white/15 text-white'
                           : 'brand-gradient text-black hover:opacity-90'
                       } ${actionId === u.id ? 'opacity-60' : ''}`}
                     >
-                      {followingIds.has(u.id) ? (
+                      {isFollowingMap[u.id] ? (
                         <>
                           <UserMinus className="w-3.5 h-3.5" />
                           <span className="hidden sm:inline">Ne plus suivre</span>
