@@ -9,12 +9,11 @@
 ## Anomalie 1 — Aura Teaser sans Optimistic UI (`page.tsx`)
 
 ### Localisation
-Fonction `handleTeaserAuraClick` — **lignes 742–770** (commentaire explicite l. 742).
+Fonction `handleTeaserAuraClick` — **lignes 743–770**.
 
 ### Extrait exact — `handleTeaserAuraClick`
 
-```742:770:app/feed/page.tsx
-  /** Teaser : pas d’optimiste local (évite conflit avec Realtime sur `beefs`) — trigger SQL + canal `beefs_changes` → loadBeefs. */
+```743:770:app/feed/page.tsx
   const handleTeaserAuraClick = async (beefId: string) => {
     if (!user?.id || isLikingTeaser.current) return;
     isLikingTeaser.current = true;
@@ -45,14 +44,20 @@ Fonction `handleTeaserAuraClick` — **lignes 742–770** (commentaire explicite
   };
 ```
 
-### Extrait comparatif — `handleAuraClick` (avec Optimistic UI)
+**Commentaire source (l. 742) :**  
+`Teaser : pas d'optimiste local (évite conflit avec Realtime sur beefs) — trigger SQL + canal beefs_changes → loadBeefs.`
 
-```702:724:app/feed/page.tsx
+### Extrait exact — `handleAuraClick` (référence avec Optimistic UI)
+
+```702:740:app/feed/page.tsx
   const handleAuraClick = async (beefId: string) => {
     if (!user?.id || isLikingCard.current) return;
     isLikingCard.current = true;
     const targetBeef = beefs.find((b) => b.id === beefId);
-    ...
+    if (!targetBeef) {
+      isLikingCard.current = false;
+      return;
+    }
     const isCurrentlyLiked = !!targetBeef.has_liked_by_user;
 
     setBeefs((prev) =>
@@ -68,47 +73,48 @@ Fonction `handleTeaserAuraClick` — **lignes 742–770** (commentaire explicite
         return b;
       }),
     );
-    ...
+
+    try {
+      if (isCurrentlyLiked) {
+        const { error } = await supabase.from('beef_likes').delete().match({ beef_id: beefId, user_id: user.id });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('beef_likes').insert({ beef_id: beefId, user_id: user.id });
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Erreur lors du vote Aura:', error);
+    }
+    setTimeout(() => {
+      isLikingCard.current = false;
+    }, 1000);
   };
 ```
 
-### Diagnostic
+### Confirmation diagnostic
 
 | Critère | `handleAuraClick` | `handleTeaserAuraClick` |
 |---------|-------------------|-------------------------|
-| `setBeefs(...)` optimiste | ✅ Oui | ❌ **Absent** |
-| Toggle `has_liked_*` local | ✅ Immédiat | ❌ Attend refetch |
-| Toggle score local | ✅ `engagement_score` | ❌ `teaser_score` inchangé jusqu'au serveur |
-| Debounce refetch parent | 1500 ms (Realtime) | Même canal — **délai cumulé** |
+| `setBeefs(...)` | ✅ **Présent** (l. 712–724) | ❌ **Absent** |
+| Mise à jour `has_liked_*` | ✅ Immédiate | ❌ Attend refetch serveur |
+| Mise à jour score | ✅ `engagement_score` | ❌ `teaser_score` inchangé localement |
 
-### Chaîne du bug visuel « +2 »
+**Confirmé :** `handleTeaserAuraClick` ne contient **aucun** appel `setBeefs`.
 
-Côté `BeefCard.tsx` (modale teaser, l. 612–623) :
+### Mécanisme du bug visuel « +2 »
 
-```612:623:components/BeefCard.tsx
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!has_liked_teaser && !localTeaserAuraLock.current) {
-                        localTeaserAuraLock.current = true;
-                        ...
-                      }
-                      onTeaserAuraClick();
-                    }}
-```
-
-1. Clic 1 : `has_liked_teaser === false` → animation `+1` ; API insert ; prop **reste false**.
-2. `localTeaserAuraLock` libéré après **1 s** ; `isLikingTeaser` libéré après **1 s**.
-3. Refetch Realtime debouncé **1,5 s** → `has_liked_teaser` peut encore être stale à t+1 s.
-4. Clic 2 (ou double-tap) : prop toujours `false` → **second `+1`** alors que le like existe déjà en DB.
-
-**Cause racine confirmée :** absence de `setBeefs` optimiste sur `has_liked_teaser` / `teaser_score`, combinée à un délai de synchronisation supérieur au verrou UI local (1 s vs debounce 1,5 s).
+1. `BeefCard` anime `+1` si `!has_liked_teaser` (prop stale).
+2. Insert Supabase → trigger SQL met à jour `beefs.teaser_score`.
+3. Realtime `beefs_changes` → `loadBeefs(true)` debouncé **1500 ms**.
+4. Verrous locaux (`localTeaserAuraLock`, `isLikingTeaser`) libérés à **1000 ms**.
+5. Fenêtre t+1 s : prop encore `false` → second clic → **second `+1` visuel**.
 
 ---
 
 ## Anomalie 2 — Erreur sémantique modale d'attente (`BeefCard.tsx`)
 
 ### Localisation `getPendingRefText`
-**Lignes 222–229** (post-refactors ; audit initial ~160).
+**Lignes 222–229.**
 
 ### Extrait exact
 
@@ -123,17 +129,20 @@ Côté `BeefCard.tsx` (modale teaser, l. 612–623) :
   const pendingRefText = getPendingRefText();
 ```
 
-### Usage de `intent`
-
-La prop `intent` est **disponible** sur le composant (l. 66, 120) et utilisée ailleurs :
+### Confirmation — usage de `intent`
 
 ```205:205:components/BeefCard.tsx
   const isManifesto = saisirTab || (intent === 'manifesto' && (status === 'pending' || status === 'ready'));
 ```
 
-**Dans `getPendingRefText` : `intent` n'est jamais lu.**
+**Confirmé :** la prop `intent` **n'est pas utilisée** dans `getPendingRefText`.  
+Les textes ne distinguent pas **manifesto** vs **médiation standard**.
 
-Conséquence : pour un beef **manifesto** (`intent === 'manifesto'`) avec un candidat Ref (`mediator_name` renseigné), un spectateur voit **« Ref en cours de validation… »** — formulation pensée pour une médiation standard, alors que le flux manifesto implique une **validation par le créateur** (`onValiderRef` / `onRefuserRef` côté feed).
+| Branche actuelle | Texte | Problème sémantique |
+|------------------|-------|---------------------|
+| Créateur ≠ médiateur | Validation Ref @nom | OK manifesto |
+| Spectateur + `mediator_name` | « Ref en cours de validation… » | Ambigu — pour manifesto = candidat en attente du **créateur** |
+| Spectateur sans Ref | « En attente d'un Ref… » | OK |
 
 ### Bloc de rendu (l. 803–807)
 
@@ -145,28 +154,23 @@ Conséquence : pour un beef **manifesto** (`intent === 'manifesto'`) avec un can
                     )}
 ```
 
-### Diagnostic condition de rendu
+### Confirmation condition de rendu
 
-| Condition | Présente | Note |
-|-----------|----------|------|
-| `status === 'pending'` | ✅ | |
-| `!!mediator_name` | ✅ | |
-| `!onValiderRef` | ✅ | Masque le bloc si le créateur a les handlers validation |
-| `!onSaisirAffaire` | ✅ | |
-| `pendingRefText` | ✅ | Guard anti-fantôme |
-| **`intent === 'manifesto'`** | ❌ **Absent** | Pas de branche sémantique manifesto vs standard |
+- ✅ `status === 'pending'`
+- ✅ `!!mediator_name`
+- ✅ `!onValiderRef && !onSaisirAffaire`
+- ✅ `pendingRefText` (guard anti-fantôme)
+- ❌ **`intent` / `isManifesto` non testés**
 
-**Cas problématique :** sur le feed « Pour toi », un manifesto pending avec `mediator_name` et **sans** `onValiderRef` passé à la carte (utilisateur non-créateur) affiche « Ref en cours de validation… » — **sémantiquement imprécis** (le Ref a postulé, il attend le créateur, pas une « validation » générique).
-
-Sur l'onglet manifestes, `onValiderRef` est injecté pour le créateur — le bloc est masqué pour lui. Les **spectateurs / autres rôles** voient toutefois le message générique.
+**Confirmé :** la div s'affiche pour tout pending avec médiateur nommé, sans différencier manifesto vs médiation.
 
 ---
 
-## Synthèse des correctifs anticipés (non implémentés)
+## Synthèse — correctifs Phase 1 (non implémentés)
 
-| Anomalie | Fichier | Piste Phase 1 |
-|----------|---------|---------------|
-| Teaser +2 / délai | `app/feed/page.tsx` | `setBeefs` optimiste sur `has_liked_teaser` + `teaser_score` (miroir `handleAuraClick`) |
-| Sémantique Ref | `components/BeefCard.tsx` | Brancher `intent` / `isManifesto` dans `getPendingRefText` et/ou condition de rendu |
+| Anomalie | Fichier | Piste |
+|----------|---------|-------|
+| Teaser +2 / délai | `app/feed/page.tsx` | Optimistic UI miroir `handleAuraClick` sur `has_liked_teaser` + `teaser_score` |
+| Confusion manifesto | `components/BeefCard.tsx` | Conditionner textes/rendu via `intent` ou `isManifesto` |
 
-**En attente GO / VALIDÉ Architecte avant implémentation.**
+**En attente GO / VALIDÉ Architecte.**
