@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useParams, useRouter, usePathname } from 'next/navigation';
 import { Share2, Flame, MoreVertical, TrendingUp, X, Sparkles } from 'lucide-react';
@@ -107,27 +108,44 @@ function beefFromPublicRpcRow(
   };
 }
 
+type MediaLikesState = {
+  avatar: { count: number; liked: boolean };
+  banner: { count: number; liked: boolean };
+};
+
+type PublicProfileQueryData = {
+  profile: UserProfile | null;
+  stats: UserStats;
+  beefs: Beef[];
+  participantBeefs: Beef[];
+  mediaLikes: MediaLikesState;
+  isFollowing: boolean;
+};
+
+const EMPTY_STATS: UserStats = {
+  beefs_participated: 0,
+  beefs_hosted: 0,
+  followers: 0,
+  following: 0,
+  beefs_resolved: 0,
+  beefs_abandoned: 0,
+};
+
+const EMPTY_MEDIA_LIKES: MediaLikesState = {
+  avatar: { count: 0, liked: false },
+  banner: { count: 0, liked: false },
+};
+
 export default function PublicProfilePage() {
   const params = useParams();
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const username = params.username as string;
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [stats, setStats] = useState<UserStats>({
-    beefs_participated: 0,
-    beefs_hosted: 0,
-    followers: 0,
-    following: 0,
-    beefs_resolved: 0,
-    beefs_abandoned: 0,
-  });
-  const [beefs, setBeefs] = useState<Beef[]>([]);
-  const [participantBeefs, setParticipantBeefs] = useState<Beef[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showFollowModal, setShowFollowModal] = useState<null | 'followers' | 'following'>(null);
   const [isAuraModalOpen, setIsAuraModalOpen] = useState(false);
@@ -135,10 +153,7 @@ export default function PublicProfilePage() {
   const [activeTab, setActiveTab] = useState<'debates' | 'participations'>('debates');
   const [viewingImage, setViewingImage] = useState<{ url: string; type: 'avatar' | 'banner' } | null>(null);
   const [mediaAuraLoading, setMediaAuraLoading] = useState(false);
-  const [mediaLikes, setMediaLikes] = useState({
-    avatar: { count: 0, liked: false },
-    banner: { count: 0, liked: false },
-  });
+  const [mediaLikes, setMediaLikes] = useState<MediaLikesState>(EMPTY_MEDIA_LIKES);
   const [dopamineBursts, setDopamineBursts] = useState<
     { id: number; text: string; minus?: boolean; anchor: 'follow' | 'aura'; solar?: boolean }[]
   >([]);
@@ -156,9 +171,6 @@ export default function PublicProfilePage() {
     [],
   );
 
-  // Check if it's the current user's profile
-  const isOwnProfile = user && profile && user.id === profile.id;
-
   useEffect(() => {
     if (typeof document === 'undefined') return;
     if (viewingImage) document.body.style.overflow = 'hidden';
@@ -168,315 +180,331 @@ export default function PublicProfilePage() {
     };
   }, [viewingImage]);
 
-  const loadProfile = useCallback(async () => {
-    setLoading(true);
-    try {
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['public-profile', username, user?.id],
+    enabled: !!username,
+    queryFn: async (): Promise<PublicProfileQueryData> => {
       const usernameKey = decodeURIComponent(String(username || '')).trim();
-      if (!usernameKey) {
-        setLoading(false);
-        return;
-      }
+      let resultStats: UserStats = { ...EMPTY_STATS };
+      let resultBeefs: Beef[] = [];
+      let resultParticipantBeefs: Beef[] = [];
+      let resultMediaLikes: MediaLikesState = { ...EMPTY_MEDIA_LIKES };
+      let resultIsFollowing = false;
 
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
+      const emptyResult = (): PublicProfileQueryData => ({
+        profile: null,
+        stats: resultStats,
+        beefs: resultBeefs,
+        participantBeefs: resultParticipantBeefs,
+        mediaLikes: resultMediaLikes,
+        isFollowing: resultIsFollowing,
+      });
 
-      let profileData: Record<string, unknown> | null = null;
+      if (!usernameKey) return emptyResult();
 
-      if (authUser) {
-        const { data: pubRow, error: pubErr } = await supabase
-          .from('user_public_profile')
-          .select('*')
-          .ilike('username', escapeForIlikeExact(usernameKey))
-          .maybeSingle();
-        if (pubErr || !pubRow) {
-          setLoading(false);
-          return;
-        }
-        if (authUser.id === pubRow.id) {
-          const { data: full, error: fullErr } = await supabase
-            .from('users')
+      try {
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
+
+        let profileData: Record<string, unknown> | null = null;
+
+        if (authUser) {
+          const { data: pubRow, error: pubErr } = await supabase
+            .from('user_public_profile')
             .select('*')
-            .eq('id', authUser.id)
-            .single();
-          if (fullErr || !full) {
-            setLoading(false);
-            return;
+            .ilike('username', escapeForIlikeExact(usernameKey))
+            .maybeSingle();
+          if (pubErr || !pubRow) return emptyResult();
+          if (authUser.id === pubRow.id) {
+            const { data: full, error: fullErr } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', authUser.id)
+              .single();
+            if (fullErr || !full) return emptyResult();
+            profileData = full as Record<string, unknown>;
+          } else {
+            profileData = pubRow as Record<string, unknown>;
           }
-          profileData = full as Record<string, unknown>;
         } else {
-          profileData = pubRow as Record<string, unknown>;
+          const { data: pubRows, error: rpcError } = await supabase.rpc('get_public_profile_by_username', {
+            p_username: usernameKey,
+          });
+          if (rpcError) return emptyResult();
+          const pub = Array.isArray(pubRows) ? pubRows[0] : pubRows;
+          if (!pub || typeof pub !== 'object') return emptyResult();
+          const p = pub as {
+            id: string;
+            username: string;
+            display_name: string;
+            bio?: string | null;
+            avatar_url?: string | null;
+            banner_url?: string | null;
+            avatar_original_url?: string | null;
+            banner_original_url?: string | null;
+            points: number;
+            lifetime_points?: number | null;
+            is_premium: boolean;
+            created_at: string;
+            avatar_likes?: number | null;
+            banner_likes?: number | null;
+            beefs_resolved?: number | null;
+            beefs_abandoned?: number | null;
+          };
+          profileData = {
+            id: p.id,
+            username: p.username,
+            display_name: p.display_name,
+            bio: p.bio,
+            avatar_url: p.avatar_url,
+            banner_url: p.banner_url,
+            avatar_original_url: p.avatar_original_url ?? null,
+            banner_original_url: p.banner_original_url ?? null,
+            points: p.points,
+            lifetime_points: p.lifetime_points ?? 0,
+            is_premium: p.is_premium,
+            created_at: p.created_at,
+            avatar_likes: Number(p.avatar_likes ?? 0),
+            banner_likes: Number(p.banner_likes ?? 0),
+            beefs_resolved: Number(p.beefs_resolved ?? 0),
+            beefs_abandoned: Number(p.beefs_abandoned ?? 0),
+          };
         }
-      } else {
-        const { data: pubRows, error: rpcError } = await supabase.rpc('get_public_profile_by_username', {
-          p_username: usernameKey,
-        });
-        if (rpcError) {
-          setLoading(false);
-          return;
-        }
-        const pub = Array.isArray(pubRows) ? pubRows[0] : pubRows;
-        if (!pub || typeof pub !== 'object') {
-          setLoading(false);
-          return;
-        }
-        const p = pub as {
-          id: string;
-          username: string;
-          display_name: string;
-          bio?: string | null;
-          avatar_url?: string | null;
-          banner_url?: string | null;
-          avatar_original_url?: string | null;
-          banner_original_url?: string | null;
-          points: number;
-          lifetime_points?: number | null;
-          is_premium: boolean;
-          created_at: string;
-          avatar_likes?: number | null;
-          banner_likes?: number | null;
-          beefs_resolved?: number | null;
-          beefs_abandoned?: number | null;
-        };
-        profileData = {
-          id: p.id,
-          username: p.username,
-          display_name: p.display_name,
-          bio: p.bio,
-          avatar_url: p.avatar_url,
-          banner_url: p.banner_url,
-          avatar_original_url: p.avatar_original_url ?? null,
-          banner_original_url: p.banner_original_url ?? null,
-          points: p.points,
-          lifetime_points: p.lifetime_points ?? 0,
-          is_premium: p.is_premium,
-          created_at: p.created_at,
-          avatar_likes: Number(p.avatar_likes ?? 0),
-          banner_likes: Number(p.banner_likes ?? 0),
-          beefs_resolved: Number(p.beefs_resolved ?? 0),
-          beefs_abandoned: Number(p.beefs_abandoned ?? 0),
-        };
-      }
 
-      if (!profileData) {
-        setLoading(false);
-        return;
-      }
+        if (!profileData) return emptyResult();
 
-      const raw = profileData as Record<string, unknown>;
-      const wisdom = wisdomFromRaw(raw);
-      const lpFromRow = Number(raw.lifetime_points ?? 0);
-      const pd: UserProfile = {
-        ...(profileData as unknown as UserProfile),
-        lifetime_points: Number.isFinite(lpFromRow) ? lpFromRow : 0,
-        avatar_likes: Number(raw.avatar_likes ?? 0),
-        banner_likes: Number(raw.banner_likes ?? 0),
-        avatar_original_url: typeof raw.avatar_original_url === 'string' ? raw.avatar_original_url : null,
-        banner_original_url: typeof raw.banner_original_url === 'string' ? raw.banner_original_url : null,
-        beefs_resolved: wisdom.beefs_resolved,
-        beefs_abandoned: wisdom.beefs_abandoned,
-      };
-
-      setProfile(pd);
-
-      let followersCount = 0;
-      let followingCount = 0;
-      if (authUser) {
-        const { data: followersData } = await supabase
-          .from('followers')
-          .select('id', { count: 'exact' })
-          .eq('following_id', pd.id);
-        const { data: followingData } = await supabase
-          .from('followers')
-          .select('id', { count: 'exact' })
-          .eq('follower_id', pd.id);
-        followersCount = followersData?.length || 0;
-        followingCount = followingData?.length || 0;
-      } else {
-        const { data: fcRows, error: fcErr } = await supabase.rpc('get_public_follow_counts', {
-          p_user_id: pd.id,
-        });
-        if (!fcErr && fcRows?.length) {
-          const fc = fcRows[0] as { followers_count?: number | string; following_count?: number | string };
-          followersCount = Number(fc.followers_count ?? 0);
-          followingCount = Number(fc.following_count ?? 0);
-        }
-      }
-
-      if (!authUser) {
-        const { data: bundleJson, error: bundleErr } = await supabase.rpc('get_public_profile_beefs_payload', {
-          p_profile_user_id: pd.id,
-        });
-        if (bundleErr) {
-          console.error('[profile] get_public_profile_beefs_payload', bundleErr);
-        }
-        const bundle = (bundleJson as Record<string, unknown> | null) ?? {};
-        const hosted = Array.isArray(bundle.hosted) ? bundle.hosted : [];
-        const participated = Array.isArray(bundle.participated) ? bundle.participated : [];
-        const hn = pd.display_name || pd.username;
-        const hu = pd.username.trim() || null;
-
-        setStats({
-          beefs_participated: Number(bundle.participated_count ?? 0),
-          beefs_hosted: Number(bundle.hosted_count ?? 0),
-          followers: followersCount,
-          following: followingCount,
+        const raw = profileData as Record<string, unknown>;
+        const wisdom = wisdomFromRaw(raw);
+        const lpFromRow = Number(raw.lifetime_points ?? 0);
+        const pd: UserProfile = {
+          ...(profileData as unknown as UserProfile),
+          lifetime_points: Number.isFinite(lpFromRow) ? lpFromRow : 0,
+          avatar_likes: Number(raw.avatar_likes ?? 0),
+          banner_likes: Number(raw.banner_likes ?? 0),
+          avatar_original_url: typeof raw.avatar_original_url === 'string' ? raw.avatar_original_url : null,
+          banner_original_url: typeof raw.banner_original_url === 'string' ? raw.banner_original_url : null,
           beefs_resolved: wisdom.beefs_resolved,
           beefs_abandoned: wisdom.beefs_abandoned,
-        });
+        };
 
-        setBeefs(
-          hosted.map((row) => beefFromPublicRpcRow(row as Record<string, unknown>, hn, hu)),
-        );
+        let followersCount = 0;
+        let followingCount = 0;
+        if (authUser) {
+          const { data: followersData } = await supabase
+            .from('followers')
+            .select('id', { count: 'exact' })
+            .eq('following_id', pd.id);
+          const { data: followingData } = await supabase
+            .from('followers')
+            .select('id', { count: 'exact' })
+            .eq('follower_id', pd.id);
+          followersCount = followersData?.length || 0;
+          followingCount = followingData?.length || 0;
+        } else {
+          const { data: fcRows, error: fcErr } = await supabase.rpc('get_public_follow_counts', {
+            p_user_id: pd.id,
+          });
+          if (!fcErr && fcRows?.length) {
+            const fc = fcRows[0] as { followers_count?: number | string; following_count?: number | string };
+            followersCount = Number(fc.followers_count ?? 0);
+            followingCount = Number(fc.following_count ?? 0);
+          }
+        }
 
-        setParticipantBeefs(
-          participated.slice(0, 12).map((row) => {
+        if (!authUser) {
+          const { data: bundleJson, error: bundleErr } = await supabase.rpc('get_public_profile_beefs_payload', {
+            p_profile_user_id: pd.id,
+          });
+          if (bundleErr) {
+            console.error('[profile] get_public_profile_beefs_payload', bundleErr);
+          }
+          const bundle = (bundleJson as Record<string, unknown> | null) ?? {};
+          const hosted = Array.isArray(bundle.hosted) ? bundle.hosted : [];
+          const participated = Array.isArray(bundle.participated) ? bundle.participated : [];
+          const hn = pd.display_name || pd.username;
+          const hu = pd.username.trim() || null;
+
+          resultStats = {
+            beefs_participated: Number(bundle.participated_count ?? 0),
+            beefs_hosted: Number(bundle.hosted_count ?? 0),
+            followers: followersCount,
+            following: followingCount,
+            beefs_resolved: wisdom.beefs_resolved,
+            beefs_abandoned: wisdom.beefs_abandoned,
+          };
+
+          resultBeefs = hosted.map((row) => beefFromPublicRpcRow(row as Record<string, unknown>, hn, hu));
+
+          resultParticipantBeefs = participated.slice(0, 12).map((row) => {
             const r = row as Record<string, unknown>;
             const mid = r.mediator_id as string | undefined;
-            const medUn =
-              typeof r.mediator_username === 'string' ? r.mediator_username.trim() : '';
-            const medDn =
-              typeof r.mediator_display_name === 'string' ? r.mediator_display_name.trim() : '';
+            const medUn = typeof r.mediator_username === 'string' ? r.mediator_username.trim() : '';
+            const medDn = typeof r.mediator_display_name === 'string' ? r.mediator_display_name.trim() : '';
             const isSelf = !mid || mid === pd.id;
             return beefFromPublicRpcRow(
               r,
               isSelf ? hn : medDn || medUn || 'Médiateur',
               isSelf ? hu : medUn || null,
             );
-          }),
-        );
+          });
 
-        setMediaLikes({
-          avatar: { count: pd.avatar_likes ?? 0, liked: false },
-          banner: { count: pd.banner_likes ?? 0, liked: false },
-        });
-        return;
-      }
+          resultMediaLikes = {
+            avatar: { count: pd.avatar_likes ?? 0, liked: false },
+            banner: { count: pd.banner_likes ?? 0, liked: false },
+          };
 
-      const { data: beefsData } = await supabase
-        .from('beefs')
-        .select('id', { count: 'exact' })
-        .eq('mediator_id', pd.id);
-
-      const { data: partRows } = await supabase
-        .from('beef_participants')
-        .select('beef_id')
-        .eq('user_id', pd.id);
-
-      const beefsParticipated = new Set((partRows || []).map((r: { beef_id: string }) => r.beef_id)).size;
-
-      setStats({
-        beefs_participated: beefsParticipated,
-        beefs_hosted: beefsData?.length || 0,
-        followers: followersCount,
-        following: followingCount,
-        beefs_resolved: wisdom.beefs_resolved,
-        beefs_abandoned: wisdom.beefs_abandoned,
-      });
-
-      // Load user's beefs
-      const { data: userBeefs, error: beefsError } = await supabase
-        .from('beefs')
-        .select('*')
-        .eq('mediator_id', pd.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (userBeefs) {
-        const hn = pd.display_name || pd.username;
-        const hu = pd.username.trim() || null;
-        setBeefs(userBeefs.map(beef => ({
-          ...beef,
-          host_name: hn,
-          host_username: hu,
-        })));
-      }
-
-      const { data: partWithBeefs } = await supabase
-        .from('beef_participants')
-        .select('beef_id, beefs(*)')
-        .eq('user_id', pd.id);
-
-      const pbRaw: Beef[] = [];
-      const seenPb = new Set<string>();
-      for (const row of partWithBeefs || []) {
-        const raw = row.beefs as Beef | Beef[] | null | undefined;
-        const b = Array.isArray(raw) ? raw[0] : raw;
-        if (!b?.id || seenPb.has(b.id)) continue;
-        seenPb.add(b.id);
-        pbRaw.push(b as Beef);
-      }
-      pbRaw.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      const medIds = [
-        ...new Set(
-          pbRaw
-            .map((b) => (b as { mediator_id?: string }).mediator_id)
-            .filter((id): id is string => !!id && id !== pd.id),
-        ),
-      ];
-      let medNameById: Record<string, string> = {};
-      let medUsernameById: Record<string, string> = {};
-      if (medIds.length > 0) {
-        const { data: mus } = await supabase
-          .from('user_public_profile')
-          .select('id, display_name, username')
-          .in('id', medIds);
-        for (const u of mus || []) {
-          const row = u as { id: string; display_name?: string; username?: string };
-          medNameById[row.id] = row.display_name || row.username || 'Médiateur';
-          const un = row.username?.trim();
-          if (un) medUsernameById[row.id] = un;
+          return {
+            profile: pd,
+            stats: resultStats,
+            beefs: resultBeefs,
+            participantBeefs: resultParticipantBeefs,
+            mediaLikes: resultMediaLikes,
+            isFollowing: resultIsFollowing,
+          };
         }
-      }
-      const selfName = pd.display_name || pd.username;
-      const selfUsername = pd.username.trim() || null;
-      setParticipantBeefs(
-        pbRaw.slice(0, 12).map((b) => {
+
+        const { data: beefsData } = await supabase
+          .from('beefs')
+          .select('id', { count: 'exact' })
+          .eq('mediator_id', pd.id);
+
+        const { data: partRows } = await supabase
+          .from('beef_participants')
+          .select('beef_id')
+          .eq('user_id', pd.id);
+
+        const beefsParticipated = new Set((partRows || []).map((r: { beef_id: string }) => r.beef_id)).size;
+
+        resultStats = {
+          beefs_participated: beefsParticipated,
+          beefs_hosted: beefsData?.length || 0,
+          followers: followersCount,
+          following: followingCount,
+          beefs_resolved: wisdom.beefs_resolved,
+          beefs_abandoned: wisdom.beefs_abandoned,
+        };
+
+        const { data: userBeefs } = await supabase
+          .from('beefs')
+          .select('*')
+          .eq('mediator_id', pd.id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (userBeefs) {
+          const hn = pd.display_name || pd.username;
+          const hu = pd.username.trim() || null;
+          resultBeefs = userBeefs.map((beef) => ({
+            ...beef,
+            host_name: hn,
+            host_username: hu,
+          }));
+        }
+
+        const { data: partWithBeefs } = await supabase
+          .from('beef_participants')
+          .select('beef_id, beefs(*)')
+          .eq('user_id', pd.id);
+
+        const pbRaw: Beef[] = [];
+        const seenPb = new Set<string>();
+        for (const row of partWithBeefs || []) {
+          const beefRaw = row.beefs as Beef | Beef[] | null | undefined;
+          const b = Array.isArray(beefRaw) ? beefRaw[0] : beefRaw;
+          if (!b?.id || seenPb.has(b.id)) continue;
+          seenPb.add(b.id);
+          pbRaw.push(b as Beef);
+        }
+        pbRaw.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        const medIds = [
+          ...new Set(
+            pbRaw
+              .map((b) => (b as { mediator_id?: string }).mediator_id)
+              .filter((id): id is string => !!id && id !== pd.id),
+          ),
+        ];
+        const medNameById: Record<string, string> = {};
+        const medUsernameById: Record<string, string> = {};
+        if (medIds.length > 0) {
+          const { data: mus } = await supabase
+            .from('user_public_profile')
+            .select('id, display_name, username')
+            .in('id', medIds);
+          for (const u of mus || []) {
+            const row = u as { id: string; display_name?: string; username?: string };
+            medNameById[row.id] = row.display_name || row.username || 'Médiateur';
+            const un = row.username?.trim();
+            if (un) medUsernameById[row.id] = un;
+          }
+        }
+        const selfName = pd.display_name || pd.username;
+        const selfUsername = pd.username.trim() || null;
+        resultParticipantBeefs = pbRaw.slice(0, 12).map((b) => {
           const mid = (b as { mediator_id?: string }).mediator_id;
-          const host_name =
-            !mid || mid === pd.id ? selfName : medNameById[mid] || 'Médiateur';
-          const host_username =
-            !mid || mid === pd.id ? selfUsername : medUsernameById[mid] ?? null;
+          const host_name = !mid || mid === pd.id ? selfName : medNameById[mid] || 'Médiateur';
+          const host_username = !mid || mid === pd.id ? selfUsername : medUsernameById[mid] ?? null;
           return { ...b, host_name, host_username };
-        }),
-      );
+        });
 
-      // Check if current user follows this profile
-      if (user && user.id !== pd.id) {
-        const { data: followData } = await supabase
-          .from('followers')
-          .select('id')
-          .eq('follower_id', user.id)
-          .eq('following_id', pd.id)
-          .maybeSingle();
+        if (user && user.id !== pd.id) {
+          const { data: followData } = await supabase
+            .from('followers')
+            .select('id')
+            .eq('follower_id', user.id)
+            .eq('following_id', pd.id)
+            .maybeSingle();
 
-        setIsFollowing(!!followData);
-      }
-
-      let likedAvatar = false;
-      let likedBanner = false;
-      if (authUser && authUser.id !== pd.id) {
-        const { data: myMediaLikes } = await supabase
-          .from('profile_media_likes')
-          .select('media_type')
-          .eq('media_owner_id', pd.id)
-          .eq('user_id', authUser.id);
-        for (const row of myMediaLikes || []) {
-          const mt = (row as { media_type?: string }).media_type;
-          if (mt === 'avatar') likedAvatar = true;
-          if (mt === 'banner') likedBanner = true;
+          resultIsFollowing = !!followData;
         }
+
+        let likedAvatar = false;
+        let likedBanner = false;
+        if (authUser && authUser.id !== pd.id) {
+          const { data: myMediaLikes } = await supabase
+            .from('profile_media_likes')
+            .select('media_type')
+            .eq('media_owner_id', pd.id)
+            .eq('user_id', authUser.id);
+          for (const row of myMediaLikes || []) {
+            const mt = (row as { media_type?: string }).media_type;
+            if (mt === 'avatar') likedAvatar = true;
+            if (mt === 'banner') likedBanner = true;
+          }
+        }
+        resultMediaLikes = {
+          avatar: { count: pd.avatar_likes ?? 0, liked: likedAvatar },
+          banner: { count: pd.banner_likes ?? 0, liked: likedBanner },
+        };
+
+        return {
+          profile: pd,
+          stats: resultStats,
+          beefs: resultBeefs,
+          participantBeefs: resultParticipantBeefs,
+          mediaLikes: resultMediaLikes,
+          isFollowing: resultIsFollowing,
+        };
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        throw error;
       }
-      setMediaLikes({
-        avatar: { count: pd.avatar_likes ?? 0, liked: likedAvatar },
-        banner: { count: pd.banner_likes ?? 0, liked: likedBanner },
-      });
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    } finally {
-      setLoading(false);
+    },
+  });
+
+  const profile = data?.profile ?? null;
+  const stats = data?.stats ?? EMPTY_STATS;
+  const beefs = data?.beefs ?? [];
+  const participantBeefs = data?.participantBeefs ?? [];
+
+  useEffect(() => {
+    if (data) {
+      setIsFollowing(data.isFollowing);
+      setMediaLikes(data.mediaLikes);
     }
-  }, [username, user]);
+  }, [data]);
+
+  const isOwnProfile = user && profile && user.id === profile.id;
 
   const handleMediaAuraClick = useCallback(async () => {
     if (!profile || !viewingImage) return;
@@ -546,10 +574,6 @@ export default function PublicProfilePage() {
       }, 1000);
     }
   }, [profile, viewingImage, user, mediaLikes, toast, router, queueBurst]);
-
-  useEffect(() => {
-    void loadProfile();
-  }, [loadProfile]);
 
   useEffect(() => {
     if (!profile || typeof window === 'undefined') return;
@@ -728,14 +752,23 @@ export default function PublicProfilePage() {
                     classNameWhenNotFollowing="relative flex items-center gap-2 rounded-full px-5 py-2 font-semibold transition-all bg-[#00F0FF] text-black shadow-[0_0_18px_rgba(0,240,255,0.45)] hover:brightness-110"
                     onSynced={(p) => {
                       setIsFollowing(p.following);
-                      if (p.recipientFollowersCount != null) {
-                        setStats((prev) => ({ ...prev, followers: p.recipientFollowersCount! }));
-                      }
-                      if (p.recipientLifetimePoints != null) {
-                        setProfile((prev) =>
-                          prev ? { ...prev, lifetime_points: p.recipientLifetimePoints! } : null,
-                        );
-                      }
+                      queryClient.setQueryData<PublicProfileQueryData>(
+                        ['public-profile', username, user?.id],
+                        (old) => {
+                          if (!old?.profile) return old;
+                          return {
+                            ...old,
+                            stats:
+                              p.recipientFollowersCount != null
+                                ? { ...old.stats, followers: p.recipientFollowersCount }
+                                : old.stats,
+                            profile:
+                              p.recipientLifetimePoints != null
+                                ? { ...old.profile, lifetime_points: p.recipientLifetimePoints }
+                                : old.profile,
+                          };
+                        },
+                      );
                       queueBurst(p.following ? '+10 ✨' : '-10 ✨', 'follow', !p.following);
                     }}
                     onError={(msg) => {

@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Camera, Share2, Settings, TrendingUp, Users, Trophy, Flame, X, Eye } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -67,25 +68,30 @@ interface Beef {
   card_host_username?: string | null;
 }
 
+type OwnerProfileQueryData = {
+  profile: UserProfile;
+  stats: UserStats;
+  beefs: Beef[];
+  mediationBeefs: Beef[];
+};
+
+const EMPTY_OWNER_STATS: UserStats = {
+  beefs_participated: 0,
+  beefs_hosted: 0,
+  beefs_resolved: 0,
+  beefs_abandoned: 0,
+  total_views: 0,
+  followers: 0,
+  following: 0,
+};
+
 export default function ProfileContent() {
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
   const { toast } = useToast();
-  
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [stats, setStats] = useState<UserStats>({
-    beefs_participated: 0,
-    beefs_hosted: 0,
-    beefs_resolved: 0,
-    beefs_abandoned: 0,
-    total_views: 0,
-    followers: 0,
-    following: 0,
-  });
-  const [beefs, setBeefs] = useState<Beef[]>([]);
-  const [mediationBeefs, setMediationBeefs] = useState<Beef[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
   const [activeTab, setActiveTab] = useState<'stats' | 'debates'>('stats');
   const [showEditModal, setShowEditModal] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -96,165 +102,179 @@ export default function ProfileContent() {
 
   const [isAuraModalOpen, setIsAuraModalOpen] = useState(false);
 
-  // Load user profile
-  useEffect(() => {
-    if (!user) return;
-
-    setLoading(true);
-    
-    const loadProfile = async () => {
-      try {
-        let { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (!data) {
-          const { data: newUser, error: insertError } = await supabase
-            .from('users')
-            .insert({
-              id: user.id,
-              email: user.email || '',
-              username: user.user_metadata?.username || user.email?.split('@')[0] || 'user',
-              display_name: user.user_metadata?.display_name || user.user_metadata?.username || user.email?.split('@')[0] || 'User',
-              points: 0,
-              is_premium: false,
-              is_verified: false,
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            console.error('Error creating user');
-            throw insertError;
-          }
-
-          data = newUser;
-        }
-
-        if (data) {
-          setProfile({
-            id: data.id,
-            username: data.username,
-            display_name: data.display_name || data.username,
-            bio: data.bio,
-            avatar_url: data.avatar_url,
-            banner_url: data.banner_url,
-            avatar_original_url: data.avatar_original_url,
-            banner_original_url: data.banner_original_url,
-            accent_color: data.accent_color || '#E83A14',
-            points: data.points || 0,
-            lifetime_points: data.lifetime_points || 0,
-            is_premium: data.is_premium || false,
-            premium_settings: data.premium_settings || {
-              showPremiumBadge: true,
-              showPremiumFrame: true,
-              showPremiumAnimations: true,
-            },
-            created_at: data.created_at,
-          });
-
-          // Load real stats from database
-          const { data: followersData } = await supabase
-            .from('followers')
-            .select('id', { count: 'exact' })
-            .eq('following_id', data.id);
-
-          const { data: followingData } = await supabase
-            .from('followers')
-            .select('id', { count: 'exact' })
-            .eq('follower_id', data.id);
-
-          const { data: mediatedRows } = await supabase
-            .from('beefs')
-            .select('*')
-            .eq('mediator_id', data.id)
-            .order('created_at', { ascending: false });
-
-          const { data: participantRows } = await supabase
-            .from('beef_participants')
-            .select('beef_id, beefs(*)')
-            .eq('user_id', data.id);
-
-          const mediatedList = (mediatedRows || []) as Beef[];
-          const fromParticipants: Beef[] = [];
-          for (const row of participantRows || []) {
-            const raw = row.beefs as Beef | Beef[] | null | undefined;
-            if (!raw) continue;
-            const b = Array.isArray(raw) ? raw[0] : raw;
-            if (b) fromParticipants.push(b as Beef);
-          }
-
-          const mergedById = new Map<string, Beef>();
-          mediatedList.forEach((b) => mergedById.set(b.id, b));
-          fromParticipants.forEach((b) => {
-            if (!mergedById.has(b.id)) mergedById.set(b.id, b);
-          });
-
-          const mergedSorted = [...mergedById.values()].sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-
-          const displayNameSelf = data.display_name || data.username || 'Utilisateur';
-          const mediatorIds = [...new Set(mergedSorted.map((b) => b.mediator_id).filter(Boolean))] as string[];
-          const mediatorMap: Record<string, string> = {};
-          const mediatorUsernameById: Record<string, string> = {};
-          if (mediatorIds.length > 0) {
-            const { data: mu } = await supabase
-              .from('user_public_profile')
-              .select('id, display_name, username')
-              .in('id', mediatorIds);
-            (mu || []).forEach((u: { id: string; display_name?: string; username?: string }) => {
-              mediatorMap[u.id] = u.display_name || u.username || 'Médiateur';
-              const un = u.username?.trim();
-              if (un) mediatorUsernameById[u.id] = un;
-            });
-          }
-
-          const selfUsername = data.username?.trim() || null;
-
-          const attachHost = (b: Beef): Beef => ({
-            ...b,
-            card_host_name:
-              b.mediator_id === data.id
-                ? displayNameSelf
-                : (b.mediator_id && mediatorMap[b.mediator_id]) || 'Médiateur',
-            card_host_username:
-              b.mediator_id === data.id
-                ? selfUsername
-                : b.mediator_id
-                  ? mediatorUsernameById[b.mediator_id] ?? null
-                  : null,
-          });
-
-          const beefsParticipatedCount = new Set((participantRows || []).map((r: { beef_id: string }) => r.beef_id)).size;
-          const beefsHostedCount = mediatedList.length;
-
-          setStats({
-            beefs_participated: beefsParticipatedCount,
-            beefs_hosted: beefsHostedCount,
-            beefs_resolved: data.beefs_resolved ?? 0,
-            beefs_abandoned: data.beefs_abandoned ?? 0,
-            total_views: 0,
-            followers: followersData?.length || 0,
-            following: followingData?.length || 0,
-          });
-
-          setBeefs(mergedSorted.map(attachHost));
-          setMediationBeefs(mediatedList.map((b) => attachHost({ ...b, card_host_name: displayNameSelf })));
-        }
-
-      } catch (error) {
-        console.error('Error loading profile:', error);
-        toast('Erreur lors du chargement du profil. Vérifie la console.', 'error');
-      } finally {
-        setLoading(false);
+  const { data, isLoading: loading, isError } = useQuery({
+    queryKey: ['owner-profile', user?.id],
+    enabled: !!user?.id,
+    queryFn: async (): Promise<OwnerProfileQueryData> => {
+      if (!user?.id) {
+        throw new Error('Utilisateur non connecté');
       }
-    };
 
-    loadProfile();
-  }, [user, toast]);
+      let { data: row } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+
+      if (!row) {
+        const { data: newUser, error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            email: user.email || '',
+            username: user.user_metadata?.username || user.email?.split('@')[0] || 'user',
+            display_name:
+              user.user_metadata?.display_name ||
+              user.user_metadata?.username ||
+              user.email?.split('@')[0] ||
+              'User',
+            points: 0,
+            is_premium: false,
+            is_verified: false,
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating user');
+          throw insertError;
+        }
+
+        row = newUser;
+      }
+
+      if (!row) {
+        throw new Error('Profil introuvable');
+      }
+
+      const finalProfile: UserProfile = {
+        id: row.id,
+        username: row.username,
+        display_name: row.display_name || row.username,
+        bio: row.bio,
+        avatar_url: row.avatar_url,
+        banner_url: row.banner_url,
+        avatar_original_url: row.avatar_original_url,
+        banner_original_url: row.banner_original_url,
+        accent_color: row.accent_color || '#E83A14',
+        points: row.points || 0,
+        lifetime_points: row.lifetime_points || 0,
+        is_premium: row.is_premium || false,
+        premium_settings: row.premium_settings || {
+          showPremiumBadge: true,
+          showPremiumFrame: true,
+          showPremiumAnimations: true,
+        },
+        created_at: row.created_at,
+      };
+
+      const { data: followersData } = await supabase
+        .from('followers')
+        .select('id', { count: 'exact' })
+        .eq('following_id', row.id);
+
+      const { data: followingData } = await supabase
+        .from('followers')
+        .select('id', { count: 'exact' })
+        .eq('follower_id', row.id);
+
+      const { data: mediatedRows } = await supabase
+        .from('beefs')
+        .select('*')
+        .eq('mediator_id', row.id)
+        .order('created_at', { ascending: false });
+
+      const { data: participantRows } = await supabase
+        .from('beef_participants')
+        .select('beef_id, beefs(*)')
+        .eq('user_id', row.id);
+
+      const mediatedList = (mediatedRows || []) as Beef[];
+      const fromParticipants: Beef[] = [];
+      for (const partRow of participantRows || []) {
+        const raw = partRow.beefs as Beef | Beef[] | null | undefined;
+        if (!raw) continue;
+        const b = Array.isArray(raw) ? raw[0] : raw;
+        if (b) fromParticipants.push(b as Beef);
+      }
+
+      const mergedById = new Map<string, Beef>();
+      mediatedList.forEach((b) => mergedById.set(b.id, b));
+      fromParticipants.forEach((b) => {
+        if (!mergedById.has(b.id)) mergedById.set(b.id, b);
+      });
+
+      const mergedSorted = [...mergedById.values()].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+
+      const displayNameSelf = row.display_name || row.username || 'Utilisateur';
+      const mediatorIds = [...new Set(mergedSorted.map((b) => b.mediator_id).filter(Boolean))] as string[];
+      const mediatorMap: Record<string, string> = {};
+      const mediatorUsernameById: Record<string, string> = {};
+      if (mediatorIds.length > 0) {
+        const { data: mu } = await supabase
+          .from('user_public_profile')
+          .select('id, display_name, username')
+          .in('id', mediatorIds);
+        (mu || []).forEach((u: { id: string; display_name?: string; username?: string }) => {
+          mediatorMap[u.id] = u.display_name || u.username || 'Médiateur';
+          const un = u.username?.trim();
+          if (un) mediatorUsernameById[u.id] = un;
+        });
+      }
+
+      const selfUsername = row.username?.trim() || null;
+
+      const attachHost = (b: Beef): Beef => ({
+        ...b,
+        card_host_name:
+          b.mediator_id === row.id
+            ? displayNameSelf
+            : (b.mediator_id && mediatorMap[b.mediator_id]) || 'Médiateur',
+        card_host_username:
+          b.mediator_id === row.id
+            ? selfUsername
+            : b.mediator_id
+              ? mediatorUsernameById[b.mediator_id] ?? null
+              : null,
+      });
+
+      const beefsParticipatedCount = new Set(
+        (participantRows || []).map((r: { beef_id: string }) => r.beef_id),
+      ).size;
+      const beefsHostedCount = mediatedList.length;
+
+      const finalStats: UserStats = {
+        beefs_participated: beefsParticipatedCount,
+        beefs_hosted: beefsHostedCount,
+        beefs_resolved: row.beefs_resolved ?? 0,
+        beefs_abandoned: row.beefs_abandoned ?? 0,
+        total_views: 0,
+        followers: followersData?.length || 0,
+        following: followingData?.length || 0,
+      };
+
+      const finalBeefs = mergedSorted.map(attachHost);
+      const finalMediationBeefs = mediatedList.map((b) =>
+        attachHost({ ...b, card_host_name: displayNameSelf }),
+      );
+
+      return {
+        profile: finalProfile,
+        stats: finalStats,
+        beefs: finalBeefs,
+        mediationBeefs: finalMediationBeefs,
+      };
+    },
+  });
+
+  const profile = data?.profile ?? null;
+  const stats = data?.stats ?? EMPTY_OWNER_STATS;
+  const beefs = data?.beefs ?? [];
+  const mediationBeefs = data?.mediationBeefs ?? [];
+
+  useEffect(() => {
+    if (isError) {
+      toast('Erreur lors du chargement du profil. Vérifie la console.', 'error');
+    }
+  }, [isError, toast]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -268,10 +288,17 @@ export default function ProfileContent() {
 
   const applyMediationBeefPatch = useCallback(
     (beefId: string, patch: { resolution_status?: string; mediation_summary?: string | null }) => {
-      setBeefs((prev) => prev.map((b) => (b.id === beefId ? { ...b, ...patch } : b)));
-      setMediationBeefs((prev) => prev.map((b) => (b.id === beefId ? { ...b, ...patch } : b)));
+      if (!user?.id) return;
+      queryClient.setQueryData<OwnerProfileQueryData>(['owner-profile', user.id], (oldData) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          beefs: oldData.beefs.map((b) => (b.id === beefId ? { ...b, ...patch } : b)),
+          mediationBeefs: oldData.mediationBeefs.map((b) => (b.id === beefId ? { ...b, ...patch } : b)),
+        };
+      });
     },
-    [],
+    [queryClient, user?.id],
   );
 
   const goPreviewParticipations = useCallback(() => {
@@ -405,20 +432,16 @@ export default function ProfileContent() {
           .update({ banner_url: cropUrl, banner_original_url: originalUrl })
           .eq('id', user.id);
         if (updateError) throw updateError;
-        setProfile((prev) =>
-          prev ? { ...prev, banner_url: cropUrl, banner_original_url: originalUrl } : null,
-        );
         toast('Bannière mise à jour !', 'success');
+        queryClient.invalidateQueries({ queryKey: ['owner-profile', user.id] });
       } else {
         const { error: updateError } = await supabase
           .from('users')
           .update({ avatar_url: cropUrl, avatar_original_url: originalUrl })
           .eq('id', user.id);
         if (updateError) throw updateError;
-        setProfile((prev) =>
-          prev ? { ...prev, avatar_url: cropUrl, avatar_original_url: originalUrl } : null,
-        );
         toast('Avatar mis à jour avec succès!', 'success');
+        queryClient.invalidateQueries({ queryKey: ['owner-profile', user.id] });
       }
     } catch (error) {
       console.error('Error uploading cropped image:', error);

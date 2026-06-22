@@ -17,6 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
   weight: ["400", "500"],
 });
+import { QueryProvider } from "@/components/QueryProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { OnboardingReminder } from "@/components/OnboardingReminder";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -88,27 +89,29 @@ function RootLayoutClient({
   children: React.ReactNode;
 }>) {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <ToastProvider>
-          <GlobalSearchProvider>
-            <ClientMonitoring />
-            <MessagesDrawerProvider>
-              <BetaGate>
-                <PWAManager />
-                <ScrollRestoration />
-                <StarField />
-                <AppShell>{children}</AppShell>
-                <OnboardingReminder />
-                <PWAInstallPrompt />
-                <GlobalMessagesDrawer />
-                <GlobalDuelAmbush />
-              </BetaGate>
-            </MessagesDrawerProvider>
-          </GlobalSearchProvider>
-        </ToastProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <QueryProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <GlobalSearchProvider>
+              <ClientMonitoring />
+              <MessagesDrawerProvider>
+                <BetaGate>
+                  <PWAManager />
+                  <ScrollRestoration />
+                  <StarField />
+                  <AppShell>{children}</AppShell>
+                  <OnboardingReminder />
+                  <PWAInstallPrompt />
+                  <GlobalMessagesDrawer />
+                  <GlobalDuelAmbush />
+                </BetaGate>
+              </MessagesDrawerProvider>
+            </GlobalSearchProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </QueryProvider>
   );
 }
 
