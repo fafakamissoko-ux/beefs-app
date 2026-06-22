@@ -1,5 +1,6 @@
 'use client';
 
+import * as Dialog from '@radix-ui/react-dialog';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { KeyboardEvent, ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
@@ -588,41 +589,32 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] overflow-y-auto overscroll-contain bg-black/80 backdrop-blur-sm [scrollbar-gutter:stable]"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="edit-beef-title"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="flex min-h-[100dvh] w-full items-start justify-center p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:p-4 sm:py-8">
-        <div className="my-auto w-full max-w-2xl">
-          <motion.div
-            initial={{ scale: 0.94, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="max-h-[min(92dvh,calc(100dvh-1.5rem))] w-full overflow-y-auto overscroll-contain rounded-[2rem] border border-white/10 bg-slate-950/60 p-5 shadow-modal backdrop-blur-3xl sm:p-6"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full brand-gradient text-xl" aria-hidden>
-                  ⚖️
-                </div>
-                <div>
-                  <h2 id="edit-beef-title" className="text-xl font-black text-white">
-                    Modifier l&apos;affaire
-                  </h2>
-                  <p className="text-xs text-gray-400">
-                    {intent === 'manifesto' ? 'Manifeste · brouillon Agora' : 'Médiation · ajustements'}
-                  </p>
-                </div>
+    <Dialog.Root open={true} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Content
+          className="fixed left-[50%] top-[50%] z-[10000] max-h-[92dvh] w-[calc(100vw-1.5rem)] max-w-2xl translate-x-[-50%] translate-y-[-50%] overflow-y-auto overscroll-contain rounded-[2rem] border border-white/10 bg-slate-950/60 p-5 shadow-modal backdrop-blur-3xl sm:p-6 outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+        >
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full brand-gradient text-xl" aria-hidden>
+                ⚖️
               </div>
-              <button type="button" onClick={onClose} className="rounded-lg p-2 transition-colors hover:bg-white/10" aria-label="Fermer">
+              <div>
+                <Dialog.Title className="text-xl font-black text-white">
+                  Modifier l&apos;affaire
+                </Dialog.Title>
+                <Dialog.Description className="text-xs text-gray-400">
+                  {intent === 'manifesto' ? 'Manifeste · brouillon Agora' : 'Médiation · ajustements'}
+                </Dialog.Description>
+              </div>
+            </div>
+            <Dialog.Close asChild>
+              <button type="button" className="rounded-lg p-2 transition-colors hover:bg-white/10" aria-label="Fermer">
                 <X className="h-5 w-5 text-gray-400" aria-hidden />
               </button>
-            </div>
+            </Dialog.Close>
+          </div>
 
             {loading ? (
               <div className="flex flex-col items-center justify-center gap-3 py-16 text-gray-400">
@@ -949,9 +941,8 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                 </button>
               </div>
             )}
-          </motion.div>
-        </div>
-      </div>
-    </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
