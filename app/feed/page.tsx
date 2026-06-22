@@ -1128,7 +1128,7 @@ export default function FeedPage() {
               </div>
             ) : (
               /* --- Rendu MOBILE (Swiper.js) --- */
-              <div id="feed-scroll-container" className="relative z-10 flex-1 min-h-0 h-full w-full bg-transparent">
+              <div id="feed-scroll-container" className="flex-1 min-h-0 w-full h-full relative z-10 bg-transparent">
                 <Swiper direction="vertical" slidesPerView={1} className="h-full w-full">
                   {!user && showHero && (
                     <SwiperSlide className="flex h-full w-full items-center justify-center p-4">
