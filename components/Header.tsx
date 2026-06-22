@@ -1,5 +1,6 @@
 'use client';
 
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -185,15 +186,6 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
     const q = params.toString();
     router.replace(`${pathname}${q ? `?${q}` : ''}${window.location.hash}`, { scroll: false });
   }, [pathname, router]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (userMenuOpen && !target.closest('[data-user-menu]')) setUserMenuOpen(false);
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [userMenuOpen]);
 
   const loadUnreadCounts = useCallback(async () => {
     if (!user) return;
@@ -585,84 +577,88 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                     <span className="md:hidden lg:inline">Call Out</span>
                   </Link>
 
-                  <div className="relative shrink-0" data-user-menu>
-                    <button
-                      onClick={() => setUserMenuOpen(!userMenuOpen)}
-                      className={`flex shrink-0 items-center gap-3 px-2.5 py-1.5 hover:bg-white/[0.06] rounded-xl transition-all ${
-                        shell === 'phone' ? 'lg:w-full lg:justify-between' : ''
-                      }`}
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.03] text-xs font-bold text-white shadow-[0_0_10px_rgba(255,255,255,0.1)]">
-                          {user.user_metadata?.username?.[0]?.toUpperCase() || 'U'}
-                        </div>
-                        <span className="hidden lg:block truncate font-sans text-sm font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
-                          {user.user_metadata?.username || 'Challenger'}
-                        </span>
-                      </div>
-                      <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    <AnimatePresence>
-                      {userMenuOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -4, scale: 0.97 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -4, scale: 0.97 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute right-0 mt-2 w-60 rounded-2xl border border-white/10 bg-black/80 shadow-card backdrop-blur-2xl overflow-hidden lg:top-auto lg:bottom-full lg:mb-2 lg:mt-0 lg:left-0 lg:right-auto"
-                        >
-                          <div className="px-4 py-3 dropdown-divider-bottom">
-                            <p className="text-sm font-semibold text-white">{user.user_metadata?.username || 'Utilisateur'}</p>
-                            <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                  <DropdownMenu.Root open={userMenuOpen} onOpenChange={setUserMenuOpen}>
+                    <DropdownMenu.Trigger asChild>
+                      <button
+                        className={`flex shrink-0 items-center gap-3 px-2.5 py-1.5 hover:bg-white/[0.06] rounded-xl transition-all outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+                          shell === 'phone' ? 'lg:w-full lg:justify-between' : ''
+                        }`}
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.03] text-xs font-bold text-white shadow-[0_0_10px_rgba(255,255,255,0.1)]">
+                            {user.user_metadata?.username?.[0]?.toUpperCase() || 'U'}
                           </div>
-                          <div className="py-1">
-                            {[
-                              { href: '/profile', icon: User, label: 'Profil' },
-                              { href: '/buy-points', icon: Flame, label: 'Acquérir de l\'Aura' },
-                              { href: '/invitations', icon: Mail, label: 'Convocations' },
-                              { href: '/settings', icon: SettingsIcon, label: 'Paramètres' },
-                              ...(userRole === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
-                            ].map(item =>
-                              item.href === '/buy-points' ? (
+                          <span className="hidden lg:block truncate font-sans text-sm font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
+                            {user.user_metadata?.username || 'Challenger'}
+                          </span>
+                        </div>
+                        <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </DropdownMenu.Trigger>
+
+                    <DropdownMenu.Portal>
+                      <DropdownMenu.Content
+                        side={shell === 'phone' ? 'top' : 'bottom'}
+                        align={shell === 'phone' ? 'start' : 'end'}
+                        sideOffset={8}
+                        className="z-[9999] w-60 rounded-2xl border border-white/10 bg-black/80 shadow-card backdrop-blur-2xl overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2"
+                      >
+                        <div className="px-4 py-3 dropdown-divider-bottom">
+                          <p className="text-sm font-semibold text-white">{user.user_metadata?.username || 'Utilisateur'}</p>
+                          <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                        </div>
+                        <div className="py-1">
+                          {[
+                            { href: '/profile', icon: User, label: 'Profil' },
+                            { href: '/buy-points', icon: Flame, label: 'Acquérir de l\'Aura' },
+                            { href: '/invitations', icon: Mail, label: 'Convocations' },
+                            { href: '/settings', icon: SettingsIcon, label: 'Paramètres' },
+                            ...(userRole === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
+                          ].map((item) =>
+                            item.href === '/buy-points' ? (
+                              <DropdownMenu.Item asChild key={item.href}>
                                 <button
-                                  key={item.href}
-                                  type="button"
                                   onClick={() => {
                                     setUserMenuOpen(false);
                                     openBuyPointsPage(router, pathname);
                                   }}
-                                  className={buyPointsAnchorClass}
+                                  className={`${buyPointsAnchorClass} w-full cursor-pointer outline-none focus:bg-white/[0.04]`}
                                 >
                                   <item.icon className="w-4 h-4 text-gray-500" />
                                   <span>{item.label}</span>
                                 </button>
-                              ) : (
+                              </DropdownMenu.Item>
+                            ) : (
+                              <DropdownMenu.Item asChild key={item.href}>
                                 <Link
-                                  key={item.href}
                                   href={hrefWithFrom(item.href, pathname)}
                                   onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors"
+                                  className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-gray-300 transition-colors hover:bg-white/[0.04] hover:text-white outline-none focus:bg-white/[0.04] focus:text-white"
                                 >
                                   <item.icon className="w-4 h-4 text-gray-500" />
                                   <span>{item.label}</span>
                                 </Link>
-                              ),
-                            )}
-                          </div>
-                          <div className="py-1 dropdown-divider-top">
+                              </DropdownMenu.Item>
+                            )
+                          )}
+                        </div>
+                        <div className="py-1 dropdown-divider-top">
+                          <DropdownMenu.Item asChild>
                             <button
-                              onClick={async () => { await signOut(); setUserMenuOpen(false); }}
-                              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-cyan-400 transition-colors hover:bg-cyan-500/[0.08]"
+                              onClick={async () => {
+                                await signOut();
+                                setUserMenuOpen(false);
+                              }}
+                              className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-cyan-400 transition-colors hover:bg-cyan-500/[0.08] outline-none focus:bg-cyan-500/[0.08]"
                             >
                               <LogOut className="w-4 h-4" />
                               <span>Déconnexion</span>
                             </button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                          </DropdownMenu.Item>
+                        </div>
+                      </DropdownMenu.Content>
+                    </DropdownMenu.Portal>
+                  </DropdownMenu.Root>
                 </>
               ) : (
                 <div className={`flex items-center gap-2 ${shell === 'phone' ? 'lg:w-full lg:flex-col lg:gap-3' : ''}`}>
