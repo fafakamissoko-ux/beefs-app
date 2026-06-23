@@ -1,41 +1,27 @@
 'use client';
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { create } from 'zustand';
 
-type MessagesDrawerContextValue = {
+interface MessagesDrawerContextValue {
   isDrawerOpen: boolean;
-  targetUserId?: string;
+  targetUserId: string | undefined;
   openDrawer: (userId?: string) => void;
   closeDrawer: () => void;
-};
-
-const MessagesDrawerContext = createContext<MessagesDrawerContextValue | null>(null);
-
-export function MessagesDrawerProvider({ children }: { children: ReactNode }) {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [targetUserId, setTargetUserId] = useState<string | undefined>();
-
-  const openDrawer = useCallback((userId?: string) => {
-    setTargetUserId(userId);
-    setIsDrawerOpen(true);
-  }, []);
-
-  const closeDrawer = useCallback(() => {
-    setIsDrawerOpen(false);
-    setTimeout(() => setTargetUserId(undefined), 300); // Délai pour l'animation de fermeture
-  }, []);
-
-  return (
-    <MessagesDrawerContext.Provider value={{ isDrawerOpen, targetUserId, openDrawer, closeDrawer }}>
-      {children}
-    </MessagesDrawerContext.Provider>
-  );
 }
 
-export function useMessagesDrawer(): MessagesDrawerContextValue {
-  const ctx = useContext(MessagesDrawerContext);
-  if (!ctx) {
-    throw new Error('useMessagesDrawer doit être utilisé dans MessagesDrawerProvider');
-  }
-  return ctx;
+export const useMessagesDrawer = create<MessagesDrawerContextValue>((set) => ({
+  isDrawerOpen: false,
+  targetUserId: undefined,
+  openDrawer: (userId) => set({ isDrawerOpen: true, targetUserId: userId }),
+  closeDrawer: () => {
+    set({ isDrawerOpen: false });
+    // Le délai de 300ms correspond à l'animation de fermeture Radix/Vaul avant le démontage
+    setTimeout(() => set({ targetUserId: undefined }), 300);
+  },
+}));
+
+// Coquille vide pour éviter de faire planter le `layout.tsx`
+// avant son nettoyage, et préserver le contrat d'import.
+export function MessagesDrawerProvider({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 }

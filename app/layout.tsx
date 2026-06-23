@@ -30,7 +30,6 @@ import { GlobalDuelAmbush } from "@/components/GlobalDuelAmbush";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ScrollRestoration } from "@/components/ScrollRestoration";
 import { ClientMonitoring } from "@/components/ClientMonitoring";
-import { MessagesDrawerProvider } from "@/contexts/MessagesDrawerContext";
 const siteUrl =
   process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://beefs-app.vercel.app");
@@ -95,18 +94,16 @@ function RootLayoutClient({
           <ToastProvider>
             <GlobalSearchProvider>
               <ClientMonitoring />
-              <MessagesDrawerProvider>
-                <BetaGate>
-                  <PWAManager />
-                  <ScrollRestoration />
-                  <StarField />
-                  <AppShell>{children}</AppShell>
-                  <OnboardingReminder />
-                  <PWAInstallPrompt />
-                  <GlobalMessagesDrawer />
-                  <GlobalDuelAmbush />
-                </BetaGate>
-              </MessagesDrawerProvider>
+              <BetaGate>
+                <PWAManager />
+                <ScrollRestoration />
+                <StarField />
+                <AppShell>{children}</AppShell>
+                <OnboardingReminder />
+                <PWAInstallPrompt />
+                <GlobalMessagesDrawer />
+                <GlobalDuelAmbush />
+              </BetaGate>
             </GlobalSearchProvider>
           </ToastProvider>
         </ThemeProvider>

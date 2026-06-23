@@ -1,6 +1,169 @@
+# Rapport d'audit source — Contextes React (Phase B.4)
+
+**Date :** 31 mai 2026  
+**Périmètre :** extraction intégrale, zéro modification du code source  
+**Objectif :** préparer la migration **Zustand** (`MessagesDrawer`) et l'optimisation **Auth** sans casser session ni UI.
+
+---
+
+## Fichiers extraits
+
+| Fichier | Lignes | Rôle |
+|---------|--------|------|
+| `contexts/MessagesDrawerContext.tsx` | 42 | État global drawer messages |
+| `contexts/AuthContext.tsx` | 258 | Session Supabase + méthodes auth |
+
+---
+
+## Synthèse — `MessagesDrawerContext.tsx`
+
+### Contrat (`MessagesDrawerContextValue`)
+
+| Membre | Type | Rôle |
+|--------|------|------|
+| `isDrawerOpen` | `boolean` | Visibilité du drawer |
+| `targetUserId` | `string \| undefined` | Conversation cible (optionnelle) |
+| `openDrawer` | `(userId?: string) => void` | Ouvre + fixe la cible |
+| `closeDrawer` | `() => void` | Ferme + reset cible après 300 ms (animation) |
+
+### Implémentation
+
+- **États :** 2 `useState` (`isDrawerOpen`, `targetUserId`)
+- **Méthodes :** `openDrawer` et `closeDrawer` en `useCallback` (deps `[]`)
+- **Provider value :** objet inline `{ isDrawerOpen, targetUserId, openDrawer, closeDrawer }` — **pas de `useMemo`**
+  - À chaque changement d'état → nouvelle référence `value` → re-render de **tous** les consommateurs `useMessagesDrawer`
+
+### Consommateurs identifiés
+
+| Fichier | Usage |
+|---------|-------|
+| `app/layout.tsx` | `MessagesDrawerProvider` (racine) |
+| `components/GlobalMessagesDrawer.tsx` | `isDrawerOpen`, `closeDrawer` |
+| `components/MessagesUI.tsx` | `targetUserId`, `isDrawerOpen` |
+| `components/Header.tsx` | `openDrawer` |
+| `components/TikTokStyleArena.tsx` | `openDrawer` |
+
+### Cible store Zustand (B.4)
+
+```typescript
+// Esquisse — à implémenter en B.4
+interface MessagesDrawerStore {
+  isDrawerOpen: boolean;
+  targetUserId?: string;
+  openDrawer: (userId?: string) => void;
+  closeDrawer: () => void;
+}
+```
+
+**Note migration :** conserver le `setTimeout(300)` dans `closeDrawer` pour l'animation vaul/drawer.
+
+---
+
+## Synthèse — `AuthContext.tsx`
+
+### Contrat (`AuthContextType`)
+
+| Membre | Type | Rôle |
+|--------|------|------|
+| `user` | `User \| null` | Utilisateur Supabase |
+| `session` | `Session \| null` | Session JWT |
+| `loading` | `boolean` | Boot + transitions auth |
+| `userRole` | `'user' \| 'admin' \| 'moderator' \| null` | Rôle table `users` |
+| `signUp` | email/password/username | Inscription + `validateSignupEmail` |
+| `signIn` | identifier/password | Login email ou RPC `login_precheck` |
+| `signInWithGoogle` / `signInWithApple` | OAuth | Redirect `/auth/callback` |
+| `signInWithMagicLink` | email OTP | Magic link |
+| `sendPhoneOtp` / `verifyPhoneOtp` | SMS | OTP téléphone |
+| `signOut` | — | `signOut` + redirect `/feed` |
+| `resetPassword` | email | Reset email Supabase |
+
+### Cycle de vie session
+
+1. **Mount :** `getSession()` → `setSession` / `setUser` → `hydrateLocalPrefsFromUser` → `loadUserRole` → `setLoading(false)`
+2. **Subscription :** `onAuthStateChange` — même séquence async à chaque événement
+3. **Cleanup :** `cancelled` flag + `subscription.unsubscribe()`
+
+### Analyse mémoïsation — ⚠️ Problèmes identifiés
+
+| Élément | Mémoïsé ? | Impact |
+|---------|-----------|--------|
+| `loadUserRole` | ✅ `useCallback([])` | Stable |
+| `signUp`, `signIn`, OAuth, OTP, `signOut`, `resetPassword` | ❌ fonctions recréées à **chaque render** | Nouvelle ref à chaque render du Provider |
+| Objet `value` (L232–246) | ❌ **pas de `useMemo`** | Nouvel objet à **chaque render** |
+| `user`, `session`, `loading`, `userRole` | États React normaux | Re-render Provider à chaque changement |
+
+**Conclusion Architecte :** toute mutation d'état (`loading`, `userRole`, etc.) recrée `value` → **re-render en cascade** de tous les ~40 consommateurs `useAuth()`, même ceux qui n'utilisent qu'une slice (ex. `user?.id`).
+
+### Dépendances externes
+
+- `@/lib/supabase/client`
+- `@/lib/email-signup-policy` (`validateSignupEmail`)
+- `@/lib/sync-user-client-prefs` (`hydrateLocalPrefsFromUser`)
+- `@/lib/site-origin` (`getBrowserSiteOrigin`)
+- RPC `login_precheck`
+
+### Pistes B.4 (sans modifier ici)
+
+1. **Zustand auth store** : séparer `session` / `user` / `userRole` / `loading` avec sélecteurs fins
+2. **Actions stables** : méthodes auth en dehors du composant ou `useCallback` + `useMemo` sur `value`
+3. **Conserver** : `onAuthStateChange`, `hydrateLocalPrefsFromUser`, `loadUserRole`, politique email signup
+
+---
+
+## Code source — `contexts/MessagesDrawerContext.tsx`
+
+```tsx
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+
+type MessagesDrawerContextValue = {
+  isDrawerOpen: boolean;
+  targetUserId?: string;
+  openDrawer: (userId?: string) => void;
+  closeDrawer: () => void;
+};
+
+const MessagesDrawerContext = createContext<MessagesDrawerContextValue | null>(null);
+
+export function MessagesDrawerProvider({ children }: { children: ReactNode }) {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [targetUserId, setTargetUserId] = useState<string | undefined>();
+
+  const openDrawer = useCallback((userId?: string) => {
+    setTargetUserId(userId);
+    setIsDrawerOpen(true);
+  }, []);
+
+  const closeDrawer = useCallback(() => {
+    setIsDrawerOpen(false);
+    setTimeout(() => setTargetUserId(undefined), 300); // Délai pour l'animation de fermeture
+  }, []);
+
+  return (
+    <MessagesDrawerContext.Provider value={{ isDrawerOpen, targetUserId, openDrawer, closeDrawer }}>
+      {children}
+    </MessagesDrawerContext.Provider>
+  );
+}
+
+export function useMessagesDrawer(): MessagesDrawerContextValue {
+  const ctx = useContext(MessagesDrawerContext);
+  if (!ctx) {
+    throw new Error('useMessagesDrawer doit être utilisé dans MessagesDrawerProvider');
+  }
+  return ctx;
+}
+```
+
+---
+
+## Code source — `contexts/AuthContext.tsx`
+
+```tsx
+'use client';
+
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { validateSignupEmail } from '@/lib/email-signup-policy';
 import { hydrateLocalPrefsFromUser } from '@/lib/sync-user-client-prefs';
@@ -229,25 +392,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const value = useMemo(
-    () => ({
-      user,
-      session,
-      loading,
-      userRole,
-      signUp,
-      signIn,
-      signInWithGoogle,
-      signInWithApple,
-      signInWithMagicLink,
-      sendPhoneOtp,
-      verifyPhoneOtp,
-      signOut,
-      resetPassword,
-    }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- méthodes auth stables par render suffisant ; deps = états session
-    [user, session, loading, userRole],
-  );
+  const value = {
+    user,
+    session,
+    loading,
+    userRole,
+    signUp,
+    signIn,
+    signInWithGoogle,
+    signInWithApple,
+    signInWithMagicLink,
+    sendPhoneOtp,
+    verifyPhoneOtp,
+    signOut,
+    resetPassword,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -259,3 +418,8 @@ export function useAuth() {
   }
   return context;
 }
+```
+
+---
+
+*Fin du rapport — aucune modification du code source.*
