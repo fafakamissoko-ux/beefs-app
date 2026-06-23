@@ -181,11 +181,16 @@ export function BeefCard({
           </div>
         );
       case 'ended':
-      case 'replay':
       case 'completed':
         return (
+          <div className="flex items-center gap-1.5 rounded-full border border-gray-500/30 bg-gray-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-300 md:text-xs">
+            TERMINÉ
+          </div>
+        );
+      case 'replay':
+        return (
           <div className="flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-300 md:text-xs">
-            REPLAY
+            <Play className="h-3 w-3 shrink-0" /> REPLAY
           </div>
         );
       case 'scheduled':
@@ -207,7 +212,7 @@ export function BeefCard({
   }
 
   const isManifesto = saisirTab || (intent === 'manifesto' && (status === 'pending' || status === 'ready'));
-  const isReplay = status === 'ended' || status === 'replay' || status === 'completed';
+  const isReplay = status === 'replay';
   const descText = description?.trim() ?? '';
   const auraTier = engagement_score >= 500 ? 3 : engagement_score >= 50 ? 2 : 1;
 
@@ -216,7 +221,8 @@ export function BeefCard({
   let statusVariant = '';
   if (status === 'live') statusVariant = 'ring-2 ring-cyan-400 border-transparent';
   else if (status === 'pending' || status === 'scheduled' || status === 'ready') statusVariant = 'ring-1 ring-white/10';
-  else if (status === 'ended' || status === 'replay' || status === 'completed' || status === 'cancelled') statusVariant = 'opacity-60 saturate-75 hover:opacity-100 hover:saturate-100';
+  else if (status === 'replay') statusVariant = 'ring-1 ring-cyan-500/40 border-transparent';
+  else if (status === 'ended' || status === 'completed' || status === 'cancelled') statusVariant = 'opacity-60 saturate-75 hover:opacity-100 hover:saturate-100';
 
   const auraFX = auraTier === 3 ? 'shadow-[0_0_20px_rgba(223,255,0,0.15)]' : auraTier === 2 ? 'shadow-[0_0_15px_rgba(0,240,255,0.1)]' : '';
   const manifestoStroke = isManifesto ? 'border-dashed border-white/20' : '';
@@ -800,7 +806,18 @@ export function BeefCard({
 
               {/* --- DYNAMIC CTA (Monolith Standard) --- */}
               <div className="mt-auto flex flex-col gap-3 pt-4">
-                {isReplay || status === 'cancelled' ? (
+                {status === 'replay' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsTeaserOpen(false);
+                      onClick();
+                    }}
+                    className="w-full rounded-xl border border-cyan-500/50 bg-cyan-500/20 py-4 text-sm font-bold uppercase tracking-widest text-cyan-300 shadow-[0_0_15px_rgba(0,240,255,0.2)] transition-all hover:bg-cyan-500/30 active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <Play className="w-5 h-5 fill-current" /> Regarder le Replay
+                  </button>
+                ) : status === 'ended' || status === 'completed' || status === 'cancelled' ? (
                   <button
                     type="button"
                     onClick={() => {

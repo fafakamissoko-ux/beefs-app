@@ -28,6 +28,8 @@ export default function ArenaPage() {
   const [beefEndedInfo, setBeefEndedInfo] = useState<{
     title: string;
     host_name: string;
+    status: string;
+    video_url?: string | null;
     started_at?: string;
     ended_at?: string;
   } | null>(null);
@@ -139,10 +141,17 @@ export default function ArenaPage() {
         ? displayNameFromPublicRow(medRow, 'Ref')
         : displayNameFromPublicRow(authorRow, 'Initiateur');
 
-      if (beef.status === 'ended' || beef.status === 'cancelled' || beef.status === 'replay') {
+      if (
+        beef.status === 'ended' ||
+        beef.status === 'cancelled' ||
+        beef.status === 'replay' ||
+        beef.status === 'completed'
+      ) {
         setBeefEndedInfo({
           title: beef.title || 'Beef',
           host_name: hostDisplayName,
+          status: beef.status,
+          video_url: beef.video_url,
           started_at: beef.started_at,
           ended_at: beef.ended_at,
         });
@@ -235,48 +244,94 @@ export default function ArenaPage() {
     setTicketAttempt((a) => a + 1);
   }, []);
 
-  // Beef terminé
   if (beefEndedInfo) {
+    const isReplayAvailable = beefEndedInfo.status === 'replay' && !!beefEndedInfo.video_url;
     const duration =
       beefEndedInfo.started_at && beefEndedInfo.ended_at
-        ? Math.floor((new Date(beefEndedInfo.ended_at).getTime() - new Date(beefEndedInfo.started_at).getTime()) / 60000)
+        ? Math.floor(
+            (new Date(beefEndedInfo.ended_at).getTime() - new Date(beefEndedInfo.started_at).getTime()) /
+              60000,
+          )
         : 0;
 
     return (
-      <div className="fixed inset-0 z-40 flex min-h-dvh flex-col items-center justify-center p-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-sm text-center space-y-6"
-        >
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-gray-800 border border-white/10 flex items-center justify-center">
-            <Clock className="w-8 h-8 text-gray-400" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-white mb-1">Beef terminé</h2>
-            <p className="text-brand-400 font-semibold">{beefEndedInfo.title}</p>
-            <p className="text-sm text-gray-500 mt-1">Médié par {beefEndedInfo.host_name}</p>
-            {duration > 0 && <p className="text-xs text-gray-600 mt-2">Durée : {duration} min</p>}
-          </div>
-          <p className="text-sm text-gray-400">
-            Ce beef est terminé. Tu peux en créer un nouveau ou regarder les prochains lives.
-          </p>
-          <Link
-            href={`/beef/${roomId}/summary`}
-            className="block w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-sm transition-colors text-center"
+      <div className="fixed inset-0 z-40 flex min-h-dvh flex-col items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-xl">
+        {isReplayAvailable ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-5xl space-y-4"
           >
-            Voir le résumé détaillé
-          </Link>
-          <motion.button
-            whileTap={{ scale: 0.96 }}
-            type="button"
-            onClick={() => router.push('/feed')}
-            className="w-full py-3 rounded-xl bg-brand-500 text-white font-semibold text-sm hover:bg-brand-600 transition-colors flex items-center justify-center gap-2"
+            <div className="w-full aspect-video rounded-2xl border border-white/10 bg-black shadow-2xl overflow-hidden relative">
+              <video
+                controls
+                src={beefEndedInfo.video_url!}
+                className="w-full h-full object-contain bg-black"
+                playsInline
+                autoPlay
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-950/50 backdrop-blur-md p-4 rounded-2xl border border-white/10">
+              <div>
+                <h2 className="text-xl font-bold text-white">{beefEndedInfo.title}</h2>
+                <p className="text-sm text-gray-400">Médié par {beefEndedInfo.host_name}</p>
+              </div>
+              <div className="flex gap-3">
+                <Link
+                  href={`/beef/${roomId}/summary`}
+                  className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-sm transition-colors text-center"
+                >
+                  Verdict & Résumé
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => router.push('/feed')}
+                  className="px-5 py-2.5 rounded-xl bg-white text-black font-bold text-sm hover:bg-gray-200 transition-colors text-center"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-sm text-center space-y-6"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Retour au feed
-          </motion.button>
-        </motion.div>
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-gray-800 border border-white/10 flex items-center justify-center">
+              <Clock className="w-8 h-8 text-gray-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white mb-1">
+                {beefEndedInfo.status === 'cancelled' ? 'Beef annulé' : 'En cours de traitement'}
+              </h2>
+              <p className="text-brand-400 font-semibold">{beefEndedInfo.title}</p>
+              <p className="text-sm text-gray-500 mt-1">Médié par {beefEndedInfo.host_name}</p>
+              {duration > 0 && <p className="text-xs text-gray-600 mt-2">Durée : {duration} min</p>}
+            </div>
+            <p className="text-sm text-gray-400">
+              {beefEndedInfo.status === 'ended' || beefEndedInfo.status === 'completed'
+                ? "Le direct est terminé. Le replay sera disponible d'ici quelques minutes."
+                : 'Ce beef a été annulé ou est terminé.'}
+            </p>
+            <Link
+              href={`/beef/${roomId}/summary`}
+              className="block w-full py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-sm transition-colors text-center"
+            >
+              Voir le résumé détaillé
+            </Link>
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              type="button"
+              onClick={() => router.push('/feed')}
+              className="w-full py-3 rounded-xl bg-brand-500 text-white font-semibold text-sm hover:bg-brand-600 transition-colors flex items-center justify-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Retour au feed
+            </motion.button>
+          </motion.div>
+        )}
       </div>
     );
   }
