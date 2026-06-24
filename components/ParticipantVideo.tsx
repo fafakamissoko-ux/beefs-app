@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
+import { usePiP } from '@/hooks/usePiP';
+import { PictureInPicture2 } from 'lucide-react';
 
 interface ParticipantVideoProps {
   videoTrack: MediaStreamTrack | null;
@@ -11,6 +13,7 @@ interface ParticipantVideoProps {
 
 export function ParticipantVideo({ videoTrack, audioTrack, muted = false, className = '', mirror = false }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { isPiPSupported, isPiPActive, togglePiP } = usePiP(videoRef);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -49,12 +52,25 @@ export function ParticipantVideo({ videoTrack, audioTrack, muted = false, classN
   }, []);
 
   return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      muted={muted}
-      className={`${className} ${mirror ? '[transform:scaleX(-1)]' : ''} bg-transparent object-cover`}
-    />
+    <div className={className || 'relative h-full w-full'}>
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted={muted}
+        disablePictureInPicture={false}
+        className={`absolute inset-0 h-full w-full object-cover ${mirror ? '[transform:scaleX(-1)]' : ''} bg-transparent`}
+      />
+      {isPiPSupported && !isPiPActive && (
+        <button
+          onClick={togglePiP}
+          type="button"
+          className="absolute top-2 right-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white/80 backdrop-blur-md transition-all hover:bg-black/60 hover:text-white"
+          title="Détacher la vidéo"
+        >
+          <PictureInPicture2 className="h-4 w-4" />
+        </button>
+      )}
+    </div>
   );
 }
