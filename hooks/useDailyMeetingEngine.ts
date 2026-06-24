@@ -73,6 +73,8 @@ export interface UseDailyMeetingEngineOptions {
   meetingToken: string | null | undefined;
 }
 
+export type WebRtcNetworkQuality = 'good' | 'low' | 'very-low' | 'offline';
+
 export interface UseDailyMeetingEngineResult {
   status: MeetingConnectionStatus;
   peersBySessionId: Record<string, PhysicalPeer>;
@@ -92,6 +94,8 @@ export interface UseDailyMeetingEngineResult {
   error: string | null;
   isCameraInterrupted: boolean;
   recoverMediaDevices: () => Promise<void>;
+  networkQuality: WebRtcNetworkQuality;
+  flipCamera: () => Promise<void>;
 }
 
 /**
@@ -108,6 +112,7 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
   const [activeSpeakerPeerId, setActiveSpeakerPeerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCameraInterrupted, setIsCameraInterrupted] = useState(false);
+  const [networkQuality, setNetworkQuality] = useState<WebRtcNetworkQuality>('good');
 
   const statusRef = useRef(status);
   statusRef.current = status;
@@ -171,6 +176,7 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
         setPeersBySessionId({});
         setActiveSpeakerPeerId(null);
         setIsCameraInterrupted(false);
+        setNetworkQuality('good');
       });
       co.on('error', (e: unknown) => {
         clearJoinWatchdog();
@@ -186,6 +192,12 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
       co.on('active-speaker-change', (event: unknown) => {
         const ev = event as { activeSpeaker?: { peerId?: string } };
         setActiveSpeakerPeerId(ev?.activeSpeaker?.peerId ?? null);
+      });
+      co.on('network-quality-change', (event: unknown) => {
+        const ev = event as { threshold?: WebRtcNetworkQuality };
+        if (ev && ev.threshold) {
+          setNetworkQuality(ev.threshold);
+        }
       });
       co.on('camera-error', () => {
         setIsCameraInterrupted(true);
@@ -372,6 +384,15 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
     }
   }, []);
 
+  const flipCamera = useCallback(async () => {
+    if (!callRef.current || viewerModeRef.current) return;
+    try {
+      await callRef.current.cycleCamera();
+    } catch (err) {
+      console.warn('[WebRTC] Erreur lors du Camera Flip:', err);
+    }
+  }, []);
+
   useEffect(() => {
     if (status !== 'joined') return;
     const handleOffline = () => {
@@ -458,5 +479,7 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
     error,
     isCameraInterrupted,
     recoverMediaDevices,
+    networkQuality,
+    flipCamera,
   };
 }

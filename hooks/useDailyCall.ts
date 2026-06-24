@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useDailyMeetingEngine, type MeetingConnectionStatus } from '@/hooks/useDailyMeetingEngine';
+import { useDailyMeetingEngine, type MeetingConnectionStatus, type WebRtcNetworkQuality } from '@/hooks/useDailyMeetingEngine';
 import type { PhysicalPeer } from '@/lib/participant-identity';
 
 export interface CallParticipant {
@@ -14,6 +14,8 @@ export interface CallParticipant {
   videoOn: boolean;
   audioOn: boolean;
 }
+
+export type { WebRtcNetworkQuality } from '@/hooks/useDailyMeetingEngine';
 
 export interface UseDailyCallReturn {
   join: (preAcquiredStream?: MediaStream | null, opts?: { camEnabled?: boolean }) => Promise<void>;
@@ -38,6 +40,8 @@ export interface UseDailyCallReturn {
   error: string | null;
   isCameraInterrupted: boolean;
   recoverMediaDevices: () => Promise<void>;
+  networkQuality: WebRtcNetworkQuality;
+  flipCamera: () => Promise<void>;
 }
 
 /** Mappe un {@link PhysicalPeer} vers le format affichage arène (pistes Daily). */
@@ -118,5 +122,7 @@ export function useDailyCall(
     error: engine.error,
     isCameraInterrupted: engine.isCameraInterrupted,
     recoverMediaDevices: engine.recoverMediaDevices,
+    networkQuality: engine.networkQuality,
+    flipCamera: engine.flipCamera,
   };
 }

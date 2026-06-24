@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Mic, Video } from 'lucide-react';
+import { Mic, Video, SwitchCamera } from 'lucide-react';
 import { ParticipantVideo } from '@/components/ParticipantVideo';
 import type { ArenaSupportSlotId, ChallengerSlotId } from '@/lib/arena-slots';
 import type { ArenaTileVM } from '../types';
@@ -29,6 +29,8 @@ export interface ArenaVideoSurfaceProps {
   onToggleMic: () => void;
   onToggleCam: () => void;
   onToast: (message: string, type: 'error' | 'success' | 'info') => void;
+  onFlipCamera?: () => void;
+  webrtcNetworkQuality?: 'good' | 'low' | 'very-low' | 'offline';
 }
 
 export function ArenaVideoSurface({
@@ -51,6 +53,8 @@ export function ArenaVideoSurface({
   onToggleMic,
   onToggleCam,
   onToast,
+  onFlipCamera,
+  webrtcNetworkQuality,
 }: ArenaVideoSurfaceProps) {
   const auraShadow =
     tile.aura > 0
@@ -104,12 +108,32 @@ export function ArenaVideoSurface({
       >
         <Video className="h-4 w-4" strokeWidth={1.75} />
       </button>
+      {onFlipCamera && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onFlipCamera();
+          }}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-[60px] transition-all hover:bg-white/20 active:scale-95 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)] md:hidden"
+          title="Basculer la caméra"
+        >
+          <SwitchCamera className="h-4 w-4" strokeWidth={1.75} />
+        </button>
+      )}
     </div>
   ) : null;
 
   const pseudoBadge = (
     <div className="flex max-w-full flex-col items-center gap-1">
       <div className="flex max-w-full items-center gap-2 rounded-full border border-white/[0.08] bg-slate-900/40 px-3 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px] sm:px-4 sm:py-2">
+        {tile.isLocal && webrtcNetworkQuality && webrtcNetworkQuality !== 'good' && (
+          <div className="shrink-0 flex items-center justify-center" title="Réseau instable">
+            <div
+              className={`h-1.5 w-1.5 rounded-full animate-pulse ${webrtcNetworkQuality === 'low' ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'}`}
+            />
+          </div>
+        )}
         <button
           type="button"
           onClick={(e) => {

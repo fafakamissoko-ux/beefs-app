@@ -62,6 +62,8 @@ export interface ArenaLayoutManagerProps {
   onToggleMic: () => void;
   onToggleCam: () => void;
   onToast: (message: string, type: 'error' | 'success' | 'info') => void;
+  onFlipCamera?: () => void;
+  webrtcNetworkQuality?: 'good' | 'low' | 'very-low' | 'offline';
   mediatorParticipant: CallParticipant | null;
   mediatorIsLocal: boolean;
   mediatorName: string;

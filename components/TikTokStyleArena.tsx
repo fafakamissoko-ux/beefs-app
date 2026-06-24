@@ -1420,6 +1420,8 @@ export function TikTokStyleArena({
     error: callError,
     isCameraInterrupted,
     recoverMediaDevices,
+    networkQuality,
+    flipCamera,
   } = useDailyCall(effectiveDailyRoomUrl, userName, isViewer, userId, meetingTokenForDaily);
 
   const stopAllMediaTracks = useCallback(() => {
@@ -3516,6 +3518,8 @@ export function TikTokStyleArena({
           onToggleMic={toggleMic}
           onToggleCam={toggleCam}
           onToast={toast}
+          onFlipCamera={!isViewer ? () => void flipCamera() : undefined}
+          webrtcNetworkQuality={networkQuality}
           mediatorParticipant={mediatorParticipant}
           mediatorIsLocal={mediatorIsLocal}
           mediatorName={mediatorName}

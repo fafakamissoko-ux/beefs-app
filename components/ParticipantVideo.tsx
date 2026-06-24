@@ -65,7 +65,7 @@ export function ParticipantVideo({ videoTrack, audioTrack, muted = false, classN
         <button
           onClick={togglePiP}
           type="button"
-          className="absolute top-2 right-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white/80 backdrop-blur-md transition-all hover:bg-black/60 hover:text-white"
+          className="absolute top-2 right-2 z-20 hidden md:flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white/80 backdrop-blur-md transition-all hover:bg-black/60 hover:text-white"
           title="Détacher la vidéo"
         >
           <PictureInPicture2 className="h-4 w-4" />

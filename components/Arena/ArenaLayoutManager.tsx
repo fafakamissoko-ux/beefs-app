@@ -37,6 +37,8 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
     onToggleMic,
     onToggleCam,
     onToast,
+    onFlipCamera,
+    webrtcNetworkQuality,
     mediatorParticipant,
     mediatorIsLocal,
     mediatorName,
@@ -140,6 +142,8 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
     onToggleMic,
     onToggleCam,
     onToast,
+    onFlipCamera,
+    webrtcNetworkQuality,
   };
 
   const mediatorProps = {
