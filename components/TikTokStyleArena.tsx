@@ -68,9 +68,9 @@ import {
 import {
   FlyingReactionsLayer,
   createFlyingReactionEntry,
-  pushFlyingReaction,
   type FlyingReactionEntry,
 } from './FlyingReactionsLayer';
+import { useArenaVolatileStore } from '@/lib/stores/arenaVolatileStore';
 import { MediatorSupportHalo } from './MediatorSupportHalo';
 import { useArenaPulseVoicesStore } from '@/lib/stores/arenaPulseVoicesStore';
 import { useArenaVerdictStore } from '@/lib/stores/arenaVerdictStore';
@@ -175,14 +175,6 @@ const PICKER_REACTIONS = POPULAR_REACTIONS.filter((e) => {
 
 /** Cœur / pouce : particules sur l’anneau du challenger (pas d’emoji flottant). */
 const INTEGRATED_SUPPORT_REACTIONS = new Set<string>(['❤️', HEART_ON_FIRE, '👍']);
-
-interface VisibleMessage {
-  id: string;
-  user_name: string;
-  content: string;
-  timestamp: number;
-  initial: string;
-}
 
 interface ParticipationRequest {
   id: string;
@@ -408,7 +400,12 @@ export function TikTokStyleArena({
   /** Coupure micro imposée par le médiateur (broadcast — le toggle local seul ne suffisait pas) */
   const [micMutedByMediator, setMicMutedByMediator] = useState(false);
 
-  const [flyingReactions, setFlyingReactions] = useState<FlyingReactionEntry[]>([]);
+  const addMessage = useArenaVolatileStore((s) => s.addMessage);
+  const deleteMessage = useArenaVolatileStore((s) => s.deleteMessage);
+  const clearMessages = useArenaVolatileStore((s) => s.clearMessages);
+  const addReaction = useArenaVolatileStore((s) => s.addReaction);
+  const clearReactions = useArenaVolatileStore((s) => s.clearReactions);
+
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportTargetUser, setReportTargetUser] = useState<{
     id: string;
@@ -427,7 +424,6 @@ export function TikTokStyleArena({
       window.removeEventListener('online', goOnline);
     };
   }, [toast]);
-  const [visibleMessages, setVisibleMessages] = useState<VisibleMessage[]>([]);
   const [contextMenuMsg, setContextMenuMsg] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [unreadDMsCount, setUnreadDMsCount] = useState(0);
@@ -479,8 +475,6 @@ export function TikTokStyleArena({
   const chatMessagesMobileScrollRef = useRef<HTMLDivElement>(null);
   const chatMessagesMobileEndRef = useRef<HTMLDivElement>(null);
   const announcementClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** File d'attente batchée pour particules (évite de marteler le state sur les pics de broadcast) */
-  const reactionBufferRef = useRef<FlyingReactionEntry[]>([]);
   /** Accumulateur d’Aura (réactions / tap intégrés) — flush réseau ~1,5 s pour limiter le flood. */
   const auraBufferRef = useRef<AuraBatchPayload>(createZeroAuraBatch());
   /** Snapshot pour `aura_master_sync` (intervalle sans recréer la closure). */
@@ -623,10 +617,6 @@ export function TikTokStyleArena({
     });
   }, []);
 
-  useLayoutEffect(() => {
-    scrollChatToEnd();
-  }, [visibleMessages, scrollChatToEnd]);
-
   /** Clavier mobile (visualViewport) : la hauteur du dock change — rescroll + évite masque qui « mange » les bulles. */
   useEffect(() => {
     const vv = window.visualViewport;
@@ -732,19 +722,14 @@ export function TikTokStyleArena({
     const ttlMs = dbId ? 60_000 : 5000;
     setTimeout(() => seenMsgKeys.current.delete(key), ttlMs);
     const msgId = dbId || `m_${Date.now()}_${Math.random()}`;
-    const newMsg: VisibleMessage = {
+    addMessage({
       id: msgId,
       user_name: msgUserName,
       content,
-      timestamp: Date.now(),
       initial: initial || msgUserName?.[0]?.toUpperCase() || '?',
-    };
-    setVisibleMessages((prev) => {
-      if (dbId && prev.some((m) => m.id === dbId)) return prev;
-      return [...prev, newMsg].slice(-40);
     });
     setGlobalHeat((v) => Math.min(100, v + 4));
-  }, []);
+  }, [addMessage]);
 
   const addRemoteReaction = useCallback((emoji: string, supportSlot?: ArenaSupportSlotId | null) => {
     if (INTEGRATED_SUPPORT_REACTIONS.has(emoji)) {
@@ -778,25 +763,13 @@ export function TikTokStyleArena({
       }
     }
     const entry = createFlyingReactionEntry(emoji);
-    reactionBufferRef.current.push(entry);
-  }, []);
-
-  useEffect(() => {
-    const flushInterval = setInterval(() => {
-      if (reactionBufferRef.current.length > 0) {
-        const newReactions = [...reactionBufferRef.current];
-        reactionBufferRef.current = [];
-        setFlyingReactions((prev) => {
-          let next = prev;
-          newReactions.forEach((r) => {
-            next = pushFlyingReaction(next, r);
-          });
-          return next.slice(-30);
-        });
-      }
-    }, 250);
-    return () => clearInterval(flushInterval);
-  }, []);
+    addReaction({
+      emoji: entry.emoji,
+      x: entry.x,
+      opacityMul: entry.opacityMul ?? 1,
+      scaleMul: entry.scaleMul ?? 1,
+    });
+  }, [addReaction]);
 
   /** Boost par tap / réaction soutenue : fixe 15 (équitable, généreux vs decay −3 / 500 ms). */
   const getAuraBoost = () => 15;
@@ -1324,9 +1297,15 @@ export function TikTokStyleArena({
       ...statsRef.current,
       beefTimeRemaining,
       liveViewerCount,
-      messagesCount: visibleMessages.length,
+      messagesCount: useArenaVolatileStore.getState().messages.length,
     };
-  }, [beefTimeRemaining, liveViewerCount, visibleMessages.length]);
+  }, [beefTimeRemaining, liveViewerCount]);
+
+  useEffect(() => {
+    return useArenaVolatileStore.subscribe((state) => {
+      statsRef.current.messagesCount = state.messages.length;
+    });
+  }, []);
 
   const formatBeefTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -1960,8 +1939,9 @@ export function TikTokStyleArena({
   useEffect(() => {
     if (!roomId) return;
     seenMsgKeys.current.clear();
-    setVisibleMessages([]);
-  }, [roomId]);
+    clearMessages();
+    clearReactions();
+  }, [roomId, clearMessages, clearReactions]);
 
   const handleReaction = (emoji: string) => {
     if (requireAuth('Donne de la force', 'Crée un compte gratuit pour envoyer des réactions.')) return;
@@ -2009,7 +1989,12 @@ export function TikTokStyleArena({
         opacityMul: 0.5,
         scaleMul: 0.82,
       });
-      setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
+      addReaction({
+        emoji: entry.emoji,
+        x: entry.x,
+        opacityMul: entry.opacityMul ?? 1,
+        scaleMul: entry.scaleMul ?? 1,
+      });
     } else if (integrated) {
       const boost = getAuraBoost();
       setSupportBurst((prev) => ({ ...prev, [slotPick]: prev[slotPick] + 1 }));
@@ -2019,10 +2004,20 @@ export function TikTokStyleArena({
       }));
       auraBufferRef.current[slotPick] += boost;
       const entry = createFlyingReactionEntry(emoji);
-      setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
+      addReaction({
+        emoji: entry.emoji,
+        x: entry.x,
+        opacityMul: entry.opacityMul ?? 1,
+        scaleMul: entry.scaleMul ?? 1,
+      });
     } else {
       const entry = createFlyingReactionEntry(emoji);
-      setFlyingReactions((prev) => pushFlyingReaction(prev, entry).slice(-30));
+      addReaction({
+        emoji: entry.emoji,
+        x: entry.x,
+        opacityMul: entry.opacityMul ?? 1,
+        scaleMul: entry.scaleMul ?? 1,
+      });
     }
 
     if (!integrated) {
@@ -2644,14 +2639,12 @@ export function TikTokStyleArena({
         ? `pending_${crypto.randomUUID()}`
         : `pending_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
-    const optimistic: VisibleMessage = {
+    addMessage({
       id: pendingId,
       user_name: userName,
       content: cleanContent,
-      timestamp: Date.now(),
       initial: senderInitial,
-    };
-    setVisibleMessages((prev) => [...prev, optimistic].slice(-40));
+    });
     setChatInput('');
     setGlobalHeat((v) => Math.min(100, v + 5));
 
@@ -2680,19 +2673,13 @@ export function TikTokStyleArena({
 
       if (!error && inserted?.id) {
         seenMsgKeys.current.add(`id:${inserted.id}`);
-        setVisibleMessages((prev) =>
-          prev.map((m) =>
-            m.id === pendingId
-              ? {
-                  id: inserted.id,
-                  user_name: userName,
-                  content: cleanContent,
-                  timestamp: Date.now(),
-                  initial: senderInitial,
-                }
-              : m,
-          ),
-        );
+        deleteMessage(pendingId);
+        addMessage({
+          id: inserted.id,
+          user_name: userName,
+          content: cleanContent,
+          initial: senderInitial,
+        });
         queueMicrotask(() => {
           scrollChatToEnd();
           window.setTimeout(() => scrollChatToEnd(), 50);
@@ -2712,7 +2699,7 @@ export function TikTokStyleArena({
         return attemptInsert(attempt + 1);
       }
 
-      setVisibleMessages((prev) => prev.filter((m) => m.id !== pendingId));
+      deleteMessage(pendingId);
       console.error('[Live] Message insert failed');
       if (error && isRlsPolicyError(error)) {
         toast(
@@ -2741,7 +2728,7 @@ export function TikTokStyleArena({
       toast('Suppression impossible', 'error');
       return;
     }
-    setVisibleMessages((prev) => prev.filter((m) => m.id !== messageId));
+    deleteMessage(messageId);
     arenaOutboundRef.current.broadcastDeleteMessage?.(messageId);
   };
 
@@ -2866,7 +2853,7 @@ export function TikTokStyleArena({
       addRemoteMessage(uname, content, initialLetter, messageId);
     },
     onMessageDeleted: (messageId) => {
-      setVisibleMessages((prev) => prev.filter((m) => m.id !== messageId));
+      deleteMessage(messageId);
     },
     onArenaBigGift: (payload) => {
       setLocalArenaBigGift(payload as ArenaBigGiftPayload);
@@ -3408,21 +3395,7 @@ export function TikTokStyleArena({
           )}
         </header>
         <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
-          <div ref={chatMessagesScrollRef} className="flex-1 overflow-y-auto pl-2 pr-4 py-2 hide-scrollbar">
-            {visibleMessages.map((msg) => (
-              <div key={msg.id} className="mb-3">
-                <span
-                  className={`block mb-1 ml-2 text-[9px] font-black uppercase tracking-widest ${getUsernameColor(msg.user_name)}`}
-                >
-                  {msg.user_name}
-                </span>
-                <div className="inline-block rounded-2xl rounded-tl-sm border border-white/10 bg-white/10 px-3 py-2 text-[13px] leading-snug text-white/90 shadow-md">
-                  {msg.content}
-                </div>
-              </div>
-            ))}
-            <div ref={chatMessagesEndRef} className="h-px w-full" />
-          </div>
+          <ArenaChatMessages endRef={chatMessagesEndRef} isMobile={false} scrollRef={chatMessagesScrollRef} />
 
           <div id="dock-desktop" className="mt-auto flex w-full shrink-0 items-center gap-2 pl-2 pr-3 py-3 bg-slate-900/40 backdrop-blur-sm border-t border-white/10 shadow-lg">
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full border border-white/[0.05] bg-black/40 px-4 py-2.5 text-[13px] text-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] placeholder-white/30 focus:bg-black/60 focus:outline-none" />
@@ -3561,24 +3534,7 @@ export function TikTokStyleArena({
             data-cinema-stay
             className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end pt-32 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none"
           >
-          <div
-            ref={chatMessagesMobileScrollRef}
-            className="pointer-events-none w-fit max-w-[85%] min-w-[50%] max-h-[30vh] overflow-y-auto overscroll-contain touch-pan-y px-3 mb-2 flex flex-col hide-scrollbar"
-          >
-            <div className="mt-auto flex flex-col justify-end">
-              {visibleMessages.map((msg) => (
-                <div key={msg.id} className="mb-2 pointer-events-auto w-fit max-w-[70%] leading-tight">
-                  <span className={`text-[11px] font-bold mr-2 drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${getUsernameColor(msg.user_name)}`}>
-                    {msg.user_name}
-                  </span>
-                  <span className="text-[13px] text-white font-medium break-all drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
-                    {msg.content}
-                  </span>
-                </div>
-              ))}
-              <div ref={chatMessagesMobileEndRef} className="h-px w-full" />
-            </div>
-          </div>
+          <ArenaChatMessages endRef={chatMessagesMobileEndRef} isMobile scrollRef={chatMessagesMobileScrollRef} />
           <div id="dock-mobile" className="pointer-events-auto mt-auto flex w-full shrink-0 items-center gap-2 px-3 pb-2">
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full border border-white/[0.05] bg-black/40 px-4 py-2.5 text-[13px] text-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] placeholder-white/30 focus:bg-black/60 focus:outline-none" />
             <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/10 text-white shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-transform active:scale-95 disabled:opacity-30">😀</button>
@@ -3600,7 +3556,7 @@ export function TikTokStyleArena({
 
         {/* REACTIONS VOLANTES */}
         <div className="pointer-events-none absolute inset-0 z-[160]">
-          <FlyingReactionsLayer reactions={flyingReactions} onRemove={(id) => setFlyingReactions((p) => p.filter(r => r.id !== id))} />
+          <ArenaFlyingReactions />
         </div>
       </div>
 
@@ -4320,5 +4276,97 @@ export function TikTokStyleArena({
           document.body
         )}
     </div>
+  );
+}
+
+// --- COMPOSANTS VOLATILS ZUSTAND ---
+
+export function ArenaChatMessages({
+  isMobile,
+  scrollRef,
+  endRef,
+}: {
+  isMobile?: boolean;
+  scrollRef: React.RefObject<HTMLDivElement>;
+  endRef: React.RefObject<HTMLDivElement>;
+}) {
+  const messages = useArenaVolatileStore((s) => s.messages);
+
+  useLayoutEffect(() => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const el = scrollRef.current;
+        if (el) {
+          el.scrollTop = el.scrollHeight;
+        }
+        endRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
+      });
+    });
+  }, [messages, scrollRef, endRef]);
+
+  return (
+    <div
+      ref={scrollRef}
+      className={
+        isMobile
+          ? 'pointer-events-none w-fit max-w-[85%] min-w-[50%] max-h-[30vh] overflow-y-auto overscroll-contain touch-pan-y px-3 mb-2 flex flex-col hide-scrollbar'
+          : 'flex-1 overflow-y-auto pl-2 pr-4 py-2 hide-scrollbar'
+      }
+    >
+      <div className="mt-auto flex flex-col justify-end">
+        {messages.map((msg) =>
+          isMobile ? (
+            <div key={msg.id} className="mb-2 pointer-events-auto w-fit max-w-[70%] leading-tight">
+              <span
+                className={`text-[11px] font-bold mr-2 drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${getUsernameColor(msg.user_name)}`}
+              >
+                {msg.user_name}
+              </span>
+              <span className="text-[13px] text-white font-medium break-all drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
+                {msg.content}
+              </span>
+            </div>
+          ) : (
+            <div key={msg.id} className="mb-3">
+              <span
+                className={`block mb-1 ml-2 text-[9px] font-black uppercase tracking-widest ${getUsernameColor(msg.user_name)}`}
+              >
+                {msg.user_name}
+              </span>
+              <div className="inline-block rounded-2xl rounded-tl-sm border border-white/10 bg-white/10 px-3 py-2 text-[13px] leading-snug text-white/90 shadow-md">
+                {msg.content}
+              </div>
+            </div>
+          ),
+        )}
+        <div ref={endRef} className="h-px w-full" />
+      </div>
+    </div>
+  );
+}
+
+export function ArenaFlyingReactions() {
+  const reactions = useArenaVolatileStore((s) => s.reactions);
+  const removeReaction = useArenaVolatileStore((s) => s.removeReaction);
+
+  const layerReactions = useMemo<FlyingReactionEntry[]>(
+    () =>
+      reactions.map((r) => ({
+        id: String(r.id),
+        emoji: r.emoji,
+        x: r.x,
+        orbitStartAngle: (r.id * 2.399963) % (Math.PI * 2),
+        orbitDir: r.id % 2 === 0 ? 1 : -1,
+        opacityMul: r.opacityMul,
+        scaleMul: r.scaleMul,
+      })),
+    [reactions],
+  );
+
+  return (
+    <FlyingReactionsLayer
+      reactions={layerReactions}
+      onRemove={(id) => removeReaction(Number(id))}
+    />
   );
 }
