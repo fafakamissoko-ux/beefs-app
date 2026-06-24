@@ -64,6 +64,7 @@ export interface ArenaLayoutManagerProps {
   onToast: (message: string, type: 'error' | 'success' | 'info') => void;
   onFlipCamera?: () => void;
   webrtcNetworkQuality?: 'good' | 'low' | 'very-low' | 'offline';
+  activeSpeakerPeerId?: string | null;
   mediatorParticipant: CallParticipant | null;
   mediatorIsLocal: boolean;
   mediatorName: string;

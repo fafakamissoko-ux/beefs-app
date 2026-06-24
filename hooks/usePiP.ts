@@ -2,7 +2,7 @@
 
 import { useState, useEffect, RefObject, useCallback } from 'react';
 
-export function usePiP(videoRef: RefObject<HTMLVideoElement | null>) {
+export function usePiP(videoRef: RefObject<HTMLVideoElement | null>, enableAutoPiP = false) {
   const [isPiPSupported, setIsPiPSupported] = useState(false);
   const [isPiPActive, setIsPiPActive] = useState(false);
 
@@ -14,10 +14,10 @@ export function usePiP(videoRef: RefObject<HTMLVideoElement | null>) {
     // 2. Activation du mode Auto-PiP (Magie Tier-1)
     // Cela permet à iOS Safari et Android Chrome de détacher automatiquement la vidéo
     // lorsque l'utilisateur retourne sur l'écran d'accueil de son téléphone.
-    if (videoRef.current && 'autoPictureInPicture' in videoRef.current) {
+    if (enableAutoPiP && videoRef.current && 'autoPictureInPicture' in videoRef.current) {
       (videoRef.current as any).autoPictureInPicture = true;
     }
-  }, [videoRef]);
+  }, [videoRef, enableAutoPiP]);
 
   useEffect(() => {
     const videoElement = videoRef.current;

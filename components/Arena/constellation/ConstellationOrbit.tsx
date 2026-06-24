@@ -9,11 +9,12 @@ import { computeConstellationLayout, getOrbitPositionPercent } from './orbitGeom
 
 export type ConstellationOrbitProps = Omit<
   ArenaVideoSurfaceProps,
-  'tile' | 'tileCount' | 'tileIndex' | 'variant' | 'isSpeaking' | 'isMutedByFocus'
+  'tile' | 'tileCount' | 'tileIndex' | 'variant' | 'isSpeaking' | 'isMutedByFocus' | 'isActiveSpeaker'
 > & {
   tiles: ArenaTileVM[];
   speakingTurnActive: boolean;
   effectiveHotMicSpeakerSlot: ChallengerSlotId | null;
+  activeSpeakerPeerId: string | null;
   mediator: MediatorOrbProps;
 };
 
@@ -21,6 +22,7 @@ export function ConstellationOrbit({
   tiles,
   speakingTurnActive,
   effectiveHotMicSpeakerSlot,
+  activeSpeakerPeerId,
   mediator,
   ...surfaceProps
 }: ConstellationOrbitProps) {
@@ -63,6 +65,8 @@ export function ConstellationOrbit({
           speakingTurnActive &&
           Boolean(effectiveHotMicSpeakerSlot) &&
           effectiveHotMicSpeakerSlot !== tile.slot;
+        const isActiveSpeaker =
+          !!activeSpeakerPeerId && tile.panel?.sessionId === activeSpeakerPeerId;
 
         return (
           <div
@@ -77,6 +81,7 @@ export function ConstellationOrbit({
               variant="constellation"
               isSpeaking={isSpeaking}
               isMutedByFocus={isMutedByFocus}
+              isActiveSpeaker={isActiveSpeaker}
               speakingTurnActive={speakingTurnActive}
               effectiveHotMicSpeakerSlot={effectiveHotMicSpeakerSlot}
               {...surfaceProps}

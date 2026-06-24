@@ -9,11 +9,12 @@ interface ParticipantVideoProps {
   muted?: boolean;
   className?: string;
   mirror?: boolean;
+  isSmartPiPUI?: boolean;
 }
 
-export function ParticipantVideo({ videoTrack, audioTrack, muted = false, className = '', mirror = false }: ParticipantVideoProps) {
+export function ParticipantVideo({ videoTrack, audioTrack, muted = false, className = '', mirror = false, isSmartPiPUI }: ParticipantVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { isPiPSupported, isPiPActive, togglePiP } = usePiP(videoRef);
+  const { isPiPSupported, isPiPActive, togglePiP } = usePiP(videoRef, isSmartPiPUI);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -61,7 +62,7 @@ export function ParticipantVideo({ videoTrack, audioTrack, muted = false, classN
         disablePictureInPicture={false}
         className={`absolute inset-0 h-full w-full object-cover ${mirror ? '[transform:scaleX(-1)]' : ''} bg-transparent`}
       />
-      {isPiPSupported && !isPiPActive && (
+      {isPiPSupported && !isPiPActive && !isSmartPiPUI && (
         <button
           onClick={togglePiP}
           type="button"

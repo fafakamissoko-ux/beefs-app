@@ -3520,6 +3520,7 @@ export function TikTokStyleArena({
           onToast={toast}
           onFlipCamera={!isViewer ? () => void flipCamera() : undefined}
           webrtcNetworkQuality={networkQuality}
+          activeSpeakerPeerId={activeSpeakerPeerId}
           mediatorParticipant={mediatorParticipant}
           mediatorIsLocal={mediatorIsLocal}
           mediatorName={mediatorName}

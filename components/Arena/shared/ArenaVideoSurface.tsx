@@ -31,6 +31,7 @@ export interface ArenaVideoSurfaceProps {
   onToast: (message: string, type: 'error' | 'success' | 'info') => void;
   onFlipCamera?: () => void;
   webrtcNetworkQuality?: 'good' | 'low' | 'very-low' | 'offline';
+  isActiveSpeaker?: boolean;
 }
 
 export function ArenaVideoSurface({
@@ -55,6 +56,7 @@ export function ArenaVideoSurface({
   onToast,
   onFlipCamera,
   webrtcNetworkQuality,
+  isActiveSpeaker,
 }: ArenaVideoSurfaceProps) {
   const auraShadow =
     tile.aura > 0
@@ -202,6 +204,9 @@ export function ArenaVideoSurface({
               {tile.name.replace(/^@/, '')[0] ?? '?'}
             </span>
           </div>
+        )}
+        {isActiveSpeaker && (
+          <div className="absolute inset-0 z-20 pointer-events-none rounded-[inherit] border-2 border-brand-400 shadow-[0_0_20px_rgba(0,240,255,0.4)] animate-pulse" />
         )}
       </button>
 

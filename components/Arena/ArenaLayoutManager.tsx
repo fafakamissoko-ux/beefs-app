@@ -6,6 +6,7 @@ import type { ChallengerSlotId } from '@/lib/arena-slots';
 import { resolveArenaLayoutMode } from '@/lib/arena-layout-mode';
 import { ConstellationOrbit } from './constellation/ConstellationOrbit';
 import { NexusGrid } from './nexus/NexusGrid';
+import { SmartPiPManager } from './SmartPiPManager';
 import { MediatorOrb } from './shared/MediatorOrb';
 import type { ArenaLayoutManagerProps } from './types';
 import { useArenaLayoutTiles } from './useArenaLayoutTiles';
@@ -39,6 +40,7 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
     onToast,
     onFlipCamera,
     webrtcNetworkQuality,
+    activeSpeakerPeerId,
     mediatorParticipant,
     mediatorIsLocal,
     mediatorName,
@@ -173,6 +175,7 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
 
   return (
     <div className="absolute inset-0 z-0 bg-transparent p-1 sm:p-2">
+      <SmartPiPManager tiles={tiles} activeSpeakerPeerId={activeSpeakerPeerId ?? null} />
       <AnimatePresence mode="wait">
         {mode === 'nexus' ? (
           <motion.div
@@ -187,6 +190,7 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
               tiles={tiles}
               speakingTurnActive={speakingTurnActive}
               effectiveHotMicSpeakerSlot={effectiveHotMicSpeakerSlot}
+              activeSpeakerPeerId={activeSpeakerPeerId ?? null}
               {...surfaceProps}
             />
             <MediatorOrb {...mediatorProps} />
@@ -204,6 +208,7 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
               tiles={tiles}
               speakingTurnActive={speakingTurnActive}
               effectiveHotMicSpeakerSlot={effectiveHotMicSpeakerSlot}
+              activeSpeakerPeerId={activeSpeakerPeerId ?? null}
               mediator={mediatorProps}
               {...surfaceProps}
             />
