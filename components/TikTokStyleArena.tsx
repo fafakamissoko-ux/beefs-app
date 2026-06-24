@@ -35,6 +35,7 @@ import { physicalPeerToCallParticipant, useDailyCall, type CallParticipant } fro
 import { supabase } from '@/lib/supabase/client';
 import { userIdsEqual } from '@/lib/user-id-equal';
 import { useToast } from '@/components/Toast';
+import { useMediaSession } from '@/hooks/useMediaSession';
 import { sanitizeMessage } from '@/lib/security';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import { postBeefManage, type BeefManageAction } from '@/lib/beef-manage-client';
@@ -241,6 +242,14 @@ export function TikTokStyleArena({
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+
+  // --- BACKGROUND AUDIO (Tier-1) ---
+  // Déclare le live auprès de l'OS pour empêcher la coupure WebRTC en arrière-plan
+  useMediaSession(
+    debateTitle || 'Live Agora',
+    host?.name || 'Ref',
+    // Si tu as une URL thumbnail dans l'avenir, passe-la ici
+  );
 
   const runBeefManage = useCallback(
     async (body: BeefManageAction) => {
