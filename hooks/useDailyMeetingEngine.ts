@@ -114,6 +114,11 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
   const [isCameraInterrupted, setIsCameraInterrupted] = useState(false);
   const [networkQuality, setNetworkQuality] = useState<WebRtcNetworkQuality>('good');
 
+  const micEnabledRef = useRef(micEnabled);
+  const camEnabledRef = useRef(camEnabled);
+  useEffect(() => { micEnabledRef.current = micEnabled; }, [micEnabled]);
+  useEffect(() => { camEnabledRef.current = camEnabled; }, [camEnabled]);
+
   const statusRef = useRef(status);
   statusRef.current = status;
 
@@ -368,12 +373,12 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
       intentionalActionRef.current = true;
       setIsCameraInterrupted(false);
       if (!viewerModeRef.current) {
+        const wasMicOn = micEnabledRef.current;
+        const wasCamOn = camEnabledRef.current;
         await co.setLocalVideo(false);
         await co.setLocalAudio(false);
-        await co.setLocalVideo(true);
-        await co.setLocalAudio(true);
-        setCamEnabled(true);
-        setMicEnabled(true);
+        if (wasCamOn) await co.setLocalVideo(true);
+        if (wasMicOn) await co.setLocalAudio(true);
       }
       setTimeout(() => {
         intentionalActionRef.current = false;
@@ -443,15 +448,6 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
       window.removeEventListener('online', handleOnline);
     };
   }, [refreshPeers, setupListeners, status]);
-
-  useEffect(() => {
-    if (status !== 'joined' || viewerModeRef.current) return;
-    const onVis = () => {
-      if (document.visibilityState === 'visible') void recoverMediaDevices();
-    };
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
-  }, [status, recoverMediaDevices]);
 
   useEffect(() => {
     return () => {

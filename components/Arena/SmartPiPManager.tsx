@@ -26,7 +26,7 @@ export function SmartPiPManager({ tiles, activeSpeakerPeerId }: SmartPiPManagerP
     // Ce conteneur est invisible mais présent dans le DOM pour que le navigateur
     // puisse extraire la vidéo lors de la réduction de l'application.
     <div
-      className="fixed inset-0 z-[-9999] opacity-[0.01] pointer-events-none overflow-hidden"
+      className="fixed bottom-0 right-0 w-2 h-2 opacity-50 pointer-events-none -z-10"
       aria-hidden="true"
     >
       <ParticipantVideo
