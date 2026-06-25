@@ -142,7 +142,7 @@ export function ArenaVideoSurface({
             e.stopPropagation();
             void onOpenProfile(tile.name, tile.arenaUserId);
           }}
-          className="truncate max-w-[80px] sm:max-w-[130px] text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]"
+          className="max-w-[70px] sm:max-w-[120px] truncate inline-block text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]"
         >
           @{tile.name}
         </button>
@@ -186,6 +186,7 @@ export function ArenaVideoSurface({
           <ParticipantVideo
             videoTrack={tile.panel.videoTrack}
             muted={tile.isLocal}
+            enableAutoPiP={isActiveSpeaker || tile.isLocal}
             className="absolute inset-0 h-full w-full object-cover"
           />
         ) : tile.avatarUrl ? (
@@ -215,10 +216,10 @@ export function ArenaVideoSurface({
           {tile.isLocal && (
             <div
               data-cinema-stay
-              className={`pointer-events-auto absolute left-1/2 z-[150] flex -translate-x-1/2 items-center gap-1.5 ${
+              className={`pointer-events-auto absolute left-1/2 z-[150] flex w-full max-w-[90px] sm:max-w-none -translate-x-1/2 flex-wrap justify-center items-center gap-1.5 sm:gap-2 ${
                 (tileCount === 3 && tileIndex === 0) || ((tileCount === 5 || tileCount === 6) && tileIndex === 4)
-                  ? 'bottom-[calc(100%+1.5rem)] lg:bottom-[calc(100%+4px)] flex-row'
-                  : 'top-[calc(100%+3.2rem)] flex-row'
+                  ? 'bottom-[calc(100%+12px)] lg:bottom-[calc(100%+4px)]'
+                  : 'top-[calc(100%+2.5rem)]'
               }`}
             >
               {localControls}

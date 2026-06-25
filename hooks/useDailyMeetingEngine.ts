@@ -390,11 +390,47 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
   }, []);
 
   const flipCamera = useCallback(async () => {
-    if (!callRef.current || viewerModeRef.current) return;
+    const co = callRef.current;
+    if (!co || viewerModeRef.current) return;
     try {
-      await callRef.current.cycleCamera();
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter((d) => d.kind === 'videoinput');
+
+      if (videoDevices.length <= 2) {
+        await co.cycleCamera();
+        return;
+      }
+      // Contournement Tier-1 iOS/Android (Évite les objectifs Macro/Telephoto)
+      const currentInput = await co.getInputDevices();
+      const camera = currentInput?.camera;
+      const currentDeviceId =
+        camera && 'deviceId' in camera ? camera.deviceId : undefined;
+
+      const frontDevices = videoDevices.filter(
+        (d) => d.label.toLowerCase().includes('front') || d.label.toLowerCase().includes('avant'),
+      );
+      const backDevices = videoDevices.filter(
+        (d) => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('arrière'),
+      );
+
+      let targetDeviceId: string | null = null;
+      if (frontDevices.some((d) => d.deviceId === currentDeviceId) && backDevices.length > 0) {
+        targetDeviceId = backDevices[0].deviceId;
+      } else if (backDevices.some((d) => d.deviceId === currentDeviceId) && frontDevices.length > 0) {
+        targetDeviceId = frontDevices[0].deviceId;
+      } else {
+        const currentIndex = videoDevices.findIndex((d) => d.deviceId === currentDeviceId);
+        targetDeviceId =
+          currentIndex === 0 ? videoDevices[videoDevices.length - 1].deviceId : videoDevices[0].deviceId;
+      }
+
+      if (targetDeviceId && targetDeviceId !== currentDeviceId) {
+        await co.setInputDevicesAsync({ videoDeviceId: targetDeviceId });
+      } else {
+        await co.cycleCamera();
+      }
     } catch (err) {
-      console.warn('[WebRTC] Erreur lors du Camera Flip:', err);
+      console.warn('[WebRTC] Erreur Camera Flip:', err);
     }
   }, []);
 
