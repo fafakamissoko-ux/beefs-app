@@ -245,11 +245,17 @@ export function TikTokStyleArena({
 
   // --- BACKGROUND AUDIO (Tier-1) ---
   // Déclare le live auprès de l'OS pour empêcher la coupure WebRTC en arrière-plan
-  const { takeSystemFocus } = useMediaSession(
-    debateTitle || 'Live Agora',
-    host?.name || 'Ref',
-    // Si tu as une URL thumbnail dans l'avenir, passe-la ici
-  );
+  useMediaSession(debateTitle || 'Live Agora', host?.name || 'Ref');
+  const systemAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const takeSystemFocusSync = useCallback(() => {
+    if (systemAudioRef.current) {
+      systemAudioRef.current.volume = 0.01;
+      systemAudioRef.current.play().then(() => {
+        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+      }).catch((e) => console.warn('[System Takeover] Audio bloqué:', e));
+    }
+  }, []);
 
   const runBeefManage = useCallback(
     async (body: BeefManageAction) => {
@@ -283,16 +289,7 @@ export function TikTokStyleArena({
     return false;
   }, [userId]);
 
-  const [hasJoined, setHasJoined] = useState(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        return sessionStorage.getItem(`arena_joined_${roomId}_${userId}`) === 'true';
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  });
+  const [hasJoined, setHasJoined] = useState(false);
   const [showPreJoin, setShowPreJoin] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
 
@@ -305,13 +302,6 @@ export function TikTokStyleArena({
     });
     return () => { void supabase.removeChannel(testCh); };
   }, []);
-
-  useEffect(() => {
-    if (isViewer) {
-      setShowPreJoin(false);
-      setHasJoined(true);
-    }
-  }, [isViewer]);
 
   useEffect(() => {
     if (hasJoined) setShowPreJoin(false);
@@ -2756,7 +2746,6 @@ export function TikTokStyleArena({
 
   // Join: enregistre le flux pré-acquis puis lance join() via l’effet ci-dessus
   const handleJoin = (preAcquired: MediaStream | null, opts?: { camEnabled: boolean }) => {
-    takeSystemFocus();
     setPreJoinMediaStream(preAcquired);
     setPreJoinCamEnabled(opts?.camEnabled ?? true);
     setHasJoined(true);
@@ -3147,7 +3136,13 @@ export function TikTokStyleArena({
       {/* --- COUCHE 2 : PRE-JOIN (Priorité 2) --- */}
       {!showVsScreen && !hasJoined && showPreJoin && (
         <div className="absolute inset-0 z-[8000] bg-black/40 backdrop-blur-sm">
-          <PreJoinScreen userName={userName} onJoin={handleJoin} viewerMode={isViewer} mediatorName={mediatorName} />
+          <PreJoinScreen
+            userName={userName}
+            onJoin={handleJoin}
+            viewerMode={isViewer}
+            mediatorName={mediatorName}
+            onTakeSystemFocus={takeSystemFocusSync}
+          />
           {!effectiveDailyRoomUrl && (
             <div className="absolute bottom-10 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-slate-900/65 px-4 py-2 text-xs font-semibold text-cyan-400 backdrop-blur-md">
               <div className="h-3 w-3 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
@@ -4284,6 +4279,15 @@ export function TikTokStyleArena({
         }
       `}</style>
       <MeetingAudioOutlet peers={physicalPeers} localSessionId={localParticipant?.sessionId ?? null} />
+
+      <audio
+        ref={systemAudioRef}
+        src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//MQwAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//MQwAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
+        loop
+        playsInline
+        hidden
+        aria-hidden
+      />
 
       {typeof document !== 'undefined' &&
         createPortal(
