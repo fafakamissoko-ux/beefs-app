@@ -244,18 +244,7 @@ export function TikTokStyleArena({
   const { toast } = useToast();
 
   // --- BACKGROUND AUDIO (Tier-1) ---
-  // Déclare le live auprès de l'OS pour empêcher la coupure WebRTC en arrière-plan
   useMediaSession(debateTitle || 'Live Agora', host?.name || 'Ref');
-  const systemAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  const takeSystemFocusSync = useCallback(() => {
-    if (systemAudioRef.current) {
-      systemAudioRef.current.volume = 0.01;
-      systemAudioRef.current.play().then(() => {
-        if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-      }).catch((e) => console.warn('[System Takeover] Audio bloqué:', e));
-    }
-  }, []);
 
   const runBeefManage = useCallback(
     async (body: BeefManageAction) => {
@@ -3141,7 +3130,6 @@ export function TikTokStyleArena({
             onJoin={handleJoin}
             viewerMode={isViewer}
             mediatorName={mediatorName}
-            onTakeSystemFocus={takeSystemFocusSync}
           />
           {!effectiveDailyRoomUrl && (
             <div className="absolute bottom-10 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-slate-900/65 px-4 py-2 text-xs font-semibold text-cyan-400 backdrop-blur-md">
@@ -4281,12 +4269,12 @@ export function TikTokStyleArena({
       <MeetingAudioOutlet peers={physicalPeers} localSessionId={localParticipant?.sessionId ?? null} />
 
       <audio
-        ref={systemAudioRef}
+        id="arena-system-audio"
         src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//MQwAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//MQwAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
         loop
         playsInline
-        hidden
         aria-hidden
+        className="fixed top-0 left-0 w-px h-px opacity-[0.01] pointer-events-none -z-50"
       />
 
       {typeof document !== 'undefined' &&

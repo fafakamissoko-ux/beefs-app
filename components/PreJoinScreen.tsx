@@ -15,7 +15,6 @@ interface PreJoinScreenProps {
   onMutinyInitiate?: () => void;
   onMutinyConfirm?: () => void;
   onMutinyRefuse?: () => void;
-  onTakeSystemFocus?: () => void;
 }
 
 export function PreJoinScreen({
@@ -28,7 +27,6 @@ export function PreJoinScreen({
   onMutinyInitiate,
   onMutinyConfirm,
   onMutinyRefuse,
-  onTakeSystemFocus,
 }: PreJoinScreenProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -139,6 +137,31 @@ export function PreJoinScreen({
     };
   }, [viewerMode, releasePreJoinResources]);
 
+  // [NATIVE OVERRIDE] Hack WebKit iOS pour la prise du Focus Audio.
+  // On court-circuite React pour éviter la perte du jeton "User Gesture" dans les microtasks.
+  useEffect(() => {
+    const handleNativeClick = () => {
+      const audioEl = document.getElementById('arena-system-audio') as HTMLAudioElement;
+      if (audioEl) {
+        audioEl.volume = 0.01;
+        audioEl.play().then(() => {
+          if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+        }).catch((e) => console.warn('[WebKit Override] Audio rejeté:', e));
+      }
+    };
+
+    const btnViewer = document.getElementById('arena-join-viewer');
+    const btnParticipant = document.getElementById('arena-join-participant');
+
+    btnViewer?.addEventListener('click', handleNativeClick, { capture: true });
+    btnParticipant?.addEventListener('click', handleNativeClick, { capture: true });
+
+    return () => {
+      btnViewer?.removeEventListener('click', handleNativeClick, { capture: true });
+      btnParticipant?.removeEventListener('click', handleNativeClick, { capture: true });
+    };
+  }, []);
+
   const toggleCam = () => {
     if (stream) {
       const videoTrack = stream.getVideoTracks()[0];
@@ -204,8 +227,8 @@ export function PreJoinScreen({
               </div>
               <button
                 type="button"
+                id="arena-join-viewer"
                 onClick={() => {
-                  if (onTakeSystemFocus) onTakeSystemFocus();
                   onJoin(null);
                 }}
                 className="w-full touch-manipulation rounded-2xl bg-white py-3 text-sm font-black uppercase tracking-widest text-black transition-[transform,background-color] duration-150 hover:bg-gray-200 active:scale-[0.97] sm:py-3.5 sm:text-base"
@@ -388,8 +411,8 @@ export function PreJoinScreen({
         {/* Join */}
         <button
           type="button"
+          id="arena-join-participant"
           onClick={() => {
-            if (onTakeSystemFocus) onTakeSystemFocus();
             handleJoin();
           }}
           className="w-full touch-manipulation rounded-2xl bg-white py-3 text-sm font-black uppercase tracking-widest text-black transition-[transform,background-color] duration-200 hover:bg-gray-200 active:scale-[0.96] sm:py-3.5 sm:text-base md:py-4"
