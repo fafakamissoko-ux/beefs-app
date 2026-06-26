@@ -245,7 +245,7 @@ export function TikTokStyleArena({
 
   // --- BACKGROUND AUDIO (Tier-1) ---
   // Déclare le live auprès de l'OS pour empêcher la coupure WebRTC en arrière-plan
-  useMediaSession(
+  const { takeSystemFocus } = useMediaSession(
     debateTitle || 'Live Agora',
     host?.name || 'Ref',
     // Si tu as une URL thumbnail dans l'avenir, passe-la ici
@@ -2756,6 +2756,7 @@ export function TikTokStyleArena({
 
   // Join: enregistre le flux pré-acquis puis lance join() via l’effet ci-dessus
   const handleJoin = (preAcquired: MediaStream | null, opts?: { camEnabled: boolean }) => {
+    takeSystemFocus();
     setPreJoinMediaStream(preAcquired);
     setPreJoinCamEnabled(opts?.camEnabled ?? true);
     setHasJoined(true);

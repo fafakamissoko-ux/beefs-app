@@ -1,13 +1,33 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 
-/**
- * Hook enregistrant le flux en cours auprès du système d'exploitation (iOS/Android).
- * Cela permet d'afficher les métadonnées sur l'écran de verrouillage et d'empêcher
- * la suspension du flux WebRTC (Background Audio) lorsque l'app est en arrière-plan.
- */
+// MP3 silencieux ultra-léger (Hack WebKit pour forcer le focus audio)
+const SILENT_MP3 = 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//MQwAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//MQwAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq';
+
+// Singleton pour éviter de multiplier les balises audio
+let dummyAudio: HTMLAudioElement | null = null;
+
 export function useMediaSession(title: string, artist: string, artworkUrl?: string) {
+
+  // Fonction à appeler SYNCHRONIQUEMENT lors du clic utilisateur
+  const takeSystemFocus = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      if (!dummyAudio) {
+        dummyAudio = new Audio(SILENT_MP3);
+        dummyAudio.loop = true;
+        // Volume 0.01 au lieu de 0 pour éviter que les OS trop agressifs ne l'ignorent
+        dummyAudio.volume = 0.01;
+      }
+
+      dummyAudio.play().then(() => {
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'playing';
+        }
+      }).catch((e) => console.warn('[System Takeover] Dummy audio bloqué :', e));
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
@@ -15,32 +35,33 @@ export function useMediaSession(title: string, artist: string, artworkUrl?: stri
         artist: artist || 'Médiateur',
         album: 'Beefs en Direct',
         artwork: [
-          // Fallback sur l'icône de l'app si pas de miniature spécifique
           { src: artworkUrl || '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' }
         ]
       });
 
-      // L'enregistrement de ces handlers "factices" est indispensable sur iOS
-      // pour que l'OS maintienne le contrôle actif du lecteur sur l'écran de verrouillage.
-      // Le flux WebRTC gère lui-même la lecture continue.
       try {
-        navigator.mediaSession.setActionHandler('play', () => { /* No-op */ });
-        navigator.mediaSession.setActionHandler('pause', () => { /* No-op */ });
+        navigator.mediaSession.setActionHandler('play', () => {
+          if (dummyAudio) dummyAudio.play();
+        });
+        navigator.mediaSession.setActionHandler('pause', () => {
+          // Optionnel : on empêche l'OS de mettre l'app en pause globale
+        });
       } catch (error) {
-        console.warn('[MediaSession] Action handlers non supportés', error);
+        console.warn('[MediaSession] Handlers non supportés', error);
       }
     }
 
     return () => {
       if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
         navigator.mediaSession.metadata = null;
-        try {
-          navigator.mediaSession.setActionHandler('play', null);
-          navigator.mediaSession.setActionHandler('pause', null);
-        } catch (error) {
-          /* ignore */
-        }
+        navigator.mediaSession.playbackState = 'none';
+      }
+      if (dummyAudio) {
+        dummyAudio.pause();
+        dummyAudio = null;
       }
     };
   }, [title, artist, artworkUrl]);
+
+  return { takeSystemFocus };
 }
