@@ -244,7 +244,7 @@ export function TikTokStyleArena({
   const { toast } = useToast();
 
   // --- BACKGROUND AUDIO (Tier-1) ---
-  useMediaSession(debateTitle || 'Live Agora', host?.name || 'Ref');
+  const { startSystemAudio } = useMediaSession(debateTitle || 'Live Agora', host?.name || 'Ref');
 
   const runBeefManage = useCallback(
     async (body: BeefManageAction) => {
@@ -4267,15 +4267,6 @@ export function TikTokStyleArena({
         }
       `}</style>
       <MeetingAudioOutlet peers={physicalPeers} localSessionId={localParticipant?.sessionId ?? null} />
-
-      <audio
-        id="arena-system-audio"
-        src="data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//MQwAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq//MQwAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
-        loop
-        playsInline
-        aria-hidden
-        className="fixed top-0 left-0 w-px h-px opacity-[0.01] pointer-events-none -z-50"
-      />
 
       {typeof document !== 'undefined' &&
         createPortal(
