@@ -36,6 +36,7 @@ import { supabase } from '@/lib/supabase/client';
 import { userIdsEqual } from '@/lib/user-id-equal';
 import { useToast } from '@/components/Toast';
 import { useMediaSession } from '@/hooks/useMediaSession';
+import { useWakeLock } from '@/hooks/useWakeLock';
 import { sanitizeMessage } from '@/lib/security';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import { postBeefManage, type BeefManageAction } from '@/lib/beef-manage-client';
@@ -245,6 +246,9 @@ export function TikTokStyleArena({
 
   // --- BACKGROUND AUDIO (Tier-1) ---
   const { startSystemAudio } = useMediaSession(debateTitle || 'Live Agora', host?.name || 'Ref');
+
+  // --- ANTI-VEILLE ÉCRAN (Tier-1) ---
+  useWakeLock(true);
 
   const runBeefManage = useCallback(
     async (body: BeefManageAction) => {
