@@ -2,47 +2,29 @@
 
 import { useEffect, useCallback } from 'react';
 
-// Singletons hors du cycle de vie React pour garantir un contexte unique à travers l'application
-let webAudioCtx: AudioContext | null = null;
-let silenceNode: OscillatorNode | null = null;
-
-type WindowWithWebkitAudio = Window & {
-  webkitAudioContext?: typeof AudioContext;
-};
+// Singleton persistant pour maintenir le lecteur réseau actif au niveau de l'OS
+let systemNetworkAudio: HTMLAudioElement | null = null;
 
 export function useMediaSession(title: string, artist: string, artworkUrl?: string) {
-  // Cette fonction démarre le moteur matériel et doit être appelée sur un geste utilisateur
-  const startSystemAudio = useCallback(() => {
+  // Fonction asynchrone déclenchée APRÈS la destruction du vu-mètre
+  const startSystemAudio = useCallback(async () => {
     if (typeof window === 'undefined') return;
 
     try {
-      if (!webAudioCtx) {
-        const AudioContextClass =
-          window.AudioContext ?? (window as WindowWithWebkitAudio).webkitAudioContext;
-        if (!AudioContextClass) return;
-        webAudioCtx = new AudioContextClass();
+      if (!systemNetworkAudio) {
+        // Exige un fichier /public/sounds/silence.mp3
+        systemNetworkAudio = new Audio('/sounds/silence.mp3');
+        systemNetworkAudio.loop = true;
+        systemNetworkAudio.volume = 0.01;
       }
 
-      if (webAudioCtx.state === 'suspended') {
-        void webAudioCtx.resume();
-      }
-
-      // Création du flux de silence cryptographique si non existant
-      if (!silenceNode) {
-        silenceNode = webAudioCtx.createOscillator();
-        const gainNode = webAudioCtx.createGain();
-        gainNode.gain.value = 0; // Silence absolu
-
-        silenceNode.connect(gainNode);
-        gainNode.connect(webAudioCtx.destination);
-        silenceNode.start();
-      }
+      await systemNetworkAudio.play();
 
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'playing';
       }
     } catch (error) {
-      console.warn('[Web Audio Engine] Impossible de démarrer le moteur:', error);
+      console.warn('[Hybrid Engine] Audio rejeté par WebKit:', error);
     }
   }, []);
 
@@ -55,18 +37,17 @@ export function useMediaSession(title: string, artist: string, artworkUrl?: stri
         artwork: [{ src: artworkUrl || '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' }],
       });
 
-      // Handlers indispensables pour simuler l'interactivité sur le Lock Screen
       try {
         navigator.mediaSession.setActionHandler('play', () => {
-          if (webAudioCtx && webAudioCtx.state === 'suspended') {
-            void webAudioCtx.resume();
+          if (systemNetworkAudio) {
+            void systemNetworkAudio.play();
           }
         });
         navigator.mediaSession.setActionHandler('pause', () => {
-          /* no-op : on empêche la pause OS */
+          // Intercepte la pause pour empêcher la coupure background
         });
       } catch {
-        // Fallback muet
+        // Fallback
       }
     }
 
@@ -75,7 +56,6 @@ export function useMediaSession(title: string, artist: string, artworkUrl?: stri
         navigator.mediaSession.metadata = null;
         navigator.mediaSession.playbackState = 'none';
       }
-      // On ne coupe pas le contexte audio ici pour survivre aux re-renders de l'arène
     };
   }, [title, artist, artworkUrl]);
 

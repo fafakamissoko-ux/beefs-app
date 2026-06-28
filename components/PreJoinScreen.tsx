@@ -15,8 +15,8 @@ interface PreJoinScreenProps {
   onMutinyInitiate?: () => void;
   onMutinyConfirm?: () => void;
   onMutinyRefuse?: () => void;
-  /** Démarre le moteur Web Audio (geste utilisateur requis — iOS lock screen). */
-  onTakeSystemFocus?: () => void;
+  /** Démarre le moteur hybride réseau (geste utilisateur requis — iOS lock screen). */
+  onTakeSystemFocus?: () => Promise<void>;
 }
 
 export function PreJoinScreen({
@@ -160,13 +160,22 @@ export function PreJoinScreen({
     }
   };
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     mediaHandedOffRef.current = true;
     const acquired = streamRef.current ?? stream;
     if (!camEnabled) {
       acquired?.getVideoTracks().forEach((t) => t.stop());
     }
-    /** Ne pas stopper les pistes : Daily les réutilise ; on libère seulement preview + AudioContext. */
+
+    // 1. Destruction IMMÉDIATE du contexte audio local (vu-mètre) pour libérer le thread iOS
+    closeAudioContext();
+
+    // 2. Lancement du Moteur Hybride sur le Lock Screen (sans collision)
+    if (onTakeSystemFocus) {
+      await onTakeSystemFocus();
+    }
+
+    // 3. Libération du reste de l'interface et passage à Daily
     releasePreJoinResources({ stopTracks: false });
     onJoin(acquired, { camEnabled });
   };
@@ -206,7 +215,11 @@ export function PreJoinScreen({
               <button
                 type="button"
                 id="arena-join-viewer"
-                onClick={() => {
+                onClick={async () => {
+                  // Le spectateur n'a pas de vu-mètre à détruire, on lance directement
+                  if (onTakeSystemFocus) {
+                    await onTakeSystemFocus();
+                  }
                   onJoin(null);
                 }}
                 className="w-full touch-manipulation rounded-2xl bg-white py-3 text-sm font-black uppercase tracking-widest text-black transition-[transform,background-color] duration-150 hover:bg-gray-200 active:scale-[0.97] sm:py-3.5 sm:text-base"
@@ -391,8 +404,8 @@ export function PreJoinScreen({
           type="button"
           id="arena-join-participant"
           onClick={() => {
-            onTakeSystemFocus?.();
-            handleJoin();
+            // La séquence est désormais gérée dans handleJoin()
+            void handleJoin();
           }}
           className="w-full touch-manipulation rounded-2xl bg-white py-3 text-sm font-black uppercase tracking-widest text-black transition-[transform,background-color] duration-200 hover:bg-gray-200 active:scale-[0.96] sm:py-3.5 sm:text-base md:py-4"
         >
