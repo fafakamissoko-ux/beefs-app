@@ -34,7 +34,7 @@ export function useMediaSession(title: string, artist: string, artworkUrl?: stri
         title: title || 'Live Agora',
         artist: artist || 'Médiateur',
         album: 'Beefs en Direct',
-        artwork: [{ src: artworkUrl || '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' }],
+        artwork: [{ src: artworkUrl || '/icon-512.png', sizes: '512x512', type: 'image/png' }],
       });
 
       try {

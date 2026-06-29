@@ -36,7 +36,7 @@ const siteUrl =
 
 export const metadata: Metadata = {
   title: {
-    default: "Beefs - L'Agora du règlement de comptes",
+    default: "Beefs - L'Agora des règlements de comptes",
     template: "%s | Beefs",
   },
   description:
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     title: "Beefs",
   },
   openGraph: {
-    title: "Beefs - L'Agora du règlement de comptes",
+    title: "Beefs - L'Agora des règlements de comptes",
     description:
       "L'arène ultime pour régler tes conflits en direct. Lance un beef, affronte tes adversaires sous l'arbitrage d'un Ref et laisse la communauté trancher.",
     type: "website",
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Beefs - L'Agora du règlement de comptes",
+    title: "Beefs - L'Agora des règlements de comptes",
     description:
       "L'arène ultime pour régler tes conflits en direct. Lance un beef, affronte tes adversaires sous l'arbitrage d'un Ref et laisse la communauté trancher.",
   },

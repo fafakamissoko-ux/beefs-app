@@ -45,7 +45,7 @@ export default function SplashScreen() {
           className="relative mb-6"
         >
           <div className="absolute inset-0 animate-pulse rounded-full bg-cyan-500/20 blur-2xl" />
-          <BeefLogo size={100} className="drop-shadow-[0_0_30px_rgba(0,240,255,0.8)]" />
+          <BeefLogo size={100} />
         </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
@@ -59,7 +59,7 @@ export default function SplashScreen() {
           animate={{ opacity: 1 }}
           className="text-cyan-400 text-[11px] md:text-sm font-black uppercase tracking-[0.2em] shadow-glow-brand mb-12 text-center px-4"
         >
-          L&apos;Agora du règlement de comptes
+          L&apos;Agora des règlements de comptes
         </motion.p>
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-1 w-48 overflow-hidden rounded-full bg-white/10">

@@ -1,11 +1,11 @@
 {
-  "name": "Beefs - L'Agora du règlement de comptes",
+  "name": "Beefs - L'Agora des règlements de comptes",
   "short_name": "Beefs",
   "description": "L'arène ultime pour régler tes conflits en direct avec un Ref.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
-  "theme_color": "#E83A14",
+  "theme_color": "#020617",
   "orientation": "portrait",
   "icons": [
     {
