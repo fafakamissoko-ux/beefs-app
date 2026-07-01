@@ -27,6 +27,7 @@ import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { VsTransition } from './VsTransition';
 import { ChatPanel } from './ChatPanel';
 import { PreJoinScreen } from './PreJoinScreen';
+import { ArenaChatMessages } from './ArenaChatMessages';
 import { ArenaLayoutManager } from '@/components/Arena/ArenaLayoutManager';
 import { FeatureGuide } from './FeatureGuide';
 import { ViewerListModal } from './ViewerListModal';
@@ -208,22 +209,6 @@ interface UserProfile {
     points: number;
   };
 }
-
-const getUsernameColor = (username: string) => {
-  const colors = [
-    'text-cyan-400',
-    'text-emerald-400',
-    'text-amber-400',
-    'text-cyan-400',
-    'text-rose-400',
-    'text-sky-400',
-  ];
-  let hash = 0;
-  for (let i = 0; i < username.length; i++) {
-    hash = username.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-};
 
 export function TikTokStyleArena({
   host,
@@ -462,10 +447,6 @@ export function TikTokStyleArena({
   const [dockPickerPos, setDockPickerPos] = useState<{ bottom: number; right: number } | null>(null);
   /** Colonne emoji / cadeaux / partage — fermeture au tap extérieur */
   const reactionDockRef = useRef<HTMLDivElement | null>(null);
-  const chatMessagesScrollRef = useRef<HTMLDivElement>(null);
-  const chatMessagesEndRef = useRef<HTMLDivElement>(null);
-  const chatMessagesMobileScrollRef = useRef<HTMLDivElement>(null);
-  const chatMessagesMobileEndRef = useRef<HTMLDivElement>(null);
   const announcementClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Accumulateur d’Aura (réactions / tap intégrés) — flush réseau ~1,5 s pour limiter le flood. */
   const auraBufferRef = useRef<AuraBatchPayload>(createZeroAuraBatch());
@@ -588,40 +569,6 @@ export function TikTokStyleArena({
     document.addEventListener('pointerdown', onDown, true);
     return () => document.removeEventListener('pointerdown', onDown, true);
   }, [soundboardExpanded]);
-
-  const scrollChatToEnd = useCallback(() => {
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        // Desktop
-        const elDesktop = chatMessagesScrollRef.current;
-        if (elDesktop) {
-          elDesktop.scrollTop = elDesktop.scrollHeight;
-        }
-        chatMessagesEndRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
-
-        // Mobile
-        const elMobile = chatMessagesMobileScrollRef.current;
-        if (elMobile) {
-          elMobile.scrollTop = elMobile.scrollHeight;
-        }
-        chatMessagesMobileEndRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
-      });
-    });
-  }, []);
-
-  /** Clavier mobile (visualViewport) : la hauteur du dock change — rescroll + évite masque qui « mange » les bulles. */
-  useEffect(() => {
-    const vv = window.visualViewport;
-    const onLayoutChange = () => scrollChatToEnd();
-    vv?.addEventListener('resize', onLayoutChange);
-    vv?.addEventListener('scroll', onLayoutChange);
-    window.addEventListener('resize', onLayoutChange);
-    return () => {
-      vv?.removeEventListener('resize', onLayoutChange);
-      vv?.removeEventListener('scroll', onLayoutChange);
-      window.removeEventListener('resize', onLayoutChange);
-    };
-  }, [scrollChatToEnd]);
 
   useEffect(() => {
     if (!gloryChallengerSlot) return;
@@ -2674,11 +2621,6 @@ export function TikTokStyleArena({
           content: cleanContent,
           initial: senderInitial,
         });
-        queueMicrotask(() => {
-          scrollChatToEnd();
-          window.setTimeout(() => scrollChatToEnd(), 50);
-          window.setTimeout(() => scrollChatToEnd(), 200);
-        });
         arenaOutboundRef.current.broadcastMessage?.({
           user_name: userName,
           content: cleanContent,
@@ -3394,7 +3336,7 @@ export function TikTokStyleArena({
           )}
         </header>
         <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
-          <ArenaChatMessages endRef={chatMessagesEndRef} isMobile={false} scrollRef={chatMessagesScrollRef} />
+          <ArenaChatMessages isMobile={false} />
 
           <div id="dock-desktop" className="mt-auto flex w-full shrink-0 items-center gap-2 pl-2 pr-3 py-3 bg-slate-900/40 backdrop-blur-sm border-t border-white/10 shadow-lg">
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full border border-white/[0.05] bg-black/40 px-4 py-2.5 text-[13px] text-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] placeholder-white/30 focus:bg-black/60 focus:outline-none" />
@@ -3536,7 +3478,7 @@ export function TikTokStyleArena({
             data-cinema-stay
             className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end pt-32 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none"
           >
-          <ArenaChatMessages endRef={chatMessagesMobileEndRef} isMobile scrollRef={chatMessagesMobileScrollRef} />
+          <ArenaChatMessages isMobile />
           <div id="dock-mobile" className="pointer-events-auto mt-auto flex w-full shrink-0 items-center gap-2 px-3 pb-2">
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full border border-white/[0.05] bg-black/40 px-4 py-2.5 text-[13px] text-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] placeholder-white/30 focus:bg-black/60 focus:outline-none" />
             <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/10 text-white shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-transform active:scale-95 disabled:opacity-30">😀</button>
@@ -4282,70 +4224,6 @@ export function TikTokStyleArena({
 }
 
 // --- COMPOSANTS VOLATILS ZUSTAND ---
-
-export function ArenaChatMessages({
-  isMobile,
-  scrollRef,
-  endRef,
-}: {
-  isMobile?: boolean;
-  scrollRef: React.RefObject<HTMLDivElement>;
-  endRef: React.RefObject<HTMLDivElement>;
-}) {
-  const messages = useArenaVolatileStore((s) => s.messages);
-
-  useLayoutEffect(() => {
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        const el = scrollRef.current;
-        if (el) {
-          el.scrollTop = el.scrollHeight;
-        }
-        endRef.current?.scrollIntoView({ block: 'end', behavior: 'auto' });
-      });
-    });
-  }, [messages, scrollRef, endRef]);
-
-  return (
-    <div
-      ref={scrollRef}
-      className={
-        isMobile
-          ? 'pointer-events-none w-fit max-w-[85%] min-w-[50%] max-h-[30vh] overflow-y-auto overscroll-contain touch-pan-y px-3 mb-2 flex flex-col hide-scrollbar'
-          : 'flex-1 overflow-y-auto pl-2 pr-4 py-2 hide-scrollbar'
-      }
-    >
-      <div className="mt-auto flex flex-col justify-end">
-        {messages.map((msg) =>
-          isMobile ? (
-            <div key={msg.id} className="mb-2 pointer-events-auto w-fit max-w-[70%] leading-tight">
-              <span
-                className={`text-[11px] font-bold mr-2 drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${getUsernameColor(msg.user_name)}`}
-              >
-                {msg.user_name}
-              </span>
-              <span className="text-[13px] text-white font-medium break-all drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
-                {msg.content}
-              </span>
-            </div>
-          ) : (
-            <div key={msg.id} className="mb-3">
-              <span
-                className={`block mb-1 ml-2 text-[9px] font-black uppercase tracking-widest ${getUsernameColor(msg.user_name)}`}
-              >
-                {msg.user_name}
-              </span>
-              <div className="inline-block rounded-2xl rounded-tl-sm border border-white/10 bg-white/10 px-3 py-2 text-[13px] leading-snug text-white/90 shadow-md">
-                {msg.content}
-              </div>
-            </div>
-          ),
-        )}
-        <div ref={endRef} className="h-px w-full" />
-      </div>
-    </div>
-  );
-}
 
 export function ArenaFlyingReactions() {
   const reactions = useArenaVolatileStore((s) => s.reactions);

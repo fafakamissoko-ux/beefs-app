@@ -38,8 +38,8 @@ export const useArenaVolatileStore = create<ArenaVolatileStore>((set) => ({
   addMessage: (msg) => set((state) => {
     // Déduplication stricte pour éviter les fantômes
     if (state.messages.some(m => m.id === msg.id)) return state;
-    // Capacité maximale de 40 messages en mémoire pour préserver la RAM
-    return { messages: [...state.messages, { ...msg, timestamp: Date.now() }].slice(-40) };
+    // Capacité maximale de 80 messages en mémoire pour préserver la RAM
+    return { messages: [...state.messages, { ...msg, timestamp: Date.now() }].slice(-80) };
   }),
   deleteMessage: (id) => set((state) => ({
     messages: state.messages.filter(m => m.id !== id)
