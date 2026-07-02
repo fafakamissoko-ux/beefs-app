@@ -48,8 +48,9 @@ export function getNexusChromeUiPos(index: number, tileCount: number): string {
   if (tileCount === 4 && index === 3) {
     return 'top-2 right-2 sm:top-4 sm:right-4 flex-col items-end';
   }
-  if (tileCount >= 5 && index % 2 === 1) {
-    return 'top-2 right-2 sm:top-4 sm:right-4 flex-row-reverse items-start';
+  if (tileCount >= 5) {
+    // Pour 5 ou 6 joueurs, les tuiles sont trop étroites. On centre le chrome en haut.
+    return 'top-2 left-1/2 -translate-x-1/2 flex-col items-center max-w-[90%]';
   }
-  return 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-start';
+  return 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-start max-w-[90%]';
 }

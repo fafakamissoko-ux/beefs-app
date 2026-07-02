@@ -113,8 +113,8 @@ export function ArenaVideoSurface({
   ) : null;
 
   const pseudoBadge = (
-    <div className="flex max-w-full flex-col items-center gap-1">
-      <div className="flex max-w-full items-center gap-2 rounded-full border border-white/[0.08] bg-slate-900/40 px-3 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px] sm:px-4 sm:py-2">
+    <div className="flex min-w-0 max-w-full flex-col items-center gap-1">
+      <div className="flex min-w-0 max-w-full overflow-hidden items-center gap-2 rounded-full border border-white/[0.08] bg-slate-900/40 px-3 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-[40px] sm:px-4 sm:py-2">
         {tile.isLocal && webrtcNetworkQuality && webrtcNetworkQuality !== 'good' && (
           <div className="shrink-0 flex items-center justify-center" title="Réseau instable">
             <div
@@ -128,7 +128,7 @@ export function ArenaVideoSurface({
             e.stopPropagation();
             void onOpenProfile(tile.name, tile.arenaUserId);
           }}
-          className="max-w-[70px] sm:max-w-[120px] truncate inline-block text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]"
+          className="min-w-0 max-w-[100px] sm:max-w-[150px] truncate inline-block text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]"
         >
           @{tile.name}
         </button>
