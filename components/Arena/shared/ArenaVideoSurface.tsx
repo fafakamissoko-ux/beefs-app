@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Mic, Video, SwitchCamera } from 'lucide-react';
+import { Mic, Video } from 'lucide-react';
 import { ParticipantVideo } from '@/components/ParticipantVideo';
 import type { ArenaSupportSlotId, ChallengerSlotId } from '@/lib/arena-slots';
 import type { ArenaTileVM } from '../types';
@@ -54,7 +54,6 @@ export function ArenaVideoSurface({
   onToggleMic,
   onToggleCam,
   onToast,
-  onFlipCamera,
   webrtcNetworkQuality,
   isActiveSpeaker,
 }: ArenaVideoSurfaceProps) {
@@ -110,19 +109,6 @@ export function ArenaVideoSurface({
       >
         <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.75} />
       </button>
-      {onFlipCamera && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onFlipCamera();
-          }}
-          className="flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-[60px] transition-all hover:bg-white/20 active:scale-95 shadow-[0_4px_16px_rgba(255,255,255,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)] md:hidden"
-          title="Basculer la caméra"
-        >
-          <SwitchCamera className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.75} />
-        </button>
-      )}
     </div>
   ) : null;
 

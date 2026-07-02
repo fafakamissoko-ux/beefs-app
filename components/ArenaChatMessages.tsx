@@ -40,13 +40,13 @@ export function ArenaChatMessages({ isMobile }: ArenaChatMessagesProps) {
 
   useLayoutEffect(() => {
     if (endRef.current) {
-      endRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      endRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
     }
   }, [messages]);
 
   const containerClasses = isMobile
-    ? 'pointer-events-none w-fit max-w-[85%] min-w-[50%] max-h-[30vh] overflow-y-auto overscroll-contain touch-pan-y px-3 mb-2 flex flex-col hide-scrollbar'
-    : 'flex-1 overflow-y-auto pl-2 pr-4 py-2 hide-scrollbar';
+    ? 'pointer-events-auto w-fit max-w-[70vw] h-full flex-1 overflow-y-auto [-webkit-overflow-scrolling:touch] px-3 mb-2 flex flex-col hide-scrollbar mask-image-fade-top'
+    : 'flex-1 overflow-y-auto pl-2 pr-4 py-2 hide-scrollbar mask-image-fade-top';
 
   return (
     <div ref={scrollRef} className={containerClasses}>

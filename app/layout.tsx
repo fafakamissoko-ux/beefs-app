@@ -48,6 +48,10 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   metadataBase: new URL(siteUrl),
   alternates: { canonical: "/" },
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon-192.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
