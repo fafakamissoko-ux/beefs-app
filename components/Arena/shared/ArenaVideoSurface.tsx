@@ -128,9 +128,12 @@ export function ArenaVideoSurface({
             e.stopPropagation();
             void onOpenProfile(tile.name, tile.arenaUserId);
           }}
-          className="min-w-0 max-w-[100px] sm:max-w-[150px] truncate inline-block text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]"
+          className={`relative min-w-0 flex items-center overflow-hidden w-[65px] sm:w-[120px] text-left text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]`}
         >
-          @{tile.name}
+          {/* Si grille 5/6 joueurs ET nom long (> 8 chars), activer marquee. Sinon, truncate simple */}
+          <span className={`${tileCount >= 5 && tile.name.length > 8 ? 'animate-marquee-pseudo' : 'truncate w-full'}`}>
+            @{tile.name}
+          </span>
         </button>
         {!tile.panel && (
           <span className="shrink-0 rounded border border-rose-500/20 bg-rose-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase text-rose-400">

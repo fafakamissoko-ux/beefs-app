@@ -4,7 +4,7 @@
   "description": "L'arène ultime pour régler tes conflits en direct avec un Ref.",
   "start_url": "/?v=2",
   "display": "standalone",
-  "background_color": "#000000",
+  "background_color": "#020617",
   "theme_color": "#020617",
   "orientation": "portrait",
   "icons": [

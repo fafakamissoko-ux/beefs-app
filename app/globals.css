@@ -344,3 +344,18 @@ textarea.beefs-field-invalid {
   border-color: rgba(239, 68, 68, 0.75) !important;
   box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35);
 }
+
+/* Animation Marquee pour Pseudos Longs (Phase N.1) */
+@keyframes marquee-pseudo {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(-100% + 80px)); } /* 80px est la largeur visible estimée */
+}
+.animate-marquee-pseudo {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee-pseudo 4s linear infinite alternate;
+}
+/* Annulation de l'animation si le texte est court (Fallback) */
+.animate-marquee-pseudo:hover {
+  animation-play-state: paused;
+}
