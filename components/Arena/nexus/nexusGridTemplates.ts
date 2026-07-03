@@ -10,9 +10,9 @@ export function getNexusGridClass(tileCount: number): string {
     case 4:
       return 'grid-cols-2 grid-rows-2';
     case 5:
-      return 'grid-cols-6 grid-rows-2';
+      return 'grid-cols-6 grid-rows-2'; // 6 colonnes virtuelles pour centrer la ligne du bas
     case 6:
-      return 'grid-cols-3 grid-rows-2';
+      return 'grid-cols-3 grid-rows-2'; // 3 colonnes symétriques
     default:
       return 'grid-cols-1 grid-rows-1';
   }
@@ -21,10 +21,11 @@ export function getNexusGridClass(tileCount: number): string {
 /** Placement d'une cellule dans la grille Nexus. */
 export function getNexusCellClass(index: number, tileCount: number): string {
   if (tileCount === 3 && index === 2) return 'col-span-2';
+  // Disposition 5 joueurs : 3 en haut, 2 centrés en bas (utilise 6 colonnes virtuelles)
   if (tileCount === 5) {
-    if (index <= 2) return 'col-span-2';
-    if (index === 3) return 'col-span-2 col-start-2';
-    if (index === 4) return 'col-span-2 col-start-4';
+    if (index <= 2) return 'col-span-2'; // Ligne 1 : Les 3 tuiles prennent 2 cols chacune
+    if (index === 3) return 'col-span-2 col-start-2'; // Ligne 2 : Tuile 4 centrée gauche
+    if (index === 4) return 'col-span-2 col-start-4'; // Ligne 2 : Tuile 5 centrée droite
   }
   return '';
 }

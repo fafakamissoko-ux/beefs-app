@@ -26,7 +26,7 @@ export function NexusGrid({
   const gridClass = getNexusGridClass(tileCount);
 
   return (
-    <div className={`relative h-full w-full grid gap-1 sm:gap-2 ${gridClass}`}>
+    <div className={`relative h-full w-full grid gap-1 sm:gap-2 min-w-0 overflow-hidden ${gridClass}`}>
       {tiles.map((tile, idx) => {
         const isSpeaking =
           speakingTurnActive && effectiveHotMicSpeakerSlot === tile.slot;
