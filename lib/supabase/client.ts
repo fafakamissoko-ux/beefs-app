@@ -9,6 +9,28 @@ export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 export type Database = {
   public: {
     Tables: {
+      users: {
+        Row: {
+          id: string;
+          username: string;
+          points: number;
+          // (autres champs omis pour concision)
+        };
+        Insert: Partial<Database['public']['Tables']['users']['Row']>;
+        Update: Partial<Database['public']['Tables']['users']['Row']>;
+      };
+      transactions: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: string;
+          amount: number;
+          balance_after: number;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['transactions']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['transactions']['Insert']>;
+      };
       rooms: {
         Row: {
           id: string;
