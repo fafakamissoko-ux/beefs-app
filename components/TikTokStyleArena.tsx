@@ -88,6 +88,8 @@ import {
   type ArenaRealtimeCallbacks,
   type StructuredDebateBroadcastPayload,
 } from '@/hooks/useArenaRealtime';
+import { useWalletStore } from '@/lib/stores/walletStore';
+import { GIFT_CATALOG } from '@/lib/constants/gifts';
 
 const SFX_MAP: Record<string, string> = {
   horn: '/sounds/horn.mp3',
@@ -347,7 +349,9 @@ export function TikTokStyleArena({
   const challengersEverJoinedRef = useRef(false);
   /** Évite de spammer le toast « challengers partis » tant que la room reste vide */
   const challengersAllLeftNotifiedRef = useRef(false);
-  const [userPoints, setUserPoints] = useState(0);
+  const walletBalance = useWalletStore((s) => s.balance);
+  const walletInit = useWalletStore((s) => s.initialize);
+  const optimisticDebit = useWalletStore((s) => s.optimisticDebit);
   const [profileFollowsTarget, setProfileFollowsTarget] = useState(false);
 
   // Speaking turn state
@@ -743,22 +747,8 @@ export function TikTokStyleArena({
     const height = 750;
     const left = (window.innerWidth / 2) - (width / 2);
     const top = (window.innerHeight / 2) - (height / 2);
-    const popup = window.open('/buy-points', 'StripeCheckout', `width=${width},height=${height},top=${top},left=${left}`);
-    
-    const initialPoints = userPoints;
-    const pollTimer = setInterval(async () => {
-      if (popup?.closed) {
-        clearInterval(pollTimer);
-      }
-      const { data } = await supabase.from('users').select('points').eq('id', userId).single();
-      if (data && data.points > initialPoints) {
-        setUserPoints(data.points);
-        toast('Lingots crédités !', 'success');
-        clearInterval(pollTimer);
-        if (popup && !popup.closed) popup.close();
-      }
-    }, 3000);
-  }, [userId, userPoints, toast]);
+    window.open('/buy-points', 'StripeCheckout', `width=${width},height=${height},top=${top},left=${left}`);
+  }, []);
 
   // Participant roles from DB — maps Daily.co userNames to beef roles
   const [participantRoles, setParticipantRoles] = useState<Record<string, BeefParticipantRowMeta>>({});
@@ -1318,14 +1308,10 @@ export function TikTokStyleArena({
     }
   }, [isHost, endBeef]);
 
-  // Load user points
   useEffect(() => {
     if (!userId) return;
-    (async () => {
-      const { data } = await supabase.from('users').select('points').eq('id', userId).single();
-      if (data) setUserPoints(data.points || 0);
-    })();
-  }, [userId]);
+    void walletInit(userId);
+  }, [userId, walletInit]);
 
   const effectiveDailyRoomUrl = dailyRoomUrl ?? null;
   const meetingTokenForDaily = dailyMeetingToken ?? null;
@@ -3288,7 +3274,7 @@ export function TikTokStyleArena({
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Mon Solde</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <Flame className="h-4 w-4 text-cyan-400 drop-shadow-md" />
-                    <span className="font-black text-white">{userPoints} Lingots</span>
+                    <span className="font-black text-white">{walletBalance} Lingots</span>
                   </div>
                 </div>
                 <button type="button" onClick={() => { setShowArenaMenu(false); goBuyPoints(); }} className="flex items-center gap-1.5 rounded-full bg-prestige-gold px-3 py-1.5 text-xs font-bold text-black shadow-[0_0_15px_rgba(212,175,55,0.4)] transition-colors hover:bg-yellow-500">
@@ -3719,34 +3705,23 @@ export function TikTokStyleArena({
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {[
-                    { emoji: '🧂', label: 'Sel', id: 'salt', cost: 1 },
-                    { emoji: '🎤', label: 'Mic Drop', id: 'mic_drop', cost: 5 },
-                    { emoji: '🌶️', label: 'Spicy', id: 'spicy', cost: 10 },
-                    { emoji: '🧠', label: 'Big Brain', id: 'big_brain', cost: 25 },
-                    { emoji: '⚡', label: 'Foudre', id: 'lightning', cost: 50 },
-                    { emoji: '🥊', label: 'K.O.', id: 'ko', cost: 99 },
-                    { emoji: '💣', label: 'Banger', id: 'banger', cost: 199 },
-                    { emoji: '🐺', label: 'Loup', id: 'wolf', cost: 500 },
-                    { emoji: '☄️', label: 'Météore', id: 'meteor', cost: 1000 },
-                    { emoji: '🌋', label: 'Éruption', id: 'volcano', cost: 2500 },
-                    { emoji: '🏆', label: 'Champion', id: 'champion', cost: 5000 },
-                    { emoji: '🐐', label: 'G.O.A.T', id: 'goat', cost: 10000 },
-                  ].map((gift) => (
+                  {GIFT_CATALOG.map((gift) => (
                     <button
-                      key={gift.label}
+                      key={gift.id}
                       type="button"
                       onClick={async () => {
-                        if (userPoints < gift.cost) {
-                          toast(`Lingots insuffisants — il te manque ${gift.cost - userPoints} Lingots (solde ${userPoints})`, 'error', {
+                        if (!optimisticDebit(gift.cost)) {
+                          toast(`Lingots insuffisants — il te manque ${gift.cost - walletBalance} Lingots`, 'error', {
                             action: { label: 'Recharger', onClick: () => goBuyPoints() },
                           });
                           return;
                         }
+
                         try {
                           const targetUserId = giftTarget || giftRecipients[0]?.id || '';
                           if (!targetUserId) {
                             toast('Participant non connecté', 'error');
+                            useWalletStore.getState().sync();
                             return;
                           }
 
@@ -3754,6 +3729,7 @@ export function TikTokStyleArena({
                             giftRecipients.find((r) => r.id === targetUserId)?.label ?? host.name;
 
                           const { data: { session } } = await supabase.auth.getSession();
+
                           const res = await fetch('/api/gifts/send', {
                             method: 'POST',
                             headers: {
@@ -3767,18 +3743,19 @@ export function TikTokStyleArena({
                               points_amount: gift.cost,
                             }),
                           });
+
                           const data = await res.json();
                           if (!res.ok) throw new Error(data.error);
-                          setUserPoints(data.newBalance);
+
                           const medBoost = Math.min(25, 4 + Math.floor(gift.cost / 40));
                           setAuraMed((v) => Math.min(300, v + medBoost));
-                          if (gift.cost >= 50) {
-                            setGiftPrestigeFlash((k) => k + 1);
-                          }
+                          if (gift.cost >= 50) setGiftPrestigeFlash((k) => k + 1);
+
                           const giftKey =
                             data.giftId != null ? String(data.giftId) : `gift_${Date.now()}`;
                           const msgContent = `a offert ${gift.emoji} ${gift.label} (${gift.cost} Lingots) à ${targetName}`;
                           const initial = userName?.[0]?.toUpperCase() || '?';
+
                           addRemoteMessage(userName, msgContent, initial, giftKey);
                           arenaOutboundRef.current.broadcastMessage?.({
                             user_name: userName,
@@ -3786,6 +3763,7 @@ export function TikTokStyleArena({
                             initial,
                             id: giftKey,
                           });
+
                           if (gift.cost >= 500) {
                             const bigPayload: ArenaBigGiftPayload = {
                               cost: gift.cost,
@@ -3799,14 +3777,9 @@ export function TikTokStyleArena({
                           }
                           toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
                         } catch (err: unknown) {
+                          useWalletStore.getState().sync();
                           const m = err instanceof Error ? err.message : "Erreur lors de l'envoi";
-                          if (typeof m === 'string' && m.toLowerCase().includes('insuffisant')) {
-                            toast(m, 'error', {
-                              action: { label: 'Recharger', onClick: () => goBuyPoints() },
-                            });
-                          } else {
-                            toast(m, 'error');
-                          }
+                          toast(m, 'error');
                         }
                         setShowGiftPicker(false);
                       }}
@@ -4078,7 +4051,7 @@ export function TikTokStyleArena({
                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Mon Solde</p>
                     <div className="mt-1 flex items-center gap-1.5">
                       <Flame className="h-5 w-5 text-cyan-400 drop-shadow-md" />
-                      <span className="text-xl font-black text-white">{userPoints} <span className="text-sm font-bold text-gray-400">Lingots</span></span>
+                      <span className="text-xl font-black text-white">{walletBalance} <span className="text-sm font-bold text-gray-400">Lingots</span></span>
                     </div>
                   </div>
                   <button type="button" onClick={() => { setShowArenaMenu(false); goBuyPoints(); }} className="flex items-center gap-1.5 rounded-full bg-prestige-gold px-4 py-2 text-xs font-bold text-black shadow-[0_0_15px_rgba(212,175,55,0.4)] transition-colors hover:bg-yellow-500">
