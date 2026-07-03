@@ -1,16 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { BeefLogo } from '@/components/BeefLogo';
 
 export default function SplashScreen() {
   const router = useRouter();
-  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const interval = setInterval(() => setProgress((p) => (p >= 100 ? 100 : p + 2)), 20);
     const timer = setTimeout(async () => {
       const { supabase } = await import('@/lib/supabase/client');
       const {
@@ -29,7 +27,6 @@ export default function SplashScreen() {
       }
     }, 1500);
     return () => {
-      clearInterval(interval);
       clearTimeout(timer);
     };
   }, [router]);

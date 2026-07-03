@@ -36,11 +36,9 @@ export function getNexusChromeUiPos(index: number, tileCount: number): string {
     return 'top-[3.5rem] right-2 sm:top-[4.5rem] sm:right-4 flex-row-reverse items-start';
   }
   if (tileCount === 3 && index === 0) {
-    // Haut-Gauche : Pseudo Haut-Droite (self-end), Contrôles Bas-Gauche (self-start)
     return 'inset-2 sm:inset-3 flex-col justify-between !pointer-events-none [&>*:first-child]:self-end [&>*:first-child]:!pointer-events-auto [&>*:last-child]:self-start [&>*:last-child]:!pointer-events-auto';
   }
   if (tileCount === 3 && index === 1) {
-    // Haut-Droite : Pseudo Haut-Gauche (self-start), Contrôles Bas-Droite (self-end). pt-12 pour éviter les icônes Live/Share.
     return 'inset-2 sm:inset-3 pt-12 sm:pt-14 flex-col justify-between !pointer-events-none [&>*:first-child]:self-start [&>*:first-child]:!pointer-events-auto [&>*:last-child]:self-end [&>*:last-child]:!pointer-events-auto';
   }
   if (tileCount === 3 && index === 2) {
@@ -49,9 +47,12 @@ export function getNexusChromeUiPos(index: number, tileCount: number): string {
   if (tileCount === 4 && index === 3) {
     return 'top-2 right-2 sm:top-4 sm:right-4 flex-col items-end';
   }
+
+  // RÈGLE UNIVERSELLE POUR 5 OU 6 JOUEURS : Centrage horizontal forcé, alignement texte au centre.
   if (tileCount >= 5) {
-    // Pour 5 ou 6 joueurs, les tuiles sont trop étroites. On centre le chrome en haut.
-    return 'top-2 left-1/2 -translate-x-1/2 flex-col items-center max-w-[90%]';
+    return 'top-2 inset-x-0 mx-auto flex-col items-center justify-center text-center w-[90%]';
   }
+
+  // Valeur par défaut (1, 2, 3, 4 joueurs, sauf exceptions ci-dessus)
   return 'top-2 left-2 sm:top-4 sm:left-4 flex-row items-start max-w-[90%]';
 }
