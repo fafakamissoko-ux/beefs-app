@@ -3712,6 +3712,7 @@ export function TikTokStyleArena({
                       onClick={async () => {
                         if (!optimisticDebit(gift.cost)) {
                           toast(`Lingots insuffisants — il te manque ${gift.cost - walletBalance} Lingots`, 'error', {
+                            id: 'insufficient-funds',
                             action: { label: 'Recharger', onClick: () => goBuyPoints() },
                           });
                           return;

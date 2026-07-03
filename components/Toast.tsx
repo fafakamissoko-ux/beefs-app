@@ -7,6 +7,8 @@ import { Check, X, AlertCircle, Info } from 'lucide-react';
 type ToastType = 'success' | 'error' | 'info';
 
 export type ToastOptions = {
+  /** Identifiant unique pour éviter le spam (déduplication). */
+  id?: string | number;
   /** Bouton secondaire (ex. aller acheter des points). */
   action?: { label: string; onClick: () => void };
   /** Durée avant fermeture auto (défaut 4 s, 10 s si action). */
@@ -79,7 +81,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       ),
-      { duration: durationMs }
+      { duration: durationMs, id: options?.id }
     );
   }, []);
 
