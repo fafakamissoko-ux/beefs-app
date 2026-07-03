@@ -14,7 +14,6 @@ import {
   Award,
   Share2,
   Calendar,
-  Flame,
   Menu,
   Music,
   MessageCircle,
@@ -112,6 +111,19 @@ const playSfx = (id: string) => {
 const DEFAULT_BEEF_DURATION = 60 * 60; // 60 min
 /** Plafond ajustable depuis la régie (prolongations). */
 const MAX_BEEF_DURATION = 4 * 60 * 60; // 4 h
+
+function IngotIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}>
+      {/* Face Supérieure (Lumière) */}
+      <polygon points="7,6 19,6 22,12 10,12" className="fill-yellow-300" />
+      {/* Face Avant (Ombre moyenne) */}
+      <polygon points="10,12 22,12 20,18 8,18" className="fill-yellow-500" />
+      {/* Face Gauche (Ombre foncée) */}
+      <polygon points="7,6 10,12 8,18 5,12" className="fill-yellow-600" />
+    </svg>
+  );
+}
 
 interface RingParticipant {
   id: string;
@@ -3273,7 +3285,7 @@ export function TikTokStyleArena({
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Mon Solde</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <Flame className="h-4 w-4 text-cyan-400 drop-shadow-md" />
+                    <IngotIcon className="h-4 w-4 drop-shadow-md" />
                     <span className="font-black text-white">{walletBalance} Lingots</span>
                   </div>
                 </div>
@@ -3364,7 +3376,21 @@ export function TikTokStyleArena({
         {/* INDICATEURS SYSTÈME DISCRETS (Haut Droite) */}
         {!isCinematicMode && (
           <div className="pointer-events-none absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[500] flex items-center gap-2 sm:right-4 sm:top-4">
-                <div className="flex items-center rounded-full border border-white/10 bg-slate-900/40 px-3 py-1.5 shadow-lg backdrop-blur-sm">
+
+            {/* HUD Portefeuille Lingots */}
+            {userId && (
+              <button
+                type="button"
+                onClick={goBuyPoints}
+                className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-900/40 px-3 py-1.5 shadow-lg backdrop-blur-sm transition-all hover:bg-slate-900/60 active:scale-95"
+                title="Recharger des Lingots"
+              >
+                <IngotIcon className="h-3.5 w-3.5 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
+                <span className="font-mono text-[11px] font-black text-white drop-shadow-md">{walletBalance}</span>
+              </button>
+            )}
+
+            <div className="flex items-center rounded-full border border-white/10 bg-slate-900/40 px-3 py-1.5 shadow-lg backdrop-blur-sm">
               <div className={`mr-2 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'animate-pulse bg-rose-500 shadow-[0_0_10px_rgba(225,29,72,0.8)]' : 'bg-amber-400'}`} />
               <span className="font-mono text-[10px] font-black uppercase tracking-widest text-white/90">Live</span>
             </div>
@@ -3874,7 +3900,7 @@ export function TikTokStyleArena({
                   </div>
                   {userId && selectedProfile.id === userId && (
                     <div className="flex items-center justify-center gap-2">
-                      <Flame className="h-5 w-5 shrink-0 text-cyan-400" />
+                      <IngotIcon className="h-5 w-5 shrink-0 drop-shadow-md" />
                       <span className="text-2xl font-black text-white">{selectedProfile.stats.points}</span>
                       <span className="text-sm text-gray-400">Lingots</span>
                     </div>
@@ -4051,7 +4077,7 @@ export function TikTokStyleArena({
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Mon Solde</p>
                     <div className="mt-1 flex items-center gap-1.5">
-                      <Flame className="h-5 w-5 text-cyan-400 drop-shadow-md" />
+                      <IngotIcon className="h-5 w-5 drop-shadow-md" />
                       <span className="text-xl font-black text-white">{walletBalance} <span className="text-sm font-bold text-gray-400">Lingots</span></span>
                     </div>
                   </div>
