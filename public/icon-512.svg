@@ -1,35 +1,22 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Fond App (Tailwind slate-950) avec coins "squircle" Apple -->
-  <rect width="512" height="512" fill="#020617" rx="112" />
-
-  <!-- Ambient Glows intensifiés -->
-  <circle cx="100" cy="100" r="200" fill="#0891b2" opacity="0.25" filter="blur(50px)" />
-  <circle cx="400" cy="400" r="150" fill="#06b6d4" opacity="0.20" filter="blur(40px)" />
-
-  <!-- Starry Glass (Étoiles vectorielles plus denses et brillantes) -->
-  <g fill="#ffffff">
-    <circle cx="60" cy="120" r="2.5" opacity="0.9" />
-    <circle cx="120" cy="300" r="1.5" opacity="0.6" />
-    <circle cx="250" cy="60" r="3" opacity="1" />
-    <circle cx="420" cy="150" r="2" opacity="0.8" />
-    <circle cx="380" cy="380" r="2.5" opacity="0.9" />
-    <circle cx="150" cy="450" r="2" opacity="0.7" />
-    <circle cx="280" cy="420" r="2.5" opacity="0.8" />
-    <circle cx="460" cy="90" r="1.5" opacity="0.5" />
-    <circle cx="50" cy="400" r="3" opacity="0.7" />
-    <circle cx="480" cy="280" r="2" opacity="0.9" />
-  </g>
-
-  <defs>
-    <!-- Moteur de luminescence (Quadruple passe avec cœur blanc pur) -->
-    <filter id="neon-glow-v2" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#ffffff" floodOpacity="0.9" />
-      <feDropShadow dx="0" dy="0" stdDeviation="10" floodColor="#22d3ee" floodOpacity="1" />
-      <feDropShadow dx="0" dy="0" stdDeviation="22" floodColor="#06b6d4" floodOpacity="0.85" />
-      <feDropShadow dx="0" dy="0" stdDeviation="40" floodColor="#0891b2" floodOpacity="0.6" />
-    </filter>
-  </defs>
-
-  <!-- Vecteur Éclair (Échelle 1.4x centrée) -->
-  <path d="M298 24 L116 290 L228 290 L172 488 L396 192 L270 192 Z" fill="#ffffff" filter="url(#neon-glow-v2)" />
+<rect width="512" height="512" fill="#F5F5F5"/>
+<g clip-path="url(#clip0_0_1)">
+<path d="M400 0H112C50.1441 0 0 50.1441 0 112V400C0 461.856 50.1441 512 112 512H400C461.856 512 512 461.856 512 400V112C512 50.1441 461.856 0 400 0Z" fill="#020617"/>
+<path opacity="0.9" d="M60 122.5C61.3807 122.5 62.5 121.381 62.5 120C62.5 118.619 61.3807 117.5 60 117.5C58.6193 117.5 57.5 118.619 57.5 120C57.5 121.381 58.6193 122.5 60 122.5Z" fill="white"/>
+<path opacity="0.6" d="M120 301.5C120.828 301.5 121.5 300.828 121.5 300C121.5 299.172 120.828 298.5 120 298.5C119.172 298.5 118.5 299.172 118.5 300C118.5 300.828 119.172 301.5 120 301.5Z" fill="white"/>
+<path d="M250 63C251.657 63 253 61.6569 253 60C253 58.3431 251.657 57 250 57C248.343 57 247 58.3431 247 60C247 61.6569 248.343 63 250 63Z" fill="white"/>
+<path opacity="0.8" d="M420 152C421.105 152 422 151.105 422 150C422 148.895 421.105 148 420 148C418.895 148 418 148.895 418 150C418 151.105 418.895 152 420 152Z" fill="white"/>
+<path opacity="0.9" d="M380 382.5C381.381 382.5 382.5 381.381 382.5 380C382.5 378.619 381.381 377.5 380 377.5C378.619 377.5 377.5 378.619 377.5 380C377.5 381.381 378.619 382.5 380 382.5Z" fill="white"/>
+<path opacity="0.7" d="M150 452C151.105 452 152 451.105 152 450C152 448.895 151.105 448 150 448C148.895 448 148 448.895 148 450C148 451.105 148.895 452 150 452Z" fill="white"/>
+<path opacity="0.8" d="M280 422.5C281.381 422.5 282.5 421.381 282.5 420C282.5 418.619 281.381 417.5 280 417.5C278.619 417.5 277.5 418.619 277.5 420C277.5 421.381 278.619 422.5 280 422.5Z" fill="white"/>
+<path opacity="0.5" d="M460 91.5C460.828 91.5 461.5 90.8284 461.5 90C461.5 89.1716 460.828 88.5 460 88.5C459.172 88.5 458.5 89.1716 458.5 90C458.5 90.8284 459.172 91.5 460 91.5Z" fill="white"/>
+<path opacity="0.7" d="M50 403C51.6569 403 53 401.657 53 400C53 398.343 51.6569 397 50 397C48.3431 397 47 398.343 47 400C47 401.657 48.3431 403 50 403Z" fill="white"/>
+<path opacity="0.9" d="M480 282C481.105 282 482 281.105 482 280C482 278.895 481.105 278 480 278C478.895 278 478 278.895 478 280C478 281.105 478.895 282 480 282Z" fill="white"/>
+<path d="M298 24L116 290H228L172 488L396 192H270L298 24Z" fill="white"/>
+</g>
+<defs>
+<clipPath id="clip0_0_1">
+<rect width="512" height="512" fill="white"/>
+</clipPath>
+</defs>
 </svg>
