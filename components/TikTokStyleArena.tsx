@@ -115,12 +115,25 @@ const MAX_BEEF_DURATION = 4 * 60 * 60; // 4 h
 function IngotIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={className}>
-      {/* Face Supérieure (Lumière) */}
-      <polygon points="7,6 19,6 22,12 10,12" className="fill-yellow-300" />
-      {/* Face Avant (Ombre moyenne) */}
-      <polygon points="10,12 22,12 20,18 8,18" className="fill-yellow-500" />
-      {/* Face Gauche (Ombre foncée) */}
-      <polygon points="7,6 10,12 8,18 5,12" className="fill-yellow-600" />
+      <defs>
+        <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FEF08A" />
+          <stop offset="25%" stopColor="#FDE047" />
+          <stop offset="50%" stopColor="#EAB308" />
+          <stop offset="75%" stopColor="#CA8A04" />
+          <stop offset="100%" stopColor="#A16207" />
+        </linearGradient>
+        <linearGradient id="goldInner" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#854D0E" />
+          <stop offset="50%" stopColor="#CA8A04" />
+          <stop offset="100%" stopColor="#FDE047" />
+        </linearGradient>
+      </defs>
+      <rect x="1" y="6" width="22" height="12" rx="3" fill="url(#goldGrad)" stroke="#713F12" strokeWidth="1" />
+      <rect x="5" y="9" width="14" height="6" rx="1.5" fill="url(#goldInner)" stroke="#854D0E" strokeWidth="0.5" />
+      <circle cx="9" cy="12" r="1" fill="#FEF08A" />
+      <circle cx="12" cy="12" r="1" fill="#FEF08A" />
+      <circle cx="15" cy="12" r="1" fill="#FEF08A" />
     </svg>
   );
 }
@@ -3375,52 +3388,22 @@ export function TikTokStyleArena({
 
         {/* INDICATEURS SYSTÈME DISCRETS (Haut Droite) */}
         {!isCinematicMode && (
-          <div className="pointer-events-none absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[500] flex items-center gap-2 sm:right-4 sm:top-4">
+          <div className={`pointer-events-none absolute right-2 sm:right-4 z-[500] flex items-center gap-1.5 sm:gap-2 transition-all duration-300 ${arenaHasAnnouncement ? 'top-[max(2.5rem,calc(env(safe-area-inset-top)+1.75rem))]' : 'top-[max(0.5rem,env(safe-area-inset-top))]'}`}>
 
-            {/* HUD Portefeuille Lingots */}
-            {userId && (
-              <button
-                type="button"
-                onClick={goBuyPoints}
-                className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-900/40 px-3 py-1.5 shadow-lg backdrop-blur-sm transition-all hover:bg-slate-900/60 active:scale-95"
-                title="Recharger des Lingots"
-              >
-                <IngotIcon className="h-3.5 w-3.5 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
-                <span className="font-mono text-[11px] font-black text-white drop-shadow-md">{walletBalance}</span>
-              </button>
-            )}
-
-            <div className="flex items-center rounded-full border border-white/10 bg-slate-900/40 px-3 py-1.5 shadow-lg backdrop-blur-sm">
-              <div className={`mr-2 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'animate-pulse bg-rose-500 shadow-[0_0_10px_rgba(225,29,72,0.8)]' : 'bg-amber-400'}`} />
-              <span className="font-mono text-[10px] font-black uppercase tracking-widest text-white/90">Live</span>
+            <div className="flex items-center rounded-full border border-white/10 bg-slate-900/40 px-2 py-1 sm:px-3 sm:py-1.5 shadow-lg backdrop-blur-sm">
+              <div className={`mr-1.5 h-1.5 w-1.5 rounded-full ${liveBadgeHot ? 'animate-pulse bg-rose-500 shadow-[0_0_10px_rgba(225,29,72,0.8)]' : 'bg-amber-400'}`} />
+              <span className="font-mono text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white/90">Live</span>
             </div>
+
             <button
               type="button"
               onClick={() => setShowViewerList(true)}
-              className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-900/40 px-3 py-1.5 shadow-lg backdrop-blur-sm transition-all hover:bg-slate-900/60"
+              className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-900/40 px-2 py-1 sm:px-3 sm:py-1.5 shadow-lg backdrop-blur-sm transition-all hover:bg-slate-900/60"
             >
               <Eye className="h-3 w-3 text-white" />
-              <span className="font-mono text-[10px] font-bold text-white">{liveViewerCount > 0 ? liveViewerCount : '—'}</span>
+              <span className="font-mono text-[9px] sm:text-[10px] font-bold text-white">{liveViewerCount > 0 ? liveViewerCount : '—'}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => openDrawer()}
-              className="pointer-events-auto relative flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-slate-900/40 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-slate-900/60"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              {unreadDMsCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-black text-white shadow-[0_0_10px_rgba(225,29,72,0.8)]">
-                  {unreadDMsCount > 9 ? '9+' : unreadDMsCount}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onShare}
-              className="pointer-events-auto hidden h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-slate-900/40 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-slate-900/60 sm:flex"
-            >
-              <Share2 className="h-3.5 w-3.5" />
-            </button>
+
             {!beefEnded && !isLeaving && (
               <button
                 type="button"
