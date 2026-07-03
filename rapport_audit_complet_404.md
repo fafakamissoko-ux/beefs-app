@@ -1,0 +1,1770 @@
+# Rapport d'audit complet — Purge 404 notifications
+
+**Date :** 31 mai 2026  
+**Contexte :** Finalisation purge 404 — état post-hotfix `ef65073`  
+**Statut :** extraction brute — **aucun code modifié**
+
+---
+
+## Synthèse pour l'Architecte
+
+### Notifications (`app/notifications/page.tsx` — 468 lignes)
+
+| Élément | Détail |
+|---------|--------|
+| **`AppNotification`** | `id, created_at, user_id, type, title, body, link, is_read, metadata` |
+| **`NotificationType`** | `follow | invite | beef_live | gift | message | system | aura` |
+| **`handleRowClick`** | Marquage lu → cas `beef_live` pending → **intercepteur legacy** → `router.push(finalLink)` |
+| **Intercepteur 404** | `/beef/{id}?view=comments` → `/feed?beefId={id}&view=comments` |
+| **Hooks routing** | `useRouter` uniquement (pas `useSearchParams`) |
+
+### Feed (`app/feed/page.tsx` — 1257 lignes)
+
+| Élément | Détail |
+|---------|--------|
+| **`activeCommentsBeefId`** | `useState<string | null>(null)` |
+| **Ouverture manuelle** | `onCommentClick={() => setActiveCommentsBeefId(beef.id)}` |
+| **Drawer** | `<CommentsDrawer beefId={activeCommentsBeefId} />` |
+| **`useSearchParams`** | `OpenCreateModalFromQuery` (`?create=1`) + `OpenCommentsFromQuery` (`?beefId=&view=comments`) |
+| **Suspense** | Les deux composants query-bound montés ensemble |
+
+---
+
+## 1. Code intégral — `app/notifications/page.tsx`
+
+```typescript
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Bell,
+  BellOff,
+  Clock,
+  Flame,
+  Gift,
+  Mail,
+  MessageCircle,
+  Sparkles,
+  UserPlus,
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { AppBackButton } from '@/components/AppBackButton';
+import { useToast } from '@/components/Toast';
+import { isNotificationUnread } from '@/lib/notification-unread';
+
+type NotificationType =
+  | 'follow'
+  | 'invite'
+  | 'beef_live'
+  | 'gift'
+  | 'message'
+  | 'system'
+  | 'aura';
+
+export interface AppNotification {
+  id: string;
+  created_at: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  link: string | null;
+  is_read: boolean | null;
+  metadata: Record<string, unknown> | null;
+}
+
+interface AuraSparkNotification {
+  id: string;
+  created_at: string;
+  is_read: boolean | null;
+  giver_name?: string | null;
+  giver_username?: string | null;
+  aura_kind?: string | null;
+}
+
+function shortTimeAgo(date: string): string {
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (seconds < 60) return 'maintenant';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}j`;
+  return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+const ICON_MAP: Record<
+  NotificationType,
+  { icon: typeof Bell; color: string; bg: string }
+> = {
+  follow: { icon: UserPlus, color: 'text-cyan-400', bg: 'bg-cyan-500/15' },
+  invite: { icon: Mail, color: 'text-orange-400', bg: 'bg-orange-500/15' },
+  beef_live: { icon: Flame, color: 'text-red-400', bg: 'bg-red-500/15' },
+  gift: { icon: Gift, color: 'text-amber-400', bg: 'bg-amber-500/15' },
+  message: { icon: MessageCircle, color: 'text-sky-400', bg: 'bg-sky-500/15' },
+  system: { icon: Bell, color: 'text-violet-400', bg: 'bg-violet-500/15' },
+  aura: { icon: Sparkles, color: 'text-brand-400', bg: 'bg-brand-500/15' },
+};
+
+function SkeletonCard() {
+  return (
+    <div className="flex items-start gap-4 animate-pulse px-4 py-3 border-b border-white/5 w-full">
+      <div className="w-10 h-10 rounded-full bg-white/10 shrink-0" />
+      <div className="flex-1 space-y-2">
+        <div className="h-4 bg-white/10 rounded w-3/4" />
+        <div className="h-3 bg-white/5 rounded w-1/2" />
+      </div>
+      <div className="h-3 bg-white/5 rounded w-16 shrink-0" />
+    </div>
+  );
+}
+
+export default function NotificationsPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [auraNotifications, setAuraNotifications] = useState<AuraSparkNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [markingAll, setMarkingAll] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'aura' | 'mentions'>('all');
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.push('/login?redirect=/notifications');
+    }
+  }, [user, authLoading, router]);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const [notifRes, auraRes] = await Promise.all([
+        supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(4000),
+        supabase
+          .from('aura_notifications')
+          .select('id, created_at, giver_name, giver_username, aura_kind, is_read')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(4000),
+      ]);
+
+      if (notifRes.error) throw notifRes.error;
+      setNotifications((notifRes.data ?? []) as AppNotification[]);
+      setAuraNotifications(auraRes.error ? [] : ((auraRes.data ?? []) as AuraSparkNotification[]));
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
+      }
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) fetchNotifications();
+  }, [user, fetchNotifications]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`notifications:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as AppNotification;
+          setNotifications((prev) => {
+            if (prev.some((n) => n.id === row.id)) return prev;
+            return [row, ...prev];
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as AppNotification;
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === row.id ? row : n))
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchNotifications]);
+
+  const markAllRead = async () => {
+    if (!user || markingAll) return;
+    setMarkingAll(true);
+    try {
+      if (activeTab === 'all') {
+        await supabase.rpc('mark_all_notifications_read');
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+        setAuraNotifications((prev) => prev.map((a) => ({ ...a, is_read: true })));
+      } else if (activeTab === 'aura') {
+        await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', user.id)
+          .eq('type', 'aura')
+          .or('is_read.is.null,is_read.eq.false');
+        await supabase
+          .from('aura_sparks')
+          .update({ is_read: true })
+          .eq('receiver_id', user.id)
+          .or('is_read.is.null,is_read.eq.false');
+        setNotifications((prev) =>
+          prev.map((n) => (n.type === 'aura' ? { ...n, is_read: true } : n)),
+        );
+        setAuraNotifications((prev) => prev.map((a) => ({ ...a, is_read: true })));
+      } else {
+        await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', user.id)
+          .neq('type', 'aura')
+          .or('is_read.is.null,is_read.eq.false');
+        setNotifications((prev) =>
+          prev.map((n) => (n.type !== 'aura' ? { ...n, is_read: true } : n)),
+        );
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
+      }
+      toast('Notifications marquées comme lues', 'success');
+    } catch (err) {
+      console.error('[notifications] markAllRead', err);
+      toast('Impossible de marquer comme lu. Réessaie dans un instant.', 'error');
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  const handleRowClick = async (n: AppNotification) => {
+    const isSparkRow = n.id.startsWith('spark-');
+
+    if (!n.is_read) {
+      if (isSparkRow) {
+        const pureId = n.id.replace('spark-', '');
+        const { error: sparkErr } = await supabase
+          .from('aura_sparks')
+          .update({ is_read: true })
+          .eq('id', pureId);
+        if (sparkErr) {
+          console.error('[notifications] mark spark read', sparkErr);
+        }
+        setAuraNotifications((prev) =>
+          prev.map((x) => (x.id === n.id || x.id === pureId ? { ...x, is_read: true } : x)),
+        );
+      } else {
+        const { error: rpcErr } = await supabase.rpc('mark_notification_read', { p_id: n.id });
+        if (rpcErr && user) {
+          const { error: upErr } = await supabase
+            .from('notifications')
+            .update({ is_read: true })
+            .eq('id', n.id)
+            .eq('user_id', user.id);
+          if (upErr) {
+            console.error('[notifications] mark one read', rpcErr, upErr);
+          }
+        }
+        setNotifications((prev) =>
+          prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)),
+        );
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
+      }
+    }
+
+    // Invité mais pas encore accepté : l’arène ouvre en spectateur ; on envoie vers les invitations.
+    if (n.type === 'beef_live' && user?.id && n.metadata && typeof n.metadata === 'object') {
+      const beefId = (n.metadata as Record<string, unknown>).beef_id;
+      if (typeof beefId === 'string' && beefId.length > 0) {
+        const { data: part } = await supabase
+          .from('beef_participants')
+          .select('invite_status')
+          .eq('beef_id', beefId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (part?.invite_status === 'pending') {
+          router.push('/invitations');
+          return;
+        }
+      }
+    }
+
+    if (n.link) {
+      let finalLink = n.link;
+      if (finalLink.startsWith('/beef/') && finalLink.includes('view=comments')) {
+        const match = finalLink.match(/^\/beef\/([a-zA-Z0-9-]+)(\?.*)?$/);
+        if (match) {
+          const beefId = match[1];
+          finalLink = `/feed?beefId=${beefId}&view=comments`;
+        }
+      }
+      router.push(finalLink);
+    }
+  };
+
+  const auraAsAppNotifications = useMemo((): AppNotification[] => {
+    if (!user) return [];
+    return auraNotifications.map((a) => {
+      const giverLabel = a.giver_name || a.giver_username || 'Quelqu\'un';
+      return {
+        id: a.id.startsWith('spark-') ? a.id : `spark-${a.id}`,
+        created_at: a.created_at,
+        user_id: user.id,
+        type: 'aura' as const,
+        title: 'Étincelle d\'Aura',
+        body: `${giverLabel} t'a transmis de l'Aura`,
+        link: a.giver_username ? `/profile/${a.giver_username}` : null,
+        is_read: a.is_read,
+        metadata: a.aura_kind ? { aura_kind: a.aura_kind } : null,
+      };
+    });
+  }, [auraNotifications, user]);
+
+  const displayNotifications = useMemo(
+    () =>
+      [...notifications, ...auraAsAppNotifications].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      ),
+    [notifications, auraAsAppNotifications],
+  );
+
+  const filteredNotifications = useMemo(() => {
+    if (activeTab === 'all') return displayNotifications;
+    if (activeTab === 'aura') return displayNotifications.filter((n) => n.type === 'aura');
+    return displayNotifications.filter((n) => n.type !== 'aura');
+  }, [displayNotifications, activeTab]);
+
+  const isPageLoading = authLoading || loading;
+  const unreadCount = displayNotifications.filter(isNotificationUnread).length;
+  const unreadFilteredCount = filteredNotifications.filter(isNotificationUnread).length;
+
+  const TAB_OPTIONS: { id: 'all' | 'aura' | 'mentions'; label: string }[] = [
+    { id: 'all', label: 'Tout' },
+    { id: 'aura', label: 'Aura' },
+    { id: 'mentions', label: 'Mentions' },
+  ];
+
+  if (!authLoading && !user) return null;
+
+  return (
+    <div className="min-h-screen">
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <AppBackButton className="mb-4" />
+        <div className="flex flex-col gap-4 mb-8">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <h1 className="text-3xl font-black text-white truncate">
+                Notifications
+              </h1>
+              {unreadCount > 0 && (
+                <span className="brand-gradient text-white text-xs font-bold px-2.5 py-1 rounded-full shrink-0">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+            <Bell className="w-6 h-6 text-gray-500 shrink-0" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {TAB_OPTIONS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? 'border border-white/10 bg-slate-900/40 text-white shadow-lg backdrop-blur-sm'
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          {filteredNotifications.length > 0 && unreadFilteredCount > 0 && (
+            <button
+              type="button"
+              onClick={markAllRead}
+              disabled={markingAll}
+              className="self-start text-sm font-semibold text-brand-400 hover:text-brand-300 disabled:opacity-50 transition-colors"
+            >
+              {markingAll ? 'Mise à jour…' : 'Tout marquer comme lu'}
+            </button>
+          )}
+        </div>
+
+        {isPageLoading ? (
+          <div className="flex flex-col gap-1">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        ) : filteredNotifications.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="py-12 border-b border-white/5 flex flex-col items-center justify-center w-full"
+          >
+            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+              <BellOff className="w-8 h-8 text-gray-600" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">
+              Aucune notification
+            </h2>
+            <p className="text-gray-500 text-sm">
+              Quand tu recevras des suivis, invitations, messages, étincelles d’Aura ou alertes,
+              elles apparaîtront ici.
+            </p>
+          </motion.div>
+        ) : (
+          <div>
+            <AnimatePresence>
+              {filteredNotifications.map((n, i) => {
+                const mapKey =
+                  typeof n.type === 'string' && n.type in ICON_MAP ? (n.type as NotificationType) : 'system';
+                const { icon: Icon, color, bg } = ICON_MAP[mapKey];
+                const unread = isNotificationUnread(n);
+                return (
+                  <motion.button
+                    key={n.id}
+                    type="button"
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.04, duration: 0.25, ease: 'easeOut' }}
+                    onClick={() => handleRowClick(n)}
+                    className={`flex items-start gap-4 w-full text-left px-4 py-3 transition-colors hover:bg-white/[0.04] border-b border-white/5 ${
+                      unread ? 'bg-brand-500/5' : ''
+                    }`}
+                  >
+                    <div
+                      className={`w-10 h-10 rounded-full ${bg} flex items-center justify-center shrink-0`}
+                    >
+                      <Icon className={`w-5 h-5 ${color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0 pr-6">
+                      <p className="text-sm font-bold text-white">{n.title}</p>
+                      {n.body ? (
+                        <p className="text-sm text-gray-400 line-clamp-2">
+                          {n.body}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                      <span className="text-xs text-gray-600 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {shortTimeAgo(n.created_at)}
+                      </span>
+                      {unread && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" aria-hidden />}
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 2. Code intégral — `app/feed/page.tsx`
+
+```typescript
+'use client';
+
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { supabase } from '@/lib/supabase/client';
+import { motion, AnimatePresence } from 'framer-motion';
+import { TrendingUp, Users, Flame, X, Radio, Coins, FileText, Swords, LayoutGrid, List } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/Toast';
+import { BeefCard } from '@/components/BeefCard';
+import { CommentsDrawer } from '@/components/CommentsDrawer';
+import { EditBeefModal } from '@/components/EditBeefModal';
+import dynamic from 'next/dynamic';
+import { submitNewBeef } from '@/lib/submitNewBeef';
+import type { SubmitBeefPayload } from '@/lib/submitNewBeef';
+import { postBeefManage } from '@/lib/beef-manage-client';
+import { hrefWithFrom } from '@/lib/navigation-return';
+import { useClientArenaOnboardingGuard } from '@/lib/client-arena-onboarding-guard';
+
+const CreateBeefForm = dynamic(() => import('@/components/CreateBeefForm').then(m => m.CreateBeefForm), {
+  loading: () => <div className="flex items-center justify-center p-8"><div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>,
+});
+
+/** Ouvre la modale création quand on arrive depuis le header (ex. /feed?create=1). */
+function OpenCreateModalFromQuery({ setOpen }: { setOpen: (open: boolean) => void }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  useEffect(() => {
+    if (searchParams.get('create') !== '1') return;
+    setOpen(true);
+    router.replace('/feed', { scroll: false });
+  }, [searchParams, router, setOpen]);
+  return null;
+}
+
+/** Ouvre le tiroir des commentaires quand on arrive depuis une notification (ex. /feed?beefId=123&view=comments). */
+function OpenCommentsFromQuery({ setOpenId }: { setOpenId: (id: string | null) => void }) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  useEffect(() => {
+    const beefId = searchParams.get('beefId');
+    const view = searchParams.get('view');
+    if (beefId && view === 'comments') {
+      setOpenId(beefId);
+      router.replace('/feed', { scroll: false });
+    }
+  }, [searchParams, router, setOpenId]);
+  return null;
+}
+
+interface Beef {
+  id: string;
+  title: string;
+  description?: string;
+  host_name: string;
+  host_username?: string | null;
+  mediator_id?: string | null;
+  created_by?: string | null;
+  intent?: string | null;
+  status: 'live' | 'ended' | 'replay' | 'scheduled' | 'cancelled' | 'pending' | 'ready' | 'completed';
+  created_at: string;
+  scheduled_at?: string;
+  viewer_count?: number;
+  tags?: string[];
+  thumbnail?: string;
+  duration?: number;
+  engagement_score?: number;
+  /** Like unique courant (table `beef_likes` côté serveur). */
+  has_liked_by_user?: boolean;
+  /** Aura du teaser plein écran (table `teaser_likes`, colonne `teaser_score`). */
+  teaser_score?: number;
+  has_liked_teaser?: boolean;
+  comment_count?: number;
+  participants_count?: number;
+  challenger_a_name?: string | null;
+  challenger_b_name?: string | null;
+  challenger_c_name?: string | null;
+  challenger_d_name?: string | null;
+  challenger_a_username?: string | null;
+  challenger_b_username?: string | null;
+  challenger_c_username?: string | null;
+  challenger_d_username?: string | null;
+  challenger_c_avatar?: string | null;
+  challenger_d_avatar?: string | null;
+  mediator_name?: string | null;
+  mediator_username?: string | null;
+  is_featured?: boolean;
+  feed_position?: number;
+  video_url?: string | null;
+  /** Feed : médiateur ou participant accepté — libellé « Retourner dans l'Arène » sur les cartes live */
+  user_is_live_ring?: boolean;
+  user_invite_status?: string | null;
+}
+
+const STATUS_FILTERS = [
+  { id: 'all', label: 'Tous statuts' },
+  { id: 'live', label: 'Live' },
+  { id: 'scheduled', label: 'À venir' },
+  { id: 'ended', label: 'Terminés' },
+];
+
+/** Aligné sur l’admin : mis en avant → feed_position (desc) → date. */
+function compareFeedOrder(a: Beef, b: Beef) {
+  const fa = !!a.is_featured;
+  const fb = !!b.is_featured;
+  if (fa !== fb) return fa ? -1 : 1;
+  const pa = Number(a.feed_position) || 0;
+  const pb = Number(b.feed_position) || 0;
+  if (pa !== pb) return pb - pa;
+  return new Date(String(b.created_at)).getTime() - new Date(String(a.created_at)).getTime();
+}
+
+/** L’Arène : Live → à venir (pas terminé) → terminées / annulées. */
+function arenaLifecycleTier(beef: Beef): number {
+  if (beef.status === 'live') return 0;
+  if (
+    beef.status === 'ended' ||
+    beef.status === 'replay' ||
+    beef.status === 'completed' ||
+    beef.status === 'cancelled'
+  ) {
+    return 2;
+  }
+  return 1;
+}
+
+function compareArenaOrder(a: Beef, b: Beef) {
+  const ta = arenaLifecycleTier(a);
+  const tb = arenaLifecycleTier(b);
+  if (ta !== tb) return ta - tb;
+  return compareFeedOrder(a, b);
+}
+
+export default function FeedPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user, loading: authLoading } = useAuth();
+  useClientArenaOnboardingGuard(user?.id);
+  const { toast } = useToast();
+  const [beefs, setBeefs] = useState<Beef[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [feedType, setFeedType] = useState<'pour-vous' | 'abonnements' | 'manifestes'>('pour-vous');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [trendingTags, setTrendingTags] = useState<string[]>([]);
+  const [followingIds, setFollowingIds] = useState<string[]>([]);
+  const [activeBeef, setActiveBeef] = useState<{ id: string; title: string; role: string } | null>(null);
+  const [fetchLimit, setFetchLimit] = useState(20);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [showHero, setShowHero] = useState(false);
+  const [mobileViewMode, setMobileViewMode] = useState<'list' | 'grid'>('grid');
+  const [beefToDelete, setBeefToDelete] = useState<string | null>(null);
+  const [editBeefId, setEditBeefId] = useState<string | null>(null);
+  const [beefToForfeit, setBeefToForfeit] = useState<string | null>(null);
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const [activeCommentsBeefId, setActiveCommentsBeefId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && localStorage.getItem('hideAgoraHero') !== 'true') {
+        setShowHero(true);
+      }
+    } catch {
+      setShowHero(true);
+    }
+  }, []);
+  const [filtersHydrated, setFiltersHydrated] = useState(false);
+  const loadMoreIntentRef = useRef(false);
+
+  const FEED_FILTERS_KEY = 'beefs_feed_filters_v1';
+
+  useEffect(() => {
+    if (filtersHydrated) return;
+    try {
+      const raw = localStorage.getItem(FEED_FILTERS_KEY);
+      if (raw) {
+        const o = JSON.parse(raw) as { feedType?: string; selectedStatus?: string; selectedTags?: string[] };
+        if (o.feedType === 'pour-vous' || o.feedType === 'abonnements' || o.feedType === 'manifestes') setFeedType(o.feedType);
+        if (typeof o.selectedStatus === 'string') setSelectedStatus(o.selectedStatus);
+        if (Array.isArray(o.selectedTags)) setSelectedTags(o.selectedTags);
+      }
+    } catch {
+      /* ignore */
+    }
+    setFiltersHydrated(true);
+  }, [filtersHydrated]);
+
+  useEffect(() => {
+    if (!filtersHydrated) return;
+    try {
+      localStorage.setItem(
+        FEED_FILTERS_KEY,
+        JSON.stringify({ feedType, selectedStatus, selectedTags })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [feedType, selectedStatus, selectedTags, filtersHydrated]);
+
+  useEffect(() => {
+    setFetchLimit(20);
+  }, [selectedStatus, selectedTags, feedType, followingIds]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setFollowingIds([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('followers')
+        .select('following_id')
+        .eq('follower_id', user.id);
+      if (cancelled) return;
+      if (error) {
+        console.error('Error loading following:', error);
+        setFollowingIds([]);
+        return;
+      }
+      setFollowingIds((data || []).map((r: { following_id: string }) => r.following_id));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  // Check if user has an active live beef they should be in
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      // Check as mediator
+      const { data: mediatedBeef } = await supabase
+        .from('beefs')
+        .select('id, title')
+        .eq('mediator_id', user.id)
+        .eq('status', 'live')
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (mediatedBeef) {
+        setActiveBeef({ id: mediatedBeef.id, title: mediatedBeef.title, role: 'Médiateur' });
+        return;
+      }
+
+      // Check as challenger
+      const { data: participations } = await supabase
+        .from('beef_participants')
+        .select('beef_id, beefs!beef_participants_beef_id_fkey(id, title, status)')
+        .eq('user_id', user.id)
+        .eq('invite_status', 'accepted');
+
+      if (cancelled) return;
+      const liveParticipation = (participations || []).find(
+        (p: any) => p.beefs?.status === 'live'
+      );
+      if (liveParticipation) {
+        setActiveBeef({
+          id: (liveParticipation.beefs as any).id,
+          title: (liveParticipation.beefs as any).title,
+          role: 'Challenger',
+        });
+      } else {
+        setActiveBeef(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (beefs.length > 0) {
+      const tagCount: Record<string, number> = {};
+      beefs.forEach(beef => { beef.tags?.forEach(tag => { tagCount[tag] = (tagCount[tag] || 0) + 1; }); });
+      const sorted = Object.entries(tagCount).sort((a, b) => b[1] - a[1]).map(([tag]) => tag).slice(0, 10);
+      setTrendingTags(sorted.length > 0 ? sorted : ['tech', 'startup', 'argent', 'business', 'gaming', 'crypto', 'politique']);
+    } else {
+      setTrendingTags(['tech', 'startup', 'argent', 'business', 'gaming', 'crypto', 'politique']);
+    }
+  }, [beefs]);
+
+  const loadBeefs = useCallback(async (isBackgroundRefresh = false) => {
+    try {
+      if (!isBackgroundRefresh) setLoading(true);
+      let query = supabase
+        .from('beefs')
+        .select('*, beef_participants(count), beef_likes!left(user_id), teaser_likes!left(user_id)')
+        .order('feed_position', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(fetchLimit);
+
+      if (feedType === 'manifestes') {
+        query = query.eq('intent', 'manifesto');
+        if (user?.id) {
+          query = query.or(`mediator_id.is.null,created_by.eq.${user.id}`);
+        } else {
+          query = query.is('mediator_id', null);
+        }
+      }
+
+      if (feedType === 'pour-vous') {
+        query = query.or('intent.is.null,intent.neq.manifesto,mediator_id.not.is.null');
+      }
+
+      if (selectedStatus !== 'all' && selectedStatus !== 'scheduled') {
+        query = query.eq('status', selectedStatus);
+      }
+      if (selectedStatus === 'scheduled') {
+        query = query.in('status', ['scheduled', 'pending']);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const beefList = data || [];
+      const beefIds = beefList.map((b: { id: string }) => b.id);
+      const challengerANameByBeef: Record<string, string> = {};
+      const challengerBNameByBeef: Record<string, string> = {};
+      const challengerCNameByBeef: Record<string, string> = {};
+      const challengerDNameByBeef: Record<string, string> = {};
+      const challengerAUsernameByBeef: Record<string, string | null> = {};
+      const challengerBUsernameByBeef: Record<string, string | null> = {};
+      const challengerCUsernameByBeef: Record<string, string | null> = {};
+      const challengerDUsernameByBeef: Record<string, string | null> = {};
+      const challengerCAvatarByBeef: Record<string, string | null> = {};
+      const challengerDAvatarByBeef: Record<string, string | null> = {};
+      let userOnLiveRingByBeef = new Map<string, boolean>();
+      let userInviteStatusByBeef = new Map<string, string | null>();
+
+      const publicIds = new Set<string>();
+      for (const b of beefList as { mediator_id?: string | null; created_by?: string | null }[]) {
+        if (b.mediator_id) publicIds.add(b.mediator_id);
+        if (b.created_by) publicIds.add(b.created_by);
+      }
+
+      let feedPublicMap = new Map<string, import('@/lib/fetch-user-public-profile').UserPublicProfileRow>();
+
+      if (beefIds.length > 0) {
+        const mediatorByBeef = new Map<string, string | null | undefined>(
+          (beefList as { id: string; mediator_id?: string | null }[]).map((b) => [b.id, b.mediator_id]),
+        );
+
+        const { data: inviteRows } = await supabase
+          .from('beef_invitations')
+          .select('beef_id, invitee_id, inviter_id, status')
+          .in('beef_id', beefIds)
+          .in('status', ['sent', 'seen', 'accepted']);
+
+        const mediatorInviteeIdsByBeef = new Map<string, Set<string>>();
+        for (const inv of inviteRows || []) {
+          const row = inv as { beef_id: string; invitee_id: string; inviter_id: string };
+          const mid = mediatorByBeef.get(row.beef_id);
+          if (mid && row.inviter_id === mid) {
+            const s = mediatorInviteeIdsByBeef.get(row.beef_id) || new Set<string>();
+            s.add(row.invitee_id);
+            mediatorInviteeIdsByBeef.set(row.beef_id, s);
+          }
+        }
+
+        const { data: partRows, error: partErr } = await supabase
+          .from('beef_participants')
+          .select('beef_id, user_id, invite_status, created_at, is_main, role')
+          .in('beef_id', beefIds);
+
+        if (!partErr && partRows) {
+          for (const row of partRows as { user_id: string }[]) {
+            if (row.user_id) publicIds.add(row.user_id);
+          }
+        }
+
+        const { fetchUserPublicByIds, displayNameFromPublicRow } = await import('@/lib/fetch-user-public-profile');
+        feedPublicMap = await fetchUserPublicByIds(supabase, [...publicIds], 'id, username, display_name, avatar_url');
+
+        if (!partErr && partRows) {
+          type PartRow = {
+            beef_id: string;
+            user_id: string;
+            invite_status: string | null;
+            created_at: string;
+            is_main: boolean | null;
+            role: string | null;
+          };
+          const byBeef = new Map<string, PartRow[]>();
+          for (const row of partRows as PartRow[]) {
+            const list = byBeef.get(row.beef_id) || [];
+            list.push(row);
+            byBeef.set(row.beef_id, list);
+          }
+          const packName = (userId: string) => displayNameFromPublicRow(feedPublicMap.get(userId), '');
+          for (const beef of beefList as {
+            id: string;
+            mediator_id?: string | null;
+            created_by?: string | null;
+            intent?: string | null;
+          }[]) {
+            const mid = beef.mediator_id;
+            const creatorId = beef.created_by;
+            const rows = byBeef.get(beef.id) || [];
+            const invited = mediatorInviteeIdsByBeef.get(beef.id);
+            const nonMed = rows.filter((r) => {
+              if (r.role === 'witness') return false;
+              if (mid && r.user_id === mid) return false;
+              if (beef.intent !== 'manifesto' && !mid && creatorId && r.user_id === creatorId) return false;
+              return true;
+            });
+            // Inclure les « pending » dès qu’ils sont dans beef_participants : les spectateurs ne voient
+            // pas les lignes beef_invitations (RLS), donc invited serait vide sans ce cas.
+            const eligible = nonMed.filter((r) => {
+              // VERROU : Uniquement les participants principaux (initiateurs du débat)
+              if (!r.is_main) return false;
+              if (r.invite_status === 'declined') return false;
+              if (r.invite_status === 'accepted' || r.invite_status === 'pending') return true;
+              return invited?.has(r.user_id) ?? false;
+            });
+            eligible.sort((a, b) => {
+              const ra = a.invite_status === 'accepted' ? 0 : 1;
+              const rb = b.invite_status === 'accepted' ? 0 : 1;
+              if (ra !== rb) return ra - rb;
+              const ma = a.is_main ? 0 : 1;
+              const mb = b.is_main ? 0 : 1;
+              if (ma !== mb) return ma - mb;
+              return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+            });
+            const first = packName(eligible[0]?.user_id ?? '');
+            const second = packName(eligible[1]?.user_id ?? '');
+            const third = packName(eligible[2]?.user_id ?? '');
+            const fourth = packName(eligible[3]?.user_id ?? '');
+            if (first) challengerANameByBeef[beef.id] = first;
+            if (second) challengerBNameByBeef[beef.id] = second;
+            if (third) challengerCNameByBeef[beef.id] = third;
+            if (fourth) challengerDNameByBeef[beef.id] = fourth;
+            const w = (userId: string) => feedPublicMap.get(userId)?.username?.trim() || null;
+            const av = (userId: string) => feedPublicMap.get(userId)?.avatar_url?.trim() || null;
+            if (eligible[0]) challengerAUsernameByBeef[beef.id] = w(eligible[0].user_id);
+            if (eligible[1]) challengerBUsernameByBeef[beef.id] = w(eligible[1].user_id);
+            if (eligible[2]) {
+              challengerCUsernameByBeef[beef.id] = w(eligible[2].user_id);
+              challengerCAvatarByBeef[beef.id] = av(eligible[2].user_id);
+            }
+            if (eligible[3]) {
+              challengerDUsernameByBeef[beef.id] = w(eligible[3].user_id);
+              challengerDAvatarByBeef[beef.id] = av(eligible[3].user_id);
+            }
+          }
+
+          const ringUid = user?.id;
+          if (ringUid && partRows) {
+            for (const row of partRows as PartRow[]) {
+              if (row.user_id !== ringUid) continue;
+              userInviteStatusByBeef.set(row.beef_id, row.invite_status);
+              if (row.invite_status !== 'accepted') continue;
+              if (row.role === 'witness') continue;
+              userOnLiveRingByBeef.set(row.beef_id, true);
+            }
+          }
+        }
+      }
+
+      const rawCount = beefList.length;
+      const { displayNameFromPublicRow: dnFromMap } = await import('@/lib/fetch-user-public-profile');
+
+      const uid = user?.id;
+      let beefsWithData = beefList.map((beef: Record<string, unknown>) => {
+        const mid = beef.mediator_id as string | null | undefined;
+        const cid = beef.created_by as string | null | undefined;
+        const med = mid ? feedPublicMap.get(mid) : undefined;
+        const author = cid ? feedPublicMap.get(cid) : undefined;
+        const hostSource = med ?? author;
+        const hostN = dnFromMap(hostSource, 'Anonyme');
+        const partAgg = beef.beef_participants as { count: number }[] | undefined;
+        const bid = String(beef.id);
+        const onRing = Boolean(uid && (mid === uid || userOnLiveRingByBeef.get(bid)));
+        const userLikes = beef.beef_likes as { user_id: string }[] | undefined;
+        const hasLiked =
+          Array.isArray(userLikes) && userLikes.some((like) => like.user_id === uid);
+        const teaserLikes = beef.teaser_likes as { user_id: string }[] | undefined;
+        const hasLikedTeaser =
+          Array.isArray(teaserLikes) && teaserLikes.some((like) => like.user_id === uid);
+        const beefFields = { ...beef } as Record<string, unknown>;
+        delete beefFields.beef_likes;
+        delete beefFields.teaser_likes;
+        delete beefFields.price;
+        delete beefFields.is_premium;
+        return {
+          ...beefFields,
+          host_name: hostN,
+          host_username: hostSource?.username?.trim() || null,
+          mediator_name: mid ? hostN : null,
+          mediator_username: mid ? (feedPublicMap.get(mid)?.username?.trim() || null) : null,
+          viewer_count: Number(beef.viewer_count) || 0,
+          tags: (beef.tags as string[] | undefined) || [],
+          participants_count: partAgg?.[0]?.count || 0,
+          challenger_a_name: challengerANameByBeef[bid] ?? null,
+          challenger_b_name: challengerBNameByBeef[bid] ?? null,
+          challenger_a_username: challengerAUsernameByBeef[bid] ?? null,
+          challenger_b_username: challengerBUsernameByBeef[bid] ?? null,
+          challenger_c_name: (() => {
+            const raw = beef.challenger_c_name;
+            const s = typeof raw === 'string' ? raw.trim() : '';
+            return s || challengerCNameByBeef[bid] || null;
+          })(),
+          challenger_d_name: (() => {
+            const raw = beef.challenger_d_name;
+            const s = typeof raw === 'string' ? raw.trim() : '';
+            return s || challengerDNameByBeef[bid] || null;
+          })(),
+          challenger_c_username: challengerCUsernameByBeef[bid] ?? null,
+          challenger_d_username: challengerDUsernameByBeef[bid] ?? null,
+          challenger_c_avatar: (() => {
+            const raw = beef.challenger_c_avatar;
+            const s = typeof raw === 'string' ? raw.trim() : '';
+            return s || challengerCAvatarByBeef[bid] || null;
+          })(),
+          challenger_d_avatar: (() => {
+            const raw = beef.challenger_d_avatar;
+            const s = typeof raw === 'string' ? raw.trim() : '';
+            return s || challengerDAvatarByBeef[bid] || null;
+          })(),
+          user_is_live_ring: onRing,
+          user_invite_status: userInviteStatusByBeef.get(bid) || null,
+          video_url: (beef.video_url as string | null | undefined) ?? null,
+          has_liked_by_user: hasLiked,
+          teaser_score: Number(beef.teaser_score) || 0,
+          has_liked_teaser: hasLikedTeaser,
+          comment_count: Number(beef.comment_count) || 0,
+        };
+      }) as Beef[];
+
+      if (selectedStatus === 'scheduled') {
+        const now = Date.now();
+        beefsWithData = beefsWithData.filter((beef: any) => {
+          const at = beef.scheduled_at ? new Date(beef.scheduled_at).getTime() : 0;
+          if (beef.status === 'pending' && beef.scheduled_at) return at > now;
+          if (beef.status === 'scheduled') return !beef.scheduled_at || at > now;
+          return false;
+        });
+      }
+
+      if (selectedTags.length > 0) {
+        beefsWithData = beefsWithData.filter((beef: any) => beef.tags?.some((tag: string) => selectedTags.includes(tag)));
+      }
+
+      if (feedType === 'abonnements') {
+        const followingSet = new Set(followingIds);
+        beefsWithData = beefsWithData.filter(
+          (beef: any) => beef.mediator_id && followingSet.has(beef.mediator_id)
+        );
+        beefsWithData.sort(compareFeedOrder);
+      } else if (feedType === 'pour-vous') {
+        beefsWithData.sort(compareArenaOrder);
+      } else {
+        beefsWithData.sort(compareFeedOrder);
+      }
+
+      setBeefs(beefsWithData);
+      setHasMore(rawCount >= fetchLimit);
+    } catch (error) {
+      console.error('Error loading beefs:', error);
+      setBeefs([]);
+      setHasMore(false);
+    } finally {
+      if (!isBackgroundRefresh) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    }
+  }, [fetchLimit, selectedStatus, selectedTags, feedType, followingIds, user?.id]);
+
+  const getSessionToken = async () => {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token;
+  };
+
+  const handleClaimManifesto = useCallback(async (beefId: string) => {
+    if (!user?.id) return;
+    const token = await getSessionToken();
+    if (!token) return;
+    const res = await postBeefManage(token, { action: 'CLAIM_MANIFESTO', beefId });
+    if (!res.ok) { toast('Impossible de postuler', 'error'); return; }
+    toast('Candidature envoyée ! En attente de l’initiateur.', 'success');
+    void loadBeefs();
+  }, [user?.id, toast, loadBeefs]);
+
+  const handleApproveRef = useCallback(async (beefId: string) => {
+    if (!user?.id) return;
+    const token = await getSessionToken();
+    if (!token) return;
+    const res = await postBeefManage(token, { action: 'APPROVE_MANIFESTO', beefId });
+    if (!res.ok) { toast('Erreur lors de la validation', 'error'); return; }
+    toast("Ref validé ! L'affaire est programmée.", 'success');
+    void loadBeefs();
+  }, [user?.id, toast, loadBeefs]);
+
+  const handleRejectRef = useCallback(async (beefId: string) => {
+    if (!user?.id) return;
+    const token = await getSessionToken();
+    if (!token) return;
+    const res = await postBeefManage(token, { action: 'REJECT_MANIFESTO', beefId });
+    if (!res.ok) { toast('Erreur lors du refus', 'error'); return; }
+    toast('Candidature refusée.', 'info');
+    void loadBeefs();
+  }, [user?.id, toast, loadBeefs]);
+
+  const handleWithdrawManifesto = useCallback(async (beefId: string) => {
+    if (!user?.id) return;
+    const token = await getSessionToken();
+    if (!token) return;
+    const res = await postBeefManage(token, { action: 'WITHDRAW_MANIFESTO', beefId });
+    if (!res.ok) { toast('Impossible de te désister', 'error'); return; }
+    toast('Tu n’es plus médiateur sur cette affaire.', 'success');
+    void loadBeefs();
+  }, [user?.id, toast, loadBeefs]);
+
+  const confirmDelete = async () => {
+    if (!beefToDelete || !user?.id) return;
+    const { error } = await supabase.from('beefs').delete().eq('id', beefToDelete).eq('created_by', user.id).eq('status', 'pending');
+    if (error) {
+      toast('Erreur lors de la suppression', 'error');
+      return;
+    }
+    toast('Affaire détruite.', 'success');
+    setBeefToDelete(null);
+    void loadBeefs();
+  };
+
+  const confirmForfeit = async () => {
+    if (!beefToForfeit || !user?.id) return;
+    const { error } = await supabase.from('beefs').update({ status: 'cancelled' }).eq('id', beefToForfeit).eq('created_by', user.id);
+    if (error) {
+      toast('Erreur lors du forfait', 'error');
+      return;
+    }
+    toast('Forfait déclaré. L\'Aura a été impactée.', 'info');
+    setBeefToForfeit(null);
+    void loadBeefs();
+  };
+
+  useEffect(() => {
+    if (authLoading) return;
+    void loadBeefs();
+
+    let debounceTimer: NodeJS.Timeout;
+
+    const channel = supabase
+      .channel('beefs_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'beefs' }, () => {
+        // Bouclier réseau : annule la requête précédente si la DB spamme les événements
+        clearTimeout(debounceTimer);
+        // Attend 1.5s que la base soit stabilisée avant de déclencher le refetch
+        debounceTimer = setTimeout(() => {
+          void loadBeefs(true);
+        }, 1500);
+      })
+      .subscribe();
+
+    return () => {
+      clearTimeout(debounceTimer);
+      channel.unsubscribe();
+    };
+  }, [
+    authLoading,
+    user?.id,
+    feedType,
+    selectedTags,
+    selectedStatus,
+    followingIds,
+    fetchLimit,
+    loadBeefs,
+  ]);
+
+  useEffect(() => {
+    if (loading) return;
+    const container = document.getElementById('feed-scroll-container');
+    if (!container) return;
+
+    const ratios = new Map<string, number>();
+
+    const pickWinner = () => {
+      let bestId: string | null = null;
+      let bestRatio = 0;
+      for (const [beefId, ratio] of ratios) {
+        if (ratio > bestRatio) {
+          bestRatio = ratio;
+          bestId = beefId;
+        }
+      }
+      setActiveVideoId(bestRatio > 0 ? bestId : null);
+    };
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const beefId = (entry.target as HTMLElement).dataset.beefId;
+          if (!beefId) continue;
+          ratios.set(beefId, entry.isIntersecting ? entry.intersectionRatio : 0);
+        }
+        pickWinner();
+      },
+      {
+        root: container,
+        threshold: [0, 0.25, 0.5, 0.75, 1],
+      },
+    );
+
+    const nodes = container.querySelectorAll('[data-beef-id]');
+    nodes.forEach((node) => {
+      const beefId = (node as HTMLElement).dataset.beefId;
+      if (beefId) ratios.set(beefId, 0);
+      obs.observe(node);
+    });
+
+    return () => obs.disconnect();
+  }, [loading, beefs, mobileViewMode]);
+
+  const loadMore = () => {
+    if (loadingMore || !hasMore) return;
+    loadMoreIntentRef.current = true;
+    setFetchLimit((n) => n + 20);
+  };
+
+  const handleAuraClick = async (beefId: string) => {
+    if (!user?.id) return;
+    const targetBeef = beefs.find((b) => b.id === beefId);
+    if (!targetBeef) return;
+
+    const isCurrentlyLiked = !!targetBeef.has_liked_by_user;
+
+    setBeefs((prev) =>
+      prev.map((b) => {
+        if (b.id === beefId) {
+          return {
+            ...b,
+            has_liked_by_user: !isCurrentlyLiked,
+            engagement_score: Math.max(0, (b.engagement_score || 0) + (isCurrentlyLiked ? -1 : 1)),
+          };
+        }
+        return b;
+      }),
+    );
+
+    try {
+      if (isCurrentlyLiked) {
+        await supabase.from('beef_likes').delete().match({ beef_id: beefId, user_id: user.id });
+      } else {
+        await supabase.from('beef_likes').insert({ beef_id: beefId, user_id: user.id });
+      }
+    } catch (error) {
+      console.error('Erreur API Aura:', error);
+    }
+  };
+
+  const handleTeaserAuraClick = async (beefId: string) => {
+    if (!user?.id) return;
+    const targetBeef = beefs.find((b) => b.id === beefId);
+    if (!targetBeef) return;
+
+    const isCurrentlyLiked = !!targetBeef.has_liked_teaser;
+
+    setBeefs((prev) =>
+      prev.map((b) => {
+        if (b.id === beefId) {
+          return {
+            ...b,
+            has_liked_teaser: !isCurrentlyLiked,
+            teaser_score: Math.max(0, (b.teaser_score || 0) + (isCurrentlyLiked ? -1 : 1)),
+          };
+        }
+        return b;
+      }),
+    );
+
+    try {
+      if (isCurrentlyLiked) {
+        await supabase.from('teaser_likes').delete().match({ beef_id: beefId, user_id: user.id });
+      } else {
+        await supabase.from('teaser_likes').insert({ beef_id: beefId, user_id: user.id });
+      }
+    } catch (error) {
+      console.error('Erreur API Aura Teaser:', error);
+    }
+  };
+
+  const handleBeefClick = (beef: Beef) => {
+    if (
+      beef.status === 'ended' ||
+      beef.status === 'replay' ||
+      beef.status === 'completed' ||
+      beef.status === 'cancelled'
+    ) {
+      router.push(`/beef/${beef.id}/summary`);
+      return;
+    }
+    router.push(`/arena/${beef.id}`);
+  };
+
+  const handleTagClick = (tag: string) => {
+    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  };
+
+  const handleCreateBeef = async (beefData: SubmitBeefPayload) => {
+    if (!user) { router.push('/login'); return; }
+    try {
+      await submitNewBeef(supabase, user.id, beefData);
+      setShowCreateModal(false);
+      router.push('/feed');
+    } catch (error: any) {
+      throw new Error(error.message || 'Erreur lors de la création');
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+      <Suspense fallback={null}>
+        <OpenCreateModalFromQuery setOpen={setShowCreateModal} />
+        <OpenCommentsFromQuery setOpenId={setActiveCommentsBeefId} />
+      </Suspense>
+        {/* Bannière + onglets + filtres (desktop) — dans le flux, repousse le scroll */}
+        <div className="z-[100] flex w-full shrink-0 flex-col bg-black/30 px-4 pb-3 pt-3 backdrop-blur-sm md:px-0 md:pt-0 lg:bg-transparent lg:backdrop-blur-none">
+          <div className="flex w-full flex-col gap-3 border-b border-white/[0.08] pb-3">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between">
+              <div className="flex items-center gap-4 max-md:flex-nowrap max-md:overflow-x-auto hide-scrollbar max-md:pb-1">
+              {[
+                { id: 'pour-vous' as const, label: 'Pour toi', icon: TrendingUp },
+                { id: 'abonnements' as const, label: 'Abonnements', icon: Users },
+                { id: 'manifestes' as const, label: 'À Saisir', icon: FileText },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setFeedType(tab.id)}
+                  className={`group flex min-h-[44px] items-center gap-2 pb-1 transition-colors ${
+                    feedType === tab.id
+                      ? 'border-b-2 border-white font-black uppercase tracking-widest text-[11px] text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] md:text-[12px]'
+                      : 'border-b-2 border-transparent pb-1 text-white/50 hover:text-white font-bold uppercase tracking-widest text-[11px] md:text-[12px]'
+                  }`}
+                >
+                  <tab.icon
+                    className={`h-4 w-4 shrink-0 ${
+                      feedType === tab.id
+                        ? 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]'
+                        : 'text-white/40 group-hover:text-white'
+                    }`}
+                  />
+                  <span
+                    className={
+                      feedType === tab.id
+                        ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]'
+                        : undefined
+                    }
+                  >
+                    {tab.label}
+                  </span>
+                </button>
+              ))}
+              </div>
+            <a
+              href={hrefWithFrom('/buy-points', pathname)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-[44px] max-md:hidden shrink-0 items-center justify-center gap-2 rounded-full border border-prestige-gold/30 px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider text-prestige-gold transition-colors hover:bg-prestige-gold/10 hover:text-yellow-400 lg:hidden"
+            >
+              <Coins className="w-4 h-4 flex-shrink-0" />
+              <span>Lingots</span>
+            </a>
+            </div>
+            <div className="mt-2 flex w-full items-center justify-between md:mt-0 md:w-auto">
+              <div className="flex max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-1 hide-scrollbar items-center gap-3">
+                {STATUS_FILTERS.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSelectedStatus(s.id)}
+                    className={`inline-flex min-h-[44px] items-center rounded-full border px-4 py-1.5 font-sans text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-200 ${
+                      selectedStatus === s.id
+                        ? 'border-white/40 bg-white/10 text-white shadow-[0_0_12px_rgba(255,255,255,0.15)]'
+                        : 'border-white/[0.08] bg-transparent text-gray-500 hover:border-white/15 hover:text-gray-300'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="ml-2 flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-black/40 p-1 md:hidden">
+                <button
+                  type="button"
+                  onClick={() => setMobileViewMode('list')}
+                  className={`rounded-full p-1.5 transition-colors ${mobileViewMode === 'list' ? 'bg-white/20 text-white' : 'text-gray-500 hover:text-white'}`}
+                >
+                  <List className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileViewMode('grid')}
+                  className={`rounded-full p-1.5 transition-colors ${mobileViewMode === 'grid' ? 'bg-white/20 text-white' : 'text-gray-500 hover:text-white'}`}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2 flex flex-col gap-2 md:px-8">
+          {/* Selected tags */}
+          {selectedTags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selectedTags.map(tag => (
+                <motion.div key={tag} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                  className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">
+                  <span>#{tag}</span>
+                  <button onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))} className="hover:bg-white/20 rounded-full p-0.5">
+                    <X className="w-3 h-3" />
+                  </button>
+                </motion.div>
+              ))}
+              <button onClick={() => setSelectedTags([])} className="px-3 py-1 text-xs font-medium text-gray-500 hover:text-gray-300 transition-colors">
+                Effacer
+              </button>
+            </div>
+          )}
+
+          {/* Trending tags */}
+          <div className="flex items-center gap-2.5 overflow-x-auto hide-scrollbar pb-1">
+            <span className="font-mono text-[10px] text-white/30 font-bold uppercase tracking-[0.15em] flex-shrink-0">Trending</span>
+            {trendingTags.filter(t => !selectedTags.includes(t)).slice(0, 8).map(tag => (
+              <button
+                key={tag}
+                onClick={() => handleTagClick(tag)}
+                className="inline-flex min-h-[44px] flex-shrink-0 items-center rounded-full border border-white/[0.06] bg-white/[0.03] px-3 py-1 font-sans text-xs font-medium text-white/40 whitespace-nowrap transition-colors hover:text-white"
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        {loading ? (
+          <div
+            id="feed-scroll-container"
+            className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-32 md:p-6 md:pt-4 ${
+              mobileViewMode === 'grid'
+                ? 'grid grid-cols-2 gap-3 px-3 pt-3 items-start md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5'
+                : 'flex flex-col snap-y snap-mandatory gap-4 items-stretch px-0 pt-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start'
+            }`}
+          >
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className={`overflow-hidden rounded-[2rem] border border-white/[0.06] bg-white/[0.04] ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
+              >
+                <div className="skeleton h-48 rounded-none" />
+                <div className="space-y-3 p-5">
+                  <div className="skeleton h-4 w-3/4 rounded-full" />
+                  <div className="skeleton h-3 w-1/2 rounded-full" />
+                  <div className="flex gap-2">
+                    <div className="skeleton h-5 w-16 rounded-full" />
+                    <div className="skeleton h-5 w-12 rounded-full" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : beefs.length === 0 ? (
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 py-16 text-center md:justify-center">
+            <div className="relative mb-6 group">
+              <div className="absolute inset-0 scale-150 rounded-full bg-prestige-gold/10 transition-all duration-700 group-hover:scale-[1.75] group-hover:bg-prestige-gold/20" />
+              <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-sm shadow-[0_0_30px_rgba(212,175,55,0.15)]">
+                <Flame className="h-10 w-10 text-prestige-gold opacity-80" strokeWidth={1.5} />
+              </div>
+            </div>
+            <h3 className="font-sans text-xl md:text-2xl font-bold text-white mb-2 tracking-tight">Le calme avant la tempête</h3>
+            <p className="font-sans text-sm md:text-base text-white/40 mb-8 max-w-xs leading-relaxed">Aucune affaire en cours ici. Prenez l'initiative et ouvrez les hostilités.</p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2.5 rounded-full border border-prestige-gold/30 bg-prestige-gold/10 px-8 py-3.5 text-sm font-bold text-prestige-gold shadow-[0_0_20px_rgba(212,175,55,0.2)] transition-all hover:bg-prestige-gold/20 hover:shadow-[0_0_30px_rgba(212,175,55,0.4)] active:scale-[0.97]"
+            >
+              <Swords className="h-5 w-5" strokeWidth={2} />
+              Initier un Beef
+            </button>
+          </div>
+        ) : (
+          <>
+            <div
+              id="feed-scroll-container"
+              className={`flex-1 min-h-0 w-full overflow-y-auto hide-scrollbar pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-32 md:p-6 md:pt-4 ${
+                mobileViewMode === 'grid'
+                  ? 'grid grid-cols-2 gap-3 px-3 pt-3 items-start md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5'
+                  : 'flex flex-col snap-y snap-mandatory gap-4 items-stretch px-0 pt-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-5 md:snap-none md:items-start'
+              }`}
+            >
+              {/* === CARTE APPÂT (Visiteurs) === */}
+              {!user && showHero && (
+                <div
+                  className={`relative flex h-auto min-h-[380px] shrink-0 flex-col items-center justify-between overflow-hidden border border-white/20 bg-gradient-to-br from-white/5 to-obsidian-950 p-6 text-center shadow-[0_0_20px_rgba(255,255,255,0.08)] max-md:rounded-2xl max-md:border md:rounded-[1.5rem] md:border ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowHero(false);
+                      try {
+                        localStorage.setItem('hideAgoraHero', 'true');
+                      } catch {
+                        /* ignore */
+                      }
+                    }}
+                    className="absolute right-3 top-3 z-20 p-2 text-white/40 hover:text-white"
+                    aria-label="Fermer"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                  <Flame className="mb-4 h-12 w-12 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]" aria-hidden />
+                  <h2 className="mb-2 font-sans text-xl font-black uppercase italic text-white md:text-2xl">Un compte à régler ?</h2>
+                  <p className="mx-auto mb-8 max-w-sm text-xs text-gray-400 md:text-sm">
+                    Ne laisse plus une affaire sans réponse. Convoque ton adversaire dans l&apos;Agora.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/signup?next=/feed')}
+                    className="w-full max-w-[220px] rounded-xl bg-white py-3.5 text-sm font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-transform hover:scale-105 active:scale-95"
+                  >
+                    Call Out
+                  </button>
+                </div>
+              )}
+              {beefs.map((beef, index) => (
+                <div
+                  key={beef.id}
+                  className={`relative shrink-0 flex justify-center ${mobileViewMode === 'list' ? 'snap-start snap-always w-full' : 'w-full'}`}
+                >
+                  <div
+                    data-beef-id={beef.id}
+                    className={mobileViewMode === 'list' ? 'w-full max-w-[380px]' : 'w-full'}
+                  >
+                    <BeefCard
+                    {...beef}
+                    isActiveVideo={beef.id === activeVideoId}
+                    onPrepareAudience={
+                      (beef.status === 'scheduled' || beef.status === 'pending' || beef.status === 'ready') &&
+                      (user?.id === beef.mediator_id || (!beef.mediator_id && user?.id === beef.created_by))
+                        ? () => router.push(`/arena/${beef.id}`)
+                        : undefined
+                    }
+                    userInviteStatus={beef.user_invite_status}
+                    saisirTab={feedType === 'manifestes'}
+                    onSaisirAffaire={
+                      beef.status === 'pending' &&
+                      beef.intent === 'manifesto' &&
+                      user?.id &&
+                      beef.created_by &&
+                      beef.created_by !== user.id &&
+                      !beef.mediator_id
+                        ? () => void handleClaimManifesto(beef.id)
+                        : undefined
+                    }
+                    onValiderRef={
+                      beef.status === 'pending' &&
+                      beef.intent === 'manifesto' &&
+                      user?.id &&
+                      beef.created_by === user.id &&
+                      beef.mediator_id
+                        ? () => void handleApproveRef(beef.id)
+                        : undefined
+                    }
+                    onRefuserRef={
+                      beef.status === 'pending' &&
+                      beef.intent === 'manifesto' &&
+                      user?.id &&
+                      beef.created_by === user.id &&
+                      beef.mediator_id
+                        ? () => void handleRejectRef(beef.id)
+                        : undefined
+                    }
+                    onSeDesister={
+                      beef.status === 'scheduled' &&
+                      user?.id === beef.mediator_id &&
+                      beef.intent === 'manifesto'
+                        ? () => void handleWithdrawManifesto(beef.id)
+                        : undefined
+                    }
+                    liveAudienceAction={
+                      beef.status === 'live'
+                        ? {
+                            variant: beef.user_is_live_ring ? 'return' : 'join',
+                            onClick: () => router.push(`/arena/${beef.id}`),
+                          }
+                        : undefined
+                    }
+                    onClick={() => handleBeefClick(beef)}
+                    comment_count={beef.comment_count || 0}
+                    onCommentClick={() => setActiveCommentsBeefId(beef.id)}
+                    onAuraClick={() => handleAuraClick(beef.id)}
+                    teaser_score={beef.teaser_score}
+                    has_liked_teaser={beef.has_liked_teaser}
+                    onTeaserAuraClick={() => handleTeaserAuraClick(beef.id)}
+                    onTagClick={handleTagClick}
+                    onDelete={
+                      beef.status === 'pending' && user?.id === beef.created_by
+                        ? () => setBeefToDelete(beef.id)
+                        : undefined
+                    }
+                    onEdit={
+                      beef.status === 'pending' && user?.id === beef.created_by
+                        ? () => setEditBeefId(beef.id)
+                        : undefined
+                    }
+                    onForfeit={
+                      beef.status === 'scheduled' && user?.id === beef.created_by
+                        ? () => setBeefToForfeit(beef.id)
+                        : undefined
+                    }
+                    onNotifyClick={
+                      beef.status === 'scheduled' || (beef.status === 'pending' && !!beef.scheduled_at)
+                        ? () => toast('Bientôt : rappel quand l’heure approche.', 'info')
+                        : undefined
+                    }
+                    index={index}
+                  />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {hasMore && (
+              <div className="flex justify-center mt-12">
+                <button
+                  type="button"
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
+                  className="rounded-full bg-white/[0.06] border border-white/[0.08] px-8 py-3 font-sans text-sm font-semibold text-white transition-all duration-200 hover:bg-white/10 hover:border-white/15 disabled:opacity-50"
+                >
+                  {loadingMore ? 'Chargement…' : 'Charger plus'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      {activeBeef && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="fixed z-[500] bottom-6 right-4 md:bottom-8 md:right-8 flex flex-col items-end pointer-events-none"
+        >
+          <button
+            type="button"
+            onClick={() => router.push(`/arena/${activeBeef.id}`)}
+            className="group pointer-events-auto flex items-center gap-3 rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg p-2 pr-4 transition-all hover:scale-105 hover:border-cyan-400"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-500/20">
+              <Radio className="h-5 w-5 animate-pulse text-cyan-400" />
+            </div>
+            <div className="flex flex-col items-start text-left">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-400">Beef en cours</span>
+              <span className="max-w-[120px] truncate text-xs font-semibold text-white md:max-w-[150px]">
+                {activeBeef.title}
+              </span>
+            </div>
+          </button>
+        </motion.div>
+      )}
+      {/* Modal Suppression */}
+      {beefToDelete && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="beef-delete-title"
+          onClick={() => setBeefToDelete(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950/75 backdrop-blur-md p-6 shadow-[0_0_40px_rgba(220,38,38,0.15)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="beef-delete-title" className="mb-2 text-xl font-black text-white">
+              Détruire l&apos;affaire ?
+            </h3>
+            <p className="mb-6 text-sm text-gray-400">
+              Cette action est irréversible. L&apos;affaire disparaîtra de l&apos;Agora.
+            </p>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setBeefToDelete(null)} className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-bold text-white transition-colors hover:bg-white/20">
+                Annuler
+              </button>
+              <button type="button" onClick={() => void confirmDelete()} className="flex-1 rounded-xl bg-blood-600 py-3 text-sm font-bold text-white shadow-glow-blood transition-colors hover:bg-blood-500">
+                Détruire
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Forfait */}
+      {beefToForfeit && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="beef-forfeit-title"
+          onClick={() => setBeefToForfeit(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950/75 backdrop-blur-md p-6 shadow-[0_0_40px_rgba(212,175,55,0.15)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="beef-forfeit-title" className="mb-2 text-xl font-black text-white">
+              Déclarer Forfait ?
+            </h3>
+            <p className="mb-6 text-sm text-gray-400">
+              L&apos;affaire est programmée. Fuir maintenant annulera le combat et impactera votre réputation.
+            </p>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setBeefToForfeit(null)} className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-bold text-white transition-colors hover:bg-white/20">
+                Combattre
+              </button>
+              <button type="button" onClick={() => void confirmForfeit()} className="flex-1 rounded-xl bg-prestige-gold py-3 text-sm font-bold text-black shadow-[0_0_15px_rgba(212,175,55,0.5)] transition-colors hover:bg-prestige-gold/90">
+                Fuir (Forfait)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editBeefId && (
+        <EditBeefModal
+          beefId={editBeefId}
+          onClose={() => setEditBeefId(null)}
+          onSaved={() => {
+            setEditBeefId(null);
+            void loadBeefs();
+            toast('Affaire mise à jour', 'success');
+          }}
+        />
+      )}
+      {showCreateModal && <CreateBeefForm onSubmit={handleCreateBeef} onCancel={() => setShowCreateModal(false)} />}
+
+      <AnimatePresence>
+        {activeCommentsBeefId && (
+          <CommentsDrawer
+            beefId={activeCommentsBeefId}
+            onClose={() => setActiveCommentsBeefId(null)}
+          />
+        )}
+      </AnimatePresence>
+
+    </div>
+  );
+}
+```
+
+---
+
+*Extraction générée depuis `main` post-hotfix — référence commit `ef65073`.*

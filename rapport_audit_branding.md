@@ -1,0 +1,1269 @@
+# Rapport d'audit — Branding & SEO (Phase H.1)
+
+**Date d'extraction :** 2026-06-29 15:23  
+**Branche :** `main` (post G.1 — commit `4cf74a7`)  
+**Mission :** Cartographie SEO metadata + iconographie globale avant refonte H.1.  
+**Contrainte :** Zéro modification du code source.
+
+---
+
+## Contexte Phase H.1
+
+Objectifs Architecte :
+1. Mettre à jour les métadonnées SEO — intégrer **« L'Agora des règlements de comptes »** (pluriel)
+2. Remplacer l'iconographie globale par un nouvel asset SVG
+
+**État actuel tagline :** « L'Agora **du** règlement de comptes » (singulier) — présent dans `metadata`, splash, `manifest.json`.
+
+---
+
+## 1. Layout racine (SEO) — `app/layout.tsx`
+
+**Points d'intérêt Architecte :**
+- Objet `export const metadata: Metadata` (l.37–76)
+- `title.default` : `"Beefs - L'Agora du règlement de comptes"`
+- `openGraph.title`, `twitter.title`, `appleWebApp.title`
+- `manifest: "/manifest.json"` — PWA icons déléguées au manifest
+- Pas de `icons` explicite dans metadata — Next.js utilise `app/icon.png`
+
+```tsx
+import type { Metadata, Viewport } from "next";
+import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import "./globals.css";
+import { AppShell } from "@/components/AppShell";
+import { StarField } from "@/components/Arena/shared/StarField";
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+  display: "swap",
+  weight: ["400", "700"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+  weight: ["400", "500"],
+});
+import { QueryProvider } from "@/components/QueryProvider";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { OnboardingReminder } from "@/components/OnboardingReminder";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { PWAManager } from "@/components/PWAManager";
+import { ToastProvider } from "@/components/Toast";
+import { GlobalSearchProvider } from "@/contexts/GlobalSearchContext";
+import { BetaGate } from "@/components/BetaGate";
+import { GlobalMessagesDrawer } from "@/components/GlobalMessagesDrawer";
+import { GlobalDuelAmbush } from "@/components/GlobalDuelAmbush";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ScrollRestoration } from "@/components/ScrollRestoration";
+import { ClientMonitoring } from "@/components/ClientMonitoring";
+const siteUrl =
+  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://beefs-app.vercel.app");
+
+export const metadata: Metadata = {
+  title: {
+    default: "Beefs - L'Agora du règlement de comptes",
+    template: "%s | Beefs",
+  },
+  description:
+    "L'arène ultime pour régler tes conflits en direct. Lance un beef, affronte tes adversaires sous l'arbitrage d'un Ref et laisse la communauté trancher.",
+  keywords: ["beefs", "débats", "live", "streaming", "conflits", "résolution", "tiktok live", "débat en direct", "vote", "challenge"],
+  authors: [{ name: "Beefs Team" }],
+  creator: "Beefs",
+  publisher: "Beefs",
+  manifest: "/manifest.json",
+  metadataBase: new URL(siteUrl),
+  alternates: { canonical: "/" },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Beefs",
+  },
+  openGraph: {
+    title: "Beefs - L'Agora du règlement de comptes",
+    description:
+      "L'arène ultime pour régler tes conflits en direct. Lance un beef, affronte tes adversaires sous l'arbitrage d'un Ref et laisse la communauté trancher.",
+    type: "website",
+    siteName: "Beefs",
+    locale: "fr_FR",
+    url: siteUrl,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Beefs - L'Agora du règlement de comptes",
+    description:
+      "L'arène ultime pour régler tes conflits en direct. Lance un beef, affronte tes adversaires sous l'arbitrage d'un Ref et laisse la communauté trancher.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#08080A",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
+function RootLayoutClient({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <QueryProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <GlobalSearchProvider>
+              <ClientMonitoring />
+              <BetaGate>
+                <PWAManager />
+                <ScrollRestoration />
+                <StarField />
+                <AppShell>{children}</AppShell>
+                <OnboardingReminder />
+                <PWAInstallPrompt />
+                <GlobalMessagesDrawer />
+                <GlobalDuelAmbush />
+              </BetaGate>
+            </GlobalSearchProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </QueryProvider>
+  );
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="fr"
+      className={`overflow-x-hidden ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+    >
+      <body className="font-sans overflow-x-hidden bg-[#050505] text-white antialiased">
+        <RootLayoutClient>{children}</RootLayoutClient>
+      </body>
+    </html>
+  );
+}
+
+```
+
+---
+
+## 2. Cartographie iconographie — fichiers principaux
+
+### Composants identifiés
+
+| Fichier | Rôle | Usage logo |
+|---------|------|------------|
+| `components/Header.tsx` | Navigation globale (AppShell) | `<BeefLogo>` + texte « Beefs » |
+| `components/BeefLogo.tsx` | SVG inline flamme | Source iconographique actuelle |
+| `app/page.tsx` | Splash / accueil | `<BeefLogo size={100}>` + tagline |
+| `components/BetaGate.tsx` | Gate beta | `<BeefLogo>` (non extrait) |
+| `app/login/page.tsx` | Auth | `<BeefLogo>` (non extrait) |
+| `components/AppShell.tsx` | Enveloppe | Monte `<Header shell="phone|full" />` (non extrait) |
+
+### 2a. Navigation globale — `components/Header.tsx`
+
+**Injection logo :** l.418–427 — `<Link>` + `<BeefLogo size={32}>` + `<span>Beefs</span>`
+
+```tsx
+'use client';
+
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  Menu,
+  X,
+  Home,
+  Flame,
+  Bell,
+  User,
+  Settings as SettingsIcon,
+  MessageCircle,
+  LogOut,
+  Mail,
+  ChevronDown,
+  Shield,
+  Coins,
+  Search,
+  Swords,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/Toast';
+import { BeefLogo } from '@/components/BeefLogo';
+import { BeefNotificationToasts } from '@/components/BeefNotificationToasts';
+import { supabase } from '@/lib/supabase/client';
+import { hrefWithFrom } from '@/lib/navigation-return';
+import { useGlobalSearch } from '@/contexts/GlobalSearchContext';
+import { useMessagesDrawer } from '@/contexts/MessagesDrawerContext';
+import { getAuraRank } from '@/lib/prestige';
+import { openBuyPointsPage } from '@/lib/navigation-buy-points';
+
+const buyPointsAnchorClass =
+  'flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors';
+
+function getNotifPrefs(): Record<string, boolean> {
+  try {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('beefs_notif_prefs') : null;
+    return saved ? JSON.parse(saved) : {};
+  } catch { return {}; }
+}
+
+function showBrowserNotification(title: string, body: string) {
+  if (typeof window === 'undefined' || !('Notification' in window)) return;
+  if (document.hasFocus()) return;
+  const prefs = getNotifPrefs();
+  if (prefs.browser === false) return;
+
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '/icon-192.png', badge: '/icon-192.png', tag: `beefs-${Date.now()}` });
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission();
+  }
+}
+
+/** Connexion / inscription / auth : pas de recherche (même si une session JWT résiduelle rend `user` truthy). */
+/** Réponse RPC count(*) (PostgREST peut renvoyer number | string). */
+function parseBadgeCount(data: unknown): number {
+  if (typeof data === 'number' && Number.isFinite(data)) return Math.max(0, Math.floor(data));
+  if (typeof data === 'string') {
+    const p = parseInt(data, 10);
+    return Number.isFinite(p) ? Math.max(0, p) : 0;
+  }
+  return 0;
+}
+
+/** Nombre exact sur le badge (plus de « 9+ » trompeur pour 10–99). */
+function formatNavBadgeCount(count: number): string {
+  const n = Math.max(0, Math.floor(count));
+  if (n > 999) return '999+';
+  return String(n);
+}
+
+/** Raccourci clavier affiché dans la barre : ⌘K (Apple) ou Ctrl+K (Windows/Linux), rendu via <kbd> pour éviter les glyphes cassés. */
+function SearchKeyboardShortcut({ visibleFrom = 'lg' }: { visibleFrom?: 'lg' | 'xl' }) {
+  const [modKey, setModKey] = useState<'⌘' | 'Ctrl'>('Ctrl');
+  useEffect(() => {
+    if (typeof navigator === 'undefined') return;
+    const apple = /Mac|iPhone|iPad|iPod/.test(navigator.platform ?? '');
+    setModKey(apple ? '⌘' : 'Ctrl');
+  }, []);
+  const visClass = visibleFrom === 'xl' ? 'xl:inline-flex' : 'lg:inline-flex';
+  return (
+    <span className={`hidden shrink-0 items-center gap-0.5 ${visClass}`} aria-hidden>
+      <kbd className="pointer-events-none inline-flex h-5 min-w-[1.35rem] select-none items-center justify-center rounded border border-white/12 bg-black/35 px-1 font-sans text-[10px] font-semibold leading-none text-white/55 shadow-[inset_0_-1px_0_rgba(0,0,0,0.4)]">
+        {modKey}
+      </kbd>
+      <kbd className="pointer-events-none inline-flex h-5 min-w-[1.25rem] select-none items-center justify-center rounded border border-white/12 bg-black/35 px-1 font-sans text-[10px] font-semibold leading-none text-white/55 shadow-[inset_0_-1px_0_rgba(0,0,0,0.4)]">
+        K
+      </kbd>
+    </span>
+  );
+}
+
+function hideGlobalSearchOnPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname === '/forgot-password' ||
+    pathname === '/onboarding'
+  ) {
+    return true;
+  }
+  if (pathname.startsWith('/auth/')) return true;
+  return false;
+}
+
+/** Badge compteur nav — rouge vif (Radar) ; ping convocations en rouge. */
+function NavUnreadBadge({
+  href,
+  count,
+  compact,
+}: {
+  href: string;
+  count: number;
+  compact?: boolean;
+}) {
+  if (count <= 0) return null;
+  const outer = compact
+    ? 'absolute -top-1 -right-1 flex h-3.5 min-w-[14px] items-center justify-center'
+    : 'absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center';
+  const inner = compact
+    ? 'min-h-[14px] min-w-[14px] px-0.5 text-[9px]'
+    : 'min-h-4 min-w-[16px] px-1 text-[10px]';
+  return (
+    <span className={outer}>
+      {href === '/invitations' && (
+        <span className="absolute inset-0 animate-ping rounded-full bg-red-500 opacity-75" aria-hidden />
+      )}
+      <span
+        className={`relative z-[1] inline-flex items-center justify-center rounded-full bg-red-600 font-bold text-white ${inner}`}
+      >
+        {formatNavBadgeCount(count)}
+      </span>
+    </span>
+  );
+}
+
+export type HeaderShell = 'phone' | 'full';
+
+export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [pendingInvitations, setPendingInvitations] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [topUsers, setTopUsers] = useState<
+    { id: string; username: string | null; display_name: string | null; avatar_url: string | null; lifetime_points: number }[]
+  >([]);
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, userRole, signOut } = useAuth();
+  const { toast } = useToast();
+  const { openSearch } = useGlobalSearch();
+  const { openDrawer } = useMessagesDrawer();
+  const showGlobalSearch = !hideGlobalSearchOnPath(pathname);
+
+  useEffect(() => {
+    async function fetchElite() {
+      const { data } = await supabase
+        .from('user_public_profile')
+        .select('id, username, display_name, avatar_url, lifetime_points')
+        .not('username', 'is', null)
+        .order('lifetime_points', { ascending: false })
+        .limit(4);
+      if (data) setTopUsers(data);
+    }
+    void fetchElite();
+  }, []);
+
+  useEffect(() => {
+    setUserMenuOpen(false);
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
+  /** Retire `?from=` de la barre d’adresse (info de navigation interne, pas la page courante). */
+  useEffect(() => {
+    if (typeof window === 'undefined' || !pathname) return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('from')) return;
+    params.delete('from');
+    const q = params.toString();
+    router.replace(`${pathname}${q ? `?${q}` : ''}${window.location.hash}`, { scroll: false });
+  }, [pathname, router]);
+
+  const loadUnreadCounts = useCallback(async () => {
+    if (!user) return;
+
+    // Toujours interroger la BDD (état réel). Badges nav alignés avec les pages correspondantes.
+    const [invRes, notifRpc, dmRpc, auraUnreadRes] = await Promise.all([
+      supabase
+        .from('beef_invitations')
+        .select('id', { count: 'exact', head: true })
+        .eq('invitee_id', user.id)
+        .eq('status', 'sent'),
+      supabase.rpc('count_unread_notifications'),
+      supabase.rpc('count_unread_direct_messages'),
+      supabase
+        .from('aura_notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .or('is_read.is.null,is_read.eq.false'),
+    ]);
+
+    setPendingInvitations(invRes.count ?? 0);
+
+    let systemUnread = 0;
+    if (notifRpc.error) {
+      const fb = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .or('is_read.is.null,is_read.eq.false');
+      systemUnread = fb.count ?? 0;
+    } else {
+      systemUnread = parseBadgeCount(notifRpc.data);
+    }
+
+    const auraRows = auraUnreadRes.error ? 0 : (auraUnreadRes.count ?? 0);
+    /** Radar : non lus table `notifications` + entrées vue `aura_notifications`. */
+    setUnreadNotifications(systemUnread + auraRows);
+
+    if (dmRpc.error) {
+      const fb = await supabase
+        .from('direct_messages')
+        .select('id, conversations!inner(participant_1, participant_2)', { count: 'exact', head: true })
+        .or('is_read.is.null,is_read.eq.false')
+        .neq('sender_id', user.id)
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`, { referencedTable: 'conversations' });
+      setUnreadMessages(fb.count ?? 0);
+    } else {
+      setUnreadMessages(parseBadgeCount(dmRpc.data));
+    }
+  }, [user]);
+
+  /** Retour Stripe : toast succès + nettoyage URL (?purchase=success). */
+  useEffect(() => {
+    if (typeof window === 'undefined' || !pathname) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('purchase') !== 'success') return;
+    
+    params.delete('purchase');
+    const q = params.toString();
+    const newUrl = `${pathname}${q ? `?${q}` : ''}${window.location.hash}`;
+    window.history.replaceState(null, '', newUrl || '/');
+    
+    toast('Paiement validé ! Lingots crédités.', 'success');
+    void loadUnreadCounts();
+  }, [pathname, toast, loadUnreadCounts]);
+
+  useEffect(() => {
+    void loadUnreadCounts();
+  }, [loadUnreadCounts, pathname]);
+
+  useEffect(() => {
+    const onRefresh = () => {
+      void loadUnreadCounts();
+    };
+    if (typeof window === 'undefined') return;
+    window.addEventListener('beefs:badges-refresh', onRefresh);
+    return () => window.removeEventListener('beefs:badges-refresh', onRefresh);
+  }, [loadUnreadCounts]);
+
+  /** Retour sur l’onglet / la fenêtre : resync des badges (lectures faites ailleurs, autre device, etc.) */
+  useEffect(() => {
+    if (!user) return;
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void loadUnreadCounts();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [user, loadUnreadCounts]);
+
+  const headerCallbacksRef = useRef({ loadUnreadCounts, toast });
+  useEffect(() => {
+    headerCallbacksRef.current = { loadUnreadCounts, toast };
+  }, [loadUnreadCounts, toast]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`header_badges_${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'beef_invitations', filter: `invitee_id=eq.${user.id}` },
+        () => {
+          void headerCallbacksRef.current.loadUnreadCounts();
+          headerCallbacksRef.current.toast('Nouvelle invitation reçue !', 'info');
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let debounceTimer: ReturnType<typeof setTimeout>;
+
+    const channel = supabase
+      .channel('notifications_header')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            void headerCallbacksRef.current.loadUnreadCounts();
+          }, 500);
+
+          if (payload.eventType === 'INSERT') {
+            const n = payload.new as { type?: string; body?: string; title?: string };
+            const prefs = getNotifPrefs();
+            const typeMap: Record<string, string> = {
+              message: 'messages',
+              follow: 'follows',
+              invite: 'invites',
+              beef_live: 'beefs_live',
+              gift: 'gifts',
+              aura: 'aura',
+            };
+            const prefKey = typeMap[n.type || ''];
+            if (prefKey && prefs[prefKey] === false) return;
+
+            showBrowserNotification(n.title || 'Beefs', n.body || '');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  /** Liens masqués jusqu’à xl sur la barre horizontale (shell full) — évite le carambolage laptop. */
+  const navSecondaryHrefs = new Set(['/notifications', '/points', '/invitations']);
+
+  const navItems = [
+    { href: '/feed', label: 'Fil d’actu', icon: Home, badge: 0 },
+    {
+      href: '/notifications',
+      label: 'Notifications',
+      icon: Bell,
+      badge: unreadNotifications,
+    },
+    { href: '/points', label: 'Lingots', icon: Coins, badge: 0 },
+    {
+      href: '/invitations',
+      label: 'Convocations',
+      icon: Mail,
+      badge: pendingInvitations,
+    },
+    {
+      href: '/messages',
+      label: 'Messages',
+      icon: MessageCircle,
+      badge: unreadMessages,
+    },
+  ];
+
+  const publicNavItems = [
+    { href: '/feed', label: 'Fil d’actu', icon: Home, badge: 0 },
+    { href: '/rules', label: "Règles de l'Agora", icon: Shield, badge: 0 },
+  ];
+  const visibleNavItems = user ? navItems : publicNavItems;
+
+  const isActive = (href: string) => {
+    if (!pathname) return false;
+    /** Sur les pages profil, aucun onglet principal (Fil d’actu, Messages, …) ne doit rester « actif ». */
+    if (pathname === '/profile' || pathname.startsWith('/profile/')) {
+      return false;
+    }
+    if (href === '/feed') return pathname === '/feed' || pathname === '/';
+    if (href === '/buy-points') return pathname === '/buy-points';
+    return pathname.startsWith(href);
+  };
+
+  return (
+    <>
+      {user && !pathname?.startsWith('/admin') && (
+        <BeefNotificationToasts userId={user.id} />
+      )}
+      <header
+        className={
+          shell === 'phone'
+            ? `z-[100] relative mx-auto flex w-full max-w-md shrink-0 flex-col rounded-none border-b border-white/10 bg-transparent lg:mx-0 lg:h-full lg:min-h-0 lg:max-w-none lg:w-64 lg:self-stretch lg:border-b-0 lg:border-r lg:border-white/10 ${
+                isActive('/feed')
+                  ? 'border-none bg-transparent'
+                  : 'border-b border-white/10 bg-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] lg:shadow-none lg:border-b-0 lg:border-r lg:border-white/10'
+              }`
+            : 'fixed left-0 right-0 top-0 z-[100] border-b border-white/10 bg-transparent shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]'
+        }
+      >
+        <div
+          className={
+            shell === 'phone'
+              ? 'mx-auto flex h-auto min-h-0 w-full max-w-md flex-col lg:mx-0 lg:h-full lg:max-w-none'
+              : 'mx-auto max-w-7xl px-4'
+          }
+        >
+          <div
+            className={
+              shell === 'phone'
+                ? 'flex h-14 min-w-0 items-center justify-between gap-2 px-4 lg:h-full lg:min-h-0 lg:w-full lg:flex-col lg:items-start lg:justify-start lg:gap-0 lg:px-6 lg:py-8'
+                : 'flex h-14 min-w-0 items-center gap-2'
+            }
+          >
+            {/* Logo — invités : accueil splash pour éviter préchargement /feed (RSC) sur login, onboarding, etc. */}
+            <Link
+              href={user ? '/feed' : '/'}
+              className={`relative z-[5] flex shrink-0 items-center gap-2.5 group ${shell === 'phone' ? 'lg:mb-10 lg:w-full' : ''}`}
+            >
+              <BeefLogo size={32} className="transition-transform group-hover:scale-105 drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]" />
+              <span className="hidden sm:block text-xl font-extrabold text-white tracking-tighter drop-shadow-md">
+                Beefs
+              </span>
+            </Link>
+
+            {/* Desktop Nav — entrées complètes si connecté ; invités : liens publics d’exploration (évite barre vide). */}
+            <nav
+              className={`relative z-[5] hidden min-w-0 ${
+                shell === 'full'
+                  ? 'lg:flex lg:items-center lg:gap-1 lg:flex-1'
+                  : 'md:flex md:items-center md:gap-1 md:flex-1'
+              } ${
+                shell === 'phone'
+                  ? 'lg:mt-0 lg:w-full lg:flex-col lg:items-stretch lg:gap-2 lg:overflow-y-auto lg:overflow-x-hidden lg:overscroll-contain lg:min-h-0'
+                  : ''
+              }`}
+            >
+              {showGlobalSearch && (
+                <button
+                  type="button"
+                  aria-label="Ouvrir la recherche"
+                  onClick={() => openSearch()}
+                  className={`glass-prestige hidden min-h-[44px] items-center gap-3 rounded-[2px] px-4 py-2 text-left transition hover:bg-white/[0.06] shrink lg:flex ${
+                    shell === 'phone'
+                      ? 'w-full max-w-xs lg:mr-0 lg:max-w-none lg:w-full'
+                      : 'w-[100px] md:w-[150px] xl:w-[250px]'
+                  }`}
+                >
+                  <Search className="h-4 w-4 shrink-0 text-gray-500" strokeWidth={1.75} aria-hidden />
+                  <span
+                    className={`min-w-0 truncate text-sm text-gray-400 md:hidden lg:min-w-0 lg:flex-1 ${
+                      shell === 'phone' ? 'lg:inline' : 'xl:inline'
+                    }`}
+                  >
+                    Rechercher un dossier, un médiateur…
+                  </span>
+                  <SearchKeyboardShortcut visibleFrom={shell === 'phone' ? 'lg' : 'xl'} />
+                </button>
+              )}
+              {visibleNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  const itemClasses = `relative flex items-center gap-2 border-l-[3px] border-transparent px-3.5 py-2 text-sm font-medium transition-all duration-200 ${
+                    active
+                      ? 'text-white max-lg:rounded-xl max-lg:border-l-transparent max-lg:bg-white/10 max-lg:text-cyan-400 lg:rounded-none lg:border-cyan-400 lg:bg-gradient-to-r lg:from-cyan-500/15 lg:to-transparent lg:text-white'
+                      : 'text-gray-500 max-lg:rounded-xl max-lg:hover:bg-white/[0.04] max-lg:hover:text-gray-200 lg:rounded-none lg:text-gray-400 lg:hover:border-transparent lg:hover:bg-white/[0.04] lg:hover:text-white'
+                  } ${shell === 'full' && navSecondaryHrefs.has(item.href) ? 'hidden xl:flex' : ''} ${
+                    shell === 'phone' ? 'lg:w-full lg:justify-start lg:px-4' : ''
+                  }`;
+
+                  if (item.href === '/messages') {
+                    return (
+                      <button
+                        key={item.href}
+                        type="button"
+                        onClick={() => {
+                          if (pathname === '/messages' || pathname.startsWith('/messages/')) return;
+                          openDrawer();
+                        }}
+                        className={itemClasses}
+                      >
+                        <div className="relative">
+                          <Icon className={`w-[18px] h-[18px] ${active ? 'max-lg:text-cyan-400' : ''}`} />
+                          <NavUnreadBadge href={item.href} count={item.badge} />
+                        </div>
+                        <span className="md:hidden lg:inline">{item.label}</span>
+                        {active && (
+                          <motion.div layoutId="nav-indicator" className="absolute -bottom-[13px] left-3 right-3 block h-[2px] rounded-full lg:hidden" style={{ background: 'linear-gradient(90deg, #00F0FF, #00B3CC)' }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
+                        )}
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={hrefWithFrom(item.href, pathname)}
+                      prefetch={false}
+                      className={itemClasses}
+                    >
+                      <div className="relative">
+                        <Icon
+                          className={`w-[18px] h-[18px] ${
+                            active
+                              ? 'max-lg:text-cyan-400 ' +
+                                (item.href === '/points' ? 'lg:text-cyan-400' : '')
+                              : ''
+                          }`}
+                        />
+                        <NavUnreadBadge href={item.href} count={item.badge} />
+                      </div>
+                      <span className="md:hidden lg:inline">{item.label}</span>
+                      {active && (
+                        <motion.div
+                          layoutId="nav-indicator"
+                          className="absolute -bottom-[13px] left-3 right-3 block h-[2px] rounded-full lg:hidden"
+                          style={{ background: 'linear-gradient(90deg, #00F0FF, #00B3CC)' }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                        />
+                      )}
+                    </Link>
+                  );
+                })}
+            </nav>
+
+            {/* L'Élite de l'Agora (Desktop Sidebar) */}
+            <div className={`hidden shrink-0 ${shell === 'full' ? 'lg:hidden' : 'lg:flex lg:flex-col lg:gap-4 lg:px-6 lg:mt-4 lg:mb-8'}`}>
+              <div className="mb-1 flex items-center gap-2">
+                <Flame className="h-4 w-4 text-cyan-500" />
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">L&apos;Élite de l&apos;Agora</h3>
+              </div>
+              <div className="flex flex-col gap-3.5">
+                {topUsers.map((u, i) => {
+                  const eliteRank = getAuraRank(u.lifetime_points || 0);
+                  return (
+                  <Link key={u.id} href={`/profile/${u.username}`} className="group flex items-center gap-3">
+                    <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-bold text-white transition-colors group-hover:border-cyan-500/50">
+                      {u.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={u.avatar_url} alt={u.username ?? ''} className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        u.username?.[0]?.toUpperCase()
+                      )}
+                      {i === 0 && <span className="absolute -right-2 -top-2 text-[12px] drop-shadow-md">👑</span>}
+                    </div>
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-xs font-bold text-gray-300 transition-colors group-hover:text-cyan-400">{u.display_name || u.username}</span>
+                      <span className={`text-[9px] font-medium uppercase tracking-wider ${eliteRank.colorClass}`}>
+                        {eliteRank.title}
+                      </span>
+                    </div>
+                  </Link>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right — bas de sidebar (lg+) */}
+            <div
+              className={`relative z-[5] hidden shrink-0 ${
+                shell === 'full' ? 'lg:flex lg:items-center gap-2 md:gap-4' : 'md:flex md:items-center gap-2 md:gap-4'
+              } ${shell === 'phone' ? 'lg:mt-auto lg:w-full lg:flex-col lg:items-stretch lg:gap-4' : ''}`}
+            >
+              {user ? (
+                <>
+                  <Link
+                    href={hrefWithFrom('/create', pathname)}
+                    prefetch
+                    className={`flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border border-red-800/70 bg-gradient-to-r from-red-700 to-red-900 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-white shadow-[0_0_20px_rgba(185,28,28,0.35)] transition-all hover:from-red-600 hover:to-red-800 active:scale-[0.97] ${
+                      shell === 'phone' ? 'lg:w-full lg:justify-center' : ''
+                    }`}
+                  >
+                    <Swords className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className="md:hidden lg:inline">Call Out</span>
+                  </Link>
+
+                  <DropdownMenu.Root open={userMenuOpen} onOpenChange={setUserMenuOpen}>
+                    <DropdownMenu.Trigger asChild>
+                      <button
+                        className={`flex shrink-0 items-center gap-3 px-2.5 py-1.5 hover:bg-white/[0.06] rounded-xl transition-all outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+                          shell === 'phone' ? 'lg:w-full lg:justify-between' : ''
+                        }`}
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.03] text-xs font-bold text-white shadow-[0_0_10px_rgba(255,255,255,0.1)]">
+                            {user.user_metadata?.username?.[0]?.toUpperCase() || 'U'}
+                          </div>
+                          <span className="hidden lg:block truncate font-sans text-sm font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
+                            {user.user_metadata?.username || 'Challenger'}
+                          </span>
+                        </div>
+                        <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </DropdownMenu.Trigger>
+
+                    <DropdownMenu.Portal>
+                      <DropdownMenu.Content
+                        side={shell === 'phone' ? 'top' : 'bottom'}
+                        align={shell === 'phone' ? 'start' : 'end'}
+                        sideOffset={8}
+                        className="z-[9999] w-60 rounded-2xl border border-white/10 bg-black/80 shadow-card backdrop-blur-2xl overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2"
+                      >
+                        <div className="px-4 py-3 dropdown-divider-bottom">
+                          <p className="text-sm font-semibold text-white">{user.user_metadata?.username || 'Utilisateur'}</p>
+                          <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                        </div>
+                        <div className="py-1">
+                          {[
+                            { href: '/profile', icon: User, label: 'Profil' },
+                            { href: '/buy-points', icon: Flame, label: 'Acquérir de l\'Aura' },
+                            { href: '/invitations', icon: Mail, label: 'Convocations' },
+                            { href: '/settings', icon: SettingsIcon, label: 'Paramètres' },
+                            ...(userRole === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
+                          ].map((item) =>
+                            item.href === '/buy-points' ? (
+                              <DropdownMenu.Item asChild key={item.href}>
+                                <button
+                                  onClick={() => {
+                                    setUserMenuOpen(false);
+                                    openBuyPointsPage(router, pathname);
+                                  }}
+                                  className={`${buyPointsAnchorClass} w-full cursor-pointer outline-none focus:bg-white/[0.04]`}
+                                >
+                                  <item.icon className="w-4 h-4 text-gray-500" />
+                                  <span>{item.label}</span>
+                                </button>
+                              </DropdownMenu.Item>
+                            ) : (
+                              <DropdownMenu.Item asChild key={item.href}>
+                                <Link
+                                  href={hrefWithFrom(item.href, pathname)}
+                                  onClick={() => setUserMenuOpen(false)}
+                                  className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-gray-300 transition-colors hover:bg-white/[0.04] hover:text-white outline-none focus:bg-white/[0.04] focus:text-white"
+                                >
+                                  <item.icon className="w-4 h-4 text-gray-500" />
+                                  <span>{item.label}</span>
+                                </Link>
+                              </DropdownMenu.Item>
+                            )
+                          )}
+                        </div>
+                        <div className="py-1 dropdown-divider-top">
+                          <DropdownMenu.Item asChild>
+                            <button
+                              onClick={async () => {
+                                await signOut();
+                                setUserMenuOpen(false);
+                              }}
+                              className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-cyan-400 transition-colors hover:bg-cyan-500/[0.08] outline-none focus:bg-cyan-500/[0.08]"
+                            >
+                              <LogOut className="w-4 h-4" />
+                              <span>Déconnexion</span>
+                            </button>
+                          </DropdownMenu.Item>
+                        </div>
+                      </DropdownMenu.Content>
+                    </DropdownMenu.Portal>
+                  </DropdownMenu.Root>
+                </>
+              ) : (
+                <div className={`flex items-center gap-2 ${shell === 'phone' ? 'lg:w-full lg:flex-col lg:gap-3' : ''}`}>
+                  <div className="flex flex-col w-full gap-3">
+                    <Link
+                      href="/signup"
+                      className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-white px-5 py-2 text-sm font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-transform hover:bg-gray-200 hover:scale-105 active:scale-95"
+                    >
+                      Rejoindre l&apos;Agora
+                    </Link>
+                    <Link
+                      href="/login"
+                      className="text-center text-[11px] font-medium text-gray-400 hover:text-white underline-offset-2 hover:underline"
+                    >
+                      Déjà membre ? Se connecter
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile — boutons d'action épurés */}
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-2 lg:hidden pointer-events-auto">
+              {showGlobalSearch && (
+                <button
+                  type="button"
+                  onClick={() => openSearch()}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-colors border border-white/10 hover:bg-white/20"
+                >
+                  <Search className="h-4 w-4" strokeWidth={2} />
+                </button>
+              )}
+              {user && (
+                <Link
+                  href={hrefWithFrom('/create', pathname)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-red-800/65 bg-gradient-to-br from-red-700 to-red-900 text-white shadow-[0_0_16px_rgba(185,28,28,0.45)] backdrop-blur-md transition-all hover:from-red-600 hover:to-red-800"
+                >
+                  <Swords className="h-4 w-4" strokeWidth={2} />
+                </Link>
+              )}
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-colors border border-white/10 hover:bg-white/20"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" strokeWidth={2} /> : <Menu className="w-5 h-5" strokeWidth={2} />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="lg:hidden border-b border-white/10 bg-transparent overflow-y-auto max-h-[calc(100dvh-3.5rem)]"
+            >
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 top-14 z-[-1]"
+                onClick={() => setMobileMenuOpen(false)}
+              />
+              <nav className="px-3 py-3 space-y-0.5">
+                {visibleNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActive(item.href);
+                  const itemClasses = `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all ${
+                    active
+                      ? 'max-lg:rounded-xl max-lg:bg-white/10 text-cyan-400'
+                      : 'text-gray-400 hover:text-white hover:bg-white/[0.04] max-lg:rounded-xl'
+                  }`;
+
+                  if (item.href === '/messages') {
+                    return (
+                      <button
+                        key={item.href}
+                        type="button"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          if (pathname === '/messages' || pathname.startsWith('/messages/')) return;
+                          openDrawer();
+                        }}
+                        className={`w-full text-left ${itemClasses}`}
+                      >
+                        <div className="relative">
+                          <Icon className="w-5 h-5" />
+                          <NavUnreadBadge href={item.href} count={item.badge} compact />
+                        </div>
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge > 0 && (
+                          <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-400">
+                            {item.badge} nouvelle{item.badge > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  }
+
+                  return (
+                      <Link
+                        key={item.href}
+                        href={hrefWithFrom(item.href, pathname)}
+                        prefetch={false}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={itemClasses}
+                      >
+                        <div className="relative">
+                          <Icon className="w-5 h-5" />
+                          <NavUnreadBadge href={item.href} count={item.badge} compact />
+                        </div>
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge > 0 && (
+                          <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-400">
+                            {item.badge} nouvelle{item.badge > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+
+                <div className={`pt-3 space-y-0.5 ${user ? 'mt-3 border-t border-white/[0.06]' : ''}`}>
+                  {user ? (
+                    <>
+                      <div className="flex items-center gap-3 px-4 py-3 mb-2">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/[0.03] text-sm font-bold text-white shadow-[0_0_10px_rgba(255,255,255,0.1)]">
+                          {user.user_metadata?.username?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-white truncate">{user.user_metadata?.username || 'Utilisateur'}</p>
+                          <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                        </div>
+                      </div>
+                      {[
+                        { href: '/profile', icon: User, label: 'Profil' },
+                        { href: '/settings', icon: SettingsIcon, label: 'Paramètres' },
+                        ...(userRole === 'admin' ? [{ href: '/admin', icon: Shield, label: 'Admin' }] : []),
+                      ].map(item => (
+                        <Link key={item.href} href={hrefWithFrom(item.href, pathname)} onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] rounded-xl transition-colors">
+                          <item.icon className="w-5 h-5 text-gray-500" />
+                          <span>{item.label}</span>
+                        </Link>
+                      ))}
+                      <button onClick={() => { signOut(); setMobileMenuOpen(false); }}
+                        className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-cyan-400 transition-colors hover:bg-cyan-500/[0.08]">
+                        <LogOut className="w-5 h-5" />
+                        <span>Déconnexion</span>
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex flex-col gap-3 px-2">
+                      <Link
+                        href="/signup"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex w-full items-center justify-center rounded-xl bg-white py-3.5 text-center text-sm font-black uppercase tracking-widest text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-transform hover:bg-gray-200 hover:scale-[0.98] active:scale-95"
+                      >
+                        Rejoindre l&apos;Agora
+                      </Link>
+                      <Link
+                        href="/login"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="text-center text-[11px] font-medium text-gray-400 hover:text-white underline-offset-2 hover:underline"
+                      >
+                        Déjà membre ? Se connecter
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </nav>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+    </>
+  );
+}
+
+```
+
+### 2b. Composant logo — `components/BeefLogo.tsx`
+
+**Cible H.1 :** remplacement SVG inline (flamme dégradée 48×48) par nouvel asset.
+
+```tsx
+interface BeefLogoProps {
+  className?: string;
+  size?: number;
+}
+
+export function BeefLogo({ className = '', size = 40 }: BeefLogoProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <defs>
+        <linearGradient id="fireGrad" x1="24" y1="6" x2="24" y2="44" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FF6B2C" />
+          <stop offset="0.5" stopColor="#E83A14" />
+          <stop offset="1" stopColor="#B91C0C" />
+        </linearGradient>
+        <linearGradient id="innerFire" x1="24" y1="18" x2="24" y2="42" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFD600" />
+          <stop offset="1" stopColor="#FF6B2C" />
+        </linearGradient>
+      </defs>
+
+      {/* Outer flame — left fork */}
+      <path
+        d="M14 42C14 42 8 32 12 22C14.5 16 18 14 20 10C20 10 20 18 24 22C22 18 19 12 22 6C22 6 30 14 32 22C34 14 36 12 36 10C36 10 42 18 40 28C38.5 36 34 42 34 42H14Z"
+        fill="url(#fireGrad)"
+      />
+
+      {/* Inner flame — bright core */}
+      <path
+        d="M20 42C20 42 16 36 18 30C19.5 25 22 24 24 20C24 20 26 26 28 28C30 24 30 22 30 20C30 20 35 26 33 32C31.5 37 28 42 28 42H20Z"
+        fill="url(#innerFire)"
+      />
+
+      {/* Hottest center */}
+      <ellipse cx="24" cy="38" rx="3" ry="4" fill="white" opacity="0.85" />
+    </svg>
+  );
+}
+
+```
+
+### 2c. Écran d'accueil — `app/page.tsx`
+
+**Branding visible :** logo 100px + « Beefs » + tagline Agora.
+
+```tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { BeefLogo } from '@/components/BeefLogo';
+
+export default function SplashScreen() {
+  const router = useRouter();
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => setProgress((p) => (p >= 100 ? 100 : p + 2)), 20);
+    const timer = setTimeout(async () => {
+      const { supabase } = await import('@/lib/supabase/client');
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data } = await supabase
+          .from('users')
+          .select('needs_arena_username')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        if (data?.needs_arena_username) router.push('/onboarding');
+        else router.push('/feed');
+      } else {
+        router.push('/feed');
+      }
+    }, 1500);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timer);
+    };
+  }, [router]);
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-transparent">
+      <div className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_center,rgba(0,240,255,0.1)_0%,transparent_60%)]" />
+      <div className="relative z-10 flex flex-col items-center">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          className="relative mb-6"
+        >
+          <div className="absolute inset-0 animate-pulse rounded-full bg-cyan-500/20 blur-2xl" />
+          <BeefLogo size={100} className="drop-shadow-[0_0_30px_rgba(0,240,255,0.8)]" />
+        </motion.div>
+        <motion.h1
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-2 pr-2 text-5xl font-black uppercase italic tracking-tighter text-white drop-shadow-md md:text-7xl"
+        >
+          Beefs
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-cyan-400 text-[11px] md:text-sm font-black uppercase tracking-[0.2em] shadow-glow-brand mb-12 text-center px-4"
+        >
+          L&apos;Agora du règlement de comptes
+        </motion.p>
+
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-1 w-48 overflow-hidden rounded-full bg-white/10">
+          <motion.div
+            className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400"
+            style={{ width: `${progress}%` }}
+          />
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+```
+
+### Référence PWA — `public/manifest.json`
+
+À synchroniser avec metadata lors de H.1 :
+
+```json
+{
+  "name": "Beefs - L'Agora du règlement de comptes",
+  "short_name": "Beefs",
+  "description": "L'arène ultime pour régler tes conflits en direct avec un Ref.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#E83A14",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["social", "entertainment"],
+  "shortcuts": [
+    {
+      "name": "Beefs Live",
+      "short_name": "Live",
+      "description": "Voir les beefs en direct",
+      "url": "/live",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Mon Profil",
+      "short_name": "Profil",
+      "description": "Accéder à mon profil",
+      "url": "/profile",
+      "icons": [{ "src": "/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}
+
+```
+
+---
+
+## 3. Dossier Public — assets logo / icônes
+
+### Fichiers logo / icônes identifiés
+
+- `public/beefs-header-wordmark-oauth.svg` (1726 octets)
+- `public/google-oauth-logo-120.png` (2497 octets)
+- `public/google-oauth-logo-512.png` (13648 octets)
+- `public/icon-192.png` (5959 octets)
+- `public/icon-192.svg` (564 octets)
+- `public/icon-512.png` (15493 octets)
+- `public/icon-512.svg` (579 octets)
+- `app/icon.png` (18448 octets) — icône Next.js App Router
+
+### Références croisées (hors public/)
+
+| Référence | Fichier consommateur |
+|-----------|---------------------|
+| `/icon-192.png` | `Header.tsx`, `useBeefNotifications.ts` (notifications) |
+| `/icon-512.png` | `app/api/stripe/checkout/route.ts` (Stripe images) |
+| `/icon-192.svg`, `/icon-512.svg` | `public/manifest.json` |
+| `/icons/icon-512x512.png` | `hooks/useMediaSession.ts` (artwork lock screen) — **fichier absent** |
+| `app/icon.png` | Metadata Next.js (favicon / OG auto) |
+| `/beefs-header-wordmark-oauth.svg` | OAuth Google (wordmark header) |
+
+### Note Architecte
+
+- `favicon.ico` : **absent** (middleware l'exclut du matcher — Next.js sert `app/icon.png`)
+- Doublons PNG + SVG pour PWA (`icon-192`, `icon-512`)
+- Nouvel SVG H.1 devra mettre à jour : `BeefLogo.tsx`, `public/icon-*.svg`, éventuellement PNG dérivés + `manifest.json`
+
+---
+
+## Synthèse H.1
+
+| Zone | Fichier(s) | Action prévue |
+|------|------------|---------------|
+| SEO title/description | `app/layout.tsx` | Pluriel « des règlements » |
+| PWA name | `public/manifest.json` | Aligner tagline |
+| Logo UI | `components/BeefLogo.tsx` | Nouvel SVG |
+| Nav + splash | `Header.tsx`, `app/page.tsx` | Consomment BeefLogo |
+| Assets statiques | `public/icon-*.svg/png` | Remplacement |
+
+---
+
+*Fin du rapport — extraction Phase H.1.*
