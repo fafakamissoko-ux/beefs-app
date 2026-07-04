@@ -72,14 +72,14 @@ import {
   createFlyingReactionEntry,
   type FlyingReactionEntry,
 } from './FlyingReactionsLayer';
-import { useArenaVolatileStore } from '@/lib/stores/arenaVolatileStore';
+import { useArenaVolatileStore, type ArenaBigGiftPayload } from '@/lib/stores/arenaVolatileStore';
 import { MediatorSupportHalo } from './MediatorSupportHalo';
 import { useArenaPulseVoicesStore } from '@/lib/stores/arenaPulseVoicesStore';
 import { useArenaVerdictStore } from '@/lib/stores/arenaVerdictStore';
 import { VerdictConfettiBurst, RematchVerdictOverlay } from './VerdictEffects';
 import { playRematchThunderSfx } from '@/lib/playVerdictSfx';
 import { MediatorSidebar, type MediatorRemoteRow } from './MediatorSidebar';
-import { FullscreenGiftAnimation, type ArenaBigGiftPayload } from './Arena/FullscreenGiftAnimation';
+import { FullscreenGiftAnimation } from './Arena/FullscreenGiftAnimation';
 import { MeetingAudioOutlet } from '@/components/MeetingAudioOutlet';
 import {
   useArenaRealtime,
@@ -960,12 +960,6 @@ export function TikTokStyleArena({
     supportBurstRef.current = supportBurst;
   }, [supportBurst]);
   const [giftPrestigeFlash, setGiftPrestigeFlash] = useState(0);
-  const [localArenaBigGift, setLocalArenaBigGift] = useState<ArenaBigGiftPayload | null>(null);
-  useEffect(() => {
-    if (!localArenaBigGift) return;
-    const t = window.setTimeout(() => setLocalArenaBigGift(null), 6000);
-    return () => window.clearTimeout(t);
-  }, [localArenaBigGift]);
   const [verdictConfetti, setVerdictConfetti] = useState(false);
   const [rematchSequence, setRematchSequence] = useState(false);
   const rematchVerdictTimerRef = useRef<number | null>(null);
@@ -2797,7 +2791,7 @@ export function TikTokStyleArena({
       deleteMessage(messageId);
     },
     onArenaBigGift: (payload) => {
-      setLocalArenaBigGift(payload as ArenaBigGiftPayload);
+      useArenaVolatileStore.getState().enqueueBigGift(payload as ArenaBigGiftPayload);
     },
     onPulseVoice: (dA, dB) => {
       if (dA > 0) addPulseVoices('A', dA);
@@ -3776,7 +3770,7 @@ export function TikTokStyleArena({
                               giftTypeId: gift.id,
                               senderName: userName,
                             };
-                            setLocalArenaBigGift(bigPayload);
+                            useArenaVolatileStore.getState().enqueueBigGift(bigPayload);
                             arenaOutboundRef.current.broadcastArenaBigGift?.(bigPayload);
                           }
                           toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
@@ -4193,7 +4187,7 @@ export function TikTokStyleArena({
 
       {typeof document !== 'undefined' &&
         createPortal(
-          <FullscreenGiftAnimation roomId={roomId} localBigGift={localArenaBigGift} />,
+          <FullscreenGiftAnimation />,
           document.body
         )}
     </div>

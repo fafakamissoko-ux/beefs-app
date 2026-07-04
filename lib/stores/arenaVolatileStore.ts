@@ -1,5 +1,14 @@
 import { create } from 'zustand';
 
+export type ArenaBigGiftPayload = {
+  cost: number;
+  label: string;
+  emoji: string;
+  giftTypeId: string;
+  senderName: string;
+  queueId?: string;
+};
+
 export interface VisibleMessage {
   id: string;
   user_name: string;
@@ -28,6 +37,11 @@ interface ArenaVolatileStore {
   addReaction: (reaction: Omit<FlyingReaction, 'id'>) => void;
   removeReaction: (id: number) => void;
   clearReactions: () => void;
+
+  // --- MOTEUR DE CADEAUX PREMIUM (FIFO) ---
+  bigGiftQueue: ArenaBigGiftPayload[];
+  enqueueBigGift: (gift: Omit<ArenaBigGiftPayload, 'queueId'>) => void;
+  shiftBigGift: () => void;
 }
 
 let reactionIdSeq = 0;
@@ -57,4 +71,13 @@ export const useArenaVolatileStore = create<ArenaVolatileStore>((set) => ({
     reactions: state.reactions.filter(r => r.id !== id)
   })),
   clearReactions: () => set({ reactions: [] }),
+
+  // --- ACTIONS CADEAUX PREMIUM ---
+  bigGiftQueue: [],
+  enqueueBigGift: (gift) => set((state) => ({
+    bigGiftQueue: [...state.bigGiftQueue, { ...gift, queueId: `g_${Date.now()}_${Math.random()}` }],
+  })),
+  shiftBigGift: () => set((state) => ({
+    bigGiftQueue: state.bigGiftQueue.slice(1),
+  })),
 }));
