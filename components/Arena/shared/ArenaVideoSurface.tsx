@@ -128,7 +128,7 @@ export function ArenaVideoSurface({
             e.stopPropagation();
             void onOpenProfile(tile.name, tile.arenaUserId);
           }}
-          className={`relative min-w-0 flex items-center overflow-hidden w-[65px] sm:w-[120px] text-left text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]`}
+          className={`relative min-w-0 flex items-center overflow-hidden w-fit max-w-[80px] sm:max-w-[120px] text-left text-[10px] font-black tracking-wide text-white hover:text-cyan-400 drop-shadow-md sm:text-[11px]`}
         >
           {/* Si grille 5/6 joueurs ET nom long (> 8 chars), activer marquee. Sinon, truncate simple */}
           <span className={`${tileCount >= 5 && tile.name.length > 8 ? 'animate-marquee-pseudo' : 'truncate w-full'}`}>
@@ -175,7 +175,6 @@ export function ArenaVideoSurface({
           <ParticipantVideo
             videoTrack={tile.panel.videoTrack}
             muted={tile.isLocal}
-            enableAutoPiP={isActiveSpeaker || tile.isLocal}
             className="absolute inset-0 h-full w-full object-cover"
           />
         ) : tile.avatarUrl ? (

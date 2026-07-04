@@ -566,12 +566,6 @@ export function TikTokStyleArena({
     return () => clearTimeout(t);
   }, [soundboardExpanded]);
 
-  useEffect(() => {
-    if (!showArenaMenu) return;
-    const t = setTimeout(() => setShowArenaMenu(false), 3000);
-    return () => clearTimeout(t);
-  }, [showArenaMenu]);
-
   /** Clic extérieur → fermer la régie (le backdrop gère déjà le tap sur le voile) */
   useEffect(() => {
     if (!mediatorSidebarOpen) return;
