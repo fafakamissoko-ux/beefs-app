@@ -15,7 +15,6 @@ import {
   Share2,
   Calendar,
   Menu,
-  Music,
   MessageCircle,
   Home,
   User,
@@ -330,7 +329,6 @@ export function TikTokStyleArena({
   const { openDrawer } = useMessagesDrawer();
   const [isCinematicMode, setIsCinematicMode] = useState(false);
   const [showVsScreen, setShowVsScreen] = useState(true);
-  const [soundboardExpanded, setSoundboardExpanded] = useState(false);
   /** Spectateur promu co-hôte : le médiateur a accepté l’invitation (beef_participants). */
   const [acceptedInviteAlert, setAcceptedInviteAlert] = useState(false);
 
@@ -559,13 +557,6 @@ export function TikTokStyleArena({
     }
   }, [mediatorSidebarOpen]);
 
-  // Auto-fermeture : 3s soundboard, 3s menu PC (pickers : fermeture au tap extérieur uniquement)
-  useEffect(() => {
-    if (!soundboardExpanded) return;
-    const t = setTimeout(() => setSoundboardExpanded(false), 3000);
-    return () => clearTimeout(t);
-  }, [soundboardExpanded]);
-
   /** Clic extérieur → fermer la régie (le backdrop gère déjà le tap sur le voile) */
   useEffect(() => {
     if (!mediatorSidebarOpen) return;
@@ -574,24 +565,11 @@ export function TikTokStyleArena({
       if (!(t instanceof Node)) return;
       if (document.querySelector('[data-mediator-regie-sheet]')?.contains(t)) return;
       if (document.querySelector('[data-mediator-sidebar-toggle]')?.contains(t)) return;
-      if (t instanceof Element && t.closest('[data-soundboard-dock]')) return;
       setMediatorSidebarOpen(false);
     };
     document.addEventListener('mousedown', onDown, true);
     return () => document.removeEventListener('mousedown', onDown, true);
   }, [mediatorSidebarOpen]);
-
-  // Soundboard : clic extérieur du dock → repli
-  useEffect(() => {
-    if (!soundboardExpanded) return;
-    const onDown = (e: PointerEvent) => {
-      const el = e.target;
-      if (el instanceof Element && el.closest('[data-soundboard-dock]')) return;
-      setSoundboardExpanded(false);
-    };
-    document.addEventListener('pointerdown', onDown, true);
-    return () => document.removeEventListener('pointerdown', onDown, true);
-  }, [soundboardExpanded]);
 
   useEffect(() => {
     if (!gloryChallengerSlot) return;
@@ -3459,7 +3437,7 @@ export function TikTokStyleArena({
         {!isCinematicMode && (
           <div
             data-cinema-stay
-            className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end h-auto max-h-[45dvh] pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none"
+            className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end h-auto max-h-[35dvh] pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none"
           >
           <ArenaChatMessages isMobile />
           <div id="dock-mobile" className="pointer-events-auto mt-auto flex w-full shrink-0 items-center gap-2 px-3 pb-2">
@@ -3486,66 +3464,6 @@ export function TikTokStyleArena({
           <ArenaFlyingReactions />
         </div>
       </div>
-
-      {/* SOUNDBOARD (HOST) — icône Music, pilule horizontale au clic */}
-      {isHost && !isCinematicMode && (
-        <div
-          data-cinema-stay
-          data-soundboard-dock
-          className="absolute right-2 top-1/2 z-[250] flex -translate-y-1/2 flex-row items-center gap-1.5 sm:right-5"
-        >
-          <AnimatePresence>
-            {soundboardExpanded && (
-              <motion.div
-                key="arena-sfx-pill"
-                initial={{ opacity: 0, x: 16, filter: 'blur(4px)' }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, x: 12, filter: 'blur(4px)' }}
-                transition={{ type: 'spring', damping: 28, stiffness: 340 }}
-                className="flex flex-row items-center gap-1.5 overflow-hidden rounded-full border border-white/10 bg-slate-900/40 px-2 py-1.5 shadow-lg backdrop-blur-sm"
-              >
-                {(
-                  [
-                    { id: 'horn', emoji: '📢', label: 'Airhorn' },
-                    { id: 'laugh', emoji: '😂', label: 'Rires' },
-                    { id: 'slap', emoji: '🥊', label: 'Punch' },
-                    { id: 'drumroll', emoji: '🥁', label: 'Tension' },
-                    { id: 'crickets', emoji: '🦗', label: 'Malaise' },
-                    { id: 'bell', emoji: '🔔', label: 'Ding' },
-                  ] as const
-                ).map((sfx) => (
-                  <button
-                    key={sfx.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      playSfx(sfx.id);
-                      arenaOutboundRef.current.broadcastSfx?.(sfx.id);
-                      setSoundboardExpanded(false);
-                    }}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/5 bg-black/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] transition-all hover:bg-white/10 active:scale-90"
-                    title={sfx.label}
-                  >
-                    <span className="text-lg drop-shadow-md sm:text-xl">{sfx.emoji}</span>
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSoundboardExpanded((v) => !v);
-            }}
-            aria-label="Effets sonores"
-            aria-expanded={soundboardExpanded}
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/10 bg-slate-900/40 text-white shadow-lg backdrop-blur-sm transition-all hover:bg-slate-900/60 active:scale-95"
-          >
-            <Music className="h-5 w-5" strokeWidth={1.6} />
-          </button>
-        </div>
-      )}
 
       {isHost && (
         <MediatorSidebar
@@ -3762,17 +3680,15 @@ export function TikTokStyleArena({
                             id: giftKey,
                           });
 
-                          if (gift.cost >= 500) {
-                            const bigPayload: ArenaBigGiftPayload = {
-                              cost: gift.cost,
-                              label: gift.label,
-                              emoji: gift.emoji,
-                              giftTypeId: gift.id,
-                              senderName: userName,
-                            };
-                            useArenaVolatileStore.getState().enqueueBigGift(bigPayload);
-                            arenaOutboundRef.current.broadcastArenaBigGift?.(bigPayload);
-                          }
+                          const bigPayload: ArenaBigGiftPayload = {
+                            cost: gift.cost,
+                            label: gift.label,
+                            emoji: gift.emoji,
+                            giftTypeId: gift.id,
+                            senderName: userName,
+                          };
+                          useArenaVolatileStore.getState().enqueueBigGift(bigPayload);
+                          arenaOutboundRef.current.broadcastArenaBigGift?.(bigPayload);
                           toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
                         } catch (err: unknown) {
                           useWalletStore.getState().sync();

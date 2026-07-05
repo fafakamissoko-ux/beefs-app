@@ -45,7 +45,7 @@ export function ArenaChatMessages({ isMobile }: ArenaChatMessagesProps) {
   }, [messages]);
 
   const containerClasses = isMobile
-    ? 'pointer-events-auto w-fit max-w-[70vw] h-full flex-1 overflow-y-auto [-webkit-overflow-scrolling:touch] px-3 mb-2 flex flex-col hide-scrollbar mask-image-fade-top'
+    ? 'pointer-events-auto w-fit max-w-[55vw] h-full flex-1 overflow-y-auto [-webkit-overflow-scrolling:touch] px-3 mb-2 flex flex-col hide-scrollbar mask-image-fade-top'
     : 'flex-1 overflow-y-auto pl-2 pr-4 py-2 hide-scrollbar mask-image-fade-top';
 
   return (
@@ -55,12 +55,12 @@ export function ArenaChatMessages({ isMobile }: ArenaChatMessagesProps) {
           isMobile ? (
             <div
               key={msg.id}
-              className="mb-2 pointer-events-auto w-fit max-w-[70%] leading-tight [content-visibility:auto]"
+              className="mb-1.5 pointer-events-auto w-fit max-w-full leading-tight [content-visibility:auto]"
             >
               <span className={`text-[11px] font-bold mr-2 drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${getUsernameColor(msg.user_name)}`}>
                 {msg.user_name}
               </span>
-              <span className="text-[13px] text-white font-medium break-all drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
+              <span className="text-[13px] text-white font-medium break-words drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
                 {msg.content}
               </span>
             </div>
