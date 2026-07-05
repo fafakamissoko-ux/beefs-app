@@ -89,23 +89,6 @@ import {
 import { useWalletStore } from '@/lib/stores/walletStore';
 import { GIFT_CATALOG } from '@/lib/constants/gifts';
 
-const SFX_MAP: Record<string, string> = {
-  horn: '/sounds/horn.mp3',
-  laugh: '/sounds/laugh.mp3',
-  slap: '/sounds/slap.mp3',
-  drumroll: '/sounds/drumroll.mp3',
-  crickets: '/sounds/crickets.mp3',
-  bell: '/sounds/bell.mp3',
-};
-
-const playSfx = (id: string) => {
-  const src = SFX_MAP[id];
-  if (!src) return;
-  const audio = new Audio(src);
-  audio.volume = 0.8;
-  audio.play().catch(() => console.warn('[Audio] Interaction requise'));
-};
-
 /** Durée par défaut au lancement « Lancer le beef » (régie : +/- au-delà). */
 const DEFAULT_BEEF_DURATION = 60 * 60; // 60 min
 /** Plafond ajustable depuis la régie (prolongations). */
@@ -2742,9 +2725,6 @@ export function TikTokStyleArena({
 
   const arenaRealtimeCallbacks = {
     getAuraBoost: () => 15,
-    onSfxPlayed: (id: string) => {
-      playSfx(id);
-    },
     onReactionReceived: (emoji: string, supportSlot?: ArenaSupportSlotId, _source?: 'broadcast' | 'poll') => {
       addRemoteReaction(emoji, supportSlot ?? undefined);
     },

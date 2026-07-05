@@ -69,6 +69,7 @@ export function FullscreenGiftAnimation() {
               className="object-contain"
               sizes="(max-width: 768px) 50vw, 400px"
               priority
+              unoptimized
             />
           </motion.div>
 

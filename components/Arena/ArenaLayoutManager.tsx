@@ -173,7 +173,7 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
   };
 
   return (
-    <div className="absolute inset-0 z-0 bg-transparent p-1 sm:p-2">
+    <div className="absolute inset-0 z-0 bg-transparent p-1 sm:p-2 -translate-y-[10dvh] lg:translate-y-0">
       <AnimatePresence mode="wait">
         {mode === 'nexus' ? (
           <motion.div
