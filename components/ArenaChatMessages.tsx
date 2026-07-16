@@ -45,7 +45,7 @@ export function ArenaChatMessages({ isMobile }: ArenaChatMessagesProps) {
   }, [messages]);
 
   const containerClasses = isMobile
-    ? 'pointer-events-none w-fit max-w-[55vw] h-full flex-1 overflow-y-auto [-webkit-overflow-scrolling:touch] px-3 mb-2 flex flex-col hide-scrollbar mask-image-fade-top'
+    ? 'pointer-events-auto w-fit max-w-[55vw] h-full flex-1 overflow-y-auto [-webkit-overflow-scrolling:touch] px-3 mb-2 flex flex-col hide-scrollbar mask-image-fade-top'
     : 'flex-1 overflow-y-auto pl-2 pr-4 py-2 hide-scrollbar mask-image-fade-top';
 
   return (

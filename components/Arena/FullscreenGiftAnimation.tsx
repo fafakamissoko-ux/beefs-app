@@ -62,14 +62,10 @@ export function FullscreenGiftAnimation() {
             animate={{ y: [0, -20, 0] }}
             transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <Image
+            <img
               src={imageSrc}
               alt={activeGift.label}
-              fill
-              className="object-contain"
-              sizes="(max-width: 768px) 50vw, 400px"
-              priority
-              unoptimized
+              className="absolute inset-0 h-full w-full object-contain"
             />
           </motion.div>
 
