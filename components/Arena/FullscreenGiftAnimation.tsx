@@ -31,8 +31,8 @@ export function FullscreenGiftAnimation() {
 
   if (!activeGift) return null;
 
-  // Cible l'anomalie d'extension (.png) résolue
-  const imageSrc = `/gifts/${activeGift.giftTypeId}.png`;
+  // Cible l'anomalie d'extension (.png.png) résolue par scan disque
+  const imageSrc = `/gifts/${activeGift.giftTypeId}.png.png`;
 
   return (
     <AnimatePresence>
