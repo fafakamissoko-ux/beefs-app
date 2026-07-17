@@ -3649,7 +3649,12 @@ export function TikTokStyleArena({
 
                           const giftKey =
                             data.giftId != null ? String(data.giftId) : `gift_${Date.now()}`;
-                          const msgContent = `a offert ${gift.emoji} ${gift.label} (${gift.cost} Lingots) à ${targetName}`;
+
+                          // Injection dynamique de la punchline
+                          const msgContent = gift.messageTemplate
+                            .replace('{sender}', userName)
+                            .replace('{recipient}', targetName);
+
                           const initial = userName?.[0]?.toUpperCase() || '?';
 
                           addRemoteMessage(userName, msgContent, initial, giftKey);
@@ -3666,6 +3671,8 @@ export function TikTokStyleArena({
                             emoji: gift.emoji,
                             giftTypeId: gift.id,
                             senderName: userName,
+                            recipientName: targetName,
+                            messageTemplate: gift.messageTemplate,
                           };
                           useArenaVolatileStore.getState().enqueueBigGift(bigPayload);
                           arenaOutboundRef.current.broadcastArenaBigGift?.(bigPayload);
@@ -3679,7 +3686,11 @@ export function TikTokStyleArena({
                       }}
                       className="flex flex-col items-center gap-1 rounded-2xl bg-white/5 p-2 hover:bg-white/12 active:scale-95"
                     >
-                      <span className="text-2xl">{gift.emoji}</span>
+                      <img
+                        src={`/gifts/${gift.id}.webp`}
+                        alt={gift.label}
+                        className="h-10 w-10 object-contain drop-shadow-md"
+                      />
                       <span className="text-[10px] font-bold text-white">{gift.label}</span>
                       <span className="text-[9px] font-semibold text-ember-400">{gift.cost} Lingots</span>
                     </button>

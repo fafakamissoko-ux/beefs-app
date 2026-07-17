@@ -6,6 +6,8 @@ export type ArenaBigGiftPayload = {
   emoji: string;
   giftTypeId: string;
   senderName: string;
+  recipientName: string;
+  messageTemplate: string;
   queueId?: string;
 };
 
