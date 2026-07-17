@@ -90,6 +90,7 @@ export interface ArenaRealtimeCallbacks {
     initialLetter: string | undefined,
     messageId: string,
     source: 'broadcast' | 'poll',
+    type?: 'text' | 'gift',
   ) => void;
 
   onMessageDeleted?: (messageId: string) => void;
@@ -156,6 +157,7 @@ export interface UseArenaRealtimeResult {
     content: string;
     initial?: string | null;
     id: string;
+    type?: 'text' | 'gift';
   }) => void;
   broadcastDeleteMessage: (messageId: string) => void;
   broadcastArenaBigGift: (payload: ArenaBigGiftBroadcastPayload) => void;
@@ -263,12 +265,13 @@ export function useArenaRealtime(
   );
 
   const broadcastMessage = useCallback(
-    (args: { user_name: string; content: string; initial?: string | null; id: string }) => {
+    (args: { user_name: string; content: string; initial?: string | null; id: string; type?: 'text' | 'gift' }) => {
       safeBroadcast('message', {
         user_name: args.user_name,
         content: args.content,
         initial: args.initial ?? undefined,
         id: args.id,
+        type: args.type,
       });
     },
     [safeBroadcast],
@@ -479,7 +482,8 @@ export function useArenaRealtime(
             return;
           }
           const ini = typeof o.initial === 'string' ? o.initial : undefined;
-          callbacksRef.current.onMessageReceived?.(o.user_name, o.content, ini, o.id, 'broadcast');
+          const msgType = o.type === 'gift' ? 'gift' : 'text';
+          callbacksRef.current.onMessageReceived?.(o.user_name, o.content, ini, o.id, 'broadcast', msgType);
         })
         .on('broadcast', { event: 'delete_message' }, ({ payload }: { payload?: unknown }) => {
           const o = asRecord(payload);

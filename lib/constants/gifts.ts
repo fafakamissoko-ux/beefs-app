@@ -14,6 +14,7 @@ export const GIFT_CATALOG: GiftItem[] = [
   { id: 'lightning', label: 'Foudre', emoji: '⚡', cost: 50, messageTemplate: "{sender} choqué ! {recipient} a foudroyé !!!" },
   { id: 'ko', label: 'K.O.', emoji: '🥊', cost: 99, messageTemplate: "Au tapis ! {sender} consacre la victoire de {recipient}." },
   { id: 'banger', label: 'Banger', emoji: '💣', cost: 199, messageTemplate: "{sender} kiffe ce banger de {recipient}." },
+  { id: 'money', label: 'Money', emoji: '💸', cost: 500, messageTemplate: "{recipient} à l'argent ! il donne à qui y veut ! de {sender}." },
   { id: 'wolf', label: 'Loup', emoji: '🐺', cost: 500, messageTemplate: "{sender} hurle avec {recipient}." },
   { id: 'meteor', label: 'Météore', emoji: '☄️', cost: 1000, messageTemplate: "{sender} appuie la frappe cosmique de {recipient}." },
   { id: 'volcano', label: 'Éruption', emoji: '🌋', cost: 2500, messageTemplate: "Fusion totale ! {sender} annonce une éruption de {recipient}." },

@@ -17,6 +17,7 @@ export interface VisibleMessage {
   content: string;
   timestamp: number;
   initial: string;
+  type?: 'text' | 'gift';
 }
 
 export interface FlyingReaction {
