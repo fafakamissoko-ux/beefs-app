@@ -638,7 +638,7 @@ export function TikTokStyleArena({
   /** Chat temps réel : dédup + insert (réutilisé par `useArenaRealtime`, avant Daily). */
   const seenMsgKeys = useRef(new Set<string>());
 
-  const addRemoteMessage = useCallback((msgUserName: string, content: string, initial?: string, dbId?: string) => {
+  const addRemoteMessage = useCallback((msgUserName: string, content: string, initial?: string, dbId?: string, type?: 'text' | 'gift') => {
     const key = dbId ? `id:${dbId}` : `${msgUserName}::${content}`;
     if (seenMsgKeys.current.has(key)) return;
     seenMsgKeys.current.add(key);
@@ -650,6 +650,7 @@ export function TikTokStyleArena({
       user_name: msgUserName,
       content,
       initial: initial || msgUserName?.[0]?.toUpperCase() || '?',
+      type,
     });
     setGlobalHeat((v) => Math.min(100, v + 4));
   }, [addMessage]);
@@ -2742,8 +2743,8 @@ export function TikTokStyleArena({
       setAuras(snapshotToChallengerAuras(snap));
       setAuraMed(snap.M);
     },
-    onMessageReceived: (uname, content, initialLetter, messageId) => {
-      addRemoteMessage(uname, content, initialLetter, messageId);
+    onMessageReceived: (uname, content, initialLetter, messageId, source, type) => {
+      addRemoteMessage(uname, content, initialLetter, messageId, type);
     },
     onMessageDeleted: (messageId) => {
       deleteMessage(messageId);
@@ -3657,12 +3658,13 @@ export function TikTokStyleArena({
 
                           const initial = userName?.[0]?.toUpperCase() || '?';
 
-                          addRemoteMessage(userName, msgContent, initial, giftKey);
+                          addRemoteMessage(userName, msgContent, initial, giftKey, 'gift');
                           arenaOutboundRef.current.broadcastMessage?.({
                             user_name: userName,
                             content: msgContent,
                             initial,
                             id: giftKey,
+                            type: 'gift',
                           });
 
                           const bigPayload: ArenaBigGiftPayload = {
