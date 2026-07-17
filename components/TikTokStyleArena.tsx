@@ -3676,7 +3676,6 @@ export function TikTokStyleArena({
                           };
                           useArenaVolatileStore.getState().enqueueBigGift(bigPayload);
                           arenaOutboundRef.current.broadcastArenaBigGift?.(bigPayload);
-                          toast(`${gift.emoji} ${gift.label} envoyé !`, 'success');
                         } catch (err: unknown) {
                           useWalletStore.getState().sync();
                           const m = err instanceof Error ? err.message : "Erreur lors de l'envoi";

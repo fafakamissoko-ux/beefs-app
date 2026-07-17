@@ -51,30 +51,31 @@ export function ArenaChatMessages({ isMobile }: ArenaChatMessagesProps) {
   return (
     <div ref={scrollRef} className={containerClasses}>
       <div className="mt-auto flex flex-col justify-end">
-        {messages.map((msg) =>
-          isMobile ? (
-            <div
-              key={msg.id}
-              className="mb-1.5 pointer-events-auto w-fit max-w-full leading-tight [content-visibility:auto]"
-            >
-              <span className={`text-[11px] font-bold mr-2 drop-shadow-[0_1px_2px_rgba(0,0,0,1)] ${getUsernameColor(msg.user_name)}`}>
-                {msg.user_name}
-              </span>
-              <span className="text-[12px] text-white font-medium break-words drop-shadow-md [text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]">
-                {msg.content}
-              </span>
-            </div>
-          ) : (
-            <div key={msg.id} className="mb-3 [content-visibility:auto]">
-              <span className={`block mb-1 ml-2 text-[9px] font-black uppercase tracking-widest ${getUsernameColor(msg.user_name)}`}>
-                {msg.user_name}
-              </span>
-              <div className="inline-block rounded-2xl rounded-tl-sm bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg px-3 py-2 text-[13px] leading-snug text-white/90">
-                {msg.content}
+        {messages.map((msg) => (
+          <div key={msg.id} className="mb-2.5 [content-visibility:auto]">
+            {/* Rendu Cadeau Premium (Ambré) */}
+            {msg.type === 'gift' ? (
+              <div className="inline-block rounded-2xl rounded-tl-sm bg-gradient-to-br from-amber-500/20 to-amber-900/20 backdrop-blur-md border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)] px-3 py-2">
+                <span className={`inline-block mr-2 text-[10px] font-black uppercase tracking-widest ${getUsernameColor(msg.user_name)}`}>
+                  {msg.user_name}
+                </span>
+                <span className="text-[13px] font-bold leading-snug text-amber-100 drop-shadow-md">
+                  {msg.content}
+                </span>
               </div>
-            </div>
-          ),
-        )}
+            ) : (
+              /* Rendu Message Standard (Pilule Pseudo + Texte flottant) */
+              <div className="flex flex-col items-start gap-0.5">
+                <span className={`inline-flex px-2 py-0.5 rounded-full bg-slate-900/60 backdrop-blur-md border border-white/10 shadow-sm text-[9px] font-black uppercase tracking-widest ${getUsernameColor(msg.user_name)}`}>
+                  {msg.user_name}
+                </span>
+                <span className={`ml-1 text-[13px] font-medium leading-snug text-white/90 drop-shadow-md ${isMobile ? '[text-shadow:0_1px_3px_rgba(0,0,0,1),0_0_8px_rgba(0,0,0,0.8)]' : ''}`}>
+                  {msg.content}
+                </span>
+              </div>
+            )}
+          </div>
+        ))}
         <div ref={endRef} className="h-px w-full shrink-0" />
       </div>
     </div>
