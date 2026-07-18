@@ -6,6 +6,61 @@ import { useArenaVolatileStore, type ArenaBigGiftPayload } from '@/lib/stores/ar
 
 const ANIM_MS = 4000;
 
+type GiftPunchlineTextToken = { type: 'text'; value: string };
+type GiftPunchlineVariableToken = {
+  type: 'variable';
+  value: string;
+  role: 'sender' | 'recipient';
+};
+export type GiftPunchlineToken = GiftPunchlineTextToken | GiftPunchlineVariableToken;
+
+export function tokenizeGiftMessageTemplate(
+  messageTemplate: string,
+  senderName: string,
+  recipientName: string,
+): GiftPunchlineToken[] {
+  const tokens: GiftPunchlineToken[] = [];
+  let cursor = 0;
+
+  while (cursor < messageTemplate.length) {
+    const senderIdx = messageTemplate.indexOf('{sender}', cursor);
+    const recipientIdx = messageTemplate.indexOf('{recipient}', cursor);
+
+    let nextIdx = messageTemplate.length;
+    let nextRole: 'sender' | 'recipient' | null = null;
+
+    if (senderIdx !== -1 && senderIdx < nextIdx) {
+      nextIdx = senderIdx;
+      nextRole = 'sender';
+    }
+    if (recipientIdx !== -1 && recipientIdx < nextIdx) {
+      nextIdx = recipientIdx;
+      nextRole = 'recipient';
+    }
+
+    if (nextRole === null) {
+      const rest = messageTemplate.slice(cursor);
+      if (rest.length > 0) {
+        tokens.push({ type: 'text', value: rest });
+      }
+      break;
+    }
+
+    if (nextIdx > cursor) {
+      tokens.push({ type: 'text', value: messageTemplate.slice(cursor, nextIdx) });
+    }
+
+    tokens.push({
+      type: 'variable',
+      value: nextRole === 'sender' ? senderName : recipientName,
+      role: nextRole,
+    });
+    cursor = nextIdx + (nextRole === 'sender' ? '{sender}'.length : '{recipient}'.length);
+  }
+
+  return tokens;
+}
+
 export function FullscreenGiftAnimation() {
   const queue = useArenaVolatileStore((s) => s.bigGiftQueue);
   const shift = useArenaVolatileStore((s) => s.shiftBigGift);
@@ -35,18 +90,30 @@ export function FullscreenGiftAnimation() {
   // Cible l'actif physique ultra-léger
   const imageSrc = `/gifts/${activeGift.giftTypeId}.webp`;
 
-  // Moteur de rendu de la punchline
   const renderPunchline = () => {
-    const text = activeGift.messageTemplate.replace('{recipient}', activeGift.recipientName);
-    const parts = text.split('{sender}');
+    if (!activeGift.messageTemplate) return null;
+
+    const parts = activeGift.messageTemplate.split(/(\{sender\}|\{recipient\})/g);
+
     return (
-      <p className="bg-black/50 px-6 py-3 rounded-full border border-white/20 backdrop-blur-md text-lg md:text-xl font-black text-white shadow-2xl text-center leading-snug">
-        {parts.map((part, i) => (
-          <span key={i}>
-            {i > 0 && <span className="text-amber-400 drop-shadow-md">{activeGift.senderName}</span>}
-            {part}
-          </span>
-        ))}
+      <p className="bg-black/50 px-6 py-3 rounded-[2rem] border border-white/20 backdrop-blur-md text-lg md:text-xl font-black text-white shadow-2xl text-center leading-snug break-words min-w-0 whitespace-pre-wrap max-w-full">
+        {parts.map((part, i) => {
+          if (part === '{sender}') {
+            return (
+              <span key={i} className="text-amber-400 drop-shadow-md uppercase">
+                {activeGift.senderName}
+              </span>
+            );
+          }
+          if (part === '{recipient}') {
+            return (
+              <span key={i} className="text-cyan-400 drop-shadow-md uppercase">
+                {activeGift.recipientName}
+              </span>
+            );
+          }
+          return <span key={i}>{part}</span>;
+        })}
       </p>
     );
   };

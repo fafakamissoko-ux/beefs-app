@@ -45,6 +45,7 @@ import { ARENA_QUICK_REACTIONS } from '@/lib/arena-quick-reactions';
 import {
   buildParticipantAliasSet,
   isValidArenaUserId,
+  matchRemoteToExpectedBeefParticipant,
   ORPHAN_GUEST_LABEL,
   reconcilePeers,
   remoteMatchesMediator,
@@ -638,7 +639,16 @@ export function TikTokStyleArena({
   /** Chat temps réel : dédup + insert (réutilisé par `useArenaRealtime`, avant Daily). */
   const seenMsgKeys = useRef(new Set<string>());
 
-  const addRemoteMessage = useCallback((msgUserName: string, content: string, initial?: string, dbId?: string, type?: 'text' | 'gift') => {
+  const addRemoteMessage = useCallback((
+    msgUserName: string,
+    content: string,
+    initial?: string,
+    dbId?: string,
+    type?: 'text' | 'gift',
+    giftSender?: string,
+    giftRecipient?: string,
+    giftTemplate?: string,
+  ) => {
     const key = dbId ? `id:${dbId}` : `${msgUserName}::${content}`;
     if (seenMsgKeys.current.has(key)) return;
     seenMsgKeys.current.add(key);
@@ -651,6 +661,9 @@ export function TikTokStyleArena({
       content,
       initial: initial || msgUserName?.[0]?.toUpperCase() || '?',
       type,
+      giftSender,
+      giftRecipient,
+      giftTemplate,
     });
     setGlobalHeat((v) => Math.min(100, v + 4));
   }, [addMessage]);
@@ -1539,8 +1552,35 @@ export function TikTokStyleArena({
 
     return () => {
       supabase.rpc('decrement_viewer_count', { beef_id: roomId }).then(() => {});
+      setLiveViewerCount((prev) => Math.max(0, prev - 1));
     };
   }, [isJoined, roomId, isViewer]);
+
+  /** Peers WebRTC bruts (Daily) — distinct du compteur Supabase `liveViewerCount`. */
+  const webrtcRemotePeers = remoteParticipants;
+
+  /** Spectateurs réels pour la modale (hors médiateur et beef_participants scène). */
+  const liveSpectatorModalEntries = useMemo((): Array<{ userName: string }> => {
+    const seen = new Set<string>();
+    const entries: Array<{ userName: string }> = [];
+    for (const peer of webrtcRemotePeers) {
+      if (remoteMatchesMediator(peer, host.id, host.name)) continue;
+      const beefMatch = matchRemoteToExpectedBeefParticipant(
+        peer,
+        host.id,
+        host.name,
+        participantRoles,
+      );
+      if (beefMatch !== null) continue;
+      const label = peer.userName?.trim();
+      if (!label) continue;
+      const dedupeKey = peer.arenaUserId ?? label.toLowerCase();
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+      entries.push({ userName: label });
+    }
+    return entries;
+  }, [webrtcRemotePeers, host.id, host.name, participantRoles]);
 
   const hasExpectedChallengers = useMemo(
     () => Object.keys(participantRoles).some((uid) => uid !== host.id),
@@ -2744,6 +2784,7 @@ export function TikTokStyleArena({
       setAuraMed(snap.M);
     },
     onMessageReceived: (uname, content, initialLetter, messageId, source, type) => {
+      // Pour les cadeaux reçus via réseau, on déduit temporairement les noms du 'content' si on ne transmet pas le JSON complet
       addRemoteMessage(uname, content, initialLetter, messageId, type);
     },
     onMessageDeleted: (messageId) => {
@@ -3658,7 +3699,7 @@ export function TikTokStyleArena({
 
                           const initial = userName?.[0]?.toUpperCase() || '?';
 
-                          addRemoteMessage(userName, msgContent, initial, giftKey, 'gift');
+                          addRemoteMessage(userName, msgContent, initial, giftKey, 'gift', userName, targetName, gift.messageTemplate);
                           arenaOutboundRef.current.broadcastMessage?.({
                             user_name: userName,
                             content: msgContent,
@@ -3903,7 +3944,7 @@ export function TikTokStyleArena({
       {/* Viewer List Modal */}
       {showViewerList && (
         <ViewerListModal
-          viewers={remoteParticipants.map(p => ({ userName: p.userName }))}
+          viewers={liveSpectatorModalEntries}
           viewerCount={liveViewerCount}
           onClose={() => setShowViewerList(false)}
           onSelectViewer={(name) => {
