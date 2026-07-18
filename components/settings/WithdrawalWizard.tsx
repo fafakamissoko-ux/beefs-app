@@ -170,11 +170,6 @@ export function WithdrawalWizard({ user, points, onPointsDeducted }: WithdrawalW
             <Euro className="w-8 h-8 text-green-400" />
           </div>
         </div>
-        <div className="mt-4 p-3 rounded-2xl border border-green-500/20 bg-green-500/10">
-          <p className="text-green-400 text-xs font-semibold">
-            ✅ Vous recevez exactement le montant demandé — aucuns frais déduits
-          </p>
-        </div>
       </div>
 
       {points < 2000 && (
@@ -468,8 +463,8 @@ export function WithdrawalWizard({ user, points, onPointsDeducted }: WithdrawalW
               <span className="text-white font-bold">{withdrawalAmountEuros}€</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-white/50 text-sm">Frais déduits</span>
-              <span className="text-green-400 font-bold">0€</span>
+              <span className="text-white/50 text-sm">Frais de plateforme</span>
+              <span className="text-white/50 font-bold italic">Prélevés à la source (Taxe Agora)</span>
             </div>
             <div className="border-t border-white/10 pt-3 flex justify-between items-center">
               <span className="text-white font-bold">Vous recevez</span>

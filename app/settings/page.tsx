@@ -562,9 +562,9 @@ export default function SettingsPage() {
                               }
                             >
                               {tx.amount >= 0 ? '+' : ''}
-                              {tx.amount} pts
+                              {tx.amount} Lingots
                             </span>
-                            <p className="text-gray-600 text-[10px]">solde {tx.balance_after}</p>
+                            <p className="text-gray-600 text-[10px]">Restant: {tx.balance_after}</p>
                           </div>
                         </li>
                       ))}
