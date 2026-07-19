@@ -1,5 +1,6 @@
 # Config CLI Supabase (https://supabase.com/docs/guides/cli/config)
-# Après `supabase link`, le project ref est enregistré localement.
+# Projet lié : clsztcvmhvccvjxdwapt (Beefs — eu-west-1)
+# Après `npx supabase login` puis `npx supabase link --project-ref clsztcvmhvccvjxdwapt`
 
 [functions.before-user-created]
 # Hook Auth : pas de JWT ; authenticité via en-têtes Standard Webhooks.
