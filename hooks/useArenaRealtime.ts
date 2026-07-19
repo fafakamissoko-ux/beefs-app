@@ -15,6 +15,8 @@ import {
 export type { AuraBatchPayload, ArenaSupportSlotId, ChallengerSlotId } from '@/lib/arena-slots';
 export { CHALLENGER_SLOT_IDS, ARENA_CHALLENGER_SLOT_COUNT } from '@/lib/arena-slots';
 
+export type ArenaPresenceState = Record<string, { user_id: string; user_name: string; is_viewer: boolean }>;
+
 /** ───────────────── Types identité & payloads broadcast ───────────────── */
 
 export type ArenaRealtimeUserRole = 'mediator' | 'challenger' | 'viewer' | 'spectator';
@@ -148,8 +150,25 @@ function capAura(n: unknown): number {
   return Math.min(300, Math.max(0, Math.floor(Number(n) || 0)));
 }
 
+function flattenPresenceState(raw: Record<string, unknown[]>): ArenaPresenceState {
+  const flatState: ArenaPresenceState = {};
+  for (const key in raw) {
+    const presences = raw[key];
+    if (!Array.isArray(presences) || presences.length === 0) continue;
+    const first = asRecord(presences[0]);
+    if (!first) continue;
+    flatState[key] = {
+      user_id: typeof first.user_id === 'string' ? first.user_id : key,
+      user_name: typeof first.user_name === 'string' ? first.user_name : '',
+      is_viewer: first.is_viewer === true,
+    };
+  }
+  return flatState;
+}
+
 export interface UseArenaRealtimeResult {
   liveConnected: boolean;
+  presenceState: ArenaPresenceState;
   safeBroadcast: (event: string, payload?: Record<string, unknown>) => void;
   broadcastSfx: (id: string) => void;
   broadcastReaction: (emoji: string, supportSlot?: ArenaSupportSlotId) => void;
@@ -208,6 +227,7 @@ export function useArenaRealtime(
   const broadcastOutboxRef = useRef<Array<{ event: string; payload: Record<string, unknown> }>>([]);
 
   const [liveConnected, setLiveConnected] = useState(false);
+  const [presenceState, setPresenceState] = useState<ArenaPresenceState>({});
 
   const flushBroadcastOutbox = useCallback(() => {
     const ch = channelRef.current;
@@ -434,6 +454,7 @@ export function useArenaRealtime(
     if (!roomId) {
       channelRef.current = null;
       setLiveConnected(false);
+      setPresenceState({});
       return undefined;
     }
 
@@ -449,10 +470,17 @@ export function useArenaRealtime(
       }
 
       ch = supabase.channel(`live_${roomId}`, {
-        config: { broadcast: { self: false } },
+        config: {
+          broadcast: { self: false },
+          presence: { key: userId },
+        },
       });
 
       ch
+        .on('presence', { event: 'sync' }, () => {
+          const newState = ch?.presenceState() ?? {};
+          setPresenceState(flattenPresenceState(newState));
+        })
         .on('broadcast', { event: 'sfx' }, ({ payload }: { payload?: unknown }) => {
           const o = asRecord(payload);
           const id = o?.id;
@@ -659,11 +687,24 @@ export function useArenaRealtime(
             reason,
           });
         })
-        .subscribe((status: string) => {
+        .subscribe(async (status: string) => {
           console.log(`[TRACER - 🔌 CANAL live_${roomId}] Changement d'état:`, status);
           if (status === 'SUBSCRIBED') {
             channelRef.current = ch;
             setLiveConnected(true);
+
+            try {
+              await ch?.track({
+                user_id: userId,
+                user_name: identityRef.current.userName,
+                is_viewer:
+                  identityRef.current.userRole === 'viewer' ||
+                  identityRef.current.userRole === 'spectator',
+              });
+            } catch (err) {
+              console.warn('[Live] Échec du tracking de présence:', err);
+            }
+
             void supabase.auth.getSession().then(({ data: { session } }) => {
               const tok = session?.access_token;
               if (tok) {
@@ -682,6 +723,7 @@ export function useArenaRealtime(
           } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             channelRef.current = null;
             setLiveConnected(false);
+            setPresenceState({});
             // Reconnexion automatique et silencieuse après 3 secondes
             if (reconnectTimer !== null) {
               window.clearTimeout(reconnectTimer);
@@ -785,6 +827,7 @@ export function useArenaRealtime(
 
   return {
     liveConnected,
+    presenceState,
     safeBroadcast,
     broadcastSfx,
     broadcastReaction,
