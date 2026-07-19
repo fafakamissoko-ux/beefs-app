@@ -91,6 +91,9 @@ export interface ArenaRealtimeCallbacks {
     messageId: string,
     source: 'broadcast' | 'poll',
     type?: 'text' | 'gift',
+    giftSender?: string,
+    giftRecipient?: string,
+    giftTemplate?: string,
   ) => void;
 
   onMessageDeleted?: (messageId: string) => void;
@@ -158,6 +161,9 @@ export interface UseArenaRealtimeResult {
     initial?: string | null;
     id: string;
     type?: 'text' | 'gift';
+    giftSender?: string;
+    giftRecipient?: string;
+    giftTemplate?: string;
   }) => void;
   broadcastDeleteMessage: (messageId: string) => void;
   broadcastArenaBigGift: (payload: ArenaBigGiftBroadcastPayload) => void;
@@ -265,13 +271,25 @@ export function useArenaRealtime(
   );
 
   const broadcastMessage = useCallback(
-    (args: { user_name: string; content: string; initial?: string | null; id: string; type?: 'text' | 'gift' }) => {
+    (args: {
+      user_name: string;
+      content: string;
+      initial?: string | null;
+      id: string;
+      type?: 'text' | 'gift';
+      giftSender?: string;
+      giftRecipient?: string;
+      giftTemplate?: string;
+    }) => {
       safeBroadcast('message', {
         user_name: args.user_name,
         content: args.content,
         initial: args.initial ?? undefined,
         id: args.id,
         type: args.type,
+        giftSender: args.giftSender,
+        giftRecipient: args.giftRecipient,
+        giftTemplate: args.giftTemplate,
       });
     },
     [safeBroadcast],
@@ -483,7 +501,20 @@ export function useArenaRealtime(
           }
           const ini = typeof o.initial === 'string' ? o.initial : undefined;
           const msgType = o.type === 'gift' ? 'gift' : 'text';
-          callbacksRef.current.onMessageReceived?.(o.user_name, o.content, ini, o.id, 'broadcast', msgType);
+          const gSender = typeof o.giftSender === 'string' ? o.giftSender : undefined;
+          const gRecipient = typeof o.giftRecipient === 'string' ? o.giftRecipient : undefined;
+          const gTemplate = typeof o.giftTemplate === 'string' ? o.giftTemplate : undefined;
+          callbacksRef.current.onMessageReceived?.(
+            o.user_name,
+            o.content,
+            ini,
+            o.id,
+            'broadcast',
+            msgType,
+            gSender,
+            gRecipient,
+            gTemplate,
+          );
         })
         .on('broadcast', { event: 'delete_message' }, ({ payload }: { payload?: unknown }) => {
           const o = asRecord(payload);

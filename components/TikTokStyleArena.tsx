@@ -2783,9 +2783,8 @@ export function TikTokStyleArena({
       setAuras(snapshotToChallengerAuras(snap));
       setAuraMed(snap.M);
     },
-    onMessageReceived: (uname, content, initialLetter, messageId, source, type) => {
-      // Pour les cadeaux reçus via réseau, on déduit temporairement les noms du 'content' si on ne transmet pas le JSON complet
-      addRemoteMessage(uname, content, initialLetter, messageId, type);
+    onMessageReceived: (uname, content, initialLetter, messageId, source, type, gSender, gRecipient, gTemplate) => {
+      addRemoteMessage(uname, content, initialLetter, messageId, type, gSender, gRecipient, gTemplate);
     },
     onMessageDeleted: (messageId) => {
       deleteMessage(messageId);
@@ -3706,6 +3705,9 @@ export function TikTokStyleArena({
                             initial,
                             id: giftKey,
                             type: 'gift',
+                            giftSender: userName,
+                            giftRecipient: targetName,
+                            giftTemplate: gift.messageTemplate,
                           });
 
                           const bigPayload: ArenaBigGiftPayload = {
