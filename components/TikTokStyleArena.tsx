@@ -836,21 +836,6 @@ export function TikTokStyleArena({
     return Object.keys(participantRoles).filter((uid) => uid !== mid);
   }, [participantRoles, participantUidOrder, host.id]);
 
-  const [liveViewerCount, setLiveViewerCount] = useState(viewerCount);
-  const liveViewerCountRef = useRef(liveViewerCount);
-  useEffect(() => {
-    liveViewerCountRef.current = liveViewerCount;
-  }, [liveViewerCount]);
-
-  const prevLiveViewerCountRef = useRef(viewerCount);
-  useEffect(() => {
-    if (liveViewerCount > prevLiveViewerCountRef.current) {
-      const delta = liveViewerCount - prevLiveViewerCountRef.current;
-      setGlobalHeat((v) => Math.min(100, v + Math.min(12, delta * 3)));
-    }
-    prevLiveViewerCountRef.current = liveViewerCount;
-  }, [liveViewerCount]);
-
   // Chrono global — défaut 60 min, plafond MAX_BEEF_DURATION à la régie
   const [beefTimeRemaining, setBeefTimeRemaining] = useState(DEFAULT_BEEF_DURATION);
   const beefWarning5Shown = useRef(false);
@@ -1213,10 +1198,9 @@ export function TikTokStyleArena({
     statsRef.current = {
       ...statsRef.current,
       beefTimeRemaining,
-      liveViewerCount,
       messagesCount: useArenaVolatileStore.getState().messages.length,
     };
-  }, [beefTimeRemaining, liveViewerCount]);
+  }, [beefTimeRemaining]);
 
   useEffect(() => {
     return useArenaVolatileStore.subscribe((state) => {
@@ -1542,45 +1526,6 @@ export function TikTokStyleArena({
       toast(msg, 'error');
     }
   }, [userId, roomId, toast]);
-
-  // Spectateurs uniquement (pas médiateur ni challengers)
-  useEffect(() => {
-    if (!isJoined || !isViewer) return;
-
-    supabase.rpc('increment_viewer_count', { beef_id: roomId }).then(() => {});
-    setLiveViewerCount((prev) => prev + 1);
-
-    return () => {
-      supabase.rpc('decrement_viewer_count', { beef_id: roomId }).then(() => {});
-      setLiveViewerCount((prev) => Math.max(0, prev - 1));
-    };
-  }, [isJoined, roomId, isViewer]);
-
-  /** Peers WebRTC bruts (Daily) — distinct du compteur Supabase `liveViewerCount`. */
-  const webrtcRemotePeers = remoteParticipants;
-
-  /** Spectateurs réels pour la modale (hors médiateur et beef_participants scène). */
-  const liveSpectatorModalEntries = useMemo((): Array<{ userName: string }> => {
-    const seen = new Set<string>();
-    const entries: Array<{ userName: string }> = [];
-    for (const peer of webrtcRemotePeers) {
-      if (remoteMatchesMediator(peer, host.id, host.name)) continue;
-      const beefMatch = matchRemoteToExpectedBeefParticipant(
-        peer,
-        host.id,
-        host.name,
-        participantRoles,
-      );
-      if (beefMatch !== null) continue;
-      const label = peer.userName?.trim();
-      if (!label) continue;
-      const dedupeKey = peer.arenaUserId ?? label.toLowerCase();
-      if (seen.has(dedupeKey)) continue;
-      seen.add(dedupeKey);
-      entries.push({ userName: label });
-    }
-    return entries;
-  }, [webrtcRemotePeers, host.id, host.name, participantRoles]);
 
   const hasExpectedChallengers = useMemo(
     () => Object.keys(participantRoles).some((uid) => uid !== host.id),
@@ -2984,7 +2929,36 @@ export function TikTokStyleArena({
     });
   };
 
-  const { liveConnected } = arenaRealtime;
+  const { liveConnected, presenceState } = arenaRealtime;
+
+  const presenceSpectators = useMemo(() => {
+    return Object.values(presenceState || {}).filter((p) => p.is_viewer);
+  }, [presenceState]);
+
+  const actualViewerCount = presenceSpectators.length;
+
+  const spectatorModalEntries = useMemo(() => {
+    return presenceSpectators.map((p) => ({
+      userId: p.user_id,
+      userName: p.user_name || 'Spectateur',
+    }));
+  }, [presenceSpectators]);
+
+  const prevViewerCountRef = useRef(actualViewerCount);
+  useEffect(() => {
+    if (actualViewerCount > prevViewerCountRef.current) {
+      const delta = actualViewerCount - prevViewerCountRef.current;
+      setGlobalHeat((v) => Math.min(100, v + Math.min(12, delta * 3)));
+    }
+    prevViewerCountRef.current = actualViewerCount;
+  }, [actualViewerCount]);
+
+  useEffect(() => {
+    statsRef.current = {
+      ...statsRef.current,
+      liveViewerCount: actualViewerCount,
+    };
+  }, [actualViewerCount]);
 
   useEffect(() => {
     if (!liveConnected || !isHost || beefEnded || !roomId) return;
@@ -3276,7 +3250,7 @@ export function TikTokStyleArena({
           </div>
           <button type="button" onClick={() => setShowViewerList(true)} className="flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-white/80 hover:bg-white/10">
             <Eye className="h-3.5 w-3.5" strokeWidth={1.2} />
-            <span className="font-mono text-[11px] font-medium">{liveViewerCount > 0 ? liveViewerCount : '—'}</span>
+            <span className="font-mono text-[11px] font-medium">{actualViewerCount > 0 ? actualViewerCount : '—'}</span>
           </button>
           {showArenaMenu && (
             <div className="absolute left-4 top-full z-[200] mt-2 flex w-64 flex-col rounded-2xl border border-white/10 bg-slate-950/75 py-2 backdrop-blur-md shadow-2xl" data-cinema-stay onClick={(e) => e.stopPropagation()}>
@@ -3388,7 +3362,7 @@ export function TikTokStyleArena({
               className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-900/40 px-2 py-1 sm:px-3 sm:py-1.5 shadow-lg backdrop-blur-sm transition-all hover:bg-slate-900/60"
             >
               <Eye className="h-3 w-3 text-white" />
-              <span className="font-mono text-[9px] sm:text-[10px] font-bold text-white">{liveViewerCount > 0 ? liveViewerCount : '—'}</span>
+              <span className="font-mono text-[9px] sm:text-[10px] font-bold text-white">{actualViewerCount > 0 ? actualViewerCount : '—'}</span>
             </button>
 
             {!beefEnded && !isLeaving && (
@@ -3946,12 +3920,12 @@ export function TikTokStyleArena({
       {/* Viewer List Modal */}
       {showViewerList && (
         <ViewerListModal
-          viewers={liveSpectatorModalEntries}
-          viewerCount={liveViewerCount}
+          viewers={spectatorModalEntries}
+          viewerCount={actualViewerCount}
           onClose={() => setShowViewerList(false)}
-          onSelectViewer={(name) => {
+          onSelectViewer={(name, id) => {
             setShowViewerList(false);
-            void openProfile(name, undefined);
+            void openProfile(name, id);
           }}
         />
       )}

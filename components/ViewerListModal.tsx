@@ -5,11 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
 export interface ViewerListModalProps {
-  viewers: Array<{ userName: string }>;
+  viewers: Array<{ userId: string; userName: string }>;
   viewerCount: number;
   onClose: () => void;
   /** Clic sur une ligne (ex. ouvrir le profil dans l’arène). */
-  onSelectViewer?: (userName: string) => void;
+  onSelectViewer?: (userName: string, userId?: string) => void;
 }
 
 function avatarInitials(userName: string): string {
@@ -95,7 +95,7 @@ export function ViewerListModal({ viewers, viewerCount, onClose, onSelectViewer 
                     );
                     return (
                       <motion.li
-                        key={`${v.userName}-${i}`}
+                        key={v.userId}
                         initial={{ opacity: 0, x: -8 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: Math.min(i * 0.03, 0.3) }}
@@ -103,7 +103,7 @@ export function ViewerListModal({ viewers, viewerCount, onClose, onSelectViewer 
                         {onSelectViewer ? (
                           <button
                             type="button"
-                            onClick={() => onSelectViewer(v.userName)}
+                            onClick={() => onSelectViewer(v.userName, v.userId)}
                             className={`${rowClass} cursor-pointer`}
                           >
                             {inner}
