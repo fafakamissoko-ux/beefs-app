@@ -409,7 +409,7 @@ export function PreJoinScreen({
           }}
           className="w-full touch-manipulation rounded-2xl bg-white py-3 text-sm font-black uppercase tracking-widest text-black transition-[transform,background-color] duration-200 hover:bg-gray-200 active:scale-[0.96] sm:py-3.5 sm:text-base md:py-4"
         >
-          Rejoindre le direct
+          Rejoindre l'Agora
         </button>
         </div>
       </div>

@@ -282,14 +282,14 @@ export function BeefCard({
               loop
               muted={isMuted}
               playsInline
-              className="absolute inset-0 z-10 h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
+              className="absolute inset-0 z-10 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : thumbnail ? (
             <Image
               src={thumbnail}
               alt={title}
               fill
-              className="z-10 object-contain transition-transform duration-500 group-hover:scale-105"
+              className="z-10 object-cover transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, 384px"
             />
           ) : (
@@ -846,7 +846,7 @@ export function BeefCard({
                         : 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.4)]'
                     }`}
                   >
-                    {liveAudienceAction?.variant === 'return' ? '⚔️ Retourner dans l\'Agora' : '🔴 Rejoindre le Direct'}
+                    {liveAudienceAction?.variant === 'return' ? '⚔️ Retourner dans l\'Agora' : '🔴 Rejoindre l\'Agora'}
                   </button>
                 ) : status === 'scheduled' || status === 'pending' || status === 'ready' ? (
                   <div className="flex flex-col gap-2">
