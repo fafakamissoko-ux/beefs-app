@@ -22,6 +22,9 @@ import {
   scheduledLocalInputToIso,
   isScheduledTimeValid,
 } from '@/lib/beef-schedule';
+import Cropper from 'react-easy-crop';
+import 'react-easy-crop/react-easy-crop.css';
+import getCroppedImg from '@/utils/cropImage';
 import type { BeefCreationIntent, BeefEventType, SubmitBeefPayload } from '@/lib/submitNewBeef';
 
 interface BeefParticipant {
@@ -90,6 +93,12 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   const [teaserFile, setTeaserFile] = useState<File | null>(null);
   const [teaserPreview, setTeaserPreview] = useState<string | null>(null);
   const teaserPreviewUrlRef = useRef<string | null>(null);
+  const [isCropping, setIsCropping] = useState(false);
+  const [rawImageUrl, setRawImageUrl] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [isProcessingCrop, setIsProcessingCrop] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -97,8 +106,11 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
         URL.revokeObjectURL(teaserPreviewUrlRef.current);
         teaserPreviewUrlRef.current = null;
       }
+      if (rawImageUrl) {
+        URL.revokeObjectURL(rawImageUrl);
+      }
     };
-  }, []);
+  }, [rawImageUrl]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -111,6 +123,15 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
       setTeaserPreview(null);
       return;
     }
+
+    if (file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file);
+      setRawImageUrl(url);
+      setIsCropping(true);
+      e.target.value = '';
+      return;
+    }
+
     setTeaserFile(file);
     if (teaserPreviewUrlRef.current) {
       URL.revokeObjectURL(teaserPreviewUrlRef.current);
@@ -118,6 +139,33 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
     const url = URL.createObjectURL(file);
     teaserPreviewUrlRef.current = url;
     setTeaserPreview(url);
+  };
+
+  const onCropComplete = (_croppedArea: unknown, croppedAreaPixelsOutput: { x: number; y: number; width: number; height: number }) => {
+    setCroppedAreaPixels(croppedAreaPixelsOutput);
+  };
+
+  const handleCropSave = async () => {
+    if (!rawImageUrl || !croppedAreaPixels) return;
+    setIsProcessingCrop(true);
+    try {
+      const croppedFile = await getCroppedImg(rawImageUrl, croppedAreaPixels, 'teaser-cropped.jpg');
+      setTeaserFile(croppedFile);
+
+      if (teaserPreviewUrlRef.current) URL.revokeObjectURL(teaserPreviewUrlRef.current);
+      const url = URL.createObjectURL(croppedFile);
+      teaserPreviewUrlRef.current = url;
+      setTeaserPreview(url);
+
+      URL.revokeObjectURL(rawImageUrl);
+      setIsCropping(false);
+      setRawImageUrl(null);
+    } catch (e) {
+      console.error('Erreur lors du recadrage:', e);
+      toast('Erreur lors du recadrage', 'error');
+    } finally {
+      setIsProcessingCrop(false);
+    }
   };
 
   const updateData = (field: keyof BeefData, value: unknown) => {
@@ -863,6 +911,58 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
               {intent === 'mediation' && 'Médiation : entre 2 et 4 participants principaux.'}
             </p>
           </div>
+
+          {/* MODALE DE RECADRAGE */}
+          {isCropping && rawImageUrl && (
+            <div className="absolute inset-0 z-[10005] flex flex-col items-center justify-center rounded-[2rem] bg-slate-950/95 backdrop-blur-xl p-4 sm:p-6">
+              <div className="relative w-full flex-1 max-h-[70vh] bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10">
+                <Cropper
+                  image={rawImageUrl}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={3 / 4}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={onCropComplete}
+                />
+              </div>
+              <div className="w-full max-w-md mt-6 space-y-4">
+                <div className="flex items-center gap-4 px-4">
+                  <span className="text-xs text-white/50">Zoom</span>
+                  <input
+                    type="range"
+                    value={zoom}
+                    min={1}
+                    max={3}
+                    step={0.1}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className="flex-1 accent-cyan-500"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      URL.revokeObjectURL(rawImageUrl);
+                      setIsCropping(false);
+                      setRawImageUrl(null);
+                    }}
+                    className="flex-1 py-3.5 rounded-xl border border-white/10 text-white/70 font-bold text-sm hover:bg-white/5 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleCropSave()}
+                    disabled={isProcessingCrop}
+                    className="flex-1 py-3.5 rounded-xl bg-cyan-500 text-black font-black uppercase tracking-widest text-sm hover:bg-cyan-400 transition-colors shadow-[0_0_20px_rgba(0,240,255,0.4)] disabled:opacity-50"
+                  >
+                    {isProcessingCrop ? 'Génération...' : 'Valider'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
