@@ -79,7 +79,7 @@ export function ArenaVideoSurface({
 
   const localControls = tile.isLocal ? (
     <div
-      className={`flex flex-wrap shrink-0 items-center gap-1 sm:gap-1.5 min-w-0 max-w-full ${tileCount === 3 && tileIndex === 2 && variant === 'nexus' ? 'pointer-events-auto' : ''}`}
+      className={`flex flex-row flex-nowrap shrink-0 items-center justify-center gap-1 sm:gap-1.5 w-max ${tileCount === 3 && tileIndex === 2 && variant === 'nexus' ? 'pointer-events-auto' : ''}`}
     >
       <button
         type="button"

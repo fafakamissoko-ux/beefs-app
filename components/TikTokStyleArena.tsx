@@ -816,6 +816,7 @@ export function TikTokStyleArena({
         name,
         matchAliases: buildParticipantAliasSet(u?.display_name, u?.username, name),
         avatarUrl: u?.avatar_url?.trim() || null,
+        isMain: p.is_main ?? false,
       };
     });
     setParticipantRoles(roles);
@@ -3020,14 +3021,10 @@ export function TikTokStyleArena({
           <div className="absolute inset-0 z-[9999] bg-black/40 backdrop-blur-sm">
             {rolesLoaded ? (
               <VsTransition
-                challengers={
-                  [
-                    participantRoles[expectedUids[0]]?.name,
-                    participantRoles[expectedUids[1]]?.name,
-                    expectedUids[2] ? participantRoles[expectedUids[2]]?.name : null,
-                    expectedUids[3] ? participantRoles[expectedUids[3]]?.name : null,
-                  ].filter(Boolean) as string[]
-                }
+                challengers={expectedUids
+                  .filter((uid) => participantRoles[uid]?.isMain)
+                  .map((uid) => participantRoles[uid]?.name)
+                  .filter(Boolean) as string[]}
                 debateTitle={debateTitle}
                 onComplete={handleVsComplete}
               />
