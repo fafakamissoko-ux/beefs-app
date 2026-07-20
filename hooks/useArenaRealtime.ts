@@ -398,10 +398,10 @@ export function useArenaRealtime(
         .channel(topic)
         .on(
           'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'beef_participants', filter: `beef_id=eq.${roomId}` },
-          (payload: { new: Record<string, unknown>; old?: Record<string, unknown> }) => {
+          { event: '*', schema: 'public', table: 'beef_participants', filter: `beef_id=eq.${roomId}` },
+          (payload: { new: Record<string, unknown>; old?: Record<string, unknown>; eventType: string }) => {
             const newRow = payload.new;
-            const oldRow = payload.old;
+            const oldRow = payload.old || {};
             const rawUid = newRow.user_id;
             const rowUserStr = typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
             if (rowUserStr !== String(userId)) return;
