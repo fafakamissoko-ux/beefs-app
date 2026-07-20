@@ -342,7 +342,8 @@ export function TikTokStyleArena({
   const [auraFeverMed, setAuraFeverMed] = useState(false);
   /** Heat Index global : activité de la salle (chat, spectateurs, réactions) — lueur chaude sur le bandeau vidéo. */
   const [globalHeat, setGlobalHeat] = useState(0);
-  const [pendingInvites, setPendingInvites] = useState<Array<{ userId: string; label: string }>>([]);
+  const [handsRaised, setHandsRaised] = useState<Array<{ userId: string; label: string }>>([]);
+  const [refInvites, setRefInvites] = useState<Array<{ userId: string; label: string }>>([]);
   const [parolePresetSec, setParolePresetSec] = useState(60);
   const [announcementTicker, setAnnouncementTicker] = useState('');
   const [gloryChallengerSlot, setGloryChallengerSlot] = useState<null | 'A' | 'B'>(null);
@@ -582,31 +583,45 @@ export function TikTokStyleArena({
 
   const fetchPendingInvites = useCallback(async () => {
     if (!isHost) return;
-    const { data, error } = await supabase
+
+    const { data: participants, error: pError } = await supabase
       .from('beef_participants')
       .select('user_id')
       .eq('beef_id', roomId)
       .eq('invite_status', 'pending');
-    if (error || !data) {
-      console.warn('[Live] Invités en attente : chargement impossible');
-      return;
-    }
+
+    if (pError || !participants) return;
+
+    const { data: invitations } = await supabase
+      .from('beef_invitations')
+      .select('invitee_id')
+      .eq('beef_id', roomId)
+      .eq('status', 'sent');
+
+    const refInvitedIds = new Set((invitations ?? []).map((i) => i.invitee_id));
+
     const { fetchUserPublicByIds } = await import('@/lib/fetch-user-public-profile');
-    const ids = data.map((r) => r.user_id);
+    const ids = participants.map((r) => r.user_id);
     const pubMap = await fetchUserPublicByIds(supabase, ids, 'id, username, display_name');
 
-    setPendingInvites(
-      data.map((r) => {
-        const u = pubMap.get(r.user_id);
-        return {
-          userId: r.user_id,
-          label:
-            (u?.display_name && u.display_name.trim()) ||
-            (u?.username && u.username.trim()) ||
-            'Invité',
-        };
-      }),
-    );
+    const hands: Array<{ userId: string; label: string }> = [];
+    const invites: Array<{ userId: string; label: string }> = [];
+
+    participants.forEach((r) => {
+      const u = pubMap.get(r.user_id);
+      const label =
+        (u?.display_name && u.display_name.trim()) ||
+        (u?.username && u.username.trim()) ||
+        'Invité';
+      if (refInvitedIds.has(r.user_id)) {
+        invites.push({ userId: r.user_id, label });
+      } else {
+        hands.push({ userId: r.user_id, label });
+      }
+    });
+
+    setHandsRaised(hands);
+    setRefInvites(invites);
   }, [isHost, roomId]);
 
   const handleAcceptPendingInvite = useCallback(
@@ -3325,6 +3340,19 @@ export function TikTokStyleArena({
           <ArenaChatMessages isMobile={false} />
 
           <div id="dock-desktop" className="mt-auto flex w-full shrink-0 items-center gap-2 pl-2 pr-3 py-3 bg-slate-900/40 backdrop-blur-sm border-t border-white/10 shadow-lg">
+            {isViewer && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  void handleRaiseHand();
+                }}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/10 text-white shadow-lg transition-transform hover:bg-white/20 active:scale-95"
+                title="Demander à monter sur scène"
+              >
+                ✋
+              </button>
+            )}
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full border border-white/[0.05] bg-black/40 px-4 py-2.5 text-[13px] text-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] placeholder-white/30 focus:bg-black/60 focus:outline-none focus:ring-2 focus:ring-white/70 focus:border-transparent" />
             <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/10 text-white shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-transform active:scale-95 disabled:opacity-30">😀</button>
             <button
@@ -3450,6 +3478,19 @@ export function TikTokStyleArena({
           >
           <ArenaChatMessages isMobile />
           <div id="dock-mobile" className="pointer-events-auto mt-auto flex w-full shrink-0 items-center gap-2 px-3 pb-2">
+            {isViewer && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  void handleRaiseHand();
+                }}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/10 text-white shadow-lg transition-transform hover:bg-white/20 active:scale-95"
+                title="Demander à monter sur scène"
+              >
+                ✋
+              </button>
+            )}
             <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') void handleSendMessage(); }} placeholder="Message..." className="flex-1 min-w-0 rounded-full border border-white/[0.05] bg-black/40 px-4 py-2.5 text-[13px] text-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] placeholder-white/30 focus:bg-black/60 focus:outline-none focus:ring-2 focus:ring-white/70 focus:border-transparent" />
             <button onClick={() => { setShowGiftPicker(false); setShowAllReactions(!showAllReactions); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/10 text-white shadow-[0_4px_16px_rgba(0,0,0,0.2),inset_0_1px_1px_rgba(255,255,255,0.2)] transition-transform active:scale-95 disabled:opacity-30">😀</button>
             <button
@@ -3509,8 +3550,16 @@ export function TikTokStyleArena({
                   beefId: roomId,
                   participantId: target.arenaUserId,
                 });
+                setDebaters((prev) => prev.filter((d) => d.id !== target.arenaUserId));
+                setParticipantRoles((prev) => {
+                  const next = { ...prev };
+                  delete next[target.arenaUserId!];
+                  return next;
+                });
+                setParticipantUidOrder((prev) => prev.filter((id) => id !== target.arenaUserId));
               }
               toast('Participant expulsé', 'success');
+              void fetchPendingInvites();
             } else {
               toast('Expulsion impossible.', 'error');
             }
@@ -3527,7 +3576,7 @@ export function TikTokStyleArena({
           announcementText={announcementTicker}
           onPublishAnnouncement={publishAnnouncementBanner}
           onClearAnnouncement={clearAnnouncementBanner}
-          pendingInvites={pendingInvites}
+          pendingInvites={handsRaised}
           onAcceptPendingInvite={handleAcceptPendingInvite}
           onRejectPendingInvite={handleRejectPendingInvite}
           onInviteParticipant={handleInviteFromModal}

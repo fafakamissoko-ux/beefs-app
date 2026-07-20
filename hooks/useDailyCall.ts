@@ -74,7 +74,7 @@ export function useDailyCall(
   const engine = useDailyMeetingEngine({
     roomUrl,
     userName,
-    viewerMode,
+    viewerMode: false,
     arenaUserId,
     meetingToken: accessMeetingToken,
   });
