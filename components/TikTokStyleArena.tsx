@@ -315,6 +315,22 @@ export function TikTokStyleArena({
   const [showVsScreen, setShowVsScreen] = useState(true);
   /** Spectateur promu co-hôte : le médiateur a accepté l’invitation (beef_participants). */
   const [acceptedInviteAlert, setAcceptedInviteAlert] = useState(false);
+  /** Spectateur invité par le Ref en direct. */
+  const [refInviteAlert, setRefInviteAlert] = useState(false);
+
+  useEffect(() => {
+    if (isViewer && userId) {
+      void supabase
+        .from('beef_participants')
+        .select('invite_status')
+        .eq('beef_id', roomId)
+        .eq('user_id', userId)
+        .single()
+        .then(({ data }) => {
+          if (data?.invite_status === 'pending') setRefInviteAlert(true);
+        });
+    }
+  }, [isViewer, userId, roomId]);
 
   // ── AURA "FERVEUR SOCIALE" ──
   const [auras, setAuras] = useState<Record<ChallengerSlotId, number>>(createEmptyChallengerAuras);
@@ -2889,6 +2905,7 @@ export function TikTokStyleArena({
       auraBufferRef.current = createZeroAuraBatch();
     },
     onSpectatorSelfInviteAccepted: () => setAcceptedInviteAlert(true),
+    onSpectatorReceivedRefInvite: () => setRefInviteAlert(true),
     onBeefParticipantsTableChanged: () => {
       if (isHost) void fetchPendingInvites();
       void loadParticipants();
@@ -3909,6 +3926,92 @@ export function TikTokStyleArena({
               >
                 Annuler et rester spectateur
               </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {refInviteAlert && !beefEnded && (
+          <motion.div
+            key="ref-invite-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
+            role="dialog"
+            aria-modal="true"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-slate-950/90 p-6 text-center shadow-[0_0_80px_rgba(0,240,255,0.12)] backdrop-blur-md"
+            >
+              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-cyan-500/20">
+                <span className="text-4xl" aria-hidden>
+                  🎙️
+                </span>
+              </div>
+              <h2 className="mb-2 font-mono text-xl font-black uppercase tracking-tight text-white">
+                Le Ref te convoque
+              </h2>
+              <p className="mb-6 text-sm text-white/60">
+                Tu es invité à entrer sur scène. Prépare ta caméra et ton micro.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await supabase
+                      .from('beef_participants')
+                      .update({
+                        invite_status: 'accepted',
+                        responded_at: new Date().toISOString(),
+                      })
+                      .eq('beef_id', roomId)
+                      .eq('user_id', userId);
+                    await supabase
+                      .from('beef_invitations')
+                      .update({
+                        status: 'accepted',
+                        responded_at: new Date().toISOString(),
+                      })
+                      .eq('beef_id', roomId)
+                      .eq('invitee_id', userId);
+                    window.location.reload();
+                  }}
+                  className="w-full rounded-full bg-cyan-500 py-3.5 font-mono text-sm font-black uppercase tracking-wider text-white shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-transform hover:bg-cyan-400 active:scale-95"
+                >
+                  Prendre la parole
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setRefInviteAlert(false);
+                    await supabase
+                      .from('beef_participants')
+                      .update({
+                        invite_status: 'declined',
+                        responded_at: new Date().toISOString(),
+                      })
+                      .eq('beef_id', roomId)
+                      .eq('user_id', userId);
+                    await supabase
+                      .from('beef_invitations')
+                      .update({
+                        status: 'declined',
+                        responded_at: new Date().toISOString(),
+                      })
+                      .eq('beef_id', roomId)
+                      .eq('invitee_id', userId);
+                    toast('Convocation déclinée', 'info');
+                  }}
+                  className="w-full rounded-full border border-white/10 bg-white/5 py-3.5 font-mono text-sm font-bold uppercase tracking-wider text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  Rester dans le public
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

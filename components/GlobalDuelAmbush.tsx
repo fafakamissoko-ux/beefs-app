@@ -265,7 +265,7 @@ export function GlobalDuelAmbush() {
       </>
     );
 
-  let buttonText = 'RELEVER LE DÉFI';
+  let buttonText = "REJOINDRE L'AGORA";
   let ButtonIcon = Zap;
 
   if (hasRef && !isScheduledForLater && ambush.invite_type === 'combatant') {

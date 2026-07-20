@@ -484,7 +484,7 @@ export default function InvitationsPage() {
                         className="group relative flex-1 overflow-hidden rounded-2xl bg-cyan-500 px-6 py-4 font-black text-white shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-all hover:scale-[1.02] hover:bg-cyan-400 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
                       >
                         <div className="relative z-10 flex items-center justify-center gap-2 text-lg">
-                          <Zap className="h-5 w-5" /> Relever le Défi
+                          <Zap className="h-5 w-5" /> Rejoindre l&apos;agora
                         </div>
                         <div className="pointer-events-none absolute inset-0 z-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
                       </button>

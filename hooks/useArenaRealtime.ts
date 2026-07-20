@@ -134,6 +134,9 @@ export interface ArenaRealtimeCallbacks {
   /** Invite spectateur → ligne `beef_participants` acceptée pour l’utilisateur courant (UPDATE Realtime). */
   onSpectatorSelfInviteAccepted?: () => void;
 
+  /** Le Ref a invité ce spectateur (UPDATE Realtime vers pending). */
+  onSpectatorReceivedRefInvite?: () => void;
+
   /** Mutation `beef_participants` pour ce beef (Postgres Changes). Le parent filtre médiateur / refetch invités. */
   onBeefParticipantsTableChanged?: () => void;
 }
@@ -405,6 +408,9 @@ export function useArenaRealtime(
 
             if (newRow.invite_status === 'accepted' && oldRow?.invite_status !== 'accepted') {
               callbacksRef.current.onSpectatorSelfInviteAccepted?.();
+            }
+            if (newRow.invite_status === 'pending' && oldRow?.invite_status !== 'pending') {
+              callbacksRef.current.onSpectatorReceivedRefInvite?.();
             }
           },
         )
