@@ -321,13 +321,14 @@ export function TikTokStyleArena({
   useEffect(() => {
     if (isViewer && userId) {
       void supabase
-        .from('beef_participants')
-        .select('invite_status')
+        .from('beef_invitations')
+        .select('status')
         .eq('beef_id', roomId)
-        .eq('user_id', userId)
-        .single()
+        .eq('invitee_id', userId)
+        .eq('status', 'sent')
+        .maybeSingle()
         .then(({ data }) => {
-          if (data?.invite_status === 'pending') setRefInviteAlert(true);
+          if (data?.status === 'sent') setRefInviteAlert(true);
         });
     }
   }, [isViewer, userId, roomId]);
