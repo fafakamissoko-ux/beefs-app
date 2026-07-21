@@ -722,11 +722,6 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           <PremiumNotificationBadge count={item.badge} compact variant={navBadgeVariant(item.href)} />
                         </div>
                         <span className="flex-1">{item.label}</span>
-                        {item.badge > 0 && (
-                          <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-400">
-                            {item.badge} nouvelle{item.badge > 1 ? 's' : ''}
-                          </span>
-                        )}
                       </button>
                     );
                   }
@@ -744,11 +739,6 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                           <PremiumNotificationBadge count={item.badge} compact variant={navBadgeVariant(item.href)} />
                         </div>
                         <span className="flex-1">{item.label}</span>
-                        {item.badge > 0 && (
-                          <span className="rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-400">
-                            {item.badge} nouvelle{item.badge > 1 ? 's' : ''}
-                          </span>
-                        )}
                       </Link>
                     );
                   })}

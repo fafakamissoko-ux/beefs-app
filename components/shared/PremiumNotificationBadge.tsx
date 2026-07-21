@@ -4,12 +4,14 @@ interface PremiumNotificationBadgeProps {
   count: number;
   compact?: boolean;
   variant?: 'amber' | 'red' | 'cyan';
+  inline?: boolean; // Permet d'utiliser le badge sans le positionnement absolu
 }
 
 export function PremiumNotificationBadge({
   count,
   compact = false,
   variant = 'red',
+  inline = false,
 }: PremiumNotificationBadgeProps) {
   if (count <= 0) return null;
 
@@ -27,16 +29,20 @@ export function PremiumNotificationBadge({
     cyan: 'bg-cyan-500',
   };
 
+  // Dimensions strictes pour empêcher l'écrasement du texte ("apostrophe")
   const sizeClasses = compact
-    ? 'h-3.5 min-w-[14px] px-1 text-[9px] -top-1 -right-1'
-    : 'h-4.5 min-w-[18px] px-1.5 text-[10px] -top-1.5 -right-1.5';
+    ? 'h-[16px] min-w-[16px] px-1 text-[9px] leading-none'
+    : 'h-[20px] min-w-[20px] px-1.5 text-[10px] leading-none';
+
+  // Ancrage géométrique parfait (déborde toujours en haut à droite sans masquer l'icône)
+  const positionClasses = inline
+    ? 'relative'
+    : 'absolute top-0 right-0 translate-x-[40%] -translate-y-[40%]';
 
   return (
-    <div className={`absolute z-[50] flex items-center justify-center rounded-full border backdrop-blur-md font-black ${colors[variant]} ${sizeClasses}`}>
-      {/* Impulsion Lumineuse (Pulse) */}
+    <div className={`${positionClasses} z-[50] flex items-center justify-center rounded-full border backdrop-blur-md font-black ${colors[variant]} ${sizeClasses}`}>
       <div className={`absolute inset-0 rounded-full animate-ping opacity-40 ${halos[variant]}`} aria-hidden />
-      {/* Compteur Quantitatif */}
-      <span className="relative z-10 drop-shadow-md">{displayCount}</span>
+      <span className="relative z-10 pt-[1px]">{displayCount}</span>
     </div>
   );
 }

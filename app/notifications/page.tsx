@@ -17,6 +17,7 @@ import {
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppBackButton } from '@/components/AppBackButton';
+import { PremiumNotificationBadge } from '@/components/shared/PremiumNotificationBadge';
 import { useToast } from '@/components/Toast';
 import { isNotificationUnread } from '@/lib/notification-unread';
 
@@ -364,11 +365,7 @@ export default function NotificationsPage() {
               <h1 className="text-3xl font-black text-white truncate">
                 Notifications
               </h1>
-              {unreadCount > 0 && (
-                <span className="brand-gradient text-white text-xs font-bold px-2.5 py-1 rounded-full shrink-0">
-                  {unreadCount}
-                </span>
-              )}
+              <PremiumNotificationBadge count={unreadCount} variant="cyan" inline />
             </div>
             <Bell className="w-6 h-6 text-gray-500 shrink-0" />
           </div>
