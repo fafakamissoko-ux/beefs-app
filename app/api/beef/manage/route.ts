@@ -11,16 +11,23 @@ const supabaseAdmin = createClient(
 async function getAuthUser(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.length < 15) return null;
+
   try {
+    // Extraction explicite de la chaîne du token
+    const token = authHeader.replace('Bearer ', '').trim();
+
+    // Initialisation neutre du client (sans dépendre des headers globaux)
     const supabaseAuth = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { global: { headers: { Authorization: authHeader } } },
     );
+
+    // Injection directe et stricte du token
     const {
       data: { user },
       error,
-    } = await supabaseAuth.auth.getUser();
+    } = await supabaseAuth.auth.getUser(token);
+
     if (error || !user) return null;
     return user;
   } catch {
