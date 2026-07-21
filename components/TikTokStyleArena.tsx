@@ -1418,6 +1418,18 @@ export function TikTokStyleArena({
     return panels;
   }, [reconciledPeers]);
 
+  // SONDE DIAGNOSTIQUE : Suivi de la grille
+  useEffect(() => {
+    if (isViewer) {
+      console.log('[TÉLÉMÉTRIE SPECTATEUR]', {
+        physicalPeers,
+        reconciledPeers,
+        expectedUids,
+        challengerRemoteSlots,
+      });
+    }
+  }, [isViewer, physicalPeers, reconciledPeers, expectedUids, challengerRemoteSlots]);
+
   const displayPanelsFixed = challengerRemoteSlots;
 
   const hostRemoteParticipant = useMemo((): CallParticipant | null => {
@@ -1531,10 +1543,20 @@ export function TikTokStyleArena({
   const joinAttemptedRef = useRef(false);
   // Auto-join quand « Rejoindre » + URL Daily + jeton (fournis par la page parente).
   useEffect(() => {
-    if (!hasJoined || !effectiveDailyRoomUrl || !meetingTokenForDaily || isJoined || isJoining || joinAttemptedRef.current) return;
+    if (!hasJoined || !effectiveDailyRoomUrl || !meetingTokenForDaily || isJoined || isJoining || joinAttemptedRef.current) {
+      if (hasJoined && isViewer && !isJoined && !isJoining && !joinAttemptedRef.current) {
+        console.warn('[AUTO-JOIN BLOCKED]', {
+          hasJoined,
+          url: effectiveDailyRoomUrl,
+          hasToken: !!meetingTokenForDaily,
+        });
+      }
+      return;
+    }
+    console.log('[AUTO-JOIN TRIGGERED] Lancement de la connexion...');
     joinAttemptedRef.current = true;
     void join(preJoinMediaStream, { camEnabled: preJoinCamEnabled });
-  }, [hasJoined, effectiveDailyRoomUrl, meetingTokenForDaily, isJoined, isJoining, join, preJoinMediaStream, preJoinCamEnabled]);
+  }, [hasJoined, effectiveDailyRoomUrl, meetingTokenForDaily, isJoined, isJoining, join, preJoinMediaStream, preJoinCamEnabled, isViewer]);
 
   const handleRaiseHand = useCallback(async () => {
     if (!userId || !roomId) return;
