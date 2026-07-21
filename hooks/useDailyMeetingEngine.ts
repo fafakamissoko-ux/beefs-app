@@ -8,12 +8,6 @@ import {
   type PhysicalPeer,
 } from '@/lib/participant-identity';
 
-declare global {
-  interface Window {
-    DEBUG_DAILY_CALL?: DailyCall;
-  }
-}
-
 export type MeetingConnectionStatus = 'idle' | 'joining' | 'joined' | 'error' | 'left';
 
 async function disposeCallSafely(co: DailyCall | null): Promise<void> {
@@ -267,10 +261,6 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
             : { audioSource, videoSource },
         );
         callRef.current = co;
-
-        // SONDE DIAGNOSTIQUE : Exposition globale
-        window.DEBUG_DAILY_CALL = co;
-
         setupListeners(co);
 
         joinWatchdogRef.current = window.setTimeout(() => {
@@ -473,10 +463,6 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
             : { audioSource: true, videoSource: true },
         );
         callRef.current = newCo;
-
-        // SONDE DIAGNOSTIQUE : Exposition globale
-        window.DEBUG_DAILY_CALL = newCo;
-
         setupListeners(newCo);
         const userData = buildDailyJoinUserData(arenaUserIdRef.current);
         await newCo.join({

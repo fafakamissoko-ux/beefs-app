@@ -1418,18 +1418,6 @@ export function TikTokStyleArena({
     return panels;
   }, [reconciledPeers]);
 
-  // SONDE DIAGNOSTIQUE : Suivi de la grille
-  useEffect(() => {
-    if (isViewer) {
-      console.log('[TÉLÉMÉTRIE SPECTATEUR]', {
-        physicalPeers,
-        reconciledPeers,
-        expectedUids,
-        challengerRemoteSlots,
-      });
-    }
-  }, [isViewer, physicalPeers, reconciledPeers, expectedUids, challengerRemoteSlots]);
-
   const displayPanelsFixed = challengerRemoteSlots;
 
   const hostRemoteParticipant = useMemo((): CallParticipant | null => {
@@ -1543,25 +1531,15 @@ export function TikTokStyleArena({
   const joinAttemptedRef = useRef(false);
   // Auto-join quand « Rejoindre » + URL Daily + jeton (fournis par la page parente).
   useEffect(() => {
-    // TRACEUR INCONDITIONNEL : S'exécute à chaque rendu pour analyser le blocage
-    console.log('[ETAT AUTO-JOIN BRUT]', {
-      isViewer,
-      hasJoined,
-      url: effectiveDailyRoomUrl,
-      hasToken: !!meetingTokenForDaily,
-      isJoined,
-      isJoining,
-      joinAttempted: joinAttemptedRef.current,
-    });
+    // CORRECTION ARCHITECTURALE :
+    // Les Spectateurs ne passent pas par le SAS de préparation caméra (qui passe hasJoined à true).
+    // Ils doivent être connectés instantanément au réseau WebRTC.
+    const isReadyToConnect = isViewer || hasJoined;
 
-    if (!hasJoined || !effectiveDailyRoomUrl || !meetingTokenForDaily || isJoined || isJoining || joinAttemptedRef.current) {
-      if (hasJoined && isViewer && !isJoined && !isJoining && !joinAttemptedRef.current) {
-        console.warn('[AUTO-JOIN BLOCKED] Arrêt de la séquence. Raison probable : URL ou Token manquant.');
-      }
+    if (!isReadyToConnect || !effectiveDailyRoomUrl || !meetingTokenForDaily || isJoined || isJoining || joinAttemptedRef.current) {
       return;
     }
 
-    console.log('[AUTO-JOIN TRIGGERED] Lancement de la connexion WebRTC...');
     joinAttemptedRef.current = true;
     void join(preJoinMediaStream, { camEnabled: preJoinCamEnabled });
   }, [hasJoined, effectiveDailyRoomUrl, meetingTokenForDaily, isJoined, isJoining, join, preJoinMediaStream, preJoinCamEnabled, isViewer]);
