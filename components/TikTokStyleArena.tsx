@@ -27,6 +27,7 @@ import { ChatPanel } from './ChatPanel';
 import { PreJoinScreen } from './PreJoinScreen';
 import { ArenaChatMessages } from './ArenaChatMessages';
 import { ArenaLayoutManager } from '@/components/Arena/ArenaLayoutManager';
+import { PremiumNotificationBadge } from '@/components/shared/PremiumNotificationBadge';
 import { FeatureGuide } from './FeatureGuide';
 import { ViewerListModal } from './ViewerListModal';
 import { ProfileUserLink } from '@/components/ProfileUserLink';
@@ -3037,6 +3038,8 @@ export function TikTokStyleArena({
     });
   }, []);
 
+  const pendingDeckCount = handsRaised.length + refInvites.length;
+
   return (
     <div
       onPointerDown={() => {
@@ -3475,6 +3478,7 @@ export function TikTokStyleArena({
           formatBeefTime={formatBeefTime}
           onToggleMediatorSidebar={() => setMediatorSidebarOpen((o) => !o)}
           getMediatorDynamicColor={getMediatorDynamicColor}
+          pendingCount={pendingDeckCount}
           localCamEnabled={preJoinCamEnabled}
           />
         )}
@@ -4151,6 +4155,7 @@ export function TikTokStyleArena({
                   <button type="button" onClick={() => { setShowArenaMenu(false); openDrawer(); }} className="flex flex-col items-center gap-2">
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 transition-transform active:scale-90 relative">
                       <MessageCircle className="h-6 w-6 text-white" />
+                      <PremiumNotificationBadge count={unreadDMsCount} variant="cyan" />
                     </div>
                     <span className="text-[10px] font-semibold text-white/80">Messages</span>
                   </button>

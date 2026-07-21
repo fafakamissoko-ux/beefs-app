@@ -4,6 +4,7 @@ import type React from 'react';
 import { motion } from 'framer-motion';
 import { Pause, Sliders, Timer } from 'lucide-react';
 import { ParticipantVideo } from '@/components/ParticipantVideo';
+import { PremiumNotificationBadge } from '@/components/shared/PremiumNotificationBadge';
 import type { CallParticipant } from '@/hooks/useDailyCall';
 import type { ArenaSupportSlotId } from '@/lib/arena-slots';
 
@@ -30,6 +31,7 @@ export interface MediatorOrbProps {
   onOpenProfile: (username: string, knownUserId?: string | null) => void | Promise<void>;
   onRecoverMediaDevices: () => void | Promise<void>;
   onToggleMediatorSidebar: () => void;
+  pendingCount?: number;
   isConstellation?: boolean;
   constellationHaloVw?: number;
 }
@@ -57,6 +59,7 @@ export function MediatorOrb({
   onOpenProfile,
   onRecoverMediaDevices,
   onToggleMediatorSidebar,
+  pendingCount,
   isConstellation = false,
   constellationHaloVw,
 }: MediatorOrbProps) {
@@ -162,6 +165,7 @@ export function MediatorOrb({
               title="Command Deck"
             >
               <Sliders className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <PremiumNotificationBadge count={pendingCount ?? 0} variant="amber" compact />
             </button>
           )}
         </div>

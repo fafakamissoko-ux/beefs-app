@@ -82,6 +82,8 @@ export interface ArenaLayoutManagerProps {
   formatBeefTime: (seconds: number) => string;
   onToggleMediatorSidebar: () => void;
   getMediatorDynamicColor: (val: number) => string;
+  /** Demandes en attente Command Deck (raise-hand + convocations Ref). */
+  pendingCount?: number;
   /** Intention caméra au PreJoin — court-circuite la grâce bootstrap si false. */
   localCamEnabled?: boolean;
 }

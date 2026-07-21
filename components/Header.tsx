@@ -32,6 +32,7 @@ import { useGlobalSearch } from '@/contexts/GlobalSearchContext';
 import { useMessagesDrawer } from '@/contexts/MessagesDrawerContext';
 import { getAuraRank } from '@/lib/prestige';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
+import { PremiumNotificationBadge } from '@/components/shared/PremiumNotificationBadge';
 
 const buyPointsAnchorClass =
   'flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/[0.04] transition-colors';
@@ -65,13 +66,6 @@ function parseBadgeCount(data: unknown): number {
     return Number.isFinite(p) ? Math.max(0, p) : 0;
   }
   return 0;
-}
-
-/** Nombre exact sur le badge (plus de « 9+ » trompeur pour 10–99). */
-function formatNavBadgeCount(count: number): string {
-  const n = Math.max(0, Math.floor(count));
-  if (n > 999) return '999+';
-  return String(n);
 }
 
 /** Raccourci clavier affiché dans la barre : ⌘K (Apple) ou Ctrl+K (Windows/Linux), rendu via <kbd> pour éviter les glyphes cassés. */
@@ -109,35 +103,8 @@ function hideGlobalSearchOnPath(pathname: string | null): boolean {
   return false;
 }
 
-/** Badge compteur nav — rouge vif (Radar) ; ping convocations en rouge. */
-function NavUnreadBadge({
-  href,
-  count,
-  compact,
-}: {
-  href: string;
-  count: number;
-  compact?: boolean;
-}) {
-  if (count <= 0) return null;
-  const outer = compact
-    ? 'absolute -top-1 -right-1 flex h-3.5 min-w-[14px] items-center justify-center'
-    : 'absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center';
-  const inner = compact
-    ? 'min-h-[14px] min-w-[14px] px-0.5 text-[9px]'
-    : 'min-h-4 min-w-[16px] px-1 text-[10px]';
-  return (
-    <span className={outer}>
-      {href === '/invitations' && (
-        <span className="absolute inset-0 animate-ping rounded-full bg-red-500 opacity-75" aria-hidden />
-      )}
-      <span
-        className={`relative z-[1] inline-flex items-center justify-center rounded-full bg-red-600 font-bold text-white ${inner}`}
-      >
-        {formatNavBadgeCount(count)}
-      </span>
-    </span>
-  );
+function navBadgeVariant(href: string): 'amber' | 'red' {
+  return href === '/invitations' ? 'amber' : 'red';
 }
 
 export type HeaderShell = 'phone' | 'full';
@@ -484,7 +451,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       >
                         <div className="relative">
                           <Icon className={`w-[18px] h-[18px] ${active ? 'max-lg:text-cyan-400' : ''}`} />
-                          <NavUnreadBadge href={item.href} count={item.badge} />
+                          <PremiumNotificationBadge count={item.badge} variant={navBadgeVariant(item.href)} />
                         </div>
                         <span className="md:hidden lg:inline">{item.label}</span>
                         {active && (
@@ -510,7 +477,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                               : ''
                           }`}
                         />
-                        <NavUnreadBadge href={item.href} count={item.badge} />
+                        <PremiumNotificationBadge count={item.badge} variant={navBadgeVariant(item.href)} />
                       </div>
                       <span className="md:hidden lg:inline">{item.label}</span>
                       {active && (
@@ -752,7 +719,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       >
                         <div className="relative">
                           <Icon className="w-5 h-5" />
-                          <NavUnreadBadge href={item.href} count={item.badge} compact />
+                          <PremiumNotificationBadge count={item.badge} compact variant={navBadgeVariant(item.href)} />
                         </div>
                         <span className="flex-1">{item.label}</span>
                         {item.badge > 0 && (
@@ -774,7 +741,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       >
                         <div className="relative">
                           <Icon className="w-5 h-5" />
-                          <NavUnreadBadge href={item.href} count={item.badge} compact />
+                          <PremiumNotificationBadge count={item.badge} compact variant={navBadgeVariant(item.href)} />
                         </div>
                         <span className="flex-1">{item.label}</span>
                         {item.badge > 0 && (

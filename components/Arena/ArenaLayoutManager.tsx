@@ -57,6 +57,7 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
     formatBeefTime,
     onToggleMediatorSidebar,
     getMediatorDynamicColor,
+    pendingCount,
   } = props;
 
   const tiles = useArenaLayoutTiles({
@@ -170,6 +171,7 @@ export function ArenaLayoutManager(props: ArenaLayoutManagerProps) {
     onOpenProfile,
     onRecoverMediaDevices,
     onToggleMediatorSidebar,
+    pendingCount,
   };
 
   return (
