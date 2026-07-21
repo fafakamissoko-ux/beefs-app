@@ -223,20 +223,9 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
       const tokRaw = meetingTokenRef.current;
       const token = typeof tokRaw === 'string' && tokRaw.length > 0 ? tokRaw : undefined;
 
-      console.log('[WEBRTC] Appel de join()...', {
-        url,
-        hasToken: !!token,
-        tokenLength: token?.length,
-        status: statusRef.current,
-      });
-
-      if (!url || statusRef.current === 'joining' || statusRef.current === 'joined') {
-        console.warn('[WEBRTC] Join annulé (déjà en cours ou URL manquante).');
-        return;
-      }
+      if (!url || statusRef.current === 'joining' || statusRef.current === 'joined') return;
 
       if (!token) {
-        console.error('[WEBRTC FATAL] Jeton Daily manquant !');
         setError('Jeton Daily manquant — repasse par la page d’entrée (Phase 1).');
         setStatus('error');
         return;
@@ -247,7 +236,6 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
       clearJoinWatchdog();
 
       try {
-        console.log('[WEBRTC INIT] Démarrage séquence join...', { viewerMode: viewerModeRef.current });
         await disposeCallSafely(callRef.current);
         callRef.current = null;
 
@@ -294,7 +282,6 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
 
         const userData = buildDailyJoinUserData(arenaUserIdRef.current);
 
-        console.log('[WEBRTC PUSH] Exécution de co.join()...');
         await co.join({
           url,
           token,
@@ -303,9 +290,7 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
           startVideoOff: shouldStartVideoOff,
           startAudioOff: vm,
         });
-        console.log('[WEBRTC SUCCESS] Connecté à la room Daily !');
       } catch (err: unknown) {
-        console.error('[WEBRTC CRASH]', err);
         clearJoinWatchdog();
         const dangling = callRef.current;
         callRef.current = null;

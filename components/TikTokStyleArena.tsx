@@ -1543,17 +1543,25 @@ export function TikTokStyleArena({
   const joinAttemptedRef = useRef(false);
   // Auto-join quand « Rejoindre » + URL Daily + jeton (fournis par la page parente).
   useEffect(() => {
+    // TRACEUR INCONDITIONNEL : S'exécute à chaque rendu pour analyser le blocage
+    console.log('[ETAT AUTO-JOIN BRUT]', {
+      isViewer,
+      hasJoined,
+      url: effectiveDailyRoomUrl,
+      hasToken: !!meetingTokenForDaily,
+      isJoined,
+      isJoining,
+      joinAttempted: joinAttemptedRef.current,
+    });
+
     if (!hasJoined || !effectiveDailyRoomUrl || !meetingTokenForDaily || isJoined || isJoining || joinAttemptedRef.current) {
       if (hasJoined && isViewer && !isJoined && !isJoining && !joinAttemptedRef.current) {
-        console.warn('[AUTO-JOIN BLOCKED]', {
-          hasJoined,
-          url: effectiveDailyRoomUrl,
-          hasToken: !!meetingTokenForDaily,
-        });
+        console.warn('[AUTO-JOIN BLOCKED] Arrêt de la séquence. Raison probable : URL ou Token manquant.');
       }
       return;
     }
-    console.log('[AUTO-JOIN TRIGGERED] Lancement de la connexion...');
+
+    console.log('[AUTO-JOIN TRIGGERED] Lancement de la connexion WebRTC...');
     joinAttemptedRef.current = true;
     void join(preJoinMediaStream, { camEnabled: preJoinCamEnabled });
   }, [hasJoined, effectiveDailyRoomUrl, meetingTokenForDaily, isJoined, isJoining, join, preJoinMediaStream, preJoinCamEnabled, isViewer]);
