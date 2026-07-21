@@ -262,18 +262,18 @@ export function BeefCard({
           ref={mediaBlockRef}
           className="absolute inset-0 z-0 h-full w-full overflow-hidden bg-black md:rounded-[1.5rem]"
         >
-          {/* Fond flouté immersif pour combler l'espace vide */}
+          {/* Fond flouté immersif (Ambient Letterboxing) - Comble l'espace vide avec les couleurs du média */}
           {thumbnail && (
             <Image
               src={thumbnail}
               alt=""
               fill
-              className="object-cover opacity-40 blur-2xl scale-110 pointer-events-none"
+              className="object-cover opacity-80 blur-[40px] scale-150 saturate-200 pointer-events-none"
               sizes="(max-width: 768px) 100vw, 384px"
             />
           )}
 
-          {/* Média principal contenu SANS rognage */}
+          {/* Média principal TOUJOURS contenu SANS rognage (object-contain) */}
           {isActiveVideo && video_url ? (
             <video
               ref={videoRef}
@@ -282,20 +282,21 @@ export function BeefCard({
               loop
               muted={isMuted}
               playsInline
-              className="absolute inset-0 z-10 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="absolute inset-0 z-10 h-full w-full object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
             />
           ) : thumbnail ? (
             <Image
               src={thumbnail}
               alt={title}
               fill
-              className="z-10 object-cover transition-transform duration-500 group-hover:scale-105"
+              className="z-10 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, 384px"
             />
           ) : (
             <div className="absolute inset-0 z-10 bg-gradient-to-b from-obsidian-900 to-black" />
           )}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent z-[5]" aria-hidden />
+          {/* Overlay renforcé pour garantir la lisibilité des textes UI par-dessus l'image */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent z-[5]" aria-hidden />
 
           <div className="absolute left-2 top-2 z-20 flex max-w-[60%] flex-col items-start gap-1">
             {status === 'live' && (
