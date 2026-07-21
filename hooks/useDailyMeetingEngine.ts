@@ -257,7 +257,7 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
 
         const co = DailyIframe.createCallObject(
           vm
-            ? { subscribeToTracksAutomatically: true }
+            ? { subscribeToTracksAutomatically: true, audioSource: false, videoSource: false }
             : { audioSource, videoSource },
         );
         callRef.current = co;
@@ -458,7 +458,9 @@ export function useDailyMeetingEngine(options: UseDailyMeetingEngineOptions): Us
 
         const vm = viewerModeRef.current;
         const newCo = DailyIframe.createCallObject(
-          vm ? { subscribeToTracksAutomatically: true } : { audioSource: true, videoSource: true },
+          vm
+            ? { subscribeToTracksAutomatically: true, audioSource: false, videoSource: false }
+            : { audioSource: true, videoSource: true },
         );
         callRef.current = newCo;
         setupListeners(newCo);

@@ -134,7 +134,7 @@ export interface ArenaRealtimeCallbacks {
   /** Invite spectateur → ligne `beef_participants` acceptée pour l’utilisateur courant (UPDATE Realtime). */
   onSpectatorSelfInviteAccepted?: () => void;
 
-  /** Le Ref a invité ce spectateur (UPDATE Realtime vers pending). */
+  /** Le Ref a invité ce spectateur (UPDATE Realtime `beef_invitations` → sent). */
   onSpectatorReceivedRefInvite?: () => void;
 
   /** Mutation `beef_participants` pour ce beef (Postgres Changes). Le parent filtre médiateur / refetch invités. */
@@ -406,10 +406,24 @@ export function useArenaRealtime(
             const rowUserStr = typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
             if (rowUserStr !== String(userId)) return;
 
+            // Déclenché UNIQUEMENT quand l'utilisateur est accepté sur scène
             if (newRow.invite_status === 'accepted' && oldRow?.invite_status !== 'accepted') {
               callbacksRef.current.onSpectatorSelfInviteAccepted?.();
             }
-            if (newRow.invite_status === 'pending' && oldRow?.invite_status !== 'pending') {
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'beef_invitations', filter: `beef_id=eq.${roomId}` },
+          (payload: { new: Record<string, unknown>; old?: Record<string, unknown>; eventType: string }) => {
+            const newRow = payload.new;
+            const oldRow = payload.old || {};
+            const rawUid = newRow.invitee_id;
+            const rowUserStr = typeof rawUid === 'string' ? rawUid : rawUid != null ? String(rawUid) : '';
+            if (rowUserStr !== String(userId)) return;
+
+            // Déclenché UNIQUEMENT quand le Ref envoie une vraie convocation
+            if (newRow.status === 'sent' && oldRow?.status !== 'sent') {
               callbacksRef.current.onSpectatorReceivedRefInvite?.();
             }
           },
