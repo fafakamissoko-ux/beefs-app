@@ -449,11 +449,11 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         }}
                         className={itemClasses}
                       >
-                        <div className="relative">
-                          <Icon className={`w-[18px] h-[18px] ${active ? 'max-lg:text-cyan-400' : ''}`} />
-                          <PremiumNotificationBadge count={item.badge} variant={navBadgeVariant(item.href)} />
-                        </div>
-                        <span className="md:hidden lg:inline">{item.label}</span>
+                        <Icon className={`w-[18px] h-[18px] ${active ? 'max-lg:text-cyan-400' : ''}`} />
+                        <span className="md:hidden lg:flex items-center gap-2">
+                          {item.label}
+                          <PremiumNotificationBadge count={item.badge} variant="red" inline />
+                        </span>
                         {active && (
                           <motion.div layoutId="nav-indicator" className="absolute -bottom-[13px] left-3 right-3 block h-[2px] rounded-full lg:hidden" style={{ background: 'linear-gradient(90deg, #00F0FF, #00B3CC)' }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
                         )}
@@ -468,18 +468,18 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                       prefetch={false}
                       className={itemClasses}
                     >
-                      <div className="relative">
-                        <Icon
-                          className={`w-[18px] h-[18px] ${
-                            active
-                              ? 'max-lg:text-cyan-400 ' +
-                                (item.href === '/points' ? 'lg:text-cyan-400' : '')
-                              : ''
-                          }`}
-                        />
-                        <PremiumNotificationBadge count={item.badge} variant={navBadgeVariant(item.href)} />
-                      </div>
-                      <span className="md:hidden lg:inline">{item.label}</span>
+                      <Icon
+                        className={`w-[18px] h-[18px] ${
+                          active
+                            ? 'max-lg:text-cyan-400 ' +
+                              (item.href === '/points' ? 'lg:text-cyan-400' : '')
+                            : ''
+                        }`}
+                      />
+                      <span className="md:hidden lg:flex items-center gap-2">
+                        {item.label}
+                        <PremiumNotificationBadge count={item.badge} variant={item.href === '/invitations' ? 'amber' : 'red'} inline />
+                      </span>
                       {active && (
                         <motion.div
                           layoutId="nav-indicator"
@@ -717,11 +717,11 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         }}
                         className={`w-full text-left ${itemClasses}`}
                       >
-                        <div className="relative">
-                          <Icon className="w-5 h-5" />
-                          <PremiumNotificationBadge count={item.badge} compact variant={navBadgeVariant(item.href)} />
-                        </div>
-                        <span className="flex-1">{item.label}</span>
+                        <Icon className="w-5 h-5" />
+                        <span className="flex-1 flex items-center gap-2">
+                          {item.label}
+                          <PremiumNotificationBadge count={item.badge} compact variant="red" inline />
+                        </span>
                       </button>
                     );
                   }
@@ -734,11 +734,11 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
                         onClick={() => setMobileMenuOpen(false)}
                         className={itemClasses}
                       >
-                        <div className="relative">
-                          <Icon className="w-5 h-5" />
-                          <PremiumNotificationBadge count={item.badge} compact variant={navBadgeVariant(item.href)} />
-                        </div>
-                        <span className="flex-1">{item.label}</span>
+                        <Icon className="w-5 h-5" />
+                        <span className="flex-1 flex items-center gap-2">
+                          {item.label}
+                          <PremiumNotificationBadge count={item.badge} compact variant={item.href === '/invitations' ? 'amber' : 'red'} inline />
+                        </span>
                       </Link>
                     );
                   })}
