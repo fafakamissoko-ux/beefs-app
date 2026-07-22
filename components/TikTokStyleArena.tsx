@@ -3571,10 +3571,10 @@ export function TikTokStyleArena({
                 });
                 setParticipantUidOrder((prev) => prev.filter((id) => id !== target.arenaUserId));
               }
-              toast('Participant expulsé', 'success');
+              toast('Participant renvoyé parmi les citoyens', 'success');
               void fetchPendingInvites();
             } else {
-              toast('Expulsion impossible.', 'error');
+              toast('Retrait impossible.', 'error');
             }
           }}
           onAdjustTime={adjustBeefTime}
