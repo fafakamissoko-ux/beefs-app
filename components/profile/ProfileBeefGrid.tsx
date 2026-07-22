@@ -49,6 +49,7 @@ export function ProfileBeefGrid({
     <div className="grid grid-cols-1 gap-4">
       {beefs.map((beef, idx) => (
         <div key={beef.id} className="space-y-2">
+          <div className="aspect-[3/4] max-h-[70dvh]">
           <BeefCard
             id={beef.id}
             index={idx}
@@ -68,6 +69,7 @@ export function ProfileBeefGrid({
               }
             }}
           />
+          </div>
           {renderExtra && renderExtra(beef)}
         </div>
       ))}
