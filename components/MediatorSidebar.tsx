@@ -223,9 +223,10 @@ export function MediatorSidebar({
                         Télémétrie — Chronos
                       </h3>
 
-                      <div className="mb-6 rounded-xl border border-white/10 bg-slate-950/50 p-4">
-                        <div className="mb-3 flex items-center gap-2 text-blue-200/55">
-                          <Timer className="h-4 w-4 text-sky-400" strokeWidth={1.5} />
+                      {/* CHRONOMÈTRE GLOBAL (Charte PRESTIGE) */}
+                      <div className="mb-6 rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-950/30 to-black/40 p-5 shadow-[0_0_20px_rgba(245,158,11,0.15)] backdrop-blur-md">
+                        <div className="mb-3 flex items-center gap-2 text-amber-200/80">
+                          <Timer className="h-4 w-4 text-amber-400" strokeWidth={1.5} />
                           <span className="font-mono text-[10px] font-bold uppercase tracking-wider">
                             Chronomètre global — beef
                           </span>
@@ -318,8 +319,9 @@ export function MediatorSidebar({
                         )}
                       </div>
 
-                      <div className="rounded-xl border border-white/10 bg-slate-950/50 p-4">
-                        <p className="mb-3 text-center font-mono text-[10px] font-bold uppercase tracking-widest text-blue-200/50">
+                      {/* HOT MIC (Charte TACTIQUE) */}
+                      <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/10 p-4 backdrop-blur-sm">
+                        <p className="mb-3 text-center font-mono text-[10px] font-bold uppercase tracking-widest text-cyan-200/60">
                           Durée allouée au tour / Hot mic
                         </p>
                         <div className="mx-auto mb-5 flex justify-center gap-3">
@@ -510,10 +512,10 @@ export function MediatorSidebar({
                     {/* BLOC 3 — GESTION DE LA SCÈNE (LE RING) */}
                     <section className={SECTION_SHELL}>
                       <div className="mb-3 flex items-center justify-between gap-2">
-                        <h3 className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-400/80">
-                          Scène — Le Ring
+                        <h3 className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-amber-400/90">
+                          L'Agora — Intervenants actifs
                         </h3>
-                        <span className="rounded-full border border-white/10 bg-slate-950/40 px-2 py-0.5 font-mono text-[9px] text-blue-200/50">
+                        <span className="rounded-full border border-amber-500/20 bg-amber-950/40 px-2 py-0.5 font-mono text-[9px] text-amber-200/60 shadow-[0_0_8px_rgba(245,158,11,0.2)]">
                           {remoteRows.length} lien(s)
                         </span>
                       </div>
@@ -619,32 +621,38 @@ export function MediatorSidebar({
                           pendingInvites.map((inv) => (
                             <li
                               key={inv.userId}
-                              className="flex flex-col gap-2 rounded-xl border border-white/10 bg-slate-950/50 px-3 py-3"
+                              className="relative group"
                             >
-                              <span className="min-w-0 break-words text-sm font-medium text-white/90">
-                                {inv.label}
-                              </span>
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    onRejectPendingInvite?.(inv.userId);
-                                    onClose();
-                                  }}
-                                  className="flex min-h-[44px] flex-1 min-w-[110px] items-center justify-center rounded-xl border border-rose-500/45 bg-rose-600/85 font-mono text-[10px] font-black uppercase tracking-wide text-white hover:bg-rose-500"
-                                >
-                                  Refuser
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    onAcceptPendingInvite?.(inv.userId);
-                                    onClose();
-                                  }}
-                                  className="flex min-h-[44px] flex-1 min-w-[110px] items-center justify-center rounded-xl bg-white font-mono text-[10px] font-black uppercase tracking-wide text-black hover:bg-gray-200"
-                                >
-                                  Accepter
-                                </button>
+                              {/* HALO LUMINEUX (Pulse) */}
+                              <div className="absolute -inset-0.5 rounded-xl bg-amber-500/30 blur-sm animate-pulse" aria-hidden="true" />
+
+                              {/* CARTE CONTENU (Premium Glass) */}
+                              <div className="relative flex flex-col gap-2 rounded-xl border border-amber-500/50 bg-slate-950/90 px-3 py-3 shadow-lg backdrop-blur-md">
+                                <span className="min-w-0 break-words text-sm font-medium text-white/90">
+                                  {inv.label}
+                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      onRejectPendingInvite?.(inv.userId);
+                                      onClose();
+                                    }}
+                                    className="flex min-h-[44px] flex-1 min-w-[110px] items-center justify-center rounded-xl border border-rose-500/45 bg-rose-600/85 font-mono text-[10px] font-black uppercase tracking-wide text-white transition hover:bg-rose-500"
+                                  >
+                                    Refuser
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      onAcceptPendingInvite?.(inv.userId);
+                                      onClose();
+                                    }}
+                                    className="flex min-h-[44px] flex-1 min-w-[110px] items-center justify-center rounded-xl bg-white font-mono text-[10px] font-black uppercase tracking-wide text-black transition hover:bg-gray-200"
+                                  >
+                                    Accepter
+                                  </button>
+                                </div>
                               </div>
                             </li>
                           ))
