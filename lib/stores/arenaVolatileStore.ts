@@ -32,6 +32,10 @@ export interface FlyingReaction {
 }
 
 interface ArenaVolatileStore {
+  // --- MUTE GLOBAL (feed vidéos) ---
+  isMuted: boolean;
+  toggleMute: () => void;
+
   // --- MOTEUR DE CHAT ---
   messages: VisibleMessage[];
   addMessage: (msg: Omit<VisibleMessage, 'timestamp'>) => void;
@@ -53,6 +57,10 @@ interface ArenaVolatileStore {
 let reactionIdSeq = 0;
 
 export const useArenaVolatileStore = create<ArenaVolatileStore>((set) => ({
+  // --- MUTE GLOBAL ---
+  isMuted: true,
+  toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
+
   // --- ACTIONS CHAT ---
   messages: [],
   addMessage: (msg) => set((state) => {

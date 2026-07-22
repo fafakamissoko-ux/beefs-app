@@ -10,11 +10,10 @@ import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
 import { InlineAuraGivers } from '@/components/InlineAuraGivers';
+import { useArenaVolatileStore } from '@/lib/stores/arenaVolatileStore';
 
 /** Alias pour éviter le motif `}[` dans `useState<…>(…)` sous SWC/TSX. */
 type FloatingAuraChip = { id: number; x: number };
-
-let globalIsMuted = true;
 
 interface BeefCardProps {
   id: string;
@@ -131,7 +130,8 @@ export function BeefCard({
 }: BeefCardProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isMuted, setIsMuted] = useState(globalIsMuted);
+  const isMuted = useArenaVolatileStore((s) => s.isMuted);
+  const toggleMute = useArenaVolatileStore((s) => s.toggleMute);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const modalVideoRef = useRef<HTMLVideoElement | null>(null);
   const mediaBlockRef = useRef<HTMLDivElement | null>(null);
@@ -162,9 +162,8 @@ export function BeefCard({
 
   const handleToggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
+    toggleMute();
     const nextMuted = !isMuted;
-    globalIsMuted = nextMuted;
-    setIsMuted(nextMuted);
     if (videoRef.current) videoRef.current.muted = nextMuted;
     if (modalVideoRef.current) {
       modalVideoRef.current.muted = nextMuted;
