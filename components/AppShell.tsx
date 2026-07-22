@@ -42,15 +42,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-[100dvh] w-full min-w-0 flex-col overflow-hidden bg-transparent backdrop-blur-none lg:flex-row">
       <Header shell="phone" />
 
-      <main className="mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-x-hidden lg:mx-0 lg:max-w-none lg:pt-0">
+      <main className="relative mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col overflow-hidden lg:mx-0 lg:max-w-none lg:pt-0">
         <div
-          className={`flex min-h-0 min-w-0 flex-1 flex-col ${
-            roomImmersive
-              ? 'overflow-hidden p-0'
-              : pathname === '/feed' || pathname === '/'
-                ? 'h-full min-h-0 max-md:overflow-hidden max-md:p-0 overflow-x-hidden p-4 lg:p-10'
-                : 'overflow-x-hidden overflow-y-auto p-4 lg:p-10'
-          }`}
+          className={
+            pathname === '/feed' || pathname === '/'
+              ? 'flex min-h-0 min-w-0 flex-1 flex-col h-full max-md:overflow-hidden max-md:p-0 overflow-x-hidden p-4 lg:p-10'
+              : 'absolute inset-0 overflow-x-hidden overflow-y-auto p-4 lg:p-10'
+          }
         >
           {children}
         </div>
