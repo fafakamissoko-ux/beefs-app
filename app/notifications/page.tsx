@@ -89,6 +89,8 @@ function SkeletonCard() {
   );
 }
 
+const PAGE_SIZE = 50;
+
 export default function NotificationsPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -96,6 +98,8 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [auraNotifications, setAuraNotifications] = useState<AuraSparkNotification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'aura' | 'mentions'>('all');
 
@@ -116,18 +120,21 @@ export default function NotificationsPage() {
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(4000),
+          .range(0, PAGE_SIZE - 1),
         supabase
           .from('aura_notifications')
           .select('id, created_at, giver_name, giver_username, aura_kind, is_read')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(4000),
+          .range(0, PAGE_SIZE - 1),
       ]);
 
       if (notifRes.error) throw notifRes.error;
-      setNotifications((notifRes.data ?? []) as AppNotification[]);
-      setAuraNotifications(auraRes.error ? [] : ((auraRes.data ?? []) as AuraSparkNotification[]));
+      const notifs = (notifRes.data ?? []) as AppNotification[];
+      const auras = auraRes.error ? [] : ((auraRes.data ?? []) as AuraSparkNotification[]);
+      setNotifications(notifs);
+      setAuraNotifications(auras);
+      setHasMore(notifs.length >= PAGE_SIZE || auras.length >= PAGE_SIZE);
 
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
@@ -139,6 +146,38 @@ export default function NotificationsPage() {
       setLoading(false);
     }
   }, [user]);
+
+  const loadMore = useCallback(async () => {
+    if (!user || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const notifFrom = notifications.length;
+      const auraFrom = auraNotifications.length;
+      const [notifRes, auraRes] = await Promise.all([
+        supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .range(notifFrom, notifFrom + PAGE_SIZE - 1),
+        supabase
+          .from('aura_notifications')
+          .select('id, created_at, giver_name, giver_username, aura_kind, is_read')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .range(auraFrom, auraFrom + PAGE_SIZE - 1),
+      ]);
+      const newNotifs = (notifRes.data ?? []) as AppNotification[];
+      const newAuras = auraRes.error ? [] : ((auraRes.data ?? []) as AuraSparkNotification[]);
+      setNotifications((prev) => [...prev, ...newNotifs]);
+      setAuraNotifications((prev) => [...prev, ...newAuras]);
+      setHasMore(newNotifs.length >= PAGE_SIZE || newAuras.length >= PAGE_SIZE);
+    } catch (err) {
+      console.error('Failed to load more notifications:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [user, loadingMore, hasMore, notifications.length, auraNotifications.length]);
 
   useEffect(() => {
     if (user) fetchNotifications();
@@ -464,6 +503,16 @@ export default function NotificationsPage() {
                 );
               })}
             </AnimatePresence>
+            {hasMore && (
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="w-full py-4 text-sm font-semibold text-brand-400 hover:text-brand-300 disabled:opacity-50 transition-colors"
+              >
+                {loadingMore ? 'Chargement…' : 'Charger plus'}
+              </button>
+            )}
           </div>
         )}
       </div>
