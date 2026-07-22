@@ -132,6 +132,7 @@ export function Header({ shell = 'phone' }: { shell?: HeaderShell }) {
         .from('user_public_profile')
         .select('id, username, display_name, avatar_url, lifetime_points')
         .not('username', 'is', null)
+        .eq('is_banned', false)
         .order('lifetime_points', { ascending: false })
         .limit(4);
       if (data) setTopUsers(data);
