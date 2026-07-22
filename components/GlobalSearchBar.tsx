@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase/client';
 import { useRouter, usePathname } from 'next/navigation';
 import { hrefWithFrom } from '@/lib/navigation-return';
+import { escapeForIlikeExact } from '@/lib/ilike-exact';
 
 interface SearchResult {
   type: 'beef' | 'user';
@@ -61,11 +62,12 @@ export function GlobalSearchModal({ open, onOpenChange }: GlobalSearchModalProps
     setLoading(true);
     try {
       if (activeTab === 'beefs') {
+        const safeQ = escapeForIlikeExact(query);
         const { data, error } = await supabase
           .from('beefs')
           .select('id, title, tags, status, created_at, viewer_count')
-          .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
-          .limit(5);
+          .or(`title.ilike.%${safeQ}%,description.ilike.%${safeQ}%`)
+          .limit(15);
 
         if (error) throw error;
 
@@ -79,11 +81,12 @@ export function GlobalSearchModal({ open, onOpenChange }: GlobalSearchModalProps
 
         setResults(beefResults);
       } else {
+        const safeQ = escapeForIlikeExact(query);
         const { data, error } = await supabase
           .from('user_public_profile')
           .select('id, username, display_name, avatar_url')
-          .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
-          .limit(5);
+          .or(`username.ilike.%${safeQ}%,display_name.ilike.%${safeQ}%`)
+          .limit(15);
 
         if (error) throw error;
 
