@@ -339,6 +339,7 @@ export default function FeedPage() {
       const challengerDAvatarByBeef: Record<string, string | null> = {};
       let userOnLiveRingByBeef = new Map<string, boolean>();
       let userInviteStatusByBeef = new Map<string, string | null>();
+      const participantIdsByBeef = new Map<string, Set<string>>();
 
       const publicIds = new Set<string>();
       for (const b of beefList as { mediator_id?: string | null; created_by?: string | null }[]) {
@@ -403,6 +404,9 @@ export default function FeedPage() {
             const list = byBeef.get(row.beef_id) || [];
             list.push(row);
             byBeef.set(row.beef_id, list);
+            const pSet = participantIdsByBeef.get(row.beef_id) || new Set<string>();
+            pSet.add(row.user_id);
+            participantIdsByBeef.set(row.beef_id, pSet);
           }
           const packName = (userId: string) => displayNameFromPublicRow(feedPublicMap.get(userId), '');
           for (const beef of beefList as {
@@ -560,9 +564,17 @@ export default function FeedPage() {
 
       if (feedType === 'abonnements') {
         const followingSet = new Set(followingIds);
-        beefsWithData = beefsWithData.filter(
-          (beef: any) => beef.mediator_id && followingSet.has(beef.mediator_id)
-        );
+        beefsWithData = beefsWithData.filter((beef: any) => {
+          if (beef.mediator_id && followingSet.has(beef.mediator_id)) return true;
+          if (beef.created_by && followingSet.has(beef.created_by)) return true;
+          const pIds = participantIdsByBeef.get(String(beef.id));
+          if (pIds) {
+            for (const uid of pIds) {
+              if (followingSet.has(uid)) return true;
+            }
+          }
+          return false;
+        });
         beefsWithData.sort(compareFeedOrder);
       } else if (feedType === 'pour-vous') {
         beefsWithData.sort(compareArenaOrder);
