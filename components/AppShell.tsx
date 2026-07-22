@@ -49,7 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ? 'overflow-hidden p-0'
               : pathname === '/feed' || pathname === '/'
                 ? 'h-full min-h-0 max-md:overflow-hidden max-md:p-0 overflow-x-hidden p-4 lg:p-10'
-                : 'overflow-x-hidden p-4 lg:p-10'
+                : 'overflow-x-hidden overflow-y-auto p-4 lg:p-10'
           }`}
         >
           {children}
