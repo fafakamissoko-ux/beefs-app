@@ -353,11 +353,21 @@ export default function FeedPage() {
           (beefList as { id: string; mediator_id?: string | null }[]).map((b) => [b.id, b.mediator_id]),
         );
 
-        const { data: inviteRows } = await supabase
-          .from('beef_invitations')
-          .select('beef_id, invitee_id, inviter_id, status')
-          .in('beef_id', beefIds)
-          .in('status', ['sent', 'seen', 'accepted']);
+        const [inviteResult, partResult] = await Promise.all([
+          supabase
+            .from('beef_invitations')
+            .select('beef_id, invitee_id, inviter_id, status')
+            .in('beef_id', beefIds)
+            .in('status', ['sent', 'seen', 'accepted']),
+          supabase
+            .from('beef_participants')
+            .select('beef_id, user_id, invite_status, created_at, is_main, role')
+            .in('beef_id', beefIds),
+        ]);
+
+        const inviteRows = inviteResult.data;
+        const partRows = partResult.data;
+        const partErr = partResult.error;
 
         const mediatorInviteeIdsByBeef = new Map<string, Set<string>>();
         for (const inv of inviteRows || []) {
@@ -369,11 +379,6 @@ export default function FeedPage() {
             mediatorInviteeIdsByBeef.set(row.beef_id, s);
           }
         }
-
-        const { data: partRows, error: partErr } = await supabase
-          .from('beef_participants')
-          .select('beef_id, user_id, invite_status, created_at, is_main, role')
-          .in('beef_id', beefIds);
 
         if (!partErr && partRows) {
           for (const row of partRows as { user_id: string }[]) {
