@@ -758,6 +758,7 @@ export default function PublicProfilePage() {
                           if (!old?.profile) return old;
                           return {
                             ...old,
+                            isFollowing: p.following,
                             stats:
                               p.recipientFollowersCount != null
                                 ? { ...old.stats, followers: p.recipientFollowersCount }
