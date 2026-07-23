@@ -403,8 +403,9 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   };
 
   const deleteMessage = async (msgId: string) => {
+    if (!user) return;
     setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, is_deleted: true } : m)));
-    await supabase.from('direct_messages').update({ is_deleted: true }).eq('id', msgId);
+    await supabase.from('direct_messages').update({ is_deleted: true }).eq('id', msgId).eq('sender_id', user.id);
     setMessageMenu(null);
   };
 
@@ -422,10 +423,12 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
 
     if (serverIds.length === 0) return;
 
+    if (!user) return;
     const { error } = await supabase
       .from('direct_messages')
       .update({ is_deleted: true })
-      .in('id', serverIds);
+      .in('id', serverIds)
+      .eq('sender_id', user.id);
 
     if (error) {
       toast('Erreur lors de la suppression groupée', 'error');
@@ -449,7 +452,8 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     setShowChatMenu(false);
     setMessageMenu(null);
 
-    const { error } = await supabase.from('direct_messages').update({ is_deleted: true }).eq('conversation_id', convId);
+    if (!user) return;
+    const { error } = await supabase.from('direct_messages').update({ is_deleted: true }).eq('conversation_id', convId).eq('sender_id', user.id);
 
     if (error) {
       toast('Impossible de vider la discussion', 'error');
