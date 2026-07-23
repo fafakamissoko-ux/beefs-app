@@ -31,6 +31,7 @@ import { WithdrawalWizard } from '@/components/settings/WithdrawalWizard';
 import { ProfileSettingsForm } from '@/components/settings/ProfileSettingsForm';
 import { EmailSettingsForm } from '@/components/settings/EmailSettingsForm';
 import { PasswordSettingsForm } from '@/components/settings/PasswordSettingsForm';
+import { useWalletStore } from '@/lib/stores/walletStore';
 
 const SETTINGS_GLASS_CARD =
   'w-full rounded-[2rem] border border-white/10 bg-black/40 p-6 md:p-8 shadow-2xl backdrop-blur-md';
@@ -68,7 +69,8 @@ export default function SettingsPage() {
     bio: '',
   });
   const [accentColor, setAccentColor] = useState('#E83A14');
-  const [walletPoints, setWalletPoints] = useState(0);
+  const walletPoints = useWalletStore((s) => s.balance);
+  const walletSync = useWalletStore((s) => s.sync);
   const [notifPrefs, setNotifPrefs] = useState({
     messages: true,
     follows: true,
@@ -105,7 +107,6 @@ export default function SettingsPage() {
           bio: data.bio || '',
         });
         if (data.accent_color) setAccentColor(data.accent_color);
-        setWalletPoints(Number(data.points) || 0);
       }
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -500,7 +501,7 @@ export default function SettingsPage() {
                 <WithdrawalWizard
                   user={user}
                   points={walletPoints}
-                  onPointsDeducted={(euros) => setWalletPoints((prev) => prev - euros * 100)}
+                  onPointsDeducted={() => void walletSync()}
                 />
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
