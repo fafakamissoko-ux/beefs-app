@@ -14,10 +14,12 @@ import { useToast } from '@/components/Toast';
 import { MediationBeefEditorPanel } from '@/components/MediationBeefEditorPanel';
 import { ImageCropModal } from '@/components/ImageCropModal';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
+import { RankDescriptionModal } from '@/components/RankDescriptionModal';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
 import { ProfileBeefGrid } from '@/components/profile/ProfileBeefGrid';
 import { useWalletStore } from '@/lib/stores/walletStore';
+import { getAuraRank } from '@/lib/prestige';
 
 interface UserProfile {
   id: string;
@@ -103,6 +105,7 @@ export default function ProfileContent() {
   const [cropOriginalFile, setCropOriginalFile] = useState<File | null>(null);
 
   const [isAuraModalOpen, setIsAuraModalOpen] = useState(false);
+  const [isRankModalOpen, setIsRankModalOpen] = useState(false);
 
   const { data, isLoading: loading, isError } = useQuery({
     queryKey: ['owner-profile', user?.id],
@@ -596,7 +599,9 @@ export default function ProfileContent() {
             </>
           }
           walletBalance={walletBalance}
+          onRankClick={() => setIsRankModalOpen(true)}
           onAuraClick={() => setIsAuraModalOpen(true)}
+          onLingotsClick={() => router.push('/buy-points')}
           onStatsClick={(type) => {
             if (type === 'participated') goStatsParticipations();
             if (type === 'hosted') goStatsMediations();
@@ -770,6 +775,13 @@ export default function ProfileContent() {
         targetId={profile.id}
         type="profile"
         ownerId={profile.id}
+      />
+
+      <RankDescriptionModal
+        isOpen={isRankModalOpen}
+        onClose={() => setIsRankModalOpen(false)}
+        currentRank={getAuraRank(profile.lifetime_points ?? profile.points)}
+        currentAura={profile.lifetime_points ?? profile.points}
       />
     </div>
   );

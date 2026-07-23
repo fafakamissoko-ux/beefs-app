@@ -11,6 +11,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/client';
 import { FollowListModal } from '@/components/FollowListModal';
 import { AuraGiversModal } from '@/components/AuraGiversModal';
+import { RankDescriptionModal } from '@/components/RankDescriptionModal';
+import { getAuraRank } from '@/lib/prestige';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
 import { ProfileBeefGrid } from '@/components/profile/ProfileBeefGrid';
@@ -156,6 +158,7 @@ export default function PublicProfilePage() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showFollowModal, setShowFollowModal] = useState<null | 'followers' | 'following'>(null);
   const [isAuraModalOpen, setIsAuraModalOpen] = useState(false);
+  const [isRankModalOpen, setIsRankModalOpen] = useState(false);
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'debates' | 'participations'>('debates');
   const [viewingImage, setViewingImage] = useState<{ url: string; type: 'avatar' | 'banner' } | null>(null);
@@ -794,7 +797,9 @@ export default function PublicProfilePage() {
                   })
               : undefined
           }
+          onRankClick={() => setIsRankModalOpen(true)}
           onAuraClick={() => setIsAuraModalOpen(true)}
+          onLingotsClick={isOwnProfile ? () => router.push('/buy-points') : undefined}
           onStatsClick={(type) => {
             if (type === 'followers') setShowFollowModal('followers');
             if (type === 'following') setShowFollowModal('following');
@@ -876,6 +881,15 @@ export default function PublicProfilePage() {
           targetId={profile.id}
           type="profile"
           ownerId={profile.id}
+        />
+      )}
+
+      {profile && (
+        <RankDescriptionModal
+          isOpen={isRankModalOpen}
+          onClose={() => setIsRankModalOpen(false)}
+          currentRank={getAuraRank(prestigeAuraDisplay(profile))}
+          currentAura={prestigeAuraDisplay(profile)}
         />
       )}
 

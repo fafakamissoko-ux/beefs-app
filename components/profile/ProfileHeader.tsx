@@ -36,7 +36,9 @@ export interface ProfileHeaderProps {
   uploadOverlayAvatar?: React.ReactNode; // Slot (Input file Camera)
   onBannerClick?: () => void;
   onAvatarClick?: () => void;
+  onRankClick?: () => void;
   onAuraClick?: () => void;
+  onLingotsClick?: () => void;
   onStatsClick?: (type: 'participated' | 'hosted' | 'followers' | 'following') => void;
   /** Solde en Lingots — affiché uniquement en mode owner */
   walletBalance?: number;
@@ -52,7 +54,9 @@ export function ProfileHeader({
   uploadOverlayAvatar,
   onBannerClick,
   onAvatarClick,
+  onRankClick,
   onAuraClick,
+  onLingotsClick,
   onStatsClick,
   walletBalance,
 }: ProfileHeaderProps) {
@@ -122,30 +126,40 @@ export function ProfileHeader({
           <p className="text-white/50 text-sm mb-2">@{profile.username}</p>
           {profile.bio && <p className="text-white/80 text-sm mb-4 leading-relaxed max-w-2xl">{profile.bio}</p>}
 
-          {/* Aura */}
-          <div
-            className={`mb-4 flex flex-wrap items-center gap-3 transition-transform ${onAuraClick ? 'cursor-pointer hover:opacity-80 active:scale-95' : ''}`}
-            onClick={onAuraClick}
-            role={onAuraClick ? 'button' : 'generic'}
-            tabIndex={onAuraClick ? 0 : -1}
-          >
-            <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md shadow-inner">
+          {/* Rang / Aura / Lingots — pilules cliquables indépendamment */}
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={onRankClick}
+              disabled={!onRankClick}
+              className={`flex items-center gap-1.5 rounded-full border border-white/10 bg-black/40 px-3 py-1 backdrop-blur-md shadow-inner transition-all ${onRankClick ? 'cursor-pointer hover:opacity-80 active:scale-95' : 'cursor-default'}`}
+            >
               <Flame className={`h-3.5 w-3.5 ${rank.colorClass}`} aria-hidden />
               <span className={`font-sans text-[10px] font-bold uppercase tracking-widest ${rank.colorClass}`}>
                 {rank.title}
               </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-sm text-white/50">
+            </button>
+            <button
+              type="button"
+              onClick={onAuraClick}
+              disabled={!onAuraClick}
+              className={`flex items-center gap-1.5 text-sm text-white/50 transition-all ${onAuraClick ? 'cursor-pointer hover:opacity-80 active:scale-95' : 'cursor-default'}`}
+            >
               <InlineAuraGivers targetId={profile.id} type="profile" ownerId={profile.id} />
               <Flame className="h-4 w-4 text-brand-500" aria-hidden />
               <span className="font-bold text-white">{profile.lifetime_points.toLocaleString('fr-FR')}</span> Aura
-            </div>
+            </button>
             {typeof walletBalance === 'number' && (
-              <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-950/30 px-3 py-1 backdrop-blur-md">
+              <button
+                type="button"
+                onClick={onLingotsClick}
+                disabled={!onLingotsClick}
+                className={`flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-950/30 px-3 py-1 backdrop-blur-md transition-all ${onLingotsClick ? 'cursor-pointer hover:opacity-80 active:scale-95' : 'cursor-default'}`}
+              >
                 <Gem className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
                 <span className="text-sm font-bold text-emerald-300">{walletBalance.toLocaleString('fr-FR')}</span>
                 <span className="text-[10px] text-emerald-400/60 font-semibold uppercase tracking-wide">Lingots</span>
-              </div>
+              </button>
             )}
           </div>
 
