@@ -3,6 +3,7 @@ import { stripe } from '@/lib/stripe/server';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import { isValidUserId, validatePointPackFromMetadata } from '@/lib/stripe/validate-checkout-metadata';
+import { POINT_PACKS } from '@/lib/stripe/client';
 
 /** Raw body requis par Stripe ; pas de cache. */
 export const dynamic = 'force-dynamic';
@@ -125,14 +126,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, stripeE
   }
 
   const { points: basePoints, packId } = packCheck;
-  const totalPointsRaw = session.metadata?.total_points;
-  let pointsAmount = basePoints;
-  if (totalPointsRaw) {
-    const parsed = parseInt(totalPointsRaw, 10);
-    if (Number.isFinite(parsed) && parsed >= 1) {
-      pointsAmount = parsed;
-    }
-  }
+  const pack = POINT_PACKS.find((p) => p.id === packId);
+  const bonusPoints = pack ? Math.floor(basePoints * (pack.bonus / 100)) : 0;
+  const pointsAmount = basePoints + bonusPoints;
 
   const { data: already, error: dupErr } = await supabaseAdmin
     .from('transactions')
