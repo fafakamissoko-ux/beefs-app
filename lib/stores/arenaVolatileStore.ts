@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { sanitize } from '@/lib/security';
 
 export type ArenaBigGiftPayload = {
   cost: number;
@@ -64,10 +65,9 @@ export const useArenaVolatileStore = create<ArenaVolatileStore>((set) => ({
   // --- ACTIONS CHAT ---
   messages: [],
   addMessage: (msg) => set((state) => {
-    // Déduplication stricte pour éviter les fantômes
     if (state.messages.some(m => m.id === msg.id)) return state;
-    // Capacité maximale de 80 messages en mémoire pour préserver la RAM
-    return { messages: [...state.messages, { ...msg, timestamp: Date.now() }].slice(-80) };
+    const safe = { ...msg, content: sanitize(msg.content), timestamp: Date.now() };
+    return { messages: [...state.messages, safe].slice(-80) };
   }),
   deleteMessage: (id) => set((state) => ({
     messages: state.messages.filter(m => m.id !== id)

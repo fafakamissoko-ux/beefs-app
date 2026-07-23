@@ -6,6 +6,7 @@ import { Send, Sparkles, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
+import { sanitizeMessage } from '@/lib/security';
 import { InlineAuraGivers } from '@/components/InlineAuraGivers';
 import { StarField } from '@/components/Arena/shared/StarField';
 
@@ -167,12 +168,15 @@ export function CommentsDrawer({ beefId, onClose }: CommentsDrawerProps) {
       return;
     }
 
+    const clean = sanitizeMessage(text);
+    if (!clean) return;
+
     setSending(true);
     try {
       const { error } = await supabase.from('beef_comments').insert({
         beef_id: beefId,
         user_id: user.id,
-        content: text,
+        content: clean,
         parent_id: replyingTo?.commentId ?? null,
       });
       if (error) throw error;
