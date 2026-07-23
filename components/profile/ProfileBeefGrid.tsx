@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BeefCard } from '@/components/BeefCard';
 import { Flame } from 'lucide-react';
+
+const PAGE_SIZE = 12;
 
 export interface GridBeef {
   id: string;
@@ -34,6 +36,7 @@ export function ProfileBeefGrid({
   renderExtra,
 }: ProfileBeefGridProps) {
   const router = useRouter();
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   if (beefs.length === 0) {
     return (
@@ -45,9 +48,12 @@ export function ProfileBeefGrid({
     );
   }
 
+  const displayed = beefs.slice(0, visibleCount);
+  const hasMore = visibleCount < beefs.length;
+
   return (
     <div className="grid grid-cols-1 gap-4">
-      {beefs.map((beef, idx) => (
+      {displayed.map((beef, idx) => (
         <div key={beef.id} className="space-y-2">
           <div className="aspect-[3/4] max-h-[70dvh] md:aspect-auto md:max-h-none">
           <BeefCard
@@ -73,6 +79,15 @@ export function ProfileBeefGrid({
           {renderExtra && renderExtra(beef)}
         </div>
       ))}
+      {hasMore && (
+        <button
+          type="button"
+          onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+          className="w-full py-3 rounded-2xl border border-white/10 bg-white/5 text-white/60 text-sm font-semibold hover:bg-white/10 transition-colors"
+        >
+          Charger plus ({beefs.length - visibleCount} restants)
+        </button>
+      )}
     </div>
   );
 }

@@ -332,7 +332,7 @@ export default function PublicProfilePage() {
 
           resultBeefs = hosted.map((row) => beefFromPublicRpcRow(row as Record<string, unknown>, hn, hu));
 
-          resultParticipantBeefs = participated.slice(0, 12).map((row) => {
+          resultParticipantBeefs = participated.map((row) => {
             const r = row as Record<string, unknown>;
             const mid = r.mediator_id as string | undefined;
             const medUn = typeof r.mediator_username === 'string' ? r.mediator_username.trim() : '';
@@ -372,7 +372,7 @@ export default function PublicProfilePage() {
           supabase.from('followers').select('*', { count: 'exact', head: true }).eq('following_id', pd.id),
           supabase.from('followers').select('*', { count: 'exact', head: true }).eq('follower_id', pd.id),
           supabase.from('beefs').select('*', { count: 'exact', head: true }).eq('mediator_id', pd.id),
-          supabase.from('beefs').select('*').eq('mediator_id', pd.id).order('created_at', { ascending: false }).limit(10),
+          supabase.from('beefs').select('*').eq('mediator_id', pd.id).order('created_at', { ascending: false }).limit(12),
           supabase.from('beef_participants').select('beef_id, beefs(*)').eq('user_id', pd.id),
           user && user.id !== pd.id
             ? supabase.from('followers').select('id').eq('follower_id', user.id).eq('following_id', pd.id).maybeSingle()
@@ -440,7 +440,7 @@ export default function PublicProfilePage() {
         }
         const selfName = pd.display_name || pd.username;
         const selfUsername = pd.username.trim() || null;
-        resultParticipantBeefs = pbRaw.slice(0, 12).map((b) => {
+        resultParticipantBeefs = pbRaw.map((b) => {
           const mid = (b as { mediator_id?: string }).mediator_id;
           const host_name = !mid || mid === pd.id ? selfName : medNameById[mid] || 'Médiateur';
           const host_username = !mid || mid === pd.id ? selfUsername : medUsernameById[mid] ?? null;
