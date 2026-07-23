@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { updateUserBalance } from '@/lib/updateUserBalance';
+import { escapeHtml } from '@/lib/escape-html';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -112,7 +113,14 @@ export async function POST(req: NextRequest) {
             description: 'Annulation — échec création demande de retrait',
             metadata: {},
           });
-        } catch {}
+        } catch (rollbackErr) {
+          console.error('[WITHDRAWAL CRITICAL] Rollback failed — points potentially lost', {
+            userId,
+            amountPoints,
+            insertError,
+            rollbackErr,
+          });
+        }
       }
       return NextResponse.json({ error: 'Erreur lors de la création de la demande' }, { status: 500 });
     }
@@ -130,14 +138,14 @@ export async function POST(req: NextRequest) {
           subject: `💰 Nouvelle demande de retrait — ${user.display_name || user.username}`,
           html: `
             <h2>Nouvelle demande de retrait</h2>
-            <p><strong>Utilisateur :</strong> ${user.display_name || user.username} (@${user.username})</p>
-            <p><strong>Email :</strong> ${user.email}</p>
+            <p><strong>Utilisateur :</strong> ${escapeHtml(user.display_name || user.username)} (@${escapeHtml(user.username)})</p>
+            <p><strong>Email :</strong> ${escapeHtml(user.email)}</p>
             <p><strong>Montant :</strong> ${amountEuros.toFixed(2)}€ (${amountPoints} pts)</p>
-            <p><strong>Méthode :</strong> ${method}</p>
-            ${iban ? `<p><strong>IBAN :</strong> ${iban}</p>` : ''}
-            ${accountHolderName ? `<p><strong>Titulaire :</strong> ${accountHolderName}</p>` : ''}
-            ${paypalEmail ? `<p><strong>PayPal :</strong> ${paypalEmail}</p>` : ''}
-            ${mobileNumber ? `<p><strong>Numéro mobile :</strong> ${mobileNumber} (${mobileOperator})</p>` : ''}
+            <p><strong>Méthode :</strong> ${escapeHtml(String(method))}</p>
+            ${iban ? `<p><strong>IBAN :</strong> ${escapeHtml(String(iban))}</p>` : ''}
+            ${accountHolderName ? `<p><strong>Titulaire :</strong> ${escapeHtml(String(accountHolderName))}</p>` : ''}
+            ${paypalEmail ? `<p><strong>PayPal :</strong> ${escapeHtml(String(paypalEmail))}</p>` : ''}
+            ${mobileNumber ? `<p><strong>Numéro mobile :</strong> ${escapeHtml(String(mobileNumber))} (${escapeHtml(String(mobileOperator))})</p>` : ''}
             <p><strong>ID demande :</strong> ${request.id}</p>
             <br/>
             <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/admin/retraits" style="background:#f97316;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">
