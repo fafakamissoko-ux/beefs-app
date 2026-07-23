@@ -474,10 +474,11 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     if (query.length < 2) { setSearchResults([]); return; }
     setSearching(true);
     try {
+      const safeQuery = query.replace(/[%_\\]/g, '\\$&');
       const { data } = await supabase
         .from('user_public_profile')
         .select('id, username, display_name, avatar_url')
-        .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+        .or(`username.ilike.%${safeQuery}%,display_name.ilike.%${safeQuery}%`)
         .neq('id', user?.id || '')
         .limit(10);
       setSearchResults(data || []);
