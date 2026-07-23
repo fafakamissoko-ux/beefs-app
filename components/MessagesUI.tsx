@@ -918,7 +918,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
 
                     const decodedText = isDeleted
                       ? '🚫 Ce message a été supprimé'
-                      : msg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/');
+                      : msg.content;
 
                     const isLater = decodedText.startsWith('[BEEF_RESPONSE:LATER] ');
                     const isDecline = decodedText.startsWith('[BEEF_RESPONSE:DECLINE] ');
@@ -1045,7 +1045,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                               {repliedMsg && !isDeleted && (
                                 <div className={`mb-2 rounded-lg border-l-2 p-2 text-xs ${isMine ? 'border-white/50 bg-black/20 text-white/90' : 'border-cyan-500 bg-black/30 text-gray-300'}`}>
                                   <p className="mb-0.5 font-bold opacity-75">{repliedMsg.sender_id === user.id ? 'Vous' : selectedConv.other_user.display_name}</p>
-                                  <p className="truncate opacity-90">{repliedMsg.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
+                                  <p className="truncate opacity-90">{repliedMsg.content}</p>
                                 </div>
                               )}
                               {isBeefResponse && !isDeleted && (
@@ -1138,7 +1138,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                             <p className="text-xs font-bold text-cyan-400">
                               Réponse à {replyingTo.sender_id === user.id ? 'vous-même' : selectedConv.other_user.display_name}
                             </p>
-                            <p className="truncate text-xs text-gray-400">{replyingTo.content.replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#x2F;/g, '/')}</p>
+                            <p className="truncate text-xs text-gray-400">{replyingTo.content}</p>
                           </div>
                           <button
                             type="button"
