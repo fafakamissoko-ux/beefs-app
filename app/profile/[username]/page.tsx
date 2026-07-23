@@ -143,7 +143,13 @@ export default function PublicProfilePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const username = params.username as string;
+  const rawUsername = Array.isArray(params.username) ? params.username[0] : params.username;
+  let username: string;
+  try {
+    username = decodeURIComponent(String(rawUsername ?? '')).trim();
+  } catch {
+    username = String(rawUsername ?? '').trim();
+  }
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -184,7 +190,7 @@ export default function PublicProfilePage() {
     queryKey: ['public-profile', username, user?.id],
     enabled: !!username,
     queryFn: async (): Promise<PublicProfileQueryData> => {
-      const usernameKey = decodeURIComponent(String(username || '')).trim();
+      const usernameKey = username;
       let resultStats: UserStats = { ...EMPTY_STATS };
       let resultBeefs: Beef[] = [];
       let resultParticipantBeefs: Beef[] = [];
