@@ -296,18 +296,8 @@ export default function PublicProfilePage() {
 
         let followersCount = 0;
         let followingCount = 0;
-        if (authUser) {
-          const { data: followersData } = await supabase
-            .from('followers')
-            .select('id', { count: 'exact' })
-            .eq('following_id', pd.id);
-          const { data: followingData } = await supabase
-            .from('followers')
-            .select('id', { count: 'exact' })
-            .eq('follower_id', pd.id);
-          followersCount = followersData?.length || 0;
-          followingCount = followingData?.length || 0;
-        } else {
+
+        if (!authUser) {
           const { data: fcRows, error: fcErr } = await supabase.rpc('get_public_follow_counts', {
             p_user_id: pd.id,
           });
@@ -370,49 +360,33 @@ export default function PublicProfilePage() {
           };
         }
 
-        const { data: beefsData } = await supabase
-          .from('beefs')
-          .select('id', { count: 'exact' })
-          .eq('mediator_id', pd.id);
+        const [
+          followersRes,
+          followingRes,
+          hostedCountRes,
+          userBeefsRes,
+          partWithBeefsRes,
+          followRes,
+          mediaLikesRes,
+        ] = await Promise.all([
+          supabase.from('followers').select('*', { count: 'exact', head: true }).eq('following_id', pd.id),
+          supabase.from('followers').select('*', { count: 'exact', head: true }).eq('follower_id', pd.id),
+          supabase.from('beefs').select('*', { count: 'exact', head: true }).eq('mediator_id', pd.id),
+          supabase.from('beefs').select('*').eq('mediator_id', pd.id).order('created_at', { ascending: false }).limit(10),
+          supabase.from('beef_participants').select('beef_id, beefs(*)').eq('user_id', pd.id),
+          user && user.id !== pd.id
+            ? supabase.from('followers').select('id').eq('follower_id', user.id).eq('following_id', pd.id).maybeSingle()
+            : Promise.resolve({ data: null }),
+          authUser && authUser.id !== pd.id
+            ? supabase.from('profile_media_likes').select('media_type').eq('media_owner_id', pd.id).eq('user_id', authUser.id)
+            : Promise.resolve({ data: null }),
+        ]);
 
-        const { data: partRows } = await supabase
-          .from('beef_participants')
-          .select('beef_id')
-          .eq('user_id', pd.id);
+        followersCount = followersRes.count ?? 0;
+        followingCount = followingRes.count ?? 0;
+        const beefsHostedCount = hostedCountRes.count ?? 0;
 
-        const beefsParticipated = new Set((partRows || []).map((r: { beef_id: string }) => r.beef_id)).size;
-
-        resultStats = {
-          beefs_participated: beefsParticipated,
-          beefs_hosted: beefsData?.length || 0,
-          followers: followersCount,
-          following: followingCount,
-          beefs_resolved: wisdom.beefs_resolved,
-          beefs_abandoned: wisdom.beefs_abandoned,
-        };
-
-        const { data: userBeefs } = await supabase
-          .from('beefs')
-          .select('*')
-          .eq('mediator_id', pd.id)
-          .order('created_at', { ascending: false })
-          .limit(10);
-
-        if (userBeefs) {
-          const hn = pd.display_name || pd.username;
-          const hu = pd.username.trim() || null;
-          resultBeefs = userBeefs.map((beef) => ({
-            ...beef,
-            host_name: hn,
-            host_username: hu,
-          }));
-        }
-
-        const { data: partWithBeefs } = await supabase
-          .from('beef_participants')
-          .select('beef_id, beefs(*)')
-          .eq('user_id', pd.id);
-
+        const partWithBeefs = partWithBeefsRes.data;
         const pbRaw: Beef[] = [];
         const seenPb = new Set<string>();
         for (const row of partWithBeefs || []) {
@@ -422,6 +396,26 @@ export default function PublicProfilePage() {
           seenPb.add(b.id);
           pbRaw.push(b as Beef);
         }
+
+        resultStats = {
+          beefs_participated: pbRaw.length,
+          beefs_hosted: beefsHostedCount,
+          followers: followersCount,
+          following: followingCount,
+          beefs_resolved: wisdom.beefs_resolved,
+          beefs_abandoned: wisdom.beefs_abandoned,
+        };
+
+        if (userBeefsRes.data) {
+          const hn = pd.display_name || pd.username;
+          const hu = pd.username.trim() || null;
+          resultBeefs = userBeefsRes.data.map((beef) => ({
+            ...beef,
+            host_name: hn,
+            host_username: hu,
+          }));
+        }
+
         pbRaw.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         const medIds = [
           ...new Set(
@@ -453,26 +447,12 @@ export default function PublicProfilePage() {
           return { ...b, host_name, host_username };
         });
 
-        if (user && user.id !== pd.id) {
-          const { data: followData } = await supabase
-            .from('followers')
-            .select('id')
-            .eq('follower_id', user.id)
-            .eq('following_id', pd.id)
-            .maybeSingle();
-
-          resultIsFollowing = !!followData;
-        }
+        resultIsFollowing = !!followRes.data;
 
         let likedAvatar = false;
         let likedBanner = false;
-        if (authUser && authUser.id !== pd.id) {
-          const { data: myMediaLikes } = await supabase
-            .from('profile_media_likes')
-            .select('media_type')
-            .eq('media_owner_id', pd.id)
-            .eq('user_id', authUser.id);
-          for (const row of myMediaLikes || []) {
+        if (mediaLikesRes.data) {
+          for (const row of mediaLikesRes.data) {
             const mt = (row as { media_type?: string }).media_type;
             if (mt === 'avatar') likedAvatar = true;
             if (mt === 'banner') likedBanner = true;
