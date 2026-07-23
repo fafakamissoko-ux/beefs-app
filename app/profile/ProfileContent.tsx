@@ -17,6 +17,7 @@ import { AuraGiversModal } from '@/components/AuraGiversModal';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileTabs } from '@/components/profile/ProfileTabs';
 import { ProfileBeefGrid } from '@/components/profile/ProfileBeefGrid';
+import { useWalletStore } from '@/lib/stores/walletStore';
 
 interface UserProfile {
   id: string;
@@ -91,6 +92,7 @@ export default function ProfileContent() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const walletBalance = useWalletStore((s) => s.balance);
 
   const [activeTab, setActiveTab] = useState<'stats' | 'debates'>('stats');
   const [showEditModal, setShowEditModal] = useState(false);
@@ -593,6 +595,7 @@ export default function ProfileContent() {
               </Link>
             </>
           }
+          walletBalance={walletBalance}
           onAuraClick={() => setIsAuraModalOpen(true)}
           onStatsClick={(type) => {
             if (type === 'participated') goStatsParticipations();
