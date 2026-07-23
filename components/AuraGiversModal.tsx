@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
+import { FollowButton } from '@/components/FollowButton';
 
 interface AuraGiver {
   giver_id: string;
@@ -151,7 +152,7 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
               </p>
               <button
                 type="button"
-                onClick={() => router.push('/signup')}
+                onClick={() => router.push('/login')}
                 className="w-full max-w-[200px] rounded-xl bg-white py-3.5 text-xs font-black uppercase tracking-wider text-black shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all hover:scale-105 active:scale-95"
               >
                 Rejoindre l&apos;Agora
@@ -186,12 +187,16 @@ export const AuraGiversModal: React.FC<AuraGiversModalProps> = ({
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    className="flex-shrink-0 rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold text-white transition-all hover:bg-white hover:text-black active:scale-95"
-                  >
-                    Suivre
-                  </button>
+                  {currentUser && currentUser !== giver.giver_id && (
+                    <FollowButton
+                      followingId={giver.giver_id}
+                      initialFollowing={false}
+                      currentFollowersCount={0}
+                      currentLifetimePoints={0}
+                      classNameWhenNotFollowing="flex-shrink-0 rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold text-white transition-all hover:bg-white hover:text-black active:scale-95"
+                      classNameWhenFollowing="flex-shrink-0 rounded-full bg-cyan-500/20 px-4 py-1.5 text-xs font-bold text-cyan-400 transition-all hover:bg-red-500/10 hover:text-red-400 active:scale-95"
+                    />
+                  )}
                 </div>
               ))}
               {currentUser !== ownerId && items.length === 7 && (
