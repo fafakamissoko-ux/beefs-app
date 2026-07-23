@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import { Flame, Calendar, ShieldCheck } from 'lucide-react';
+import { Flame, Calendar, ShieldCheck, Gem } from 'lucide-react';
 import { InlineAuraGivers } from '@/components/InlineAuraGivers';
 import { getAuraRank } from '@/lib/prestige';
 
@@ -38,6 +38,8 @@ export interface ProfileHeaderProps {
   onAvatarClick?: () => void;
   onAuraClick?: () => void;
   onStatsClick?: (type: 'participated' | 'hosted' | 'followers' | 'following') => void;
+  /** Solde en Lingots — affiché uniquement en mode owner */
+  walletBalance?: number;
 }
 
 export function ProfileHeader({
@@ -52,6 +54,7 @@ export function ProfileHeader({
   onAvatarClick,
   onAuraClick,
   onStatsClick,
+  walletBalance,
 }: ProfileHeaderProps) {
   const rank = getAuraRank(profile.lifetime_points);
   const accent = profile.accent_color || '#E83A14';
@@ -137,6 +140,13 @@ export function ProfileHeader({
               <Flame className="h-4 w-4 text-brand-500" aria-hidden />
               <span className="font-bold text-white">{profile.lifetime_points.toLocaleString('fr-FR')}</span> Aura
             </div>
+            {typeof walletBalance === 'number' && (
+              <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-950/30 px-3 py-1 backdrop-blur-md">
+                <Gem className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
+                <span className="text-sm font-bold text-emerald-300">{walletBalance.toLocaleString('fr-FR')}</span>
+                <span className="text-[10px] text-emerald-400/60 font-semibold uppercase tracking-wide">Lingots</span>
+              </div>
+            )}
           </div>
 
           {/* Taux de Fiabilité (Sagesse) */}

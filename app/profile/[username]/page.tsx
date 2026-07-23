@@ -19,6 +19,7 @@ import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { FollowButton } from '@/components/FollowButton';
 import { AppBackButton } from '@/components/AppBackButton';
 import { hrefWithFrom } from '@/lib/navigation-return';
+import { useWalletStore } from '@/lib/stores/walletStore';
 import { useToast } from '@/components/Toast';
 import { MediationSummaryPublic } from '@/components/MediationSummaryPublic';
 import { resolutionStatusLabel } from '@/lib/mediation-outcome-labels';
@@ -491,6 +492,7 @@ export default function PublicProfilePage() {
   }, [data]);
 
   const isOwnProfile = user && profile && user.id === profile.id;
+  const walletBalance = useWalletStore((s) => s.balance);
 
   const handleMediaAuraClick = useCallback(async () => {
     if (!profile || !viewingImage) return;
@@ -664,7 +666,7 @@ export default function PublicProfilePage() {
 
         {/* Profile Header Unifié */}
         <ProfileHeader
-          mode="public"
+          mode={isOwnProfile ? 'owner' : 'public'}
           profile={{
             id: profile.id,
             username: profile.username,
@@ -797,6 +799,7 @@ export default function PublicProfilePage() {
             if (type === 'followers') setShowFollowModal('followers');
             if (type === 'following') setShowFollowModal('following');
           }}
+          walletBalance={isOwnProfile ? walletBalance : undefined}
         />
 
         {/* Tabs Publics */}
