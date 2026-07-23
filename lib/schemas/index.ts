@@ -3,9 +3,20 @@ import { isDisposableEmailDomain, validateSignupEmail } from '@/lib/email-signup
 import { validatePasswordPolicy } from '@/lib/password-policy';
 
 // --- SCHÉMA PROFIL ---
+const stripHtml = (v: string) => v.replace(/<[^>]*>/g, '');
+
 export const profileSchema = z.object({
-  display_name: z.string().min(2, 'Minimum 2 caractères').max(30, 'Maximum 30 caractères'),
-  bio: z.string().max(160, 'Maximum 160 caractères').optional().nullable(),
+  display_name: z
+    .string()
+    .min(2, 'Minimum 2 caractères')
+    .max(30, 'Maximum 30 caractères')
+    .transform(stripHtml),
+  bio: z
+    .string()
+    .max(160, 'Maximum 160 caractères')
+    .transform(stripHtml)
+    .optional()
+    .nullable(),
   accent_color: z.string().optional().nullable(),
 });
 export type ProfileFormValues = z.infer<typeof profileSchema>;
