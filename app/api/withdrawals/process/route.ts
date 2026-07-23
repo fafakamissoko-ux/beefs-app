@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { isAdminRequest } from '@/lib/is-admin-request';
 import { updateUserBalance } from '@/lib/updateUserBalance';
+import { escapeHtml } from '@/lib/escape-html';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,8 +71,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Notify the creator by email
-    const user = request.users as any;
+    const user = request.users as { email: string; display_name: string | null; username: string; points: number };
     const isPaid = action === 'paid';
+    const safeName = escapeHtml(user.display_name || user.username);
+    const safeNote = adminNote ? escapeHtml(String(adminNote)) : '';
 
     try {
       await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-email`, {
@@ -88,17 +91,17 @@ export async function POST(req: NextRequest) {
           html: isPaid
             ? `
               <h2>Votre retrait a été effectué !</h2>
-              <p>Bonjour ${user.display_name || user.username},</p>
+              <p>Bonjour ${safeName},</p>
               <p>Votre retrait de <strong>${parseFloat(request.amount_euros).toFixed(2)}€</strong> a été traité avec succès.</p>
               <p>Le virement devrait apparaître sur votre compte dans les prochains jours ouvrés.</p>
-              ${adminNote ? `<p><em>Note : ${adminNote}</em></p>` : ''}
+              ${safeNote ? `<p><em>Note : ${safeNote}</em></p>` : ''}
               <p>Merci de faire confiance à Beefs !</p>
             `
             : `
               <h2>Demande de retrait refusée</h2>
-              <p>Bonjour ${user.display_name || user.username},</p>
+              <p>Bonjour ${safeName},</p>
               <p>Votre demande de retrait de <strong>${parseFloat(request.amount_euros).toFixed(2)}€</strong> a été refusée.</p>
-              ${adminNote ? `<p><strong>Raison :</strong> ${adminNote}</p>` : ''}
+              ${safeNote ? `<p><strong>Raison :</strong> ${safeNote}</p>` : ''}
               <p>Vos points ont été <strong>recrédités</strong> sur votre compte.</p>
               <p>Si vous avez des questions, contactez-nous.</p>
             `,
