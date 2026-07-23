@@ -798,7 +798,7 @@ export default function PublicProfilePage() {
               : undefined
           }
           onRankClick={() => setIsRankModalOpen(true)}
-          onAuraClick={() => setIsAuraModalOpen(true)}
+          onAuraClick={isOwnProfile ? () => setIsAuraModalOpen(true) : undefined}
           onLingotsClick={isOwnProfile ? () => router.push('/buy-points') : undefined}
           onStatsClick={(type) => {
             if (type === 'followers') setShowFollowModal('followers');

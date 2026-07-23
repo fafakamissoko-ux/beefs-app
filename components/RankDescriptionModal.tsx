@@ -57,71 +57,46 @@ export const RankDescriptionModal: React.FC<RankDescriptionModalProps> = ({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
               <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
                 <p className="text-sm text-white/70 leading-relaxed">{currentRank.description}</p>
               </div>
 
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-3">Tous les rangs</p>
-                <div className="space-y-2">
-                  {PRESTIGE_RANKS.map((r) => {
-                    const isCurrent = r.tier === currentRank.tier;
-                    const isReached = currentAura >= r.threshold;
-                    const nextRank = PRESTIGE_RANKS.find((nr) => nr.tier === r.tier + 1);
-                    const progress = nextRank
-                      ? Math.min(1, Math.max(0, (currentAura - r.threshold) / (nextRank.threshold - r.threshold)))
-                      : 1;
-
-                    return (
-                      <div
-                        key={r.tier}
-                        className={`rounded-2xl border p-3 transition-colors ${
-                          isCurrent
-                            ? 'border-white/15 bg-white/[0.04]'
-                            : 'border-white/5 bg-white/[0.01]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <Flame className={`h-3.5 w-3.5 ${r.colorClass}`} aria-hidden />
-                            <span className={`text-xs font-bold uppercase tracking-wide ${r.colorClass}`}>
-                              {r.title}
-                            </span>
-                            {isCurrent && (
-                              <span className="text-[9px] font-bold uppercase tracking-wider text-white/40 bg-white/10 px-1.5 py-0.5 rounded-full">
-                                Actuel
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[10px] text-white/30 font-semibold">
-                            {r.threshold === 0 ? '0' : r.threshold.toLocaleString('fr-FR')}+ Aura
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-white/40 leading-relaxed">{r.description}</p>
-                        {isCurrent && nextRank && (
-                          <div className="mt-2">
-                            <div className="flex items-center justify-between text-[10px] text-white/30 mb-1">
-                              <span>Progression</span>
-                              <span className="flex items-center gap-1">
-                                {nextRank.title} <ChevronRight className="h-2.5 w-2.5" />
-                              </span>
-                            </div>
-                            <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${isReached ? 'bg-gradient-to-r from-brand-500 to-cyan-400' : 'bg-white/10'}`}
-                                style={{ width: `${Math.round(progress * 100)}%` }}
-                              />
-                            </div>
-                            <p className="text-[10px] text-white/25 mt-1">
-                              {currentAura.toLocaleString('fr-FR')} / {nextRank.threshold.toLocaleString('fr-FR')} Aura
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Seuil atteint</span>
+                  <span className="text-xs text-white/40 font-semibold">
+                    {currentRank.threshold === 0 ? '0' : currentRank.threshold.toLocaleString('fr-FR')}+ Aura
+                  </span>
                 </div>
+                <div className="flex items-center gap-2 text-sm text-white/60">
+                  <Flame className="h-4 w-4 text-brand-500" aria-hidden />
+                  <span className="font-bold text-white">{currentAura.toLocaleString('fr-FR')}</span> Aura
+                </div>
+                {(() => {
+                  const nextRank = PRESTIGE_RANKS.find((nr) => nr.tier === currentRank.tier + 1);
+                  if (!nextRank) return null;
+                  const progress = Math.min(1, Math.max(0, (currentAura - currentRank.threshold) / (nextRank.threshold - currentRank.threshold)));
+                  return (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between text-[10px] text-white/30 mb-1">
+                        <span>Progression</span>
+                        <span className="flex items-center gap-1">
+                          {nextRank.title} <ChevronRight className="h-2.5 w-2.5" />
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-white/5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-brand-500 to-cyan-400"
+                          style={{ width: `${Math.round(progress * 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-white/25 mt-1">
+                        {currentAura.toLocaleString('fr-FR')} / {nextRank.threshold.toLocaleString('fr-FR')} Aura
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </motion.div>
