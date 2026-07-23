@@ -1,10 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Euro, Check, ArrowLeft, AlertCircle, ChevronDown } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
+import { z } from 'zod';
+
+const paypalEmailSchema = z.string().email('Adresse email PayPal invalide');
+
+const ibanSchema = z
+  .string()
+  .transform((v) => v.replace(/\s/g, '').toUpperCase())
+  .pipe(
+    z
+      .string()
+      .min(15, 'IBAN trop court (15 caractères minimum)')
+      .max(34, 'IBAN trop long (34 caractères maximum)')
+      .regex(/^[A-Z]{2}\d{2}[A-Z0-9]+$/, 'Format IBAN invalide'),
+  );
+
+const mobileSchema = z
+  .string()
+  .regex(/^\+\d{7,15}$/, 'Numéro de téléphone invalide (format international attendu)');
 
 const ALL_EMAIL_PROVIDERS = [
   { label: 'Gmail', domain: 'gmail.com' },
@@ -103,7 +121,11 @@ export function WithdrawalWizard({ user, points, onPointsDeducted }: WithdrawalW
       .then(({ data }) => setWithdrawalHistory((data as WithdrawalRequestRow[]) || []));
   }, [user.id]);
 
+  const isSubmitting = useRef(false);
+
   const handleWithdrawalSubmit = async () => {
+    if (isSubmitting.current) return;
+    isSubmitting.current = true;
     setWithdrawalLoading(true);
     setWithdrawalError('');
 
@@ -144,6 +166,7 @@ export function WithdrawalWizard({ user, points, onPointsDeducted }: WithdrawalW
     } catch (err: unknown) {
       setWithdrawalError(err instanceof Error ? err.message : 'Erreur serveur');
     } finally {
+      isSubmitting.current = false;
       setWithdrawalLoading(false);
     }
   };
@@ -200,7 +223,9 @@ export function WithdrawalWizard({ user, points, onPointsDeducted }: WithdrawalW
                 step={1}
                 value={withdrawalAmountEuros}
                 onChange={(e) => {
-                  const val = Math.min(Number(e.target.value), Math.floor(points / 100));
+                  const raw = Number(e.target.value);
+                  if (!Number.isFinite(raw)) return;
+                  const val = Math.max(20, Math.min(Math.floor(raw), Math.floor(points / 100)));
                   setWithdrawalAmountEuros(val);
                 }}
                 className="flex-1 bg-transparent text-white text-lg font-bold focus:outline-none"
@@ -420,20 +445,23 @@ export function WithdrawalWizard({ user, points, onPointsDeducted }: WithdrawalW
                   setWithdrawalError('Veuillez entrer le nom du titulaire du compte.');
                   return;
                 }
-                if (!withdrawalFields.iban?.trim() || withdrawalFields.iban.length < 15) {
-                  setWithdrawalError('Veuillez entrer un IBAN valide.');
+                const ibanResult = ibanSchema.safeParse(withdrawalFields.iban || '');
+                if (!ibanResult.success) {
+                  setWithdrawalError(ibanResult.error.issues[0].message);
                   return;
                 }
               }
               if (withdrawalMethod === 'paypal') {
-                if (!withdrawalFields.paypalEmail?.trim() || !withdrawalFields.paypalEmail.includes('@')) {
-                  setWithdrawalError('Veuillez entrer une adresse email PayPal valide.');
+                const emailResult = paypalEmailSchema.safeParse(withdrawalFields.paypalEmail || '');
+                if (!emailResult.success) {
+                  setWithdrawalError(emailResult.error.issues[0].message);
                   return;
                 }
               }
               if (['orange_money', 'wave'].includes(withdrawalMethod)) {
-                if (!withdrawalFields.mobileNumber?.trim() || withdrawalFields.mobileNumber.length < 8) {
-                  setWithdrawalError('Veuillez entrer un numéro de téléphone valide.');
+                const mobileResult = mobileSchema.safeParse(withdrawalFields.mobileNumber || '');
+                if (!mobileResult.success) {
+                  setWithdrawalError(mobileResult.error.issues[0].message);
                   return;
                 }
               }
