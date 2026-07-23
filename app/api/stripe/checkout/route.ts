@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     // Find the selected pack
     const pack = POINT_PACKS.find(p => p.id === packId);
     
-    if (!pack || !pack.priceId) {
+    if (!pack) {
       return NextResponse.json(
         { error: 'Invalid pack selected' },
         { status: 400 }

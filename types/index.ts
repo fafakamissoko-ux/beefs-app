@@ -6,8 +6,6 @@ export type RoomStatus = 'waiting' | 'live' | 'ended';
 
 export type MessageType = 'chat' | 'source' | 'fact_check';
 
-export type GiftType = 'flame' | 'crown' | 'lightning' | 'diamond';
-
 export type ChallengerStatus = 'waiting' | 'active' | 'done';
 
 export type FactCheckVerdict = 'true' | 'false' | 'misleading' | 'needs-context';
@@ -50,7 +48,7 @@ export interface Gift {
   room_id: string;
   from_user_id: string;
   to_user_id: string;
-  gift_type: GiftType;
+  gift_type: string;
   created_at: string;
 }
 

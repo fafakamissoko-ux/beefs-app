@@ -23,7 +23,6 @@ export const POINT_PACKS = [
     points: 500,
     price: 4.99,
     bonus: 5,
-    priceId: process.env.STRIPE_PRICE_STARTER,
     popular: false,
   },
   {
@@ -33,8 +32,7 @@ export const POINT_PACKS = [
     points: 1200,
     price: 9.99,
     bonus: 20,
-    priceId: process.env.STRIPE_PRICE_POPULAR,
-    popular: true, // Best value
+    popular: true,
   },
   {
     id: 'premium',
@@ -43,7 +41,6 @@ export const POINT_PACKS = [
     points: 3000,
     price: 19.99,
     bonus: 50,
-    priceId: process.env.STRIPE_PRICE_PREMIUM,
     popular: false,
   },
   {
@@ -53,7 +50,6 @@ export const POINT_PACKS = [
     points: 10000,
     price: 49.99,
     bonus: 100,
-    priceId: process.env.STRIPE_PRICE_VIP,
     popular: false,
   },
 ] as const;
