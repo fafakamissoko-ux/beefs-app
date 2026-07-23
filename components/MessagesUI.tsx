@@ -113,6 +113,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [showChatMenu, setShowChatMenu] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -261,6 +262,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const msg = payload.new as Message;
+          if (msg.is_deleted) return;
           if (msg.sender_id !== user?.id) {
             setMessages(prev => [...prev, msg]);
             supabase.from('direct_messages').update({ is_read: true }).eq('id', msg.id).then(() => {});
@@ -338,9 +340,11 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   }, [user?.id]);
 
   const sendMessage = async () => {
+    if (isSending) return;
     if (!newMessage.trim() || !selectedConv || !user) return;
     const clean = sanitizeMessage(newMessage);
     if (!clean) return;
+    setIsSending(true);
 
     const pendingReplyTarget = replyingTo;
     const replyToId =
@@ -361,30 +365,31 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     setReplyingTo(null);
     setNewMessage('');
 
-    const { data, error } = await supabase.from('direct_messages').insert({
-      conversation_id: selectedConv.id,
-      sender_id: user.id,
-      content: clean,
-      reply_to_id: replyToId,
-    }).select().single();
+    try {
+      const { data, error } = await supabase.from('direct_messages').insert({
+        conversation_id: selectedConv.id,
+        sender_id: user.id,
+        content: clean,
+        reply_to_id: replyToId,
+      }).select().single();
 
-    // COUPE-CIRCUIT FRAMER MOTION
-    // Si le tiroir se ferme pendant l'aller-retour serveur, on stoppe net les mises à jour
-    // d'état pour éviter que React/Framer Motion ne gèle le composant en pleine destruction.
-    if (isDrawerMode && !isDrawerOpenRef.current) return;
+      if (isDrawerMode && !isDrawerOpenRef.current) return;
 
-    if (error) {
-      toast('Erreur lors de l\'envoi', 'error');
-      setMessages(prev => prev.filter(m => m.id !== tempMsg.id));
-      return;
+      if (error) {
+        toast('Erreur lors de l\'envoi', 'error');
+        setMessages(prev => prev.filter(m => m.id !== tempMsg.id));
+        return;
+      }
+
+      setMessages(prev => prev.map(m => m.id === tempMsg.id ? data : m));
+
+      await supabase.from('conversations').update({
+        last_message_text: clean,
+        last_message_at: new Date().toISOString(),
+      }).eq('id', selectedConv.id);
+    } finally {
+      setIsSending(false);
     }
-
-    setMessages(prev => prev.map(m => m.id === tempMsg.id ? data : m));
-
-    await supabase.from('conversations').update({
-      last_message_text: clean,
-      last_message_at: new Date().toISOString(),
-    }).eq('id', selectedConv.id);
   };
 
   const toggleReaction = async (msg: Message, emoji: string) => {
