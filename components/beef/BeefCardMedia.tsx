@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Play, Calendar, Sparkles, Volume2, VolumeX, Bell, MoreVertical, Trash2, Edit2, Flag } from 'lucide-react';
@@ -86,6 +86,18 @@ export function BeefCardMedia({
   const { toast } = useToast();
   const [isReminded, setIsReminded] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const close = () => setIsMenuOpen(false);
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('click', close);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('click', close);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [isMenuOpen]);
 
   return (
     <div

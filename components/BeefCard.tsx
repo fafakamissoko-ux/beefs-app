@@ -275,6 +275,7 @@ export function BeefCard({
             teaserScore={teaser_score}
             hasLikedTeaser={has_liked_teaser}
             onTeaserAuraClick={onTeaserAuraClick}
+            commentCount={comment_count}
             onCommentClick={onCommentClick}
             onClose={() => setIsTeaserOpen(false)}
             onClick={onClick}

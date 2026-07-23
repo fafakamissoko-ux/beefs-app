@@ -23,6 +23,7 @@ interface BeefTeaserModalProps {
   teaserScore: number;
   hasLikedTeaser: boolean;
   onTeaserAuraClick?: () => void;
+  commentCount: number;
   onCommentClick?: () => void;
   onClose: () => void;
   onClick: () => void;
@@ -56,6 +57,7 @@ export function BeefTeaserModal({
   teaserScore,
   hasLikedTeaser,
   onTeaserAuraClick,
+  commentCount,
   onCommentClick,
   onClose,
   onClick,
@@ -154,22 +156,22 @@ export function BeefTeaserModal({
               )}
 
               {onTeaserAuraClick && (
-                <div className="relative flex flex-col items-center gap-1.5">
-                  <AnimatePresence>
-                    {floatingAuras.map((aura) => (
-                      <motion.span
-                        key={aura.id}
-                        initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
-                        animate={{ opacity: 0, y: -40, scale: 1.5 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.65 }}
-                        className="pointer-events-none absolute -top-8 left-1/2 z-50 -translate-x-1/2 text-sm font-black text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]"
-                      >
-                        +1
-                      </motion.span>
-                    ))}
-                  </AnimatePresence>
-                  <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex flex-col items-center gap-1.5">
+                    <AnimatePresence>
+                      {floatingAuras.map((aura) => (
+                        <motion.span
+                          key={aura.id}
+                          initial={{ opacity: 1, y: 0, x: aura.x, scale: 0.5 }}
+                          animate={{ opacity: 0, y: -40, scale: 1.5 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.65 }}
+                          className="pointer-events-none absolute -top-8 left-1/2 z-50 -translate-x-1/2 text-sm font-black text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]"
+                        >
+                          +1
+                        </motion.span>
+                      ))}
+                    </AnimatePresence>
                     <div
                       role="button"
                       tabIndex={0}
@@ -190,6 +192,25 @@ export function BeefTeaserModal({
                         }`}
                       />
                     </div>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => { e.stopPropagation(); onTeaserAuraModalOpen(); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onTeaserAuraModalOpen(); } }}
+                      aria-label="Voir les donateurs d'Aura teaser"
+                      className={`cursor-pointer font-mono text-xs font-bold drop-shadow-md transition-transform active:scale-95 ${
+                        hasLikedTeaser
+                          ? 'text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
+                          : 'text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <InlineAuraGivers targetId={id} type="teaser" ownerId={createdBy || ''} />
+                        <span>{(teaserScore || 0).toLocaleString()}</span>
+                      </div>
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1.5">
                     <div
                       role="button"
                       tabIndex={0}
@@ -200,24 +221,10 @@ export function BeefTeaserModal({
                     >
                       <MessageCircle className="h-6 w-6" strokeWidth={2.25} />
                     </div>
+                    <span className="font-mono text-xs font-bold text-white drop-shadow-md">
+                      {commentCount.toLocaleString()}
+                    </span>
                   </div>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => { e.stopPropagation(); onTeaserAuraModalOpen(); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onTeaserAuraModalOpen(); } }}
-                    aria-label="Voir les donateurs d'Aura teaser"
-                    className={`cursor-pointer px-3 py-2 -mx-3 -my-2 font-mono text-xs font-bold drop-shadow-md transition-transform active:scale-95 ${
-                      hasLikedTeaser
-                        ? 'text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.8)]'
-                        : 'text-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <InlineAuraGivers targetId={id} type="teaser" ownerId={createdBy || ''} />
-                      <span>{(teaserScore || 0).toLocaleString()}</span>
-                    </div>
-                  </span>
                 </div>
               )}
             </div>

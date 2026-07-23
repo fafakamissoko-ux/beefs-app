@@ -49,7 +49,7 @@ export function ProfileBeefGrid({
     <div className="grid grid-cols-1 gap-4">
       {beefs.map((beef, idx) => (
         <div key={beef.id} className="space-y-2">
-          <div className="aspect-[3/4] max-h-[70dvh]">
+          <div className="aspect-[3/4] max-h-[70dvh] md:aspect-auto md:max-h-none">
           <BeefCard
             id={beef.id}
             index={idx}
