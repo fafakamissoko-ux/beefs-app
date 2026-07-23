@@ -198,15 +198,21 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     return;
   }
 
-  const subscriptionData: any = {
+  const sub = subscription as Stripe.Subscription & {
+    current_period_start: number;
+    current_period_end: number;
+    cancel_at: number | null;
+  };
+
+  const subscriptionData = {
     user_id: user.id,
     stripe_subscription_id: subscription.id,
     stripe_customer_id: customerId,
     plan_type: 'premium',
     status: subscription.status === 'active' ? 'active' : subscription.status,
-    current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-    current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
-    cancel_at: (subscription as any).cancel_at ? new Date((subscription as any).cancel_at * 1000).toISOString() : null,
+    current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
+    current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+    cancel_at: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
   };
 
   // Upsert subscription

@@ -77,9 +77,9 @@ export default function BuyPointsPage() {
       } else {
         throw new Error('No checkout URL returned');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Purchase error:', err);
-      setError(err.message || 'Une erreur est survenue');
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
       setLoading(false);
     }
   };

@@ -84,8 +84,8 @@ export default function AdminRetraitsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       loadRequests();
-    } catch (err: any) {
-      toast('Erreur : ' + err.message, 'error');
+    } catch (err: unknown) {
+      toast('Erreur : ' + (err instanceof Error ? err.message : 'Inconnue'), 'error');
     } finally {
       setActionLoading(null);
     }

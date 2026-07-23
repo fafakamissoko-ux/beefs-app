@@ -148,7 +148,8 @@ export async function POST(request: NextRequest) {
 
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('[stripe checkout]', error);
     return NextResponse.json(
       { error: 'Erreur lors de la création de la session de paiement' },
       { status: 500 }
