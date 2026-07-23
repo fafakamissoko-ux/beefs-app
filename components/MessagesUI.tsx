@@ -452,6 +452,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
 
   const clearEntireConversation = async () => {
     if (!selectedConv) return;
+    if (!window.confirm('Es-tu sûr de vouloir supprimer tout l\'historique ? Cette action est irréversible.')) return;
     const convId = selectedConv.id;
     setMessages([]);
     setShowChatMenu(false);
