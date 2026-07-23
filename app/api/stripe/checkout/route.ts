@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/server';
 import { POINT_PACKS } from '@/lib/stripe/client';
 import { createClient } from '@supabase/supabase-js';
-import { detectUserCountry, calculatePrice, calculateFraudScore, COUNTRIES } from '@/lib/geo';
+import { detectUserCountryFromRequest, calculatePrice, calculateFraudScore, COUNTRIES } from '@/lib/geo';
 import { publicAppOrigin } from '@/lib/app-url';
 
 export async function POST(request: NextRequest) {
@@ -58,8 +58,8 @@ export async function POST(request: NextRequest) {
       if (user) customerEmail = user.email;
     }
 
-    // 🌍 STEP 1: Detect user's country
-    const country = await detectUserCountry();
+    // 🌍 STEP 1: Detect user's country from request headers (Vercel / Cloudflare)
+    const country = detectUserCountryFromRequest(request);
 
     // 💰 STEP 2: Calculate adapted price
     const adaptedPrice = calculatePrice(pack.price, country);

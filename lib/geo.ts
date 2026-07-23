@@ -84,9 +84,11 @@ export const PRICING_BASE = {
   vip: 49.99,
 };
 
+/**
+ * Client-side: détecte le pays via l'API /api/geo puis fallback navigateur.
+ */
 export async function detectUserCountry(): Promise<CountryData> {
   try {
-    // Try Cloudflare headers first (most reliable)
     const response = await fetch('/api/geo');
     const data = await response.json();
     
@@ -97,19 +99,37 @@ export async function detectUserCountry(): Promise<CountryData> {
     console.warn('Cloudflare geo detection failed');
   }
 
-  // Fallback: Browser language
   const browserLang = navigator.language.toLowerCase();
   if (browserLang.includes('fr')) {
-    // Check if it's from Africa
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (timezone.includes('Africa')) {
-      return COUNTRIES.SN; // Default to Senegal for Africa
+      return COUNTRIES.SN;
     }
     return COUNTRIES.FR;
   } else if (browserLang.includes('en-gb')) {
     return COUNTRIES.GB;
   } else if (browserLang.includes('en')) {
     return COUNTRIES.US;
+  }
+
+  return COUNTRIES.DEFAULT;
+}
+
+/**
+ * Server-side (Route Handler / SSR) : extrait le pays depuis les headers
+ * injectés par Vercel (`x-vercel-ip-country`) ou Cloudflare (`cf-ipcountry`).
+ * Fonctionne dans un environnement Node.js sans accès à `navigator`.
+ */
+export function detectUserCountryFromRequest(
+  request: { headers: { get(name: string): string | null } },
+): CountryData {
+  const code =
+    request.headers.get('x-vercel-ip-country') ??
+    request.headers.get('cf-ipcountry') ??
+    null;
+
+  if (code && COUNTRIES[code.toUpperCase()]) {
+    return COUNTRIES[code.toUpperCase()];
   }
 
   return COUNTRIES.DEFAULT;
