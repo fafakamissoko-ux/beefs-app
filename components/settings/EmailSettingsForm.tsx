@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 import { useToast } from '@/components/Toast';
 import { emailChangeSchema, type EmailChangeFormValues } from '@/lib/schemas';
 import { AlertCircle, Check, Mail } from 'lucide-react';
@@ -38,7 +39,12 @@ export function EmailSettingsForm({ currentEmail }: EmailSettingsFormProps) {
         throw new Error('Adresse e-mail actuelle introuvable.');
       }
 
-      const { error: authErr } = await supabase.auth.signInWithPassword({
+      const throwawayClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { auth: { persistSession: false } },
+      );
+      const { error: authErr } = await throwawayClient.auth.signInWithPassword({
         email: currentEmail,
         password: data.password,
       });
