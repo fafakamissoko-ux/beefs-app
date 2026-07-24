@@ -57,6 +57,16 @@ const config: Config = {
       backgroundImage: {
         "brand-gradient": "linear-gradient(135deg, #00F0FF 0%, #00B3CC 100%)",
       },
+      keyframes: {
+        "marquee-continuous": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
+      },
+      animation: {
+        "marquee-continuous": "marquee-continuous 20s linear infinite",
+        "marquee-continuous-fast": "marquee-continuous 8s linear infinite",
+      },
       zIndex: {
         base: "10",
         overlay: "50",

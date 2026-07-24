@@ -4,7 +4,7 @@ import { createContext, useContext, useCallback } from 'react';
 import { Toaster, toast as sonnerToast } from 'sonner';
 import { Check, X, AlertCircle, Info } from 'lucide-react';
 
-type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info';
 
 export type ToastOptions = {
   /** Identifiant unique pour éviter le spam (déduplication). */
