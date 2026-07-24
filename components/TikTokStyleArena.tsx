@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import {
   Eye,
   Gift,
@@ -2683,6 +2684,7 @@ export function TikTokStyleArena({
   };
 
   const [isLeaving, setIsLeaving] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   // Leave: for mediators, triggers endBeef. For others, just leave.
   const handleLeave = useCallback(async () => {
@@ -2700,10 +2702,8 @@ export function TikTokStyleArena({
       return;
     }
     if (isHost) {
-      const ok = window.confirm(
-        'Mettre fin au beef pour tous les participants ? Cette action est définitive.',
-      );
-      if (!ok) return;
+      setShowLeaveConfirm(true);
+      return;
     }
     setIsLeaving(true);
     if (isHost) {
@@ -2713,6 +2713,12 @@ export function TikTokStyleArena({
       router.replace('/feed');
     }
   }, [leave, router, isHost, endBeef, roomId, userId, stopAllMediaTracks]);
+
+  const confirmHostLeave = useCallback(async () => {
+    setShowLeaveConfirm(false);
+    setIsLeaving(true);
+    await endBeef('Le Ref a mis fin au beef');
+  }, [endBeef]);
 
   const arenaHasAnnouncement = announcementTicker.trim() !== '';
 
@@ -4278,6 +4284,15 @@ export function TikTokStyleArena({
           <FullscreenGiftAnimation />,
           document.body
         )}
+
+      <ConfirmModal
+        isOpen={showLeaveConfirm}
+        onCancel={() => setShowLeaveConfirm(false)}
+        onConfirm={() => void confirmHostLeave()}
+        title="Mettre fin au beef"
+        description="Mettre fin au beef pour tous les participants ? Cette action est définitive."
+        confirmLabel="Terminer"
+      />
     </div>
   );
 }

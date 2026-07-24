@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { AppBackButton } from '@/components/AppBackButton';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 type ViewMode = 'admin' | 'user' | 'mediator' | 'challenger';
 
@@ -35,6 +36,7 @@ export default function AdminDashboardPage() {
   const [switchingMode, setSwitchingMode] = useState(false);
   const [dailyMigrateLoading, setDailyMigrateLoading] = useState(false);
   const [dailyMigratePreview, setDailyMigratePreview] = useState<{ count: number; names: string[] } | null>(null);
+  const [showDailyConfirm, setShowDailyConfirm] = useState(false);
 
   useEffect(() => {
     // Wait for both auth AND role to be loaded before redirecting
@@ -115,9 +117,12 @@ export default function AdminDashboardPage() {
       toast('Fais d’abord un aperçu (liste des salles).', 'info');
       return;
     }
-    if (!window.confirm(`Passer ${dailyMigratePreview.count} salle(s) Daily en private ? Les joins sans token cesseront de fonctionner.`)) {
-      return;
-    }
+    setShowDailyConfirm(true);
+  };
+
+  const executeDailyMigrate = async () => {
+    setShowDailyConfirm(false);
+    if (!dailyMigratePreview) return;
     setDailyMigrateLoading(true);
     try {
       const res = await fetch('/api/admin/daily/rooms-migrate-private', {
@@ -342,6 +347,15 @@ export default function AdminDashboardPage() {
           </motion.div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={showDailyConfirm}
+        onCancel={() => setShowDailyConfirm(false)}
+        onConfirm={() => void executeDailyMigrate()}
+        title="Migration Daily"
+        description={`Passer ${dailyMigratePreview?.count ?? 0} salle(s) Daily en private ? Les joins sans token cesseront de fonctionner.`}
+        confirmLabel="Migrer"
+      />
     </div>
   );
 }
