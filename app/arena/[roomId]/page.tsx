@@ -37,14 +37,14 @@ export default function ArenaPage() {
   const [isHost, setIsHost] = useState(false);
   const [userRole, setUserRole] = useState<'mediator' | 'challenger' | 'viewer' | 'spectator'>('spectator');
 
-  const [host, setHost] = useState({
-    id: 'host_1',
-    name: 'Host Principal',
-    isHost: true,
-    videoEnabled: true,
-    audioEnabled: true,
-    badges: [] as string[],
-  });
+  const [host, setHost] = useState<{
+    id: string;
+    name: string;
+    isHost: boolean;
+    videoEnabled: boolean;
+    audioEnabled: boolean;
+    badges: string[];
+  } | null>(null);
 
   const [dailyRoomUrl, setDailyRoomUrl] = useState<string | null>(null);
   const [dailyMeetingToken, setDailyMeetingToken] = useState<string | null>(null);
@@ -118,11 +118,15 @@ export default function ArenaPage() {
     setDailyMeetingToken(null);
 
     (async () => {
-      const { data: beef, error: beefErr } = await supabase.from('beefs').select('*').eq('id', roomId).single();
+      const { data: beef, error: beefErr } = await supabase
+        .from('beefs')
+        .select('id, title, status, mediator_id, created_by, video_url, started_at, ended_at, viewer_count')
+        .eq('id', roomId)
+        .single();
 
       if (cancelled) return;
       if (beefErr || !beef) {
-        window.location.href = '/feed';
+        router.push('/feed');
         return;
       }
 
@@ -181,20 +185,13 @@ export default function ArenaPage() {
 
       if (userIdsEqual(effectiveHostId, uidTrim)) {
         setUserRole('mediator');
-      } else {
-        const { data: participation } = await supabase
-          .from('beef_participants')
-          .select('role, invite_status, is_main')
-          .eq('beef_id', roomId)
-          .eq('user_id', uidTrim)
-          .eq('is_main', true)
-          .maybeSingle();
+      }
 
-        if (participation && participation.invite_status === 'accepted') {
-          setUserRole('challenger');
-        } else {
-          setUserRole('viewer');
-        }
+      const { data: { user: authUser }, error: authErr } = await supabase.auth.getUser();
+      if (authErr || !authUser) {
+        setAccessError('Session expirée — reconnecte-toi.');
+        setEntryPhase('READY');
+        return;
       }
 
       const {
@@ -495,6 +492,16 @@ export default function ArenaPage() {
             <div className="pointer-events-none absolute inset-0 z-0 translate-x-[-100%] bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]" />
           </button>
         </motion.div>
+      </div>
+    );
+  }
+
+  if (!host) {
+    return (
+      <div className="fixed inset-0 z-40 flex min-h-dvh items-center justify-center bg-black/20 backdrop-blur-sm">
+        <div className="text-center text-white">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-cyan-500" />
+        </div>
       </div>
     );
   }
