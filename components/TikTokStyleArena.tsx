@@ -284,16 +284,6 @@ export function TikTokStyleArena({
   const [rolesLoaded, setRolesLoaded] = useState(false);
 
   useEffect(() => {
-    console.log("=== 🩺 HEALTH CHECK SUPABASE REALTIME ===");
-    const testCh = supabase.channel('test_health_check');
-    testCh.subscribe((status, err) => {
-      console.log("=> STATUT WEBSOCKET BRUT :", status);
-      if (err) console.error("=> ERREUR WEBSOCKET :", err);
-    });
-    return () => { void supabase.removeChannel(testCh); };
-  }, []);
-
-  useEffect(() => {
     if (hasJoined) setShowPreJoin(false);
   }, [hasJoined]);
 
