@@ -38,7 +38,7 @@ import { userIdsEqual } from '@/lib/user-id-equal';
 import { useToast } from '@/components/Toast';
 import { useMediaSession } from '@/hooks/useMediaSession';
 import { useWakeLock } from '@/hooks/useWakeLock';
-import { sanitizeMessage } from '@/lib/security';
+import { sanitize as sanitizeTicker, sanitizeMessage } from '@/lib/security';
 import { openBuyPointsPage } from '@/lib/navigation-buy-points';
 import { postBeefManage, type BeefManageAction } from '@/lib/beef-manage-client';
 import { escapeForIlikeExact } from '@/lib/ilike-exact';
@@ -2785,7 +2785,7 @@ export function TikTokStyleArena({
         clearTimeout(announcementClearTimerRef.current);
         announcementClearTimerRef.current = null;
       }
-      const raw = typeof text === 'string' ? text.trim() : '';
+      const raw = typeof text === 'string' ? sanitizeTicker(text.trim()) : '';
       if (!raw) {
         setAnnouncementTicker('');
         return;
@@ -3101,11 +3101,11 @@ export function TikTokStyleArena({
           role="status"
           aria-live="polite"
         >
-          <div className="flex w-max min-w-full animate-marquee-continuous whitespace-nowrap">
-            <span className="mx-4 text-[10px] font-black uppercase tracking-widest text-white/90">
+          <div className="flex w-max min-w-[200vw] animate-marquee-continuous whitespace-nowrap">
+            <span className="mx-4 min-w-[100vw] text-[10px] font-black uppercase tracking-widest text-white/90">
               {announcementTicker} • {announcementTicker} • {announcementTicker} • {announcementTicker}
             </span>
-            <span className="mx-4 text-[10px] font-black uppercase tracking-widest text-white/90">
+            <span className="mx-4 min-w-[100vw] text-[10px] font-black uppercase tracking-widest text-white/90">
               {announcementTicker} • {announcementTicker} • {announcementTicker} • {announcementTicker}
             </span>
           </div>
@@ -3385,12 +3385,12 @@ export function TikTokStyleArena({
 
         {/* TICKER MOBILE */}
         {!isCinematicMode && arenaHasAnnouncement && (
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-[190] flex h-7 items-center overflow-hidden border-b border-white/10 bg-slate-950/55 backdrop-blur-md lg:hidden">
-            <div className="flex w-max min-w-full animate-marquee-continuous-fast whitespace-nowrap">
-              <span className="mx-4 text-[9px] font-bold uppercase tracking-widest text-white/90">
+          <div className="pointer-events-none fixed inset-x-0 top-0 z-[500] flex h-7 items-center overflow-hidden border-b border-white/10 bg-slate-950/55 backdrop-blur-md lg:hidden">
+            <div className="flex w-max min-w-[200vw] animate-marquee-continuous-fast whitespace-nowrap">
+              <span className="mx-4 min-w-[100vw] text-[9px] font-bold uppercase tracking-widest text-white/90">
                 {announcementTicker} • {announcementTicker} • {announcementTicker} • {announcementTicker}
               </span>
-              <span className="mx-4 text-[9px] font-bold uppercase tracking-widest text-white/90">
+              <span className="mx-4 min-w-[100vw] text-[9px] font-bold uppercase tracking-widest text-white/90">
                 {announcementTicker} • {announcementTicker} • {announcementTicker} • {announcementTicker}
               </span>
             </div>
