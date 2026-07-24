@@ -2,14 +2,15 @@
  * Security utilities for Beefs
  */
 
-// Sanitize user input — strip HTML tags and dangerous patterns
+// Sanitize user input — strip dangerous patterns only.
+// React JSX handles HTML escaping at render time, so we do NOT
+// manually encode <, >, / to avoid double-encoding.
 export function sanitize(input: string): string {
   return input
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\//g, '&#x2F;')
+    .replace(/<script[\s>]/gi, '')
+    .replace(/<\/script>/gi, '')
     .replace(/javascript:/gi, '')
-    .replace(/on\w+=/gi, '')
+    .replace(/on\w+\s*=/gi, '')
     .replace(/data:/gi, '')
     .trim();
 }

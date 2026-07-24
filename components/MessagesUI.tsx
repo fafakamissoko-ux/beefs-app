@@ -114,6 +114,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -452,7 +453,6 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
 
   const clearEntireConversation = async () => {
     if (!selectedConv) return;
-    if (!window.confirm('Es-tu sûr de vouloir supprimer tout l\'historique ? Cette action est irréversible.')) return;
     const convId = selectedConv.id;
     setMessages([]);
     setShowChatMenu(false);
@@ -877,7 +877,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                       >
                         <button
                           type="button"
-                          onClick={() => void clearEntireConversation()}
+                          onClick={() => { setShowChatMenu(false); setShowPurgeConfirm(true); }}
                           className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm font-bold text-red-500 transition-colors hover:bg-red-500/10"
                         >
                           <Trash className="h-5 w-5" aria-hidden /> Vider la discussion
@@ -1225,6 +1225,48 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
         </div>
 
       </div>
+
+      <AnimatePresence>
+        {showPurgeConfirm && (
+          <motion.div
+            key="purge-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowPurgeConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="mx-4 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950/75 p-6 shadow-2xl backdrop-blur-md"
+            >
+              <h3 className="text-center text-base font-black text-white">Vider la discussion</h3>
+              <p className="mt-2 text-center text-sm text-white/60">
+                Es-tu sûr de vouloir supprimer tout l&apos;historique ? Cette action est irréversible.
+              </p>
+              <div className="mt-6 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowPurgeConfirm(false)}
+                  className="flex-1 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-bold text-white/70 transition-colors hover:bg-white/10"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowPurgeConfirm(false); void clearEntireConversation(); }}
+                  className="flex-1 rounded-xl bg-red-500 py-3 text-sm font-black text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-colors hover:bg-red-600"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
