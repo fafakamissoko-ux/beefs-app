@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Mic, MicOff, Video, VideoOff, ChevronDown } from 'lucide-react';
 import { MutinyProtocol } from './MutinyProtocol';
 
@@ -31,6 +32,8 @@ export function PreJoinScreen({
   onMutinyRefuse,
   onTakeSystemFocus,
 }: PreJoinScreenProps) {
+  const router = useRouter();
+  const [isJoining, setIsJoining] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   /** True si le MediaStream a été passé à Daily — ne pas stopper les pistes au démontage. */
@@ -161,6 +164,8 @@ export function PreJoinScreen({
   };
 
   const handleJoin = async () => {
+    if (isJoining) return;
+    setIsJoining(true);
     mediaHandedOffRef.current = true;
     const acquired = streamRef.current ?? stream;
     if (!camEnabled) {
@@ -197,9 +202,7 @@ export function PreJoinScreen({
           <div className="relative rounded-[2.5rem] border border-white/10 bg-slate-950/75 p-5 shadow-2xl backdrop-blur-md sm:p-6">
             <button
               type="button"
-              onClick={() => {
-                window.location.href = '/feed';
-              }}
+              onClick={() => router.push('/feed')}
               className="absolute left-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-white/10"
             >
               <span aria-hidden>←</span>
@@ -215,8 +218,10 @@ export function PreJoinScreen({
               <button
                 type="button"
                 id="arena-join-viewer"
+                disabled={isJoining}
                 onClick={async () => {
-                  // Le spectateur n'a pas de vu-mètre à détruire, on lance directement
+                  if (isJoining) return;
+                  setIsJoining(true);
                   if (onTakeSystemFocus) {
                     await onTakeSystemFocus();
                   }
@@ -240,9 +245,7 @@ export function PreJoinScreen({
         <div className="relative space-y-3 rounded-[2.5rem] border border-white/10 bg-slate-950/75 p-3 shadow-2xl backdrop-blur-md sm:space-y-4 sm:p-5 md:p-6">
         <button
           type="button"
-          onClick={() => {
-            window.location.href = '/feed';
-          }}
+          onClick={() => router.push('/feed')}
           className="absolute top-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-white/10"
         >
           <span aria-hidden>←</span>
@@ -308,6 +311,7 @@ export function PreJoinScreen({
             <button
               type="button"
               onClick={toggleCam}
+              aria-label="Basculer la caméra"
               className={`flex w-full touch-manipulation items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition-all sm:gap-2 sm:rounded-2xl sm:px-3 sm:py-2.5 sm:text-sm ${
                 camEnabled
                   ? 'bg-white/[0.06] text-white ring-1 ring-cyan-500/25 hover:bg-white/[0.1]'
@@ -326,6 +330,7 @@ export function PreJoinScreen({
             <button
               type="button"
               onClick={toggleMic}
+              aria-label="Basculer le micro"
               className={`mb-1.5 flex w-full touch-manipulation items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-xs font-semibold transition-all sm:mb-2 sm:gap-2 sm:rounded-2xl sm:px-3 sm:py-2.5 sm:text-sm ${
                 micEnabled
                   ? 'bg-white/[0.06] text-white ring-1 ring-cyan-500/25 hover:bg-white/[0.1]'
@@ -356,8 +361,8 @@ export function PreJoinScreen({
                   onChange={e => { setSelectedCam(e.target.value); startPreview(e.target.value, selectedMic); }}
                   className="w-full cursor-pointer appearance-none rounded-[1.5rem] bg-white/[0.04] px-3 py-2 pr-9 text-xs text-white ring-0 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 sm:rounded-[1.75rem] sm:px-4 sm:py-2.5 sm:text-sm"
                 >
-                  {devices.cameras.map(d => (
-                    <option key={d.deviceId} value={d.deviceId}>{d.label || 'Caméra'}</option>
+                  {devices.cameras.map((d, index) => (
+                    <option key={d.deviceId || `cam-fallback-${index}`} value={d.deviceId}>{d.label || 'Caméra'}</option>
                   ))}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40 sm:right-4 sm:h-4 sm:w-4" />
@@ -370,8 +375,8 @@ export function PreJoinScreen({
                   onChange={e => { setSelectedMic(e.target.value); startPreview(selectedCam, e.target.value); }}
                   className="w-full cursor-pointer appearance-none rounded-[1.5rem] bg-white/[0.04] px-3 py-2 pr-9 text-xs text-white ring-0 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 sm:rounded-[1.75rem] sm:px-4 sm:py-2.5 sm:text-sm"
                 >
-                  {devices.mics.map(d => (
-                    <option key={d.deviceId} value={d.deviceId}>{d.label || 'Micro'}</option>
+                  {devices.mics.map((d, index) => (
+                    <option key={d.deviceId || `mic-fallback-${index}`} value={d.deviceId}>{d.label || 'Micro'}</option>
                   ))}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40 sm:right-4 sm:h-4 sm:w-4" />
@@ -403,13 +408,11 @@ export function PreJoinScreen({
         <button
           type="button"
           id="arena-join-participant"
-          onClick={() => {
-            // La séquence est désormais gérée dans handleJoin()
-            void handleJoin();
-          }}
-          className="w-full touch-manipulation rounded-2xl bg-white py-3 text-sm font-black uppercase tracking-widest text-black transition-[transform,background-color] duration-200 hover:bg-gray-200 active:scale-[0.96] sm:py-3.5 sm:text-base md:py-4"
+          disabled={isJoining}
+          onClick={() => { void handleJoin(); }}
+          className="w-full touch-manipulation rounded-2xl bg-white py-3 text-sm font-black uppercase tracking-widest text-black transition-[transform,background-color] duration-200 hover:bg-gray-200 active:scale-[0.96] disabled:opacity-50 disabled:cursor-not-allowed sm:py-3.5 sm:text-base md:py-4"
         >
-          Rejoindre l'Agora
+          {isJoining ? 'Connexion…' : "Rejoindre l'Agora"}
         </button>
         </div>
       </div>
