@@ -709,11 +709,7 @@ export function MediatorSidebar({
                             Confirmation requise
                           </p>
                           <p className="text-center text-[13px] leading-snug text-rose-50/95">
-                            {confirmVerdict === 'resolved'
-                              ? 'Proclamer la paix terminera ou marquera le dénouement officiel.'
-                              : confirmVerdict === 'rematch'
-                                ? 'Une revanche restructure le flux — vérifiez avant d’ordonner.'
-                                : 'Sceller définitivement met fin au broadcast pour tous les participants.'}
+                            Cette action met fin au direct pour tous les participants. Confirmer ?
                           </p>
                           <div className="flex gap-2">
                             <button
@@ -743,21 +739,21 @@ export function MediatorSidebar({
                             onClick={() => setConfirmVerdict('resolved')}
                             className="flex min-h-[44px] w-full items-center justify-center rounded-2xl bg-white font-mono text-[12px] font-black uppercase tracking-widest text-black transition hover:bg-gray-200"
                           >
-                            Proclamer la paix
+                            L’Agora a statué
                           </button>
                           <button
                             type="button"
                             onClick={() => setConfirmVerdict('rematch')}
                             className="flex min-h-[44px] w-full items-center justify-center rounded-2xl border border-amber-500/50 bg-amber-600/18 font-mono text-[12px] font-black uppercase tracking-widest text-amber-200 transition hover:bg-amber-600/32"
                           >
-                            Ordonner une revanche
+                            Rappel à l’Agora
                           </button>
                           <button
                             type="button"
                             onClick={() => setConfirmVerdict('closed')}
                             className="flex min-h-[44px] w-full items-center justify-center rounded-2xl border border-rose-400/55 bg-rose-950/55 font-mono text-[12px] font-black uppercase tracking-widest text-rose-100 transition hover:bg-rose-900/65"
                           >
-                            Sceller l’arène
+                            Dissolution de Séance
                           </button>
                         </div>
                       )}

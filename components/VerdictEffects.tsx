@@ -89,10 +89,10 @@ export function RematchVerdictOverlay({
                   '0 0 40px rgba(255,107,44,0.55), 2px 0 #00f0ff, -2px 0 #ff0050',
               }}
             >
-              REMATCH DEMANDÉ
+              L'AGORA EXIGE UN NOUVEAU ROUND
             </h2>
             <p className="text-base font-semibold leading-relaxed tracking-tight text-white/90 sm:text-lg">
-              Préparez-vous pour le Round 2. Suivez les challengers pour la date !
+              Préparez-vous pour le retour.
             </p>
           </motion.div>
         </motion.div>

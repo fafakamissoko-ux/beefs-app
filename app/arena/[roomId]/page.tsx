@@ -301,7 +301,7 @@ export default function ArenaPage() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-white mb-1">
-                {beefEndedInfo.status === 'cancelled' ? 'Beef annulé' : 'En cours de traitement'}
+                {beefEndedInfo.status === 'cancelled' ? 'Séance annulée' : 'En cours de traitement'}
               </h2>
               <p className="text-brand-400 font-semibold">{beefEndedInfo.title}</p>
               <p className="text-sm text-gray-500 mt-1">Médié par {beefEndedInfo.host_name}</p>
@@ -309,8 +309,8 @@ export default function ArenaPage() {
             </div>
             <p className="text-sm text-gray-400">
               {beefEndedInfo.status === 'ended' || beefEndedInfo.status === 'completed'
-                ? "Le direct est terminé. Le replay sera disponible d'ici quelques minutes."
-                : 'Ce beef a été annulé ou est terminé.'}
+                ? "La séance est levée. Le replay sera disponible d'ici quelques minutes."
+                : 'Cette séance a été annulée ou est terminée.'}
             </p>
             <Link
               href={`/beef/${roomId}/summary`}

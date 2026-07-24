@@ -1178,11 +1178,11 @@ export function TikTokStyleArena({
       if (kind === 'resolved') {
         setVerdictConfetti(true);
         window.setTimeout(() => setVerdictConfetti(false), 2200);
-        window.setTimeout(() => void endBeef('Verdict : résolu'), 1600);
+        window.setTimeout(() => void endBeef('L\u2019Agora a statu\u00e9 \u2014 Paix proclam\u00e9e'), 1600);
         return;
       }
       if (kind === 'closed') {
-        void endBeef('Clos par le Ref');
+        void endBeef('Dissolution \u2014 Les citoyens sont lib\u00e9r\u00e9s, l\u2019Agora se ferme');
         return;
       }
       playRematchThunderSfx();
@@ -1195,7 +1195,7 @@ export function TikTokStyleArena({
       if (rematchVerdictTimerRef.current) clearTimeout(rematchVerdictTimerRef.current);
       rematchVerdictTimerRef.current = window.setTimeout(() => {
         rematchVerdictTimerRef.current = null;
-        void endBeef('Rematch demandé');
+        void endBeef('Rappel \u00e0 l\u2019Agora \u2014 Nouveau round exig\u00e9');
       }, 10000);
     },
     [isHost, roomId, endBeef, runBeefManage],
@@ -2903,7 +2903,7 @@ export function TikTokStyleArena({
           resonanceF: Number(o.resonanceF) || 0,
           resonanceM: Number(o.resonanceM) || 0,
           messages: Number(o.messages) || 0,
-          endReason: String(o.endReason ?? 'Fin du beef'),
+          endReason: String(o.endReason ?? 'Séance levée'),
         });
       } else {
         setEndSummary(null);
@@ -3172,7 +3172,7 @@ export function TikTokStyleArena({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 id="beef-end-summary-title" className="text-2xl font-bold text-white">Beef terminé</h2>
+              <h2 id="beef-end-summary-title" className="text-2xl font-bold text-white">Séance levée</h2>
               <p className="text-sm text-gray-400">{endSummary.endReason}</p>
             </div>
 
