@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { normalizeBeefId } from '@/lib/beef-id';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
+import { sanitize } from '@/lib/security';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'APPROVE_MANIFESTO') {
-      const { data: beef } = await supabaseAdmin
+      const { data: manifestoBeef } = await supabaseAdmin
         .from('beefs')
         .select('title, mediator_id')
         .eq('id', beefId)
@@ -124,10 +125,10 @@ export async function POST(request: NextRequest) {
         .eq('status', 'pending');
       if (error) return NextResponse.json({ error: 'Validation impossible' }, { status: 500 });
 
-      if (beef?.mediator_id) {
-        const msg = `Tu as été choisi comme médiateur pour l'affaire : ${beef.title ?? ''}`;
+      if (manifestoBeef?.mediator_id) {
+        const msg = `Tu as été choisi comme médiateur pour l'affaire : ${manifestoBeef.title ?? ''}`;
         await supabaseAdmin.from('notifications').insert({
-          user_id: beef.mediator_id,
+          user_id: manifestoBeef.mediator_id,
           type: 'system',
           title: 'Candidature validée !',
           body: msg,
@@ -308,10 +309,9 @@ export async function POST(request: NextRequest) {
       }
 
       if (toggle === 'REMATCH_MEDIATION_SUMMARY') {
-        const summary =
-          typeof body.mediationSummary === 'string' && body.mediationSummary.trim()
-            ? body.mediationSummary.trim()
-            : 'Rematch demandé — Round 2 à planifier avec les challengers.';
+        const summary = sanitize(
+        String(body.mediationSummary || '').trim().slice(0, 500),
+      ) || 'Rematch demandé — Round 2 à planifier avec les challengers.';
         const { error } = await supabaseAdmin
           .from('beefs')
           .update({ mediation_summary: summary })
@@ -323,10 +323,9 @@ export async function POST(request: NextRequest) {
       }
 
       if (toggle === 'END_BEEF') {
-        const reason =
-          typeof body.endReason === 'string' && body.endReason.trim()
-            ? body.endReason.trim()
-            : 'Terminé par le médiateur';
+        const reason = sanitize(
+          String(body.endReason || '').trim().slice(0, 500),
+        ) || 'Terminé par le médiateur';
         const resolution = resolutionFromEndReason(reason);
         const updatePayload: {
           status: 'ended';
