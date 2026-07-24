@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { sanitizeMessage } from '@/lib/security';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -50,7 +51,6 @@ type MediatorSidebarProps = {
   beefTimeFormatted: string;
   onSetChallengerMuted: (sessionId: string, debaterId: string | null, muted: boolean) => void;
   onEjectParticipant: (sessionId: string) => void | Promise<void>;
-  onAdjustTime: (deltaSec: number) => void;
   mediatorMicEnabled?: boolean;
   mediatorCamEnabled?: boolean;
   onMediatorToggleMic?: () => void | Promise<void>;
@@ -98,7 +98,6 @@ export function MediatorSidebar({
   beefTimeFormatted,
   onSetChallengerMuted,
   onEjectParticipant,
-  onAdjustTime: _onAdjustTime,
   mediatorMicEnabled,
   mediatorCamEnabled,
   onMediatorToggleMic,
@@ -118,13 +117,39 @@ export function MediatorSidebar({
   inviteCurrentUserId = null,
   networkHealthy,
 }: MediatorSidebarProps) {
-  void _onAdjustTime;
   const [confirmVerdict, setConfirmVerdict] = useState<'resolved' | 'closed' | 'rematch' | null>(
     null,
   );
   useEffect(() => {
     if (!open) setConfirmVerdict(null);
   }, [open]);
+
+  const asideRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key === 'Tab' && asideRef.current) {
+        const focusable = asideRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        } else {
+          if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [open, onClose]);
 
   const [announceDraft, setAnnounceDraft] = useState('');
   const [announceDurationSec, setAnnounceDurationSec] = useState(120);
@@ -170,6 +195,7 @@ export function MediatorSidebar({
                 />
 
                 <motion.aside
+                  ref={asideRef}
                   data-mediator-regie-sheet
                   role="dialog"
                   aria-label="Command Deck"
@@ -450,6 +476,7 @@ export function MediatorSidebar({
                           value={announceDraft}
                           onChange={(e) => setAnnounceDraft(e.target.value)}
                           rows={3}
+                          maxLength={200}
                           placeholder="Message affiché sur l’arène…"
                           className="mb-3 w-full resize-none rounded-2xl border border-white/[0.08] bg-black/40 px-4 py-3 font-sans text-sm text-white placeholder-white/30 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] focus:border-white/20 focus:bg-black/60 focus:outline-none"
                         />
@@ -476,7 +503,9 @@ export function MediatorSidebar({
                           <button
                             type="button"
                             onClick={() => {
-                              onPublishAnnouncement(announceDraft.trim(), announceDurationSec);
+                              const safe = sanitizeMessage(announceDraft.trim());
+                              if (!safe) return;
+                              onPublishAnnouncement(safe, announceDurationSec);
                               onClose();
                             }}
                             className="flex min-h-[44px] items-center rounded-full bg-amber-500 px-5 font-mono text-[10px] font-black uppercase tracking-wider text-black hover:bg-amber-400"

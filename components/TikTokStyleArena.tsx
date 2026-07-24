@@ -3573,7 +3573,6 @@ export function TikTokStyleArena({
               toast('Retrait impossible.', 'error');
             }
           }}
-          onAdjustTime={adjustBeefTime}
           mediatorMicEnabled={micEnabled}
           mediatorCamEnabled={camEnabled}
           onMediatorToggleMic={() => void toggleMic()}
