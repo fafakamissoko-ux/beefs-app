@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { Send, Pin, Heart } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -32,27 +32,78 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isSendingRef = useRef(false);
+  const cachedUserRef = useRef<{ username: string; display_name: string; avatar_url: string | null } | null>(null);
   const { toast } = useToast();
 
-  // Load messages and subscribe to realtime
   useEffect(() => {
-    // Load initial messages from beef_messages table
+    if (!userId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('username, display_name, avatar_url')
+        .eq('id', userId)
+        .single();
+      if (data) cachedUserRef.current = data;
+    })();
+  }, [userId]);
+
+  const PAGE_SIZE = 50;
+  const [hasOlder, setHasOlder] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (loadingOlder || !hasOlder) return;
+    setLoadingOlder(true);
+    const oldest = messages[0]?.created_at;
+    let query = supabase
+      .from('beef_messages')
+      .select('*')
+      .eq('beef_id', roomId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+      .limit(PAGE_SIZE);
+    if (oldest) query = query.lt('created_at', oldest);
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error loading older messages:', error);
+    } else if (data) {
+      if (data.length < PAGE_SIZE) setHasOlder(false);
+      setMessages((prev) => [...data.reverse() as Message[], ...prev]);
+    }
+    setLoadingOlder(false);
+  }, [loadingOlder, hasOlder, messages, roomId]);
+
+  useEffect(() => {
+    if (!sentinelRef.current || !hasOlder) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0]?.isIntersecting) loadOlderMessages(); },
+      { threshold: 0.1 },
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [loadOlderMessages, hasOlder]);
+
+  useEffect(() => {
     const loadMessages = async () => {
       const { data, error } = await supabase
         .from('beef_messages')
         .select('*')
         .eq('beef_id', roomId)
         .eq('is_deleted', false)
-        .order('created_at', { ascending: true })
-        .limit(100);
+        .order('created_at', { ascending: false })
+        .limit(PAGE_SIZE);
 
       if (error) {
         console.error('Error loading messages:', error);
       } else if (data) {
-        setMessages(data as Message[]);
+        if (data.length < PAGE_SIZE) setHasOlder(false);
+        setMessages(data.reverse() as Message[]);
       }
     };
 
+    setHasOlder(true);
     loadMessages();
 
     // Subscribe to new messages
@@ -68,7 +119,11 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
         },
         (payload) => {
           if (!payload.new.is_deleted) {
-            setMessages((prev) => [...prev, payload.new as Message]);
+            setMessages((prev) =>
+              prev.some((m) => m.id === payload.new.id)
+                ? prev
+                : [...prev, payload.new as Message],
+            );
           }
         }
       )
@@ -100,25 +155,22 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
+    if (isSendingRef.current) return;
+    isSendingRef.current = true;
 
     setLoading(true);
     try {
-      // Get user details
-      const { data: userData } = await supabase
-        .from('users')
-        .select('username, display_name, avatar_url')
-        .eq('id', userId)
-        .single();
+      const ud = cachedUserRef.current;
 
       const cleanContent = sanitizeMessage(input);
-      if (!cleanContent) { setLoading(false); return; }
+      if (!cleanContent) return;
 
       const { error } = await supabase.from('beef_messages').insert({
         beef_id: roomId,
         user_id: userId,
-        username: userData?.username || userName,
-        display_name: userData?.display_name || userName,
-        avatar_url: userData?.avatar_url,
+        username: ud?.username || userName,
+        display_name: ud?.display_name || userName,
+        avatar_url: ud?.avatar_url ?? null,
         content: cleanContent,
         is_pinned: false,
       });
@@ -129,10 +181,11 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
       } else {
         setInput('');
       }
-    } catch (error) {
-      console.error('Error sending message:', error);
+    } catch (err: unknown) {
+      console.error('Error sending message:', err);
     } finally {
       setLoading(false);
+      isSendingRef.current = false;
     }
   };
 
@@ -186,6 +239,12 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
 
       {/* Messages List */}
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
+        {hasOlder && <div ref={sentinelRef} className="h-1" />}
+        {loadingOlder && (
+          <div className="flex justify-center py-2">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-transparent" />
+          </div>
+        )}
         <AnimatePresence>
           {regularMessages.map((msg) => (
             <ChatMessage key={msg.id} message={msg} />
@@ -201,8 +260,9 @@ export function ChatPanel({ roomId, userId, userName, tiktokStyle = false, comme
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
             placeholder="Message..."
+            maxLength={500}
             disabled={loading}
             className="glass-chat flex-1 rounded-[2px] border border-white/12 px-4 py-2.5 text-sm font-medium tracking-tight text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:opacity-50"
           />
@@ -260,7 +320,7 @@ function TikTokChatMessage({ message }: { message: Message }) {
 
 function CommentsStyleMessage({ message }: { message: Message }) {
   const [liked, setLiked] = useState(false);
-  const [likes, setLikes] = useState(Math.floor(Math.random() * 50));
+  const [likes, setLikes] = useState(0);
 
   return (
     <motion.div
@@ -321,9 +381,6 @@ function CommentsStyleMessage({ message }: { message: Message }) {
               <span className={`text-xs font-medium ${liked ? 'text-ember-400' : ''}`}>{likes}</span>
             )}
           </motion.button>
-          <button className="text-white/60 hover:text-white transition-colors text-xs font-medium touch-manipulation">
-            Répondre
-          </button>
         </div>
       </div>
     </motion.div>
