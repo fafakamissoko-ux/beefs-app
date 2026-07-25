@@ -43,7 +43,7 @@ export function ArenaAuthHookModal({ authHook, onClose }: ArenaAuthHookModalProp
             onClick={() => router.push(`/signup?next=${encodeURIComponent(window.location.pathname)}`)}
             className="w-full rounded-2xl bg-white py-4 text-xs font-black uppercase tracking-widest text-black transition-all hover:scale-[1.02] hover:bg-gray-200"
           >
-            Cr\u00e9er mon profil
+            Créer mon profil
           </button>
 
           <button
@@ -51,7 +51,7 @@ export function ArenaAuthHookModal({ authHook, onClose }: ArenaAuthHookModalProp
             onClick={() => router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`)}
             className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 text-xs font-bold uppercase tracking-widest text-white hover:bg-white/10"
           >
-            D\u00e9j\u00e0 inscrit ?
+            Déjà inscrit ?
           </button>
         </div>
 

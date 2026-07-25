@@ -51,26 +51,7 @@ interface PublicProfileSearchRow {
   avatar_url?: string | null;
 }
 
-const POPULAR_TAGS = [
-  'tech',
-  'startup',
-  'argent',
-  'respect',
-  'business',
-  'crypto',
-  'politique',
-  'sport',
-  'gaming',
-  'culture',
-  'justice',
-  'amitié',
-  'famille',
-  'travail',
-  'collab',
-  'contrat',
-  'idée',
-  'crédit',
-];
+const FALLBACK_TAGS = ['débat', 'clash', 'live', 'réaction', 'face-à-face', 'discussion'];
 
 /** Aligné avec `submitNewBeef` : péremption invitations combattants / arbitre. */
 function invitationExpiresIso(scheduledAtIso: string | null): string {
@@ -116,6 +97,35 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
   const [searchResults, setSearchResults] = useState<PublicProfileSearchRow[]>([]);
   const [searching, setSearching] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const [trendingTags, setTrendingTags] = useState<string[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('beefs')
+        .select('tags')
+        .not('tags', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (!data?.length) return;
+      const freq: Record<string, number> = {};
+      for (const row of data) {
+        if (!Array.isArray(row.tags)) continue;
+        for (const t of row.tags as string[]) {
+          const clean = t.trim().toLowerCase();
+          if (clean) freq[clean] = (freq[clean] || 0) + 1;
+        }
+      }
+      const sorted = Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .map(([tag]) => tag)
+        .slice(0, 20);
+      setTrendingTags(sorted);
+    })();
+  }, []);
+
+  const POPULAR_TAGS = trendingTags.length > 0 ? trendingTags : FALLBACK_TAGS;
 
   const [teaserFile, setTeaserFile] = useState<File | null>(null);
   const [teaserPreview, setTeaserPreview] = useState<string | null>(null);
@@ -452,8 +462,8 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
     else if (title.trim().length <= 3) errors.title = 'Le titre doit faire au moins 4 caractères.';
     if (tags.length === 0) errors.tags = 'Ajoute au moins 1 tag.';
     if (!description.trim()) errors.description = 'La description est obligatoire.';
-    else if (description.trim().length < 50) {
-      errors.description = `Description trop courte (${description.trim().length}/50 minimum).`;
+    else if (description.trim().length < 20) {
+      errors.description = `Description trop courte (${description.trim().length}/20 minimum).`;
     }
     if (intent === 'mediation' && (mainParticipants.length < 2 || mainParticipants.length > 4)) {
       errors.participants = 'Médiation : entre 2 et 4 participants principaux requis.';
@@ -791,9 +801,9 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                       }`}
                     />
                     <div className="mt-2 flex justify-between text-xs">
-                      <span className={description.trim().length < 50 ? 'font-semibold text-red-400' : 'font-semibold text-green-400'}>
-                        {description.trim().length < 50
-                          ? `⚠️ Minimum 50 caractères (${50 - description.trim().length} restants)`
+                      <span className={description.trim().length < 20 ? 'font-semibold text-red-400' : 'font-semibold text-green-400'}>
+                        {description.trim().length < 20
+                          ? `⚠️ Minimum 20 caractères (${20 - description.trim().length} restants)`
                           : `✓ ${description.length} caractères`}
                       </span>
                       <span className="text-gray-500">{description.length}/1000</span>

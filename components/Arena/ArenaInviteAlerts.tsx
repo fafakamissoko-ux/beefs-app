@@ -33,16 +33,16 @@ export function AcceptedInviteAlert({ isOpen, beefEnded, onDismiss }: AcceptedIn
             className="w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-slate-950/75 p-6 text-center shadow-2xl backdrop-blur-md"
           >
             <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-cobalt-500/20">
-              <span className="text-4xl" aria-hidden>\u2696\ufe0f</span>
+              <span className="text-4xl" aria-hidden>{'⚖️'}</span>
             </div>
             <h2
               id="mediation-invite-title"
               className="mb-2 font-mono text-xl font-black uppercase tracking-tight text-white"
             >
-              Invitation \u00e0 la m\u00e9diation
+              Invitation à la médiation
             </h2>
             <p className="mb-6 text-sm text-white/60">
-              Le Ref souhaite t&apos;entendre. Installe-toi \u00e0 la table des \u00e9changes en pr\u00e9parant ta cam\u00e9ra et
+              Le Ref souhaite t&apos;entendre. Installe-toi à la table des échanges en préparant ta caméra et
               ton micro.
             </p>
             <button
@@ -123,7 +123,7 @@ export function RefInviteAlert({
       })
       .eq('beef_id', roomId)
       .eq('invitee_id', userId);
-    toast('Convocation d\u00e9clin\u00e9e', 'info');
+    toast('Convocation déclinée', 'info');
   };
 
   return (
@@ -145,13 +145,13 @@ export function RefInviteAlert({
             className="w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-slate-950/75 p-6 text-center shadow-2xl backdrop-blur-md"
           >
             <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-cyan-500/20">
-              <span className="text-4xl" aria-hidden>\ud83c\udf99\ufe0f</span>
+              <span className="text-4xl" aria-hidden>{'🎙️'}</span>
             </div>
             <h2 className="mb-2 font-mono text-xl font-black uppercase tracking-tight text-white">
               Le Ref te convoque
             </h2>
             <p className="mb-6 text-sm text-white/60">
-              Tu es invit\u00e9 \u00e0 entrer sur sc\u00e8ne. Pr\u00e9pare ta cam\u00e9ra et ton micro.
+              Tu es invité à entrer sur scène. Prépare ta caméra et ton micro.
             </p>
             <div className="flex flex-col gap-3">
               <button

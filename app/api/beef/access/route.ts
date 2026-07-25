@@ -158,12 +158,11 @@ export async function GET(request: NextRequest) {
       tokenRole = 'mediator';
       isCreator = true;
     } else {
-      const uidForParticipant = canonicalUserUuid(user.id) ?? user.id.trim();
       const { data: part } = await supabaseAdmin
         .from('beef_participants')
         .select('id')
         .eq('beef_id', beefId)
-        .eq('user_id', uidForParticipant)
+        .eq('user_id', user.id)
         .eq('invite_status', 'accepted')
         .maybeSingle();
       if (part) {

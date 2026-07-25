@@ -219,7 +219,7 @@ export function TikTokStyleArena({
 
   const { runBeefManage } = useBeefManage(supabase, toast);
 
-  const isViewer = userRole === 'viewer' || userRole === 'spectator';
+  const isViewer = userRole === 'viewer';
 
   // ── AUTH HOOK (Conversion des anonymes + mur freemium mandatory) ──
   const { authHook, setAuthHook, requireAuth } = useAuthGate(userId);
@@ -309,6 +309,8 @@ export function TikTokStyleArena({
   const challengersEverJoinedRef = useRef(false);
   /** Évite de spammer le toast « challengers partis » tant que la room reste vide */
   const challengersAllLeftNotifiedRef = useRef(false);
+  /** Supprime le toast « challengers partis » juste après un kick volontaire */
+  const recentKickRef = useRef(false);
   const walletBalance = useWalletStore((s) => s.balance);
   const walletInit = useWalletStore((s) => s.initialize);
   const optimisticDebit = useWalletStore((s) => s.optimisticDebit);
@@ -1233,11 +1235,12 @@ export function TikTokStyleArena({
       challengerUserIds.length > 0 &&
       challengersEverJoinedRef.current &&
       remoteParticipants.length === 0 &&
-      isJoined
+      isJoined &&
+      !recentKickRef.current
     ) {
       if (!challengersAllLeftNotifiedRef.current) {
         challengersAllLeftNotifiedRef.current = true;
-        toast('Les challengers ont quitté la room — le direct continue. Tu peux terminer le beef depuis la régie.', 'info');
+        toast('Les participants ont quitté la séance — tu peux clôturer depuis la régie.', 'info');
       }
     } else if (remoteParticipants.length > 0) {
       challengersAllLeftNotifiedRef.current = false;
@@ -2840,7 +2843,7 @@ export function TikTokStyleArena({
         {!isCinematicMode && (
           <div
             data-cinema-stay
-            className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end h-auto max-h-[31dvh] pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none"
+            className="absolute inset-x-0 bottom-0 z-[160] lg:hidden flex flex-col justify-end h-auto max-h-[31dvh] pb-[max(3.5rem,env(safe-area-inset-bottom))] pointer-events-none"
           >
           <ArenaChatMessages isMobile />
           <div id="dock-mobile" className="pointer-events-auto mt-auto flex w-full shrink-0 items-center gap-2 px-3 pb-2">
@@ -2919,6 +2922,8 @@ export function TikTokStyleArena({
                 setDebaters((prev) => prev.filter((d) => d.id !== target.arenaUserId));
                 void loadParticipants();
               }
+              recentKickRef.current = true;
+              setTimeout(() => { recentKickRef.current = false; }, 3000);
               toast('Participant renvoyé parmi les citoyens', 'success');
               void fetchPendingInvites();
             } else {

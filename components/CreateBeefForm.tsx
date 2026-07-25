@@ -106,9 +106,13 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
         URL.revokeObjectURL(teaserPreviewUrlRef.current);
         teaserPreviewUrlRef.current = null;
       }
-      if (rawImageUrl) {
-        URL.revokeObjectURL(rawImageUrl);
-      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const url = rawImageUrl;
+    return () => {
+      if (url) URL.revokeObjectURL(url);
     };
   }, [rawImageUrl]);
 
@@ -172,10 +176,35 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
     setBeefData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const POPULAR_TAGS = [
-    'tech', 'startup', 'argent', 'respect', 'business', 'crypto',
-    'politique', 'sport', 'gaming', 'culture', 'justice', 'amitié',
-    'famille', 'travail', 'collab', 'contrat', 'idée', 'crédit',
+  const [trendingTags, setTrendingTags] = useState<string[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('beefs')
+        .select('tags')
+        .not('tags', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (!data?.length) return;
+      const freq: Record<string, number> = {};
+      for (const row of data) {
+        if (!Array.isArray(row.tags)) continue;
+        for (const t of row.tags as string[]) {
+          const clean = t.trim().toLowerCase();
+          if (clean) freq[clean] = (freq[clean] || 0) + 1;
+        }
+      }
+      const sorted = Object.entries(freq)
+        .sort((a, b) => b[1] - a[1])
+        .map(([tag]) => tag)
+        .slice(0, 20);
+      setTrendingTags(sorted);
+    })();
+  }, []);
+
+  const POPULAR_TAGS = trendingTags.length > 0 ? trendingTags : [
+    'débat', 'clash', 'live', 'réaction', 'face-à-face', 'discussion',
   ];
 
   const addTag = (tag: string) => {
@@ -298,8 +327,8 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
     else if (beefData.title.trim().length <= 3) errors.title = 'Le titre doit faire au moins 4 caractères.';
     if (beefData.tags.length === 0) errors.tags = 'Ajoute au moins 1 tag (#motclé).';
     if (!beefData.description.trim()) errors.description = 'La description est obligatoire.';
-    else if (beefData.description.trim().length < 50)
-      errors.description = `Description trop courte (${beefData.description.trim().length}/50 caractères minimum).`;
+    else if (beefData.description.trim().length < 20)
+      errors.description = `Description trop courte (${beefData.description.trim().length}/20 caractères minimum).`;
 
     if (intent === 'mediation') {
       if (mainParticipants.length < 2 || mainParticipants.length > 4) {
@@ -578,15 +607,15 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                   <div className="mt-2 flex items-center justify-between">
                     <p
                       className={`text-xs font-semibold ${
-                        beefData.description.length < 50
+                        beefData.description.length < 20
                           ? 'text-red-400'
-                          : beefData.description.length < 100
+                          : beefData.description.length < 50
                             ? 'text-yellow-400'
                             : 'text-green-400'
                       }`}
                     >
-                      {beefData.description.length < 50
-                        ? `⚠️ Minimum 50 caractères (${50 - beefData.description.length} restants)`
+                      {beefData.description.length < 20
+                        ? `⚠️ Minimum 20 caractères (${20 - beefData.description.length} restants)`
                         : `✓ ${beefData.description.length} caractères`}
                     </p>
                     <p className="text-xs text-gray-500">{beefData.description.length}/1000</p>
@@ -907,7 +936,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
 
           <div className="mt-3 rounded-[2rem] border border-cyan-500/20 bg-cyan-500/10 p-2">
             <p className="text-xs text-cyan-400">
-              <strong>Obligatoire :</strong> titre, tags, description (50+ caractères).{' '}
+              <strong>Obligatoire :</strong> titre, tags, description (20+ caractères).{' '}
               {intent === 'mediation' && 'Médiation : entre 2 et 4 participants principaux.'}
             </p>
           </div>

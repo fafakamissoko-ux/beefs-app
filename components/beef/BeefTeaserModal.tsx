@@ -236,15 +236,15 @@ export function BeefTeaserModal({
           <h2 className="mb-4 text-xl font-black text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.4)] md:text-2xl">
             {title}
           </h2>
-          <div className="mb-4 flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="hide-scrollbar flex-1 overflow-y-auto pr-2 text-sm font-medium leading-relaxed text-white/80 whitespace-pre-wrap">
+          <div className="mb-4 flex min-h-0 flex-shrink flex-col overflow-hidden">
+            <div className="hide-scrollbar overflow-y-auto pr-2 text-sm font-medium leading-relaxed text-white/80 whitespace-pre-wrap">
               {descText || 'Aucune description. Rejoignez l\'Agora pour découvrir l\'enjeu de cette affaire.'}
             </div>
           </div>
           {tags.length > 0 && (
-            <div className="mb-4 flex flex-wrap gap-1.5">
+            <div className="mb-4 flex flex-wrap gap-2">
               {tags.map((tag, idx) => (
-                <span key={idx} className="rounded border border-white/20 bg-black/40 px-2 py-1 text-[10px] font-bold text-white/80">
+                <span key={idx} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/70 backdrop-blur-sm">
                   #{tag}
                 </span>
               ))}

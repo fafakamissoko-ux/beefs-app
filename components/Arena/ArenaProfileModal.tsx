@@ -108,11 +108,11 @@ export function ArenaProfileModal({
             </div>
             <div className="text-center">
               <span className="text-2xl font-black text-white">{profile.stats.mediations}</span>
-              <span className="ml-1 text-sm text-gray-400">M\u00e9diations</span>
+              <span className="ml-1 text-sm text-gray-400">Médiations</span>
             </div>
             <div className="text-center">
               <span className="text-2xl font-black text-white">{profile.stats.followers}</span>
-              <span className="ml-1 text-sm text-gray-400">Abonn\u00e9s</span>
+              <span className="ml-1 text-sm text-gray-400">Abonnés</span>
             </div>
             <div className="text-center">
               <span className="text-2xl font-black text-white">{profile.stats.following}</span>
@@ -150,7 +150,7 @@ export function ArenaProfileModal({
                       : 'bg-white text-black font-black uppercase tracking-widest hover:bg-gray-200'
                   }`}
                 >
-                  {profileFollowsTarget ? 'Abonn\u00e9 \u2713' : 'Suivre'}
+                  {profileFollowsTarget ? 'Abonné ✓' : 'Suivre'}
                 </button>
               )}
               {isOtherUser && (

@@ -35,7 +35,7 @@ export default function ArenaPage() {
   } | null>(null);
 
   const [isHost, setIsHost] = useState(false);
-  const [userRole, setUserRole] = useState<'mediator' | 'challenger' | 'viewer' | 'spectator'>('spectator');
+  const [userRole, setUserRole] = useState<'mediator' | 'challenger' | 'viewer'>('viewer');
 
   const [host, setHost] = useState<{
     id: string;
@@ -116,6 +116,7 @@ export default function ArenaPage() {
     setAccessError(null);
     setDailyRoomUrl(null);
     setDailyMeetingToken(null);
+    setUserRole('viewer');
 
     (async () => {
       const { data: beef, error: beefErr } = await supabase

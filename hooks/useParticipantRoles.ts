@@ -7,6 +7,7 @@ import {
   buildParticipantAliasSet,
   type BeefParticipantRowMeta,
 } from '@/lib/participant-identity';
+import { userIdsEqual } from '@/lib/user-id-equal';
 
 type ToastFn = (message: string, type?: ToastType) => void;
 
@@ -52,9 +53,9 @@ export function useParticipantRoles({
       .eq('beef_id', roomId);
 
     if (!isViewer && !isHost && data) {
-      const amIStillHere = data.some((p: { user_id: string }) => p.user_id === userId);
+      const amIStillHere = data.some((p: { user_id: string }) => userIdsEqual(p.user_id, userId));
       if (!amIStillHere) {
-        toast('Vous avez été renvoyé dans les gradins par la régie.', 'error');
+        toast('Vous avez été renvoyé parmi les citoyens.', 'error');
         setTimeout(() => window.location.reload(), 1200);
         return;
       }
