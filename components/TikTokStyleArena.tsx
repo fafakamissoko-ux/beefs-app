@@ -54,12 +54,14 @@ import { useBeefTimer, DEFAULT_BEEF_DURATION, MAX_BEEF_DURATION } from '@/hooks/
 import { useBeefLifecycle, type EndSummary } from '@/hooks/useBeefLifecycle';
 import { useGiftSend } from '@/hooks/useGiftSend';
 import { ArenaProfileModal } from '@/components/Arena/ArenaProfileModal';
+import { ArenaBeefEndSummary } from '@/components/Arena/ArenaBeefEndSummary';
+import { ArenaMenuPanel } from '@/components/Arena/ArenaMenuPanel';
+import { ArenaDockPickersPortal } from '@/components/Arena/ArenaDockPickersPortal';
 import { AcceptedInviteAlert, RefInviteAlert } from '@/components/Arena/ArenaInviteAlerts';
 import { ArenaAuthHookModal } from '@/components/Arena/ArenaAuthHookModal';
 import { IngotIcon } from '@/components/shared/IngotIcon';
 import { escapeForIlikeExact } from '@/lib/ilike-exact';
 import { useMessagesDrawer } from '@/contexts/MessagesDrawerContext';
-import { ARENA_QUICK_REACTIONS } from '@/lib/arena-quick-reactions';
 import {
   buildParticipantAliasSet,
   isValidArenaUserId,
@@ -106,7 +108,6 @@ import {
   type StructuredDebateBroadcastPayload,
 } from '@/hooks/useArenaRealtime';
 import { useWalletStore } from '@/lib/stores/walletStore';
-import { GIFT_CATALOG } from '@/lib/constants/gifts';
 
 
 
@@ -138,29 +139,7 @@ interface TikTokStyleArenaProps {
 }
 
 
-// 🔥 TOUTES LES RÉACTIONS POPULAIRES (80)
-const POPULAR_REACTIONS = [
-  '👍', '👎', '😂', '🔥', '💯', '👏', '🤔', '😮', '💀', '🎯',
-  '⚡', '💪', '🧠', '👀', '🤯', '😡', '❤️', '🎉', '🙌', '💎',
-  '🌟', '✨', '🚀', '💥', '🤡', '👽', '👻', '🥶', '🥵', '😎',
-  '🤓', '🥳', '🤬', '🤮', '🤢', '🤧', '😇', '🤫', '🤭', '🥱',
-  '🤌', '🫶', '🤝', '🤘', '🤙', '🖐️', '👊', '🙏', '🏆', '🥇',
-  '🗣️', '🎙️', '🎤', '🎧', '📻', '🎸', '🥁', '🎭', '🎨', '🎬',
-  '🍿', '🍔', '🍕', '🍻', '🥂', '🍾', '🧊', '🧂', '🌶️', '🥩',
-  '🛑', '🚧', '🚨', '🧯', '🥊', '🥋', '🤺', '🏋️', '🤸', '✅'
-];
-
-/** Bandeau mobile : 10 emojis scroll ; desktop : grille 2×5 + panneau 😀 pour le reste. */
-
 const HEART_ON_FIRE = '❤️‍🔥';
-
-const STRIP_SET = new Set<string>(ARENA_QUICK_REACTIONS);
-
-const PICKER_REACTIONS = POPULAR_REACTIONS.filter((e) => {
-  if (STRIP_SET.has(e)) return false;
-  if (e === '❤️' || e === HEART_ON_FIRE) return false;
-  return true;
-});
 
 /** Cœur / pouce : particules sur l’anneau du challenger (pas d’emoji flottant). */
 const INTEGRATED_SUPPORT_REACTIONS = new Set<string>(['❤️', HEART_ON_FIRE, '👍']);
@@ -2136,111 +2115,7 @@ export function TikTokStyleArena({
         }}
       />
       {beefEnded && endSummary && (
-        <div
-          className="absolute inset-0 z-[1000] flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm p-6"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="beef-end-summary-title"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', damping: 20 }}
-            className="w-full max-w-sm space-y-6 text-center"
-          >
-            {/* Header */}
-            <div className="space-y-2">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-ember-600 to-cobalt-600 shadow-[0_0_15px_rgba(59,130,246,0.5)]" aria-hidden>
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h2 id="beef-end-summary-title" className="text-2xl font-bold text-white">Séance levée</h2>
-              <p className="text-sm text-gray-400">{endSummary.endReason}</p>
-            </div>
-
-            {/* Stats (pas de compteur de votes : le soutien se lit sur l’aura en direct) */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-                <div className="text-2xl font-bold text-cyan-400">{endSummary.duration}</div>
-                <div className="mt-1 text-xs text-gray-500">Durée</div>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-                <div className="text-2xl font-bold text-cobalt-400">{endSummary.viewers}</div>
-                <div className="mt-1 text-xs text-gray-500">Spectateurs</div>
-              </div>
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-                <div className="text-2xl font-bold text-ember-400">{endSummary.messages}</div>
-                <div className="mt-1 text-xs text-gray-500">Messages</div>
-              </div>
-            </div>
-
-            <div className="mt-3 rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-              <div className="mb-3 text-center font-mono text-xs uppercase tracking-widest text-gray-400">Résonance Générée</div>
-              <div className="flex flex-wrap justify-center gap-2">
-                {endSummary.resonanceA > 0 && (
-                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-2">
-                    <span className="text-lg font-black tabular-nums text-cyan-400">{endSummary.resonanceA}</span>
-                    <span className="mt-1 font-mono text-[9px] uppercase text-cyan-200/60">Slot A</span>
-                  </div>
-                )}
-                <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-prestige-gold/20 bg-prestige-gold/10 p-2">
-                  <span className="text-lg font-black tabular-nums text-prestige-gold">{endSummary.resonanceM}</span>
-                  <span className="mt-1 font-mono text-[9px] uppercase text-prestige-gold/60">Ref</span>
-                </div>
-                {endSummary.resonanceB > 0 && (
-                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-white/20 bg-white/10 p-2">
-                    <span className="text-lg font-black tabular-nums text-white/90">{endSummary.resonanceB}</span>
-                    <span className="mt-1 font-mono text-[9px] uppercase text-white/60">Slot B</span>
-                  </div>
-                )}
-                {endSummary.resonanceC > 0 && (
-                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-2">
-                    <span className="text-lg font-black tabular-nums text-yellow-400">{endSummary.resonanceC}</span>
-                    <span className="mt-1 font-mono text-[9px] uppercase text-yellow-200/60">Slot C</span>
-                  </div>
-                )}
-                {endSummary.resonanceD > 0 && (
-                  <div className="flex min-w-[70px] flex-col items-center rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-2">
-                    <span className="text-lg font-black tabular-nums text-cyan-400">{endSummary.resonanceD}</span>
-                    <span className="mt-1 font-mono text-[9px] uppercase text-cyan-200/60">Slot D</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="space-y-3 pt-2">
-              <p className="text-xs text-gray-500 leading-relaxed px-1">
-                Il n’y a pas de fil de commentaires sur cet écran : les spectateurs peuvent{' '}
-                <span className="text-gray-400">noter le Ref</span> (étoiles + commentaire) depuis le résumé du
-                beef.
-              </p>
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.96 }}
-                onClick={() => {
-                  if (endSummaryTimerRef.current) clearTimeout(endSummaryTimerRef.current);
-                  router.push(`/beef/${roomId}/summary`);
-                }}
-                className="w-full rounded-full border border-white/10 bg-white/10 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/15"
-              >
-                Résumé & avis Ref
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.96 }}
-                onClick={() => {
-                  if (endSummaryTimerRef.current) clearTimeout(endSummaryTimerRef.current);
-                  router.replace('/feed');
-                }}
-                className="w-full rounded-full border border-white/20 bg-white/10 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/15"
-              >
-                Retour au feed
-              </motion.button>
-              <p className="text-xs text-gray-600">Redirection automatique dans quelques secondes...</p>
-            </div>
-          </motion.div>
-        </div>
+        <ArenaBeefEndSummary roomId={roomId} endSummary={endSummary} endSummaryTimerRef={endSummaryTimerRef} />
       )}
 
       {/* ── NETWORK RECONNECTION OVERLAY ── */}
@@ -2272,60 +2147,7 @@ export function TikTokStyleArena({
             <Eye className="h-3.5 w-3.5" strokeWidth={1.2} />
             <span className="font-mono text-[11px] font-medium">{actualViewerCount > 0 ? actualViewerCount : '—'}</span>
           </button>
-          {showArenaMenu && (
-            <div className="absolute left-4 top-full z-[200] mt-2 flex w-64 flex-col rounded-2xl border border-white/10 bg-slate-950/75 py-2 backdrop-blur-md shadow-2xl" data-cinema-stay onClick={(e) => e.stopPropagation()}>
-              {/* En-tête Monétisation */}
-              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Mon Solde</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <IngotIcon className="h-4 w-4 drop-shadow-md" />
-                    <span className="font-black text-white">{walletBalance} Lingots</span>
-                  </div>
-                </div>
-                <button type="button" onClick={() => { setShowArenaMenu(false); goBuyPoints(); }} className="flex items-center gap-1.5 rounded-full bg-prestige-gold px-3 py-1.5 text-xs font-bold text-black shadow-[0_0_15px_rgba(212,175,55,0.4)] transition-colors hover:bg-yellow-500">
-                  Recharger
-                </button>
-              </div>
-
-              {/* Grille d'actions (Standard) */}
-              <div className="grid grid-cols-2 gap-1 p-2">
-                <button type="button" onClick={() => { setShowArenaMenu(false); setIsCinematicMode(true); }} className="flex flex-col items-center gap-2 rounded-xl p-3 text-white transition-colors hover:bg-white/10">
-                  <Maximize className="h-5 w-5 text-gray-300" />
-                  <span className="text-xs font-medium">Cinématique</span>
-                </button>
-                <button type="button" onClick={() => { setShowArenaMenu(false); openDrawer(); }} className="flex flex-col items-center gap-2 rounded-xl p-3 text-white transition-colors hover:bg-white/10">
-                  <MessageCircle className="h-5 w-5 text-gray-300" />
-                  <span className="text-xs font-medium">Messages</span>
-                </button>
-                <button type="button" onClick={() => { setShowArenaMenu(false); onShare(); }} className="flex flex-col items-center gap-2 rounded-xl p-3 text-white transition-colors hover:bg-white/10">
-                  <Share2 className="h-5 w-5 text-cyan-400" />
-                  <span className="text-xs font-medium">Partager</span>
-                </button>
-                <button type="button" onClick={() => { setShowArenaMenu(false); window.open('/profile', '_blank'); }} className="flex flex-col items-center gap-2 rounded-xl p-3 text-white transition-colors hover:bg-white/10">
-                  <User className="h-5 w-5 text-gray-300" />
-                  <span className="text-xs font-medium">Profil</span>
-                </button>
-              </div>
-
-              {/* Actions secondaires */}
-              <div className="border-t border-white/10 p-2">
-                <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/feed'); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white">
-                  <Home className="h-4 w-4" /> Retour au Feed
-                </button>
-                <button type="button" onClick={() => { setShowArenaMenu(false); window.open('/settings', '_blank'); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-300 transition-colors hover:bg-white/10 hover:text-white">
-                  <SettingsIcon className="h-4 w-4" /> Paramètres
-                </button>
-              </div>
-
-              {/* Quitter */}
-              <div className="border-t border-white/10 p-2">
-                <button type="button" onClick={() => { setShowArenaMenu(false); void handleLeave(); }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-500/10 px-3 py-2.5 text-sm font-black uppercase tracking-widest text-rose-500 transition-colors hover:bg-rose-500/20">
-                  Quitter le Direct
-                </button>
-              </div>
-            </div>
-          )}
+          <ArenaMenuPanel open={showArenaMenu} onClose={() => setShowArenaMenu(false)} walletBalance={walletBalance} goBuyPoints={goBuyPoints} onCinematicMode={() => setIsCinematicMode(true)} openDrawer={openDrawer} onShare={onShare} onLeave={() => void handleLeave()} unreadDMsCount={unreadDMsCount} />
         </header>
         <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
           <ArenaChatMessages isMobile={false} />
@@ -2573,122 +2395,20 @@ export function TikTokStyleArena({
         />
       )}
 
-      {dockPickersMounted && (showAllReactions || showGiftPicker) && dockPickerPos && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed z-[10000]"
-          style={{ bottom: dockPickerPos.bottom, right: dockPickerPos.right }}
-        >
-          <AnimatePresence mode="wait">
-            {showAllReactions && (
-              <motion.div
-                key="arena-all-reactions"
-                data-arena-dock-popover
-                role="dialog"
-                aria-modal="true"
-                aria-label="Réactions"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="pointer-events-auto max-h-[min(50dvh,280px)] w-[min(calc(100vw-1rem),18rem)] max-w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-2 pt-1.5 backdrop-blur-sm shadow-lg"
-              >
-                <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/[0.08] pb-2">
-                  <span className="pl-0.5 text-[11px] font-semibold text-white/75">Réactions</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowAllReactions(false)}
-                    aria-label="Fermer le panneau de réactions"
-                    className="flex h-9 min-h-9 min-w-9 shrink-0 touch-manipulation items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                  >
-                    <X className="h-4 w-4" strokeWidth={1.5} aria-hidden />
-                  </button>
-                </div>
-                <div className="grid grid-cols-6 gap-1 sm:grid-cols-8">
-                  {PICKER_REACTIONS.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => {
-                        handleReaction(emoji);
-                        setShowAllReactions(false);
-                      }}
-                      aria-label={`Réagir avec ${emoji}`}
-                      className="flex h-9 min-h-9 w-9 min-w-9 touch-manipulation items-center justify-center rounded-2xl text-lg hover:bg-white/10 active:scale-95"
-                    >
-                      <span aria-hidden>{emoji}</span>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-            {showGiftPicker && (
-              <motion.div
-                key="arena-gift-picker"
-                data-arena-dock-popover
-                role="dialog"
-                aria-modal="true"
-                aria-label="Cadeaux"
-                initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="pointer-events-auto max-h-[min(60dvh,380px)] w-[min(calc(100vw-1rem),340px)] overflow-y-auto overscroll-contain rounded-[2.5rem] border border-white/10 bg-slate-900/40 p-3 pt-2 backdrop-blur-sm shadow-lg hide-scrollbar"
-              >
-                <div className="mb-3">
-                  <div className="mb-2 flex justify-between items-center">
-                    <span className="text-[11px] font-semibold text-white/75">Soutenir un participant :</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowGiftPicker(false)}
-                      className="text-white/70 hover:text-white"
-                      aria-label="Fermer les cadeaux"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="flex w-full items-center gap-1 rounded-xl bg-slate-950/50 p-1">
-                    {giftRecipients.map((recipient) => (
-                      <button
-                        key={recipient.id}
-                        type="button"
-                        onClick={() => setGiftTarget(recipient.id)}
-                        className={`flex-1 truncate rounded-lg px-1 py-1.5 text-[9px] font-bold transition-colors ${
-                          (giftTarget || giftRecipients[0]?.id) === recipient.id
-                            ? userIdsEqual(recipient.id, host.id)
-                              ? 'bg-prestige-gold text-black'
-                              : 'border border-white/20 bg-white/10 text-white'
-                            : 'text-white/50 hover:bg-white/10'
-                        }`}
-                      >
-                        @{recipient.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {GIFT_CATALOG.map((gift) => (
-                    <button
-                      key={gift.id}
-                      type="button"
-                      onClick={() => void sendGift(gift)}
-                      className="flex flex-col items-center gap-1 rounded-2xl bg-white/5 p-2 hover:bg-white/12 active:scale-95"
-                    >
-                      <img
-                        src={`/gifts/${gift.id}.webp`}
-                        alt={gift.label}
-                        className="h-10 w-10 object-contain drop-shadow-md"
-                      />
-                      <span className="text-[10px] font-bold text-white">{gift.label}</span>
-                      <span className="text-[9px] font-semibold text-ember-400">{gift.cost} Lingots</span>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>,
-        document.body
-      )}
+      <ArenaDockPickersPortal
+        mounted={dockPickersMounted}
+        showReactions={showAllReactions}
+        showGifts={showGiftPicker}
+        pos={dockPickerPos}
+        onCloseReactions={() => setShowAllReactions(false)}
+        onCloseGifts={() => setShowGiftPicker(false)}
+        onReaction={handleReaction}
+        giftRecipients={giftRecipients}
+        giftTarget={giftTarget}
+        setGiftTarget={setGiftTarget}
+        hostId={host.id}
+        sendGift={sendGift}
+      />
 
       {/* User Profile Modal */}
       <AnimatePresence>
@@ -2745,95 +2465,6 @@ export function TikTokStyleArena({
         />
       )}
 
-      <AnimatePresence>
-        {showArenaMenu && (
-          <motion.div
-            key="arena-menu-mobile-drawer"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menu Agora"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[400] flex lg:hidden"
-          >
-            <button type="button" className="absolute inset-0 bg-black/40 backdrop-blur-sm" aria-label="Fermer le menu" onClick={() => setShowArenaMenu(false)} />
-
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 32, stiffness: 360 }}
-              className="absolute bottom-0 left-0 right-0 z-10 max-h-[85dvh] overflow-y-auto rounded-t-[2rem] bg-slate-950/75 backdrop-blur-md border-t border-white/10 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-              data-cinema-stay
-            >
-              <div className="mx-auto mt-3 mb-4 h-1.5 w-12 shrink-0 rounded-full bg-white/20" aria-hidden />
-
-              <div className="flex flex-col px-4 pb-[max(2rem,env(safe-area-inset-bottom))]">
-
-                {/* Monétisation */}
-                <div className="mb-5 flex items-center justify-between rounded-2xl bg-white/5 border border-white/5 p-4 shadow-inner">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Mon Solde</p>
-                    <div className="mt-1 flex items-center gap-1.5">
-                      <IngotIcon className="h-5 w-5 drop-shadow-md" />
-                      <span className="text-xl font-black text-white">{walletBalance} <span className="text-sm font-bold text-gray-400">Lingots</span></span>
-                    </div>
-                  </div>
-                  <button type="button" onClick={() => { setShowArenaMenu(false); goBuyPoints(); }} className="flex items-center gap-1.5 rounded-full bg-prestige-gold px-4 py-2 text-xs font-bold text-black shadow-[0_0_15px_rgba(212,175,55,0.4)] transition-colors hover:bg-yellow-500">
-                    Recharger
-                  </button>
-                </div>
-
-                {/* Grille d'actions (TikTok Style) */}
-                <div className="mb-5 grid grid-cols-4 gap-3">
-                  <button type="button" onClick={() => { setShowArenaMenu(false); setIsCinematicMode(true); }} className="flex flex-col items-center gap-2">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 transition-transform active:scale-90">
-                      <Maximize className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-[10px] font-semibold text-white/80">Ciné</span>
-                  </button>
-                  <button type="button" onClick={() => { setShowArenaMenu(false); openDrawer(); }} className="flex flex-col items-center gap-2">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 transition-transform active:scale-90 relative">
-                      <MessageCircle className="h-6 w-6 text-white" />
-                      <PremiumNotificationBadge count={unreadDMsCount} variant="cyan" />
-                    </div>
-                    <span className="text-[10px] font-semibold text-white/80">Messages</span>
-                  </button>
-                  <button type="button" onClick={() => { setShowArenaMenu(false); onShare(); }} className="flex flex-col items-center gap-2">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 transition-transform active:scale-90">
-                      <Share2 className="h-6 w-6 text-cyan-400" />
-                    </div>
-                    <span className="text-[10px] font-semibold text-white/80">Partager</span>
-                  </button>
-                  <button type="button" onClick={() => { setShowArenaMenu(false); window.open('/profile', '_blank'); }} className="flex flex-col items-center gap-2">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 transition-transform active:scale-90">
-                      <User className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-[10px] font-semibold text-white/80">Profil</span>
-                  </button>
-                </div>
-
-                {/* Actions secondaires */}
-                <div className="mb-5 flex flex-col gap-1 rounded-2xl bg-white/5 p-2">
-                  <button type="button" onClick={() => { setShowArenaMenu(false); router.push('/feed'); }} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-white transition-colors hover:bg-white/10">
-                    <Home className="h-5 w-5 text-gray-400" /> Retour au Feed
-                  </button>
-                  <button type="button" onClick={() => { setShowArenaMenu(false); window.open('/settings', '_blank'); }} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-white transition-colors hover:bg-white/10">
-                    <SettingsIcon className="h-5 w-5 text-gray-400" /> Paramètres
-                  </button>
-                </div>
-
-                {/* Quitter */}
-                <button type="button" onClick={() => { setShowArenaMenu(false); void handleLeave(); }} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-4 text-sm font-black uppercase tracking-widest text-rose-500 transition-colors hover:bg-rose-500/20 active:scale-95">
-                  Quitter le Direct
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* === HOOK DE CONVERSION PREMIUM === */}
       <AnimatePresence>
