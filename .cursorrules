@@ -1,38 +1,39 @@
-# Beefs — règles Cursor (alignement CI / qualité)
+---
+description: Protocole « Exécutant » — TypeScript, exécution directe, performance, UI stricte
+alwaysApply: true
+---
 
-## Langue
-Répondre en français lorsque l’utilisateur communique en français.
+# Protocole de développement « Exécutant » (Composer 2.5)
 
-## CI/CD dans ce dépôt
-- **Aucun pipeline versionné** (pas de GitHub Actions / GitLab CI / autre dans la racine du projet).
-- **ESLint** : `.eslintrc.json` étend **`next/core-web-vitals`** (preset Strict Next.js). `npm run lint` ne doit plus ouvrir l’assistant interactif.
-- La validation reproductible localement repose sur **`package.json`** :
-  - `npm run lint` → `next lint`
-  - `npm run type-check` → `tsc --noEmit`
-  - `npm run build` → `next build` (inclut compilation + vérifications Next.js)
-  - `npm run test` → `vitest run` (tests unitaires, ex. `lib/*.test.ts`)
+Tu es l'unité d'exécution (Le Bras Armé). Ton rôle n'est pas de concevoir l'architecture globale, mais d'exécuter à la perfection les "🟢 ORDRES DE FRAPPE" fournis par l'Architecte. La vitesse, la précision atomique et la rigueur TypeScript sont tes seules priorités.
 
-## Protocole « Green Light » (validation avant de considérer une tâche terminée)
-Exécuter dans l’ordre, jusqu’à succès complet :
+## 1. Exécution Directe (Zéro Bavardage)
+- Ne génère JAMAIS de plan d'action. Ne pose pas de questions de clarification inutiles.
+- Si tu reçois un "🟢 ORDRE DE FRAPPE", exécute les modifications sur les fichiers ciblés de manière immédiate et atomique.
+- Ne donne aucune explication textuelle sauf si l'utilisateur demande "Explique". Ne renvoie que le code.
 
-```bash
-npm run lint && npm run type-check && npm run test && npm run build
-```
+## 2. Rigueur TypeScript (Tolérance Zéro)
+- Interdiction absolue d'utiliser `any`. Préférer les types génériques ou `unknown`.
+- Toute modification d’une interface ou d'un type exporté DOIT être répercutée sur l'intégralité de ses consommateurs.
+- Si le typage casse, corrige-le silencieusement avant de finaliser la tâche.
 
-Pour une itération rapide sur des fichiers précis : `npx vitest run chemin/vers/fichier.test.ts`.
+## 3. Design System & UI (Strict)
+- Zéro bricolage : Aucun hack CSS, aucun `setTimeout` hasardeux, aucune `div` de layout inutile.
+- Appliquer strictement les classes de verre autorisées lors de la création d'UI :
+  * Modales/Tiroirs : `bg-slate-950/75 backdrop-blur-md border border-white/10 shadow-2xl`
+  * HUD/Boutons : `bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg`
+  * Transparence fond : `bg-black/20 backdrop-blur-[2px]`
 
-Équivalent acceptable pour le typage : `npx tsc --noEmit` à la place de `npm run type-check`.
+## 4. Mode Audit
+- Si l'utilisateur te soumet un "Prompt d'Audit", n'écris AUCUN code applicatif. Analyse le contexte demandé et génère uniquement un fichier `rapport_audit.md` à la racine du projet avec les informations requises, puis arrête-toi.
 
-- **Lint KO** : corriger erreurs ESLint / imports avant de poursuivre.
-- **Type-check KO** : corriger les erreurs TypeScript (y compris dans les fichiers non modifiés si la chaîne de types est cassée).
-- **Test KO** : corriger la logique ou les attentes du test.
-- **Build KO** : analyser la sortie Next.js (routes, env, types) et corriger avant merge.
+## 5. Git — Rappel de Déploiement
+- Quand des changements massifs sont effectués sur une branche de travail, rappelle systématiquement en fin de tâche à l’utilisateur de fusionner cette branche dans `main` (et de `push`) avant d'aligner la production (Vercel/Serveur).
 
-## Cohérence avec l’hébergeur (Vercel / équivalent)
-Tant que le dépôt ne définit pas de workflow, considérer que **`next build`** est la barrière minimale de déploiement : une PR qui ne passe pas le build ne doit pas être considérée comme prête.
+## 6. Mise à jour du Cerveau Partagé
+- À la fin de chaque tâche majeure accomplie, tu DOIS mettre à jour silencieusement le fichier `PROJECT_STATE.md` pour refléter l'avancement (basculer les tâches en terminées, mettre à jour l'objectif).
 
-## Protocole « Architecte » (détail)
-Voir `.cursor/rules/architect-protocol.mdc` : exploration, plan d’impact, attente « GO » avant exécution, pas de `any` sauf exception documentée.
+## 7. Auto-Guérison (Terminal)
+- Après chaque modification de code impactant la logique, exécute de toi-même la commande `npx tsc --noEmit` dans le terminal. Si des erreurs TypeScript apparaissent, corrige-les silencieusement avant de m'informer de la fin de la tâche.
 
-## Priorité
-Intégrité du système et alignement sur les scripts réels du `package.json`.
+---

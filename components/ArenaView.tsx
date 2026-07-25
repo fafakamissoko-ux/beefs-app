@@ -118,7 +118,7 @@ interface Participant {
   isHost: boolean;
 }
 
-interface TikTokStyleArenaProps {
+interface ArenaViewProps {
   host: Participant;
   challenger?: Participant | null;
   roomId: string;
@@ -146,7 +146,7 @@ const INTEGRATED_SUPPORT_REACTIONS = new Set<string>(['❤️', HEART_ON_FIRE, '
 
 
 
-export function TikTokStyleArena({
+export function ArenaView({
   host,
   challenger,
   roomId,
@@ -160,7 +160,7 @@ export function TikTokStyleArena({
   dailyMeetingToken,
   onReaction,
   onShare,
-}: TikTokStyleArenaProps) {
+}: ArenaViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();

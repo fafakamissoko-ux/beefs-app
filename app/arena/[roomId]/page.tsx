@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { TikTokStyleArena } from '@/components/TikTokStyleArena';
+import { ArenaView } from '@/components/ArenaView';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
 import { Clock, ArrowLeft, Camera, LogIn, Mic, Play, ShieldAlert } from 'lucide-react';
@@ -510,7 +510,7 @@ export default function ArenaPage() {
   // État 3 — ARENA_READY : arène avec URL + jeton validés
   return (
     <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-transparent">
-      <TikTokStyleArena
+      <ArenaView
         host={host}
         roomId={roomId}
         userId={userId}

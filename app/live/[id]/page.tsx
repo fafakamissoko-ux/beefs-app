@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { TikTokStyleArena } from '@/components/TikTokStyleArena';
+import { ArenaView } from '@/components/ArenaView';
 import { supabase } from '@/lib/supabase/client';
 import { motion } from 'framer-motion';
 import { Clock, ArrowLeft } from 'lucide-react';
@@ -316,7 +316,7 @@ export default function LiveBeefRoomPage() {
 
   return (
     <div className="fixed left-1/2 top-14 z-40 h-[calc(100dvh-3.5rem)] max-lg:w-full max-lg:max-w-md -translate-x-1/2 overflow-hidden lg:inset-0 lg:h-dvh lg:transform-none">
-      <TikTokStyleArena
+      <ArenaView
         host={host}
         roomId={roomId}
         userId={userId}
