@@ -55,7 +55,8 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
           .from('followers')
           .select('follower_id')
           .eq('following_id', userId)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .range(0, 29);
 
         if (error) throw error;
         const followerIds = (followerRows || [])
@@ -80,7 +81,8 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
           .from('followers')
           .select('following_id')
           .eq('follower_id', userId)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .range(0, 29);
 
         if (error) throw error;
         const followingIdsList = (followingRows || [])

@@ -79,9 +79,13 @@
   - F2.2.2 : Extraction IngotIcon en composant shared
   - Export type ToastType depuis Toast.tsx
 
+- **Audit Phase F — Phase 2 Suite (F2.3-F2.6)** : Fragmentation finale du monolithe (3338 → 2523 lignes, -815) :
+  - F2.3 : Purge code mort — 4 imports orphelins, constantes, variables visuelles, interface UserProfile (-83 lignes)
+  - F2.4 : Extraction hooks noyau dur — useBeefTimer (chrono, warnings, start/pause/resume), useBeefLifecycle (endBeef, verdict, summary), useGiftSend (transaction API, wallet debit, broadcast)
+  - F2.5 : Extraction UI — ArenaBeefEndSummary, ArenaMenuPanel (fusion Desktop+Mobile, Design System Verre Lourd), ArenaDockPickersPortal (emoji+gift pickers)
+  - F2.6 : Renommage TikTokStyleArena.tsx → ArenaView.tsx + adaptation imports dans arena/[roomId]/page.tsx et live/[id]/page.tsx
+
 ## Tâches en Cours (Next Steps)
-- [ ] Phase F2.2 suite : Extraction HUD/menus (Verre Léger), Dock tactique, réassemblage ArenaView.tsx
-- [ ] Phase F2 noyau dur (reporté) : useBeefTimer, useSpeakingTurn, useAuraEngine, useBeefLifecycle — nécessite refactoring du dispatcher arenaRealtimeCallbacks
+- [ ] Câblage gift type — Finaliser le pipeline cadeau dans le chat
 - [ ] Phase E.2 : Rate limiting serveur (E-04), RPC N+1 (E-06/E-07), indicateurs frappe (E-08), refonte UI (E-15), animations (E-27)
-- [ ] Propagation réseau des métadonnées gift (broadcast/onMessageReceived)
 - [ ] Exécuter `106_update_gift_prices.sql` sur Supabase si pas fait

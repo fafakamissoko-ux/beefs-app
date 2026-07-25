@@ -89,7 +89,7 @@ function SkeletonCard() {
   );
 }
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -135,7 +135,6 @@ export default function NotificationsPage() {
       setNotifications(notifs);
       setAuraNotifications(auras);
       setHasMore(notifs.length >= PAGE_SIZE || auras.length >= PAGE_SIZE);
-
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('beefs:badges-refresh'));
       }
@@ -171,7 +170,7 @@ export default function NotificationsPage() {
       const newAuras = auraRes.error ? [] : ((auraRes.data ?? []) as AuraSparkNotification[]);
       setNotifications((prev) => [...prev, ...newNotifs]);
       setAuraNotifications((prev) => [...prev, ...newAuras]);
-      setHasMore(newNotifs.length >= PAGE_SIZE || newAuras.length >= PAGE_SIZE);
+      setHasMore((activeTab === 'aura' ? newAuras.length : newNotifs.length) >= PAGE_SIZE);
     } catch (err) {
       console.error('Failed to load more notifications:', err);
     } finally {

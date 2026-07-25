@@ -116,6 +116,10 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
+  const [convError, setConvError] = useState<string | null>(null);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -151,44 +155,37 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
   const loadConversations = useCallback(async (): Promise<Conversation[]> => {
     if (!user) return [];
     setLoadingConvs(true);
+    setConvError(null);
     try {
-      const { data: convs } = await supabase
-        .from('conversations')
-        .select('*')
-        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
-        .order('last_message_at', { ascending: false, nullsFirst: false });
+      const { data: convRows, error: rpcError } = await supabase
+        .rpc('get_conversations_with_unread', { p_user_id: user.id });
 
-      if (!convs) {
+      if (rpcError) throw rpcError;
+      if (!convRows || convRows.length === 0) {
         setConversations([]);
         return [];
       }
 
-      const otherIds = convs.map(c => c.participant_1 === user.id ? c.participant_2 : c.participant_1);
-      const { data: users } = await supabase
+      const otherIds = convRows.map((c: { participant_1: string; participant_2: string }) =>
+        c.participant_1 === user.id ? c.participant_2 : c.participant_1,
+      );
+      const { data: profileRows } = await supabase
         .from('user_public_profile')
         .select('id, username, display_name, avatar_url')
         .in('id', otherIds);
-      const userMap = new Map((users || []).map(u => [u.id, u]));
+      const userMap = new Map((profileRows || []).map((u: { id: string }) => [u.id, u]));
 
-      // Count unread messages per conversation
-      const enriched: Conversation[] = await Promise.all(convs.map(async c => {
+      const enriched: Conversation[] = convRows.map((c: { id: string; participant_1: string; participant_2: string; last_message_text: string | null; last_message_at: string | null; unread_count: number }) => {
         const otherId = c.participant_1 === user.id ? c.participant_2 : c.participant_1;
         const otherUser = userMap.get(otherId) || { id: otherId, username: 'unknown', display_name: 'Utilisateur', avatar_url: null };
-
-        const { count } = await supabase
-          .from('direct_messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('conversation_id', c.id)
-          .neq('sender_id', user.id)
-          .eq('is_read', false);
-
-        return { ...c, other_user: otherUser, unread_count: count || 0 };
-      }));
+        return { ...c, other_user: otherUser, unread_count: Number(c.unread_count) || 0 };
+      });
 
       setConversations(enriched);
       return enriched;
     } catch (err) {
       console.error('Error loading conversations:', err);
+      setConvError('Impossible de charger les conversations.');
       return [];
     } finally {
       setLoadingConvs(false);
@@ -295,17 +292,21 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     setSelectedMessages(new Set());
     setMessages([]);
     setSelectedConv(conv);
-    prevMessagesLength.current = 0; // Scroll instantané au chargement des messages
+    setHasOlderMessages(false);
+    prevMessagesLength.current = 0;
     setLoadingMsgs(true);
     try {
+      const PAGE = 50;
       const { data } = await supabase
         .from('direct_messages')
         .select('*')
         .eq('conversation_id', conv.id)
-        .order('created_at', { ascending: true })
-        .limit(100);
+        .order('created_at', { ascending: false })
+        .limit(PAGE);
 
-      setMessages(data || []);
+      const sorted = (data || []).reverse();
+      setMessages(sorted);
+      setHasOlderMessages((data?.length ?? 0) >= PAGE);
 
       // Mark unread DMs as read
       if (data?.length) {
@@ -340,6 +341,33 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
       setLoadingMsgs(false);
     }
   }, [user?.id]);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!selectedConv || loadingOlder || !hasOlderMessages) return;
+    setLoadingOlder(true);
+    try {
+      const oldest = messages[0]?.created_at;
+      if (!oldest) return;
+      const PAGE = 50;
+      const { data } = await supabase
+        .from('direct_messages')
+        .select('*')
+        .eq('conversation_id', selectedConv.id)
+        .lt('created_at', oldest)
+        .order('created_at', { ascending: false })
+        .limit(PAGE);
+
+      const sorted = (data || []).reverse();
+      if (sorted.length > 0) {
+        setMessages((prev) => [...sorted, ...prev]);
+      }
+      setHasOlderMessages((data?.length ?? 0) >= PAGE);
+    } catch {
+      /* ignore */
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [selectedConv, loadingOlder, hasOlderMessages, messages]);
 
   const sendMessage = async () => {
     if (isSending) return;
@@ -480,24 +508,27 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
     }
   };
 
-  const searchUsers = async (query: string) => {
+  const searchUsers = (query: string) => {
     setSearchQuery(query);
-    if (query.length < 2) { setSearchResults([]); return; }
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    if (query.length < 2) { setSearchResults([]); setSearching(false); return; }
     setSearching(true);
-    try {
-      const safeQuery = query.replace(/[%_\\]/g, '\\$&');
-      const { data } = await supabase
-        .from('user_public_profile')
-        .select('id, username, display_name, avatar_url')
-        .or(`username.ilike.%${safeQuery}%,display_name.ilike.%${safeQuery}%`)
-        .neq('id', user?.id || '')
-        .limit(10);
-      setSearchResults(data || []);
-    } catch {
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
-    }
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const safeQuery = query.replace(/[%_\\]/g, '\\$&');
+        const { data } = await supabase
+          .from('user_public_profile')
+          .select('id, username, display_name, avatar_url')
+          .or(`username.ilike.%${safeQuery}%,display_name.ilike.%${safeQuery}%`)
+          .neq('id', user?.id || '')
+          .limit(10);
+        setSearchResults(data || []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
   };
 
   const startConversation = async (otherUser: UserSearchRow) => {
@@ -752,11 +783,22 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
               <div className="flex items-center justify-center py-12">
                 <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
               </div>
+            ) : convError ? (
+              <div className="text-center py-16 px-4">
+                <MessageCircle className="w-12 h-12 text-red-500/60 mx-auto mb-3" />
+                <p className="text-red-400 font-semibold mb-2">{convError}</p>
+                <button
+                  onClick={() => loadConversations()}
+                  className="px-4 py-1.5 rounded-full bg-white/10 text-white/80 text-sm font-medium hover:bg-white/20 transition-colors"
+                >
+                  R&eacute;essayer
+                </button>
+              </div>
             ) : conversations.length === 0 ? (
               <div className="text-center py-16 px-4">
                 <MessageCircle className="w-12 h-12 text-gray-700 mx-auto mb-3" />
                 <p className="text-gray-400 font-semibold mb-1">Aucune conversation</p>
-                <p className="text-gray-600 text-sm">Cherche un utilisateur pour demarrer</p>
+                <p className="text-gray-600 text-sm">Cherche un utilisateur pour d&eacute;marrer</p>
               </div>
             ) : (
               conversations.map((conv) => (
@@ -906,7 +948,19 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                     <p className="text-sm text-gray-600">Envoie le premier message !</p>
                   </div>
                 ) : (
-                  messages.map((msg, index) => {
+                  <>
+                  {hasOlderMessages && (
+                    <div className="flex justify-center py-2">
+                      <button
+                        onClick={loadOlderMessages}
+                        disabled={loadingOlder}
+                        className="px-3 py-1 rounded-full bg-white/10 text-white/60 text-xs font-medium hover:bg-white/20 transition-colors disabled:opacity-40"
+                      >
+                        {loadingOlder ? 'Chargement...' : 'Charger l\u2019historique'}
+                      </button>
+                    </div>
+                  )}
+                  {messages.map((msg, index) => {
                     const isMine = msg.sender_id === user.id;
                     const isDeleted = !!msg.is_deleted;
                     const prevMsg = index > 0 ? messages[index - 1] : null;
@@ -1103,7 +1157,8 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                       </div>
                       </div>
                     );
-                  })
+                  })}
+                  </>
                 )}
                 <div ref={messagesEndRef} className="h-1 shrink-0" />
               </div>
