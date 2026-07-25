@@ -50,6 +50,9 @@ import { useDebaterInvites, type Debater } from '@/hooks/useDebaterInvites';
 import { useArenaProfile, type ArenaUserProfile } from '@/hooks/useArenaProfile';
 import { useArenaChat } from '@/hooks/useArenaChat';
 import { useParticipantRoles } from '@/hooks/useParticipantRoles';
+import { useBeefTimer, DEFAULT_BEEF_DURATION, MAX_BEEF_DURATION } from '@/hooks/useBeefTimer';
+import { useBeefLifecycle, type EndSummary } from '@/hooks/useBeefLifecycle';
+import { useGiftSend } from '@/hooks/useGiftSend';
 import { ArenaProfileModal } from '@/components/Arena/ArenaProfileModal';
 import { AcceptedInviteAlert, RefInviteAlert } from '@/components/Arena/ArenaInviteAlerts';
 import { ArenaAuthHookModal } from '@/components/Arena/ArenaAuthHookModal';
@@ -105,10 +108,6 @@ import {
 import { useWalletStore } from '@/lib/stores/walletStore';
 import { GIFT_CATALOG } from '@/lib/constants/gifts';
 
-/** Durée par défaut au lancement « Lancer le beef » (régie : +/- au-delà). */
-const DEFAULT_BEEF_DURATION = 60 * 60; // 60 min
-/** Plafond ajustable depuis la régie (prolongations). */
-const MAX_BEEF_DURATION = 4 * 60 * 60; // 4 h
 
 
 interface Participant {
@@ -219,7 +218,6 @@ export function TikTokStyleArena({
   /** Chat en overlay bas-gauche (pas de sidebar) */
   const [mediatorSidebarOpen, setMediatorSidebarOpen] = useState(false);
   const [showGiftPicker, setShowGiftPicker] = useState(false);
-  const [giftTarget, setGiftTarget] = useState<string>('');
   const [showViewerList, setShowViewerList] = useState(false);
   const [showArenaMenu, setShowArenaMenu] = useState(false);
   const { openDrawer } = useMessagesDrawer();
@@ -260,26 +258,9 @@ export function TikTokStyleArena({
   const [announcementTicker, setAnnouncementTicker] = useState('');
   const [gloryChallengerSlot, setGloryChallengerSlot] = useState<null | 'A' | 'B'>(null);
 
-  // ── END-OF-BEEF STATE ──
-  const [beefEnded, setBeefEnded] = useState(false);
-  const [endSummary, setEndSummary] = useState<{
-    duration: string;
-    viewers: number;
-    resonanceA: number;
-    resonanceB: number;
-    resonanceC: number;
-    resonanceD: number;
-    resonanceE: number;
-    resonanceF: number;
-    resonanceM: number;
-    messages: number;
-    endReason: string;
-  } | null>(null);
-  const endSummaryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const mediatorGraceRef = useRef<NodeJS.Timeout | null>(null);
   const [mediatorGraceActive, setMediatorGraceActive] = useState(false);
   const [mediatorGraceSeconds, setMediatorGraceSeconds] = useState(0);
-  const beefEndedRef = useRef(false);
   const mediatorWasConnectedRef = useRef(false);
   /** True dès qu’au moins un challenger attendu a été vu dans la room Daily (évite la fin auto tant qu’on attend les connexions). */
   const challengersEverJoinedRef = useRef(false);
@@ -289,7 +270,6 @@ export function TikTokStyleArena({
   const recentKickRef = useRef(false);
   const walletBalance = useWalletStore((s) => s.balance);
   const walletInit = useWalletStore((s) => s.initialize);
-  const optimisticDebit = useWalletStore((s) => s.optimisticDebit);
   // profileFollowsTarget — now in useArenaProfile hook (initialized below)
 
   // Speaking turn state
@@ -555,43 +535,24 @@ export function TikTokStyleArena({
     supabaseClient: supabase, toast,
   });
 
-  // Chrono global — défaut 60 min, plafond MAX_BEEF_DURATION à la régie
-  const [beefTimeRemaining, setBeefTimeRemaining] = useState(DEFAULT_BEEF_DURATION);
-  const beefWarning5Shown = useRef(false);
-  const beefWarning1Shown = useRef(false);
+  // ── BEEF TIMER (extracted hook) ──
+  const {
+    beefTimeRemaining, setBeefTimeRemaining,
+    timerActive, setTimerActive,
+    timerPaused, setTimerPaused,
+    startingBeef,
+    beefTimeRemainingRef, timerActiveRef, timerPausedRef,
+    beefEndsAtMsRef, beefWallClockStartedAtRef,
+    beefWarning5Shown, beefWarning1Shown,
+    isHostRef,
+    beefGlobalTimerFlushRef, scheduleBeefGlobalTimerBroadcast,
+    adjustBeefTime, resetBeefTimerToFull, pauseBeefTimer, resumeBeefTimer,
+    handleStartBeef, endBeefRef,
+  } = useBeefTimer({ isHost, roomId, toast, runBeefManage });
 
-  const [timerActive, setTimerActive] = useState(false);
-  const [timerPaused, setTimerPaused] = useState(false);
-  const beefEndsAtMsRef = useRef<number | null>(null);
-  const beefWallClockStartedAtRef = useRef<number | null>(null);
-  const beefTimeRemainingRef = useRef(DEFAULT_BEEF_DURATION);
-  const timerActiveRef = useRef(false);
-  const timerPausedRef = useRef(false);
-  const isHostRef = useRef(isHost);
-  useEffect(() => {
-    isHostRef.current = isHost;
-  }, [isHost]);
-  useEffect(() => {
-    timerActiveRef.current = timerActive;
-  }, [timerActive]);
-  useEffect(() => {
-    timerPausedRef.current = timerPaused;
-  }, [timerPaused]);
-  useEffect(() => {
-    beefTimeRemainingRef.current = beefTimeRemaining;
-  }, [beefTimeRemaining]);
-
-  const endBeefRef = useRef<(reason: string) => Promise<void>>();
-  /** Rempli après `useDailyCall` — `endBeef` vit au-dessus du hook et ne peut pas fermer sur `leave` en closure directe. */
   const leaveRef = useRef<() => Promise<void>>(async () => {});
   const stopAllMediaTracksRef = useRef<() => void>(() => {});
-
-  /** API broadcast issue du hook (remplie à chaque rendu après `useArenaRealtime`). */
   const arenaOutboundRef = useRef<Partial<UseArenaRealtimeResult>>({});
-  const beefGlobalTimerFlushRef = useRef<(() => void) | null>(null);
-  const scheduleBeefGlobalTimerBroadcast = useCallback(() => {
-    queueMicrotask(() => beefGlobalTimerFlushRef.current?.());
-  }, []);
 
   // ── CHAT (extracted hook) ──
   const {
@@ -604,35 +565,6 @@ export function TikTokStyleArena({
     setGlobalHeat, arenaOutboundRef,
   });
 
-  // Décompte partagé (deadline `beefEndsAtMsRef`) — médiateur + clients synchronisés
-  useEffect(() => {
-    if (!timerActive || timerPaused) return;
-    const tick = () => {
-      const end = beefEndsAtMsRef.current;
-      if (end == null) return;
-      const next = Math.max(0, Math.floor((end - Date.now()) / 1000));
-      setBeefTimeRemaining(next);
-      beefTimeRemainingRef.current = next;
-      if (isHostRef.current) {
-        if (next <= 5 * 60 && next > 60 && !beefWarning5Shown.current) {
-          beefWarning5Shown.current = true;
-          toast('5 minutes restantes', 'info');
-        }
-        if (next <= 60 && next > 0 && !beefWarning1Shown.current) {
-          beefWarning1Shown.current = true;
-          toast('1 minute restante !', 'error');
-        }
-      }
-      if (next <= 0 && isHostRef.current) {
-        beefEndsAtMsRef.current = null;
-        setTimerActive(false);
-        endBeefRef.current?.('Temps écoulé');
-      }
-    };
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, [timerActive, timerPaused, toast]);
   const resetPulseVoices = useArenaPulseVoicesStore((s) => s.reset);
   const resetArenaVerdict = useArenaVerdictStore((s) => s.reset);
   const addPulseVoices = useArenaPulseVoicesStore((s) => s.addPulse);
@@ -647,10 +579,23 @@ export function TikTokStyleArena({
     supportBurstRef.current = supportBurst;
   }, [supportBurst]);
   const [giftPrestigeFlash, setGiftPrestigeFlash] = useState(0);
-  const [verdictConfetti, setVerdictConfetti] = useState(false);
-  const [rematchSequence, setRematchSequence] = useState(false);
-  const rematchVerdictTimerRef = useRef<number | null>(null);
   const rematchExitTimerRef = useRef<number | null>(null);
+
+  // ── BEEF LIFECYCLE (extracted hook) ──
+  const {
+    beefEnded, setBeefEnded,
+    endSummary, setEndSummary,
+    beefEndedRef, endSummaryTimerRef,
+    verdictConfetti, setVerdictConfetti,
+    rematchSequence, setRematchSequence,
+    rematchVerdictTimerRef,
+    endBeef, handleMediatorVerdict,
+  } = useBeefLifecycle({
+    roomId, userId, isHost, runBeefManage,
+    stopAllMediaTracksRef, leaveRef, arenaOutboundRef,
+    beefEndsAtMsRef, beefWallClockStartedAtRef,
+    statsRef, supportBurstRef,
+  });
 
   /** Mémorise le panneau « préféré » pour les réactions intégrées (pas de compteur de vote). */
   const preferSide = useCallback((side: ArenaSupportSlotId) => {
@@ -717,209 +662,6 @@ export function TikTokStyleArena({
     };
   }, []);
 
-  /** Le chrono global du beef ne doit pas être figé par la micro du médiateur ou l’état audio des challengers. */
-
-  const adjustBeefTime = useCallback(
-    (deltaSec: number) => {
-      setBeefTimeRemaining((prev) => {
-        const next = Math.max(0, Math.min(MAX_BEEF_DURATION, prev + deltaSec));
-        beefTimeRemainingRef.current = next;
-        if (timerActiveRef.current && !timerPausedRef.current) {
-          beefEndsAtMsRef.current = Date.now() + next * 1000;
-        }
-        return next;
-      });
-      queueMicrotask(() => scheduleBeefGlobalTimerBroadcast());
-    },
-    [scheduleBeefGlobalTimerBroadcast],
-  );
-
-  const resetBeefTimerToFull = useCallback(() => {
-    const next = DEFAULT_BEEF_DURATION;
-    setBeefTimeRemaining(next);
-    beefTimeRemainingRef.current = next;
-    beefWarning5Shown.current = false;
-    beefWarning1Shown.current = false;
-    if (timerActiveRef.current && !timerPausedRef.current) {
-      beefEndsAtMsRef.current = Date.now() + next * 1000;
-    }
-    queueMicrotask(() => scheduleBeefGlobalTimerBroadcast());
-  }, [scheduleBeefGlobalTimerBroadcast]);
-
-  const pauseBeefTimer = useCallback(() => {
-    if (beefEndsAtMsRef.current != null) {
-      const r = Math.max(0, Math.floor((beefEndsAtMsRef.current - Date.now()) / 1000));
-      setBeefTimeRemaining(r);
-      beefTimeRemainingRef.current = r;
-    }
-    beefEndsAtMsRef.current = null;
-    setTimerPaused(true);
-    queueMicrotask(() => scheduleBeefGlobalTimerBroadcast());
-  }, [scheduleBeefGlobalTimerBroadcast]);
-
-  const resumeBeefTimer = useCallback(() => {
-    const r = beefTimeRemainingRef.current;
-    beefEndsAtMsRef.current = Date.now() + r * 1000;
-    setTimerPaused(false);
-    queueMicrotask(() => scheduleBeefGlobalTimerBroadcast());
-  }, [scheduleBeefGlobalTimerBroadcast]);
-
-  const [startingBeef, setStartingBeef] = useState(false);
-
-  const handleStartBeef = useCallback(
-    async (durationSec: number) => {
-      if (startingBeef) return;
-      setStartingBeef(true);
-      try {
-        const r = await runBeefManage({
-          action: 'TOGGLE_STATUS',
-          beefId: roomId,
-          toggle: 'START_LIVE_SESSION',
-        });
-        if (!r.ok) {
-          toast('Erreur au lancement du chrono', 'error');
-          return;
-        }
-        const sec = Math.max(60, Math.min(Math.floor(durationSec), MAX_BEEF_DURATION));
-        const now = Date.now();
-        const target = now + sec * 1000;
-        beefWallClockStartedAtRef.current = now;
-        beefEndsAtMsRef.current = target;
-        setBeefTimeRemaining(sec);
-        beefTimeRemainingRef.current = sec;
-        beefWarning5Shown.current = false;
-        beefWarning1Shown.current = false;
-        setTimerActive(true);
-        setTimerPaused(false);
-        toast('Le beef a commencé.', 'success');
-        queueMicrotask(() => scheduleBeefGlobalTimerBroadcast());
-      } catch (err) {
-        console.error('Start beef error:', err);
-        toast('Erreur au lancement du chrono', 'error');
-      } finally {
-        setStartingBeef(false);
-      }
-    },
-    [roomId, startingBeef, scheduleBeefGlobalTimerBroadcast, runBeefManage, toast],
-  );
-
-  const endBeef = useCallback(async (reason: string = 'Terminé par le Ref') => {
-    if (beefEndedRef.current) return;
-    stopAllMediaTracksRef.current();
-    if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.removeItem(`arena_joined_${roomId}_${userId}`);
-      } catch {
-        /* ignore */
-      }
-    }
-
-    const s = statsRef.current;
-    const wall = beefWallClockStartedAtRef.current;
-    const elapsed =
-      wall != null
-        ? Math.max(0, Math.floor((Date.now() - wall) / 1000))
-        : Math.max(0, DEFAULT_BEEF_DURATION - s.beefTimeRemaining);
-    const mins = Math.floor(elapsed / 60);
-    const secs = elapsed % 60;
-
-    const sb = supportBurstRef.current;
-    const summary = {
-      duration: `${mins}m ${secs.toString().padStart(2, '0')}s`,
-      viewers: s.liveViewerCount,
-      resonanceA: s.votesA + sb.A,
-      resonanceB: s.votesB + sb.B,
-      resonanceC: s.votesC + sb.C,
-      resonanceD: s.votesD + sb.D,
-      resonanceE: s.votesE + sb.E,
-      resonanceF: s.votesF + sb.F,
-      resonanceM: sb.M,
-      messages: s.messagesCount,
-      endReason: reason,
-    };
-
-    const r = await runBeefManage({
-      action: 'TOGGLE_STATUS',
-      beefId: roomId,
-      toggle: 'END_BEEF',
-      endReason: reason,
-      summary,
-    });
-    if (!r.ok) {
-      stopAllMediaTracksRef.current();
-      return;
-    }
-
-    beefEndedRef.current = true;
-    beefEndsAtMsRef.current = null;
-    beefWallClockStartedAtRef.current = null;
-    setEndSummary(summary);
-    setBeefEnded(true);
-
-    // Broadcast end to all viewers (with stats so they see accurate summary)
-    arenaOutboundRef.current.broadcastBeefEnded?.({
-      reason,
-      summary,
-    });
-
-    // Stop camera/mic
-    await leaveRef.current();
-
-    // Auto-redirect after 12 seconds
-    endSummaryTimerRef.current = setTimeout(() => {
-      router.replace('/feed');
-    }, 12000);
-  }, [roomId, router, runBeefManage, userId]);
-
-  const handleMediatorVerdict = useCallback(
-    async (kind: 'resolved' | 'closed' | 'rematch') => {
-      if (!isHost || beefEndedRef.current) return;
-      useArenaVerdictStore.getState().setVerdict(kind, roomId);
-      arenaOutboundRef.current.broadcastBeefVerdict?.(kind);
-
-      if (kind === 'resolved') {
-        setVerdictConfetti(true);
-        window.setTimeout(() => setVerdictConfetti(false), 2200);
-        window.setTimeout(() => void endBeef('L\u2019Agora a statu\u00e9 \u2014 Paix proclam\u00e9e'), 1600);
-        return;
-      }
-      if (kind === 'closed') {
-        void endBeef('Dissolution \u2014 Les citoyens sont lib\u00e9r\u00e9s, l\u2019Agora se ferme');
-        return;
-      }
-      playRematchThunderSfx();
-      setRematchSequence(true);
-      await runBeefManage({
-        action: 'TOGGLE_STATUS',
-        beefId: roomId,
-        toggle: 'REMATCH_MEDIATION_SUMMARY',
-      });
-      if (rematchVerdictTimerRef.current) clearTimeout(rematchVerdictTimerRef.current);
-      rematchVerdictTimerRef.current = window.setTimeout(() => {
-        rematchVerdictTimerRef.current = null;
-        void endBeef('Rappel \u00e0 l\u2019Agora \u2014 Nouveau round exig\u00e9');
-      }, 10000);
-    },
-    [isHost, roomId, endBeef, runBeefManage],
-  );
-
-  useEffect(() => {
-    if (beefEnded) {
-      setRematchSequence(false);
-      if (rematchVerdictTimerRef.current) {
-        clearTimeout(rematchVerdictTimerRef.current);
-        rematchVerdictTimerRef.current = null;
-      }
-    }
-  }, [beefEnded]);
-
-  useEffect(() => {
-    return () => {
-      if (rematchVerdictTimerRef.current) clearTimeout(rematchVerdictTimerRef.current);
-    };
-  }, []);
-
-  // Keep refs in sync
   useEffect(() => { endBeefRef.current = endBeef; }, [endBeef]);
   useEffect(() => {
     statsRef.current = {
@@ -1303,35 +1045,12 @@ export function TikTokStyleArena({
   const mediatorIsLocal = isHost;
   const mediatorName = isHost ? userName : host.name;
 
-  const giftRecipients = useMemo(() => {
-    const seen = new Set<string>();
-    const out: { id: string; label: string }[] = [];
-
-    const push = (id: string | undefined | null, label: string) => {
-      if (!id || seen.has(id) || userIdsEqual(id, userId)) return;
-      seen.add(id);
-      out.push({ id, label: label.trim() || 'Participant' });
-    };
-
-    push(host.id, mediatorName || host.name || 'Ref');
-
-    challengerRemoteSlots.forEach((p, idx) => {
-      if (!p?.arenaUserId) return;
-      const name = p.userName?.trim();
-      const label =
-        name && !name.startsWith('En attente') ? name : `Combattant ${idx + 1}`;
-      push(p.arenaUserId, label);
-    });
-
-    return out;
-  }, [host.id, host.name, mediatorName, challengerRemoteSlots, userId]);
-
-  useEffect(() => {
-    if (giftRecipients.length === 0) return;
-    if (!giftTarget || !giftRecipients.some((r) => r.id === giftTarget)) {
-      setGiftTarget(giftRecipients[0].id);
-    }
-  }, [giftRecipients, giftTarget]);
+  // ── GIFT SEND (extracted hook) ──
+  const { giftTarget, setGiftTarget, giftRecipients, sendGift } = useGiftSend({
+    roomId, userId, userName, hostId: host.id, hostName: host.name, mediatorName,
+    challengerRemoteSlots, toast, arenaOutboundRef,
+    addRemoteMessage, setAuraMed, setGiftPrestigeFlash, setShowGiftPicker, goBuyPoints,
+  });
 
   const mediatorMicEnabled = mediatorIsLocal ? micEnabled : !!mediatorParticipant?.audioOn;
 
@@ -2951,89 +2670,7 @@ export function TikTokStyleArena({
                     <button
                       key={gift.id}
                       type="button"
-                      onClick={async () => {
-                        if (!optimisticDebit(gift.cost)) {
-                          toast(`Lingots insuffisants — il te manque ${gift.cost - walletBalance} Lingots`, 'error', {
-                            id: 'insufficient-funds',
-                            action: { label: 'Recharger', onClick: () => goBuyPoints() },
-                          });
-                          return;
-                        }
-
-                        try {
-                          const targetUserId = giftTarget || giftRecipients[0]?.id || '';
-                          if (!targetUserId) {
-                            toast('Participant non connecté', 'error');
-                            useWalletStore.getState().sync();
-                            return;
-                          }
-
-                          const targetName =
-                            giftRecipients.find((r) => r.id === targetUserId)?.label ?? host.name;
-
-                          const { data: { session } } = await supabase.auth.getSession();
-
-                          const res = await fetch('/api/gifts/send', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              Authorization: `Bearer ${session?.access_token || ''}`,
-                            },
-                            body: JSON.stringify({
-                              beef_id: roomId,
-                              recipient_id: targetUserId,
-                              gift_type_id: gift.id,
-                              points_amount: gift.cost,
-                            }),
-                          });
-
-                          const data = await res.json();
-                          if (!res.ok) throw new Error(data.error);
-
-                          const medBoost = Math.min(25, 4 + Math.floor(gift.cost / 40));
-                          setAuraMed((v) => Math.min(300, v + medBoost));
-                          if (gift.cost >= 50) setGiftPrestigeFlash((k) => k + 1);
-
-                          const giftKey =
-                            data.giftId != null ? String(data.giftId) : `gift_${Date.now()}`;
-
-                          // Injection dynamique de la punchline
-                          const msgContent = gift.messageTemplate
-                            .replace('{sender}', userName)
-                            .replace('{recipient}', targetName);
-
-                          const initial = userName?.[0]?.toUpperCase() || '?';
-
-                          addRemoteMessage(userName, msgContent, initial, giftKey, 'gift', userName, targetName, gift.messageTemplate);
-                          arenaOutboundRef.current.broadcastMessage?.({
-                            user_name: userName,
-                            content: msgContent,
-                            initial,
-                            id: giftKey,
-                            type: 'gift',
-                            giftSender: userName,
-                            giftRecipient: targetName,
-                            giftTemplate: gift.messageTemplate,
-                          });
-
-                          const bigPayload: ArenaBigGiftPayload = {
-                            cost: gift.cost,
-                            label: gift.label,
-                            emoji: gift.emoji,
-                            giftTypeId: gift.id,
-                            senderName: userName,
-                            recipientName: targetName,
-                            messageTemplate: gift.messageTemplate,
-                          };
-                          useArenaVolatileStore.getState().enqueueBigGift(bigPayload);
-                          arenaOutboundRef.current.broadcastArenaBigGift?.(bigPayload);
-                        } catch (err: unknown) {
-                          useWalletStore.getState().sync();
-                          const m = err instanceof Error ? err.message : "Erreur lors de l'envoi";
-                          toast(m, 'error');
-                        }
-                        setShowGiftPicker(false);
-                      }}
+                      onClick={() => void sendGift(gift)}
                       className="flex flex-col items-center gap-1 rounded-2xl bg-white/5 p-2 hover:bg-white/12 active:scale-95"
                     >
                       <img
