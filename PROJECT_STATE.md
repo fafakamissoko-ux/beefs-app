@@ -85,7 +85,17 @@
   - F2.5 : Extraction UI — ArenaBeefEndSummary, ArenaMenuPanel (fusion Desktop+Mobile, Design System Verre Lourd), ArenaDockPickersPortal (emoji+gift pickers)
   - F2.6 : Renommage TikTokStyleArena.tsx → ArenaView.tsx + adaptation imports dans arena/[roomId]/page.tsx et live/[id]/page.tsx
 
+- **Câblage gift type** : Pipeline cadeau complet (API → broadcast → store → rendu Premium Glass amber). ✅
+- **Migration SQL 106** : `106_update_gift_prices.sql` appliquée sur Supabase (17 gift types, prix synchronisés). ✅
+- **Migration SQL 108** : `108_messaging_optimizations.sql` — RPC `get_conversations_with_unread` (résolution N+1). ✅
+
+- **Audit Phase E.2** : Messagerie & Social — Optimisations & UI — 6 ordres de frappe exécutés :
+  - E2-01 : RPC `get_conversations_with_unread` (élimine N+1 requêtes par conversation)
+  - E2-02 : Debounce 300ms recherche utilisateurs + état `convError` avec bouton Réessayer
+  - E2-03 : Pagination messages (50, historique inversé), FollowListModal `.range(0,29)`, notifications `PAGE_SIZE=20`, fix `hasMore` par onglet actif
+  - E2-04 : Design System Verre Lourd sur GlobalMessagesDrawer (`bg-slate-950/75 backdrop-blur-md`) + remplacement `setTimeout` par `onAnimationComplete`
+  - E2-05 : Suppression `delay: index * 0.04` sur FollowListModal et notifications (performance listes)
+  - E2-06 : Escape handler FollowListModal, typo "démarrer", `aria-label` textarea DMs
+
 ## Tâches en Cours (Next Steps)
-- [ ] Câblage gift type — Finaliser le pipeline cadeau dans le chat
-- [ ] Phase E.2 : Rate limiting serveur (E-04), RPC N+1 (E-06/E-07), indicateurs frappe (E-08), refonte UI (E-15), animations (E-27)
-- [ ] Exécuter `106_update_gift_prices.sql` sur Supabase si pas fait
+- [ ] Phases d'audit restantes (à identifier et enchaîner)

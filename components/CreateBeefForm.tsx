@@ -86,6 +86,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Record<string, unknown>[]>([]);
   const [searching, setSearching] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tagInput, setTagInput] = useState('');
   const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
 
@@ -93,6 +94,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   const [teaserFile, setTeaserFile] = useState<File | null>(null);
   const [teaserPreview, setTeaserPreview] = useState<string | null>(null);
   const teaserPreviewUrlRef = useRef<string | null>(null);
+  const isSubmittingRef = useRef(false);
   const [isCropping, setIsCropping] = useState(false);
   const [rawImageUrl, setRawImageUrl] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -125,6 +127,12 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
         teaserPreviewUrlRef.current = null;
       }
       setTeaserPreview(null);
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast('Fichier trop lourd (50 Mo max)', 'error');
+      e.target.value = '';
       return;
     }
 
@@ -210,6 +218,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   const addTag = (tag: string) => {
     const cleanTag = tag.replace(/^[#$]/, '').trim().toLowerCase();
     if (!cleanTag) return;
+    if (cleanTag.length > 24) return;
     if (beefData.tags.length >= 10) {
       toast('Maximum 10 tags par beef', 'info');
       return;
@@ -261,26 +270,31 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
     }
   };
 
-  const searchUsers = async (query: string) => {
+  const searchUsers = (query: string) => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     if (query.length < 2) {
       setSearchResults([]);
+      setSearching(false);
       return;
     }
     setSearching(true);
-    try {
-      const { data, error } = await supabase
-        .from('user_public_profile')
-        .select('id, username, display_name, avatar_url')
-        .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
-        .neq('id', user?.id)
-        .limit(5);
-      if (error) throw error;
-      setSearchResults(data || []);
-    } catch (error) {
-      console.error('Error searching users:', error);
-    } finally {
-      setSearching(false);
-    }
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const safeQuery = query.replace(/[%_\\]/g, '\\$&');
+        const { data, error } = await supabase
+          .from('user_public_profile')
+          .select('id, username, display_name, avatar_url')
+          .or(`username.ilike.%${safeQuery}%,display_name.ilike.%${safeQuery}%`)
+          .neq('id', user?.id)
+          .limit(5);
+        if (error) throw error;
+        setSearchResults(data || []);
+      } catch (err) {
+        console.error('Error searching users:', err);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
   };
 
   const addParticipant = (userData: Record<string, unknown>, isMain: boolean) => {
@@ -377,11 +391,12 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   };
 
   const handleSubmit = async () => {
-    if (!intent) return;
+    if (!intent || isSubmittingRef.current) return;
     const errors = validateForm();
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
+    isSubmittingRef.current = true;
     setLoading(true);
     try {
       const payload: SubmitBeefPayload = {
@@ -411,6 +426,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
       const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message) : 'Erreur inconnue. Réessaie.';
       setFieldErrors({ submit: msg });
     } finally {
+      isSubmittingRef.current = false;
       setLoading(false);
     }
   };

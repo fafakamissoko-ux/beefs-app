@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { continuationPriceFromResolvedCount } from '@/lib/mediator-pricing';
 import { normalizeScheduledAtForInsert } from '@/lib/beef-schedule';
+import { sanitize } from '@/lib/security';
 
 export type BeefCreationIntent = 'manifesto' | 'mediation';
 export type BeefEventType = 'standard' | 'prestige';
@@ -41,9 +42,13 @@ export async function submitNewBeef(
   beefData: SubmitBeefPayload
 ) {
   assertValidUuid(userId, 'userId');
+
+  beefData.title = sanitize(beefData.title ?? '');
+  if (beefData.description) beefData.description = sanitize(beefData.description);
+
   const { count } = await supabase
     .from('beefs')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('mediator_id', userId)
     .eq('resolution_status', 'resolved');
 
@@ -111,18 +116,24 @@ export async function submitNewBeef(
   if (when) insertData.scheduled_at = when;
 
   if (beefData.teaser_file) {
+    if (beefData.teaser_file.size > 50 * 1024 * 1024) {
+      throw new Error('Fichier trop lourd (50 Mo maximum).');
+    }
+
     const fileExt = beefData.teaser_file.name.split('.').pop();
     const fileName = `${userId}_${Date.now()}.${fileExt}`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('teasers')
       .upload(fileName, beefData.teaser_file);
 
-    if (!uploadError && uploadData) {
-      const { data: publicUrlData } = supabase.storage.from('teasers').getPublicUrl(fileName);
-      const isVideo = beefData.teaser_file.type.startsWith('video/');
-      if (isVideo) insertData.video_url = publicUrlData.publicUrl;
-      else insertData.thumbnail = publicUrlData.publicUrl;
+    if (uploadError || !uploadData) {
+      throw new Error("Échec de l'upload du teaser. Réessaie.");
     }
+
+    const { data: publicUrlData } = supabase.storage.from('teasers').getPublicUrl(fileName);
+    const isVideo = beefData.teaser_file.type.startsWith('video/');
+    if (isVideo) insertData.video_url = publicUrlData.publicUrl;
+    else insertData.thumbnail = publicUrlData.publicUrl;
   }
 
   const { data: beef, error } = await supabase.from('beefs').insert(insertData).select().single();

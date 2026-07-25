@@ -132,6 +132,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
   const [remotePreviewIsVideo, setRemotePreviewIsVideo] = useState(false);
   const teaserPreviewUrlRef = useRef<string | null>(null);
   const baselineMediaRef = useRef<{ video: string | null; thumb: string | null }>({ video: null, thumb: null });
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isCropping, setIsCropping] = useState(false);
   const [rawImageUrl, setRawImageUrl] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -287,6 +288,12 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
       return;
     }
 
+    if (file.size > 50 * 1024 * 1024) {
+      toast('Fichier trop lourd (50 Mo max)', 'error');
+      e.target.value = '';
+      return;
+    }
+
     if (file.type.startsWith('image/')) {
       const url = URL.createObjectURL(file);
       setRawImageUrl(url);
@@ -391,26 +398,31 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
     }
   };
 
-  const searchUsers = async (query: string) => {
+  const searchUsers = (query: string) => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     if (query.length < 2) {
       setSearchResults([]);
+      setSearching(false);
       return;
     }
     setSearching(true);
-    try {
-      const { data, error } = await supabase
-        .from('user_public_profile')
-        .select('id, username, display_name, avatar_url')
-        .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
-        .neq('id', user?.id ?? '')
-        .limit(5);
-      if (error) throw error;
-      setSearchResults((data ?? []) as PublicProfileSearchRow[]);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSearching(false);
-    }
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const safeQuery = query.replace(/[%_\\]/g, '\\$&');
+        const { data, error } = await supabase
+          .from('user_public_profile')
+          .select('id, username, display_name, avatar_url')
+          .or(`username.ilike.%${safeQuery}%,display_name.ilike.%${safeQuery}%`)
+          .neq('id', user?.id ?? '')
+          .limit(5);
+        if (error) throw error;
+        setSearchResults((data ?? []) as PublicProfileSearchRow[]);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
   };
 
   const addParticipant = (row: PublicProfileSearchRow, isMainDefault: boolean) => {
