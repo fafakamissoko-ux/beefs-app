@@ -560,7 +560,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                         <div className="relative h-full w-full">
                           <video
                             src={teaserPreview}
-                            className="h-full w-full object-contain bg-black"
+                            className="h-full w-full object-cover bg-black"
                             muted
                             loop
                             autoPlay
@@ -572,7 +572,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                         </div>
                       ) : (
                         // eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob)
-                        <img src={teaserPreview} className="h-full w-full object-contain bg-black" alt="Aperçu teaser" />
+                        <img src={teaserPreview} className="h-full w-full object-cover bg-black" alt="Aperçu teaser" />
                       )
                     ) : (
                       <div className="flex flex-col items-center gap-3 text-white/40">

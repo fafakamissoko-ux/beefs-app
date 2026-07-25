@@ -768,14 +768,14 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                       {teaserPreview ? (
                         teaserFile?.type.startsWith('video/') || (!teaserFile && remotePreviewIsVideo) ? (
                           <div className="relative h-full w-full">
-                            <video src={teaserPreview} className="h-full w-full bg-black object-contain" muted loop autoPlay playsInline />
+                            <video src={teaserPreview} className="h-full w-full bg-black object-cover" muted loop autoPlay playsInline />
                             <div className="absolute bottom-2 right-2 rounded-full bg-black/50 p-1.5 backdrop-blur-sm">
                               <Film className="h-3.5 w-3.5 text-brand-400" aria-hidden />
                             </div>
                           </div>
                         ) : (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={teaserPreview} className="h-full w-full bg-black object-contain" alt="Aperçu teaser" />
+                          <img src={teaserPreview} className="h-full w-full bg-black object-cover" alt="Aperçu teaser" />
                         )
                       ) : (
                         <div className="flex flex-col items-center gap-3 text-white/40">
