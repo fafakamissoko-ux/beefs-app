@@ -1229,20 +1229,7 @@ export function TikTokStyleArena({
       toast('Le Ref est de retour', 'success');
     }
 
-    // Challengers partis, médiateur toujours présent : ne pas terminer le beef — notification unique.
-    if (
-      isHost &&
-      challengerUserIds.length > 0 &&
-      challengersEverJoinedRef.current &&
-      remoteParticipants.length === 0 &&
-      isJoined &&
-      !recentKickRef.current
-    ) {
-      if (!challengersAllLeftNotifiedRef.current) {
-        challengersAllLeftNotifiedRef.current = true;
-        toast('Les participants ont quitté la séance — tu peux clôturer depuis la régie.', 'info');
-      }
-    } else if (remoteParticipants.length > 0) {
+    if (remoteParticipants.length > 0) {
       challengersAllLeftNotifiedRef.current = false;
     }
   }, [remoteParticipants, isJoined, isHost, host.id, host.name, participantRoles, mediatorGraceActive, toast]);
