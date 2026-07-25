@@ -24,14 +24,14 @@ import {
 } from 'lucide-react';
 import { ReportBlockModal } from '@/components/ReportBlockModal';
 import { VsTransition } from './VsTransition';
-import { ChatPanel } from './ChatPanel';
+
 import { PreJoinScreen } from './PreJoinScreen';
 import { ArenaChatMessages } from './ArenaChatMessages';
 import { ArenaLayoutManager } from '@/components/Arena/ArenaLayoutManager';
 import { PremiumNotificationBadge } from '@/components/shared/PremiumNotificationBadge';
-import { FeatureGuide } from './FeatureGuide';
+
 import { ViewerListModal } from './ViewerListModal';
-import { ProfileUserLink } from '@/components/ProfileUserLink';
+
 import { physicalPeerToCallParticipant, useDailyCall, type CallParticipant } from '@/hooks/useDailyCall';
 import { supabase } from '@/lib/supabase/client';
 import { userIdsEqual } from '@/lib/user-id-equal';
@@ -88,7 +88,7 @@ import {
   type FlyingReactionEntry,
 } from './FlyingReactionsLayer';
 import { useArenaVolatileStore, type ArenaBigGiftPayload } from '@/lib/stores/arenaVolatileStore';
-import { MediatorSupportHalo } from './MediatorSupportHalo';
+
 import { useArenaPulseVoicesStore } from '@/lib/stores/arenaPulseVoicesStore';
 import { useArenaVerdictStore } from '@/lib/stores/arenaVerdictStore';
 import { VerdictConfettiBurst, RematchVerdictOverlay } from './VerdictEffects';
@@ -109,8 +109,6 @@ import { GIFT_CATALOG } from '@/lib/constants/gifts';
 const DEFAULT_BEEF_DURATION = 60 * 60; // 60 min
 /** Plafond ajustable depuis la régie (prolongations). */
 const MAX_BEEF_DURATION = 4 * 60 * 60; // 4 h
-
-// IngotIcon — extracted to components/shared/IngotIcon.tsx
 
 
 interface Participant {
@@ -140,10 +138,6 @@ interface TikTokStyleArenaProps {
   onShare: () => void;
 }
 
-// 🔥 TOP 10 RÉACTIONS (affichées par défaut)
-const TOP_10_REACTIONS = [
-  '👍', '😂', '🔥', '💯', '👏', '😮', '💀', '❤️', '🎉', '🚀'
-];
 
 // 🔥 TOUTES LES RÉACTIONS POPULAIRES (80)
 const POPULAR_REACTIONS = [
@@ -173,24 +167,6 @@ const PICKER_REACTIONS = POPULAR_REACTIONS.filter((e) => {
 const INTEGRATED_SUPPORT_REACTIONS = new Set<string>(['❤️', HEART_ON_FIRE, '👍']);
 
 
-// Debater — now exported from hooks/useDebaterInvites.ts
-
-interface UserProfile {
-  id: string;
-  username: string;
-  displayName: string;
-  avatarUrl: string | null;
-  bio?: string;
-  isPrivate: boolean;
-  joinedDate: string;
-  stats: {
-    mediations: number;
-    participations: number;
-    followers: number;
-    following: number;
-    points: number;
-  };
-}
 
 export function TikTokStyleArena({
   host,
@@ -1004,22 +980,6 @@ export function TikTokStyleArena({
     return () => clearTimeout(t);
   }, [auraMed]);
 
-  /** Aura prestige-gold — cadre sponsor : les gains remontent au Host quand un soutien financier est détecté.
-   *  TODO: brancher sur l'événement gift broadcast ; pour l'instant, activé par l'aura A ou B > 60. */
-  const sponsorAuraActive = CHALLENGER_SLOT_IDS.some((id) => auras[id] > 60);
-  const sponsorGlow = sponsorAuraActive
-    ? 'shadow-[0_0_52px_rgba(212,175,55,0.45),0_0_96px_rgba(255,220,140,0.22),inset_0_0_26px_rgba(212,175,55,0.14)]'
-    : '';
-
-  const globalHeatGlow = useMemo(() => {
-    if (globalHeat <= 0) return 'none';
-    const a1 = Math.min(0.55, 0.14 + globalHeat / 180);
-    const a2 = Math.min(0.35, 0.06 + globalHeat / 220);
-    const r1 = 26 + globalHeat * 0.95;
-    const r2 = 56 + globalHeat * 0.75;
-    return `0 0 ${r1}px rgba(255,200,50,${a1}), 0 0 ${r2}px rgba(255,165,40,${a2}), inset 0 0 ${18 + globalHeat * 0.35}px rgba(255,210,100,${Math.min(0.2, 0.04 + globalHeat / 400)})`;
-  }, [globalHeat]);
-
   useEffect(() => {
     challengersEverJoinedRef.current = false;
   }, [roomId]);
@@ -1056,7 +1016,6 @@ export function TikTokStyleArena({
     localParticipant,
     remoteParticipants,
     activeSpeakerPeerId,
-    error: callError,
     isCameraInterrupted,
     recoverMediaDevices,
     networkQuality,
@@ -1147,11 +1106,6 @@ export function TikTokStyleArena({
   useEffect(() => {
     leaveRef.current = leave;
   }, [leave]);
-
-  /** Pas de bulles « onboarding » quand la salle est déjà active ou pendant la connexion Daily */
-  const featureGuideSuppress =
-    isJoining ||
-    (isJoined && (remoteParticipants.length > 0 || timerActive));
 
   // Track when mediator has actually connected at least once
   useEffect(() => {
@@ -1301,7 +1255,6 @@ export function TikTokStyleArena({
     : isViewer
       ? challengerRemoteSlots[0] ?? null
       : localParticipant;
-  const leftPanelIsLocal = !isHost && !isViewer;
   const leftPanelName = isHost
     ? (challengerRemoteSlots[0]?.userName || 'Challenger 1')
     : isViewer
@@ -1338,14 +1291,6 @@ export function TikTokStyleArena({
     [expectedUids, challengerRemoteSlots],
   );
 
-  const leftSlot = 'A';
-  const rightSlot = 'B';
-
-  const leftAura = auraA;
-  const rightAura = auraB;
-  const leftColor = '225,29,72';
-  const rightColor = '16,185,129';
-
   const expectedChallengers = useMemo(
     () =>
       Object.values(participantRoles)
@@ -1353,23 +1298,6 @@ export function TikTokStyleArena({
         .map((r) => r.name),
     [participantRoles],
   );
-
-  const leftIsSpeaking =
-    speakingTurnActive &&
-    !!leftPanel?.arenaUserId &&
-    speakingTurnTarget === leftPanel.arenaUserId;
-  const rightIsSpeaking =
-    speakingTurnActive &&
-    !!rightPanel?.arenaUserId &&
-    speakingTurnTarget === rightPanel.arenaUserId;
-
-  const leftRemoteAudioMuted =
-    structuredDebateEnabled &&
-    !leftPanelIsLocal &&
-    !!leftPanel &&
-    (!leftIsSpeaking || mediatorHoldingFloor);
-  const rightRemoteAudioMuted =
-    structuredDebateEnabled && !!rightPanel && (!rightIsSpeaking || mediatorHoldingFloor);
 
   const mediatorParticipant = isHost ? localParticipant : hostRemoteParticipant;
   const mediatorIsLocal = isHost;
@@ -1494,17 +1422,6 @@ export function TikTokStyleArena({
     if (!speakingTurnActive) return null;
     return hotMicSpeakerSlot ?? floorAnnouncement?.slot ?? null;
   }, [speakingTurnActive, hotMicSpeakerSlot, floorAnnouncement]);
-
-  const gloryIntenseA =
-    gloryChallengerSlot === 'A' &&
-    speakingTurnActive &&
-    effectiveHotMicSpeakerSlot === 'A' &&
-    !speakingTurnPaused;
-  const gloryIntenseB =
-    gloryChallengerSlot === 'B' &&
-    speakingTurnActive &&
-    effectiveHotMicSpeakerSlot === 'B' &&
-    !speakingTurnPaused;
 
   // Multi-participant system
   const {
