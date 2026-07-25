@@ -42,6 +42,14 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
   const queryClient = useQueryClient();
   const [actionId, setActionId] = useState<string | null>(null);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   const title = type === 'followers' ? 'Abonnés' : 'Abonnements';
 
   const { data, isLoading: loading, isError } = useQuery({
@@ -246,7 +254,7 @@ export function FollowListModal({ userId, type, onClose }: FollowListModalProps)
                   key={u.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.04, type: 'spring', stiffness: 400, damping: 28 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 28 }}
                   className="card flex items-center gap-3 p-3 rounded-[2rem] bg-black border border-white/10 hover:border-white/15 transition-colors"
                 >
                   <button

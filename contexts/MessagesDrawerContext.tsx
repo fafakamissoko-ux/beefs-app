@@ -7,6 +7,7 @@ interface MessagesDrawerContextValue {
   targetUserId: string | undefined;
   openDrawer: (userId?: string) => void;
   closeDrawer: () => void;
+  clearTarget: () => void;
 }
 
 export const useMessagesDrawer = create<MessagesDrawerContextValue>((set) => ({
@@ -15,9 +16,8 @@ export const useMessagesDrawer = create<MessagesDrawerContextValue>((set) => ({
   openDrawer: (userId) => set({ isDrawerOpen: true, targetUserId: userId }),
   closeDrawer: () => {
     set({ isDrawerOpen: false });
-    // Le délai de 300ms correspond à l'animation de fermeture Radix/Vaul avant le démontage
-    setTimeout(() => set({ targetUserId: undefined }), 300);
   },
+  clearTarget: () => set({ targetUserId: undefined }),
 }));
 
 // Coquille vide pour éviter de faire planter le `layout.tsx`

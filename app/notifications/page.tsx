@@ -472,7 +472,7 @@ export default function NotificationsPage() {
                     type="button"
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.04, duration: 0.25, ease: 'easeOut' }}
+                    transition={{ duration: 0.25, ease: 'easeOut' }}
                     onClick={() => handleRowClick(n)}
                     className={`flex items-start gap-4 w-full text-left px-4 py-3 transition-colors hover:bg-white/[0.04] border-b border-white/5 ${
                       unread ? 'bg-brand-500/5' : ''

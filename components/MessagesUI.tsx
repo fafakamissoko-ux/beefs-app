@@ -1253,6 +1253,7 @@ export function MessagesUI({ isDrawerMode = false, onClose }: MessagesUIProps = 
                             }
                           }}
                           placeholder="Message..."
+                          aria-label="Saisir un message"
                           rows={1}
                           className="hide-scrollbar flex-1 min-w-0 resize-none border-none bg-transparent px-3 py-2 font-sans text-[15px] text-white placeholder-white/40 focus:outline-none focus:ring-0 max-h-[120px]"
                         />

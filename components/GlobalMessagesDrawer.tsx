@@ -6,7 +6,7 @@ import { useMessagesDrawer } from '@/contexts/MessagesDrawerContext';
 import { MessagesUI } from '@/components/MessagesUI';
 
 export function GlobalMessagesDrawer() {
-  const { isDrawerOpen, closeDrawer } = useMessagesDrawer();
+  const { isDrawerOpen, closeDrawer, clearTarget } = useMessagesDrawer();
 
   const handleClose = () => {
     if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
@@ -38,7 +38,12 @@ export function GlobalMessagesDrawer() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 z-[999999] flex w-full flex-col overflow-hidden border-l border-white/10 bg-black/20 backdrop-blur-[2px] shadow-2xl md:w-[450px] lg:w-[600px]"
+              onAnimationComplete={(def) => {
+                if (typeof def === 'object' && def !== null && 'x' in def && def.x === '100%') {
+                  clearTarget();
+                }
+              }}
+              className="fixed right-0 top-0 bottom-0 z-[999999] flex w-full flex-col overflow-hidden bg-slate-950/75 backdrop-blur-md border-l border-white/10 shadow-2xl md:w-[450px] lg:w-[600px]"
             >
               <MessagesUI isDrawerMode={true} onClose={handleClose} />
             </motion.div>
