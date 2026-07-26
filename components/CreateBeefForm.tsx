@@ -109,11 +109,13 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
   }, []);
 
   useEffect(() => {
-    const url = rawImageUrl;
     return () => {
-      if (url) URL.revokeObjectURL(url);
+      if (rawImageUrl && rawImageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(rawImageUrl);
+      }
     };
-  }, [rawImageUrl]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -945,11 +947,16 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
             <TeaserEditor
               rawImageUrl={rawImageUrl}
               onSave={(file) => {
-                if (teaserPreviewUrlRef.current) URL.revokeObjectURL(teaserPreviewUrlRef.current);
-                const url = URL.createObjectURL(file);
-                teaserPreviewUrlRef.current = url;
+                if (teaserPreviewUrlRef.current) {
+                  URL.revokeObjectURL(teaserPreviewUrlRef.current);
+                  teaserPreviewUrlRef.current = null;
+                }
                 setTeaserFile(file);
-                setTeaserPreview(url);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  setTeaserPreview(reader.result as string);
+                };
+                reader.readAsDataURL(file);
                 setIsEditingTeaser(false);
                 setRawImageUrl(null);
               }}

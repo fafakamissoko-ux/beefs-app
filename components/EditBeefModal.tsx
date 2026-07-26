@@ -1004,12 +1004,17 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
             <TeaserEditor
               rawImageUrl={rawImageUrl}
               onSave={(file) => {
-                if (teaserPreviewUrlRef.current) URL.revokeObjectURL(teaserPreviewUrlRef.current);
-                const url = URL.createObjectURL(file);
-                teaserPreviewUrlRef.current = url;
+                if (teaserPreviewUrlRef.current) {
+                  URL.revokeObjectURL(teaserPreviewUrlRef.current);
+                  teaserPreviewUrlRef.current = null;
+                }
                 setTeaserFile(file);
                 setRemotePreviewIsVideo(false);
-                setTeaserPreview(url);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  setTeaserPreview(reader.result as string);
+                };
+                reader.readAsDataURL(file);
                 setIsEditingTeaser(false);
                 setRawImageUrl(null);
               }}
