@@ -13,6 +13,7 @@ import {
   UserPlus,
   ImagePlus,
   Film,
+  Type,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -539,8 +540,22 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                           </div>
                         </div>
                       ) : (
-                        // eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob)
-                        <img src={teaserPreview} className="h-full w-full object-cover bg-black" alt="Aperçu teaser" />
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob) */}
+                          <img src={teaserPreview} className="h-full w-full object-cover bg-black" alt="Aper\u00e7u teaser" />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRawImageUrl(teaserPreview);
+                              setIsEditingTeaser(true);
+                            }}
+                            className="absolute bottom-2 left-2 z-10 flex items-center gap-1.5 rounded-full bg-cyan-500/90 px-3 py-1.5 text-[11px] font-bold text-black shadow-lg hover:bg-cyan-400 transition-colors"
+                          >
+                            <Type className="h-3 w-3" />
+                            {'\u00c9'}diter
+                          </button>
+                        </>
                       )
                     ) : (
                       <div className="flex flex-col items-center gap-3 text-white/40">
