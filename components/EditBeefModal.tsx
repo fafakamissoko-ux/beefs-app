@@ -1035,6 +1035,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                   crop={crop}
                   zoom={zoom}
                   aspect={3 / 4}
+                  objectFit="contain"
                   onCropChange={setCrop}
                   onZoomChange={setZoom}
                   onCropComplete={onCropComplete}

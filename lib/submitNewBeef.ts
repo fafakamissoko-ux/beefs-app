@@ -18,6 +18,8 @@ export interface SubmitBeefPayload {
   teaser_file?: File | null;
 }
 
+let _submitting = false;
+
 /** RFC 4122 UUID v1–v8 — rejet des chaînes arbitraires avant insertion DB. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -41,166 +43,168 @@ export async function submitNewBeef(
   userId: string,
   beefData: SubmitBeefPayload
 ) {
-  assertValidUuid(userId, 'userId');
+  if (_submitting) throw new Error('Création déjà en cours.');
+  _submitting = true;
 
-  beefData.title = sanitize(beefData.title ?? '');
-  if (beefData.description) beefData.description = sanitize(beefData.description);
+  try {
+    assertValidUuid(userId, 'userId');
 
-  const { count } = await supabase
-    .from('beefs')
-    .select('id', { count: 'exact', head: true })
-    .eq('mediator_id', userId)
-    .eq('resolution_status', 'resolved');
+    beefData.title = sanitize(beefData.title ?? '');
+    if (beefData.description) beefData.description = sanitize(beefData.description);
 
-  const price = continuationPriceFromResolvedCount(count ?? 0);
+    const { count } = await supabase
+      .from('beefs')
+      .select('id', { count: 'exact', head: true })
+      .eq('mediator_id', userId)
+      .eq('resolution_status', 'resolved');
 
-  // --- VÉRIFICATION BOUCLIER ANTI-SPAM (Mode: Fail-Closed) ---
-  const inviteesList = (beefData.participants ?? []).filter((p) => p.user_id !== userId);
-  if (inviteesList.length > 0) {
-    const inviteeIds = [...new Set(inviteesList.map((i) => i.user_id))];
-    const { data: targetUsers, error: targetErr } = await supabase.rpc('get_users_privacy', {
-      target_ids: inviteeIds,
-    });
+    const price = continuationPriceFromResolvedCount(count ?? 0);
 
-    if (targetErr) {
-      throw new Error("Erreur serveur lors de la vérification de la confidentialité. Opération annulée par sécurité.");
-    }
+    // --- VÉRIFICATION BOUCLIER ANTI-SPAM (Mode: Fail-Closed) ---
+    const inviteesList = (beefData.participants ?? []).filter((p) => p.user_id !== userId);
+    if (inviteesList.length > 0) {
+      const inviteeIds = [...new Set(inviteesList.map((i) => i.user_id))];
+      const { data: targetUsers, error: targetErr } = await supabase.rpc('get_users_privacy', {
+        target_ids: inviteeIds,
+      });
 
-    if (!targetUsers || targetUsers.length !== inviteeIds.length) {
-      throw new Error("Impossible de vérifier les paramètres de tous les utilisateurs. Opération annulée.");
-    }
-
-    for (const target of targetUsers) {
-      const privacy = target.invitation_privacy || 'everyone';
-      const targetName = target.display_name || target.username || 'Cet utilisateur';
-
-      if (privacy === 'nobody') {
-        throw new Error(`${targetName} n'accepte aucune invitation pour le moment (Mode Ne pas déranger).`);
+      if (targetErr) {
+        throw new Error("Erreur serveur lors de la vérification de la confidentialité. Opération annulée par sécurité.");
       }
 
-      if (privacy === 'following') {
-        const { data: follows, error: followErr } = await supabase
-          .from('followers')
-          .select('id')
-          .eq('follower_id', target.id)
-          .eq('following_id', userId)
-          .maybeSingle();
+      if (!targetUsers || targetUsers.length !== inviteeIds.length) {
+        throw new Error("Impossible de vérifier les paramètres de tous les utilisateurs. Opération annulée.");
+      }
 
-        if (followErr) {
-          throw new Error(`Erreur lors de la vérification des accès pour ${targetName}.`);
+      for (const target of targetUsers) {
+        const privacy = target.invitation_privacy || 'everyone';
+        const targetName = target.display_name || target.username || 'Cet utilisateur';
+
+        if (privacy === 'nobody') {
+          throw new Error(`${targetName} n'accepte aucune invitation pour le moment (Mode Ne pas déranger).`);
         }
 
-        if (!follows) {
-          throw new Error(`${targetName} n'accepte les défis que de ses abonnements.`);
+        if (privacy === 'following') {
+          const { data: follows, error: followErr } = await supabase
+            .from('followers')
+            .select('id')
+            .eq('follower_id', target.id)
+            .eq('following_id', userId)
+            .maybeSingle();
+
+          if (followErr) {
+            throw new Error(`Erreur lors de la vérification des accès pour ${targetName}.`);
+          }
+
+          if (!follows) {
+            throw new Error(`${targetName} n'accepte les défis que de ses abonnements.`);
+          }
         }
       }
     }
-  }
-  // --- FIN VÉRIFICATION ---
+    // --- FIN VÉRIFICATION ---
 
-  const insertData: Record<string, unknown> = {
-    title: beefData.title,
-    subject: beefData.title,
-    description: beefData.description || '',
-    mediator_id: beefData.intent === 'mediation' ? userId : null,
-    created_by: userId,
-    intent: beefData.intent,
-    event_type: beefData.event_type,
-    status: 'pending',
-    is_premium: false,
-    price,
-    tags: beefData.tags || [],
-  };
+    const insertData: Record<string, unknown> = {
+      title: beefData.title,
+      subject: beefData.title,
+      description: beefData.description || '',
+      mediator_id: beefData.intent === 'mediation' ? userId : null,
+      created_by: userId,
+      intent: beefData.intent,
+      event_type: beefData.event_type,
+      status: 'pending',
+      is_premium: false,
+      price,
+      tags: beefData.tags || [],
+    };
 
-  const when = normalizeScheduledAtForInsert(beefData.scheduled_at);
-  if (when) insertData.scheduled_at = when;
+    const when = normalizeScheduledAtForInsert(beefData.scheduled_at);
+    if (when) insertData.scheduled_at = when;
 
-  if (beefData.teaser_file) {
-    if (beefData.teaser_file.size > 50 * 1024 * 1024) {
-      throw new Error('Fichier trop lourd (50 Mo maximum).');
-    }
-
-    const fileExt = beefData.teaser_file.name.split('.').pop();
-    const fileName = `${userId}_${Date.now()}.${fileExt}`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('teasers')
-      .upload(fileName, beefData.teaser_file);
-
-    if (uploadError || !uploadData) {
-      throw new Error("Échec de l'upload du teaser. Réessaie.");
-    }
-
-    const { data: publicUrlData } = supabase.storage.from('teasers').getPublicUrl(fileName);
-    const isVideo = beefData.teaser_file.type.startsWith('video/');
-    if (isVideo) insertData.video_url = publicUrlData.publicUrl;
-    else insertData.thumbnail = publicUrlData.publicUrl;
-  }
-
-  const { data: beef, error } = await supabase.from('beefs').insert(insertData).select().single();
-  if (error) throw new Error(error.message);
-
-  // Validation UUID de tous les participants avant toute insertion
-  for (const p of beefData.participants ?? []) {
-    assertValidUuid(p.user_id, `participant user_id`);
-  }
-
-  const participantRows = (beefData.participants ?? []).map((p) => ({
-    beef_id: beef.id,
-    user_id: p.user_id,
-    role: p.role || 'participant',
-    is_main: Boolean(p.is_main),
-    invite_status: p.user_id === userId ? 'accepted' : 'pending',
-  }));
-
-  if (participantRows.length > 0) {
-    const { error: pErr } = await supabase.from('beef_participants').insert(participantRows);
-    if (pErr) throw new Error(pErr.message);
-
-    const invitees = (beefData.participants ?? []).filter((p) => p.user_id !== userId);
-
-    if (invitees.length > 0) {
-      let expiresAt = new Date();
-      if (when) {
-        expiresAt = new Date(when);
-        expiresAt.setMinutes(expiresAt.getMinutes() + 10); // Période de grâce de 10 min
-      } else {
-        expiresAt.setHours(expiresAt.getHours() + 24);
+    if (beefData.teaser_file) {
+      if (beefData.teaser_file.size > 50 * 1024 * 1024) {
+        throw new Error('Fichier trop lourd (50 Mo maximum).');
       }
 
-      const { error: invErr } = await supabase.from('beef_invitations').insert(
-        invitees.map((p) => ({
+      const fileExt = beefData.teaser_file.name.split('.').pop();
+      const fileName = `${userId}_${Date.now()}.${fileExt}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('teasers')
+        .upload(fileName, beefData.teaser_file);
+
+      if (uploadError || !uploadData) {
+        throw new Error("Échec de l'upload du teaser. Réessaie.");
+      }
+
+      const { data: publicUrlData } = supabase.storage.from('teasers').getPublicUrl(fileName);
+      const isVideo = beefData.teaser_file.type.startsWith('video/');
+      if (isVideo) insertData.video_url = publicUrlData.publicUrl;
+      else insertData.thumbnail = publicUrlData.publicUrl;
+    }
+
+    const { data: beef, error } = await supabase.from('beefs').insert(insertData).select().single();
+    if (error) throw new Error(error.message);
+
+    for (const p of beefData.participants ?? []) {
+      assertValidUuid(p.user_id, `participant user_id`);
+    }
+
+    const participantRows = (beefData.participants ?? []).map((p) => ({
+      beef_id: beef.id,
+      user_id: p.user_id,
+      role: p.role || 'participant',
+      is_main: Boolean(p.is_main),
+      invite_status: p.user_id === userId ? 'accepted' : 'pending',
+    }));
+
+    if (participantRows.length > 0) {
+      const { error: pErr } = await supabase.from('beef_participants').insert(participantRows);
+      if (pErr) throw new Error(pErr.message);
+
+      const invitees = (beefData.participants ?? []).filter((p) => p.user_id !== userId);
+
+      if (invitees.length > 0) {
+        let expiresAt = new Date();
+        if (when) {
+          expiresAt = new Date(when);
+          expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+        } else {
+          expiresAt.setHours(expiresAt.getHours() + 24);
+        }
+
+        const { error: invErr } = await supabase.from('beef_invitations').insert(
+          invitees.map((p) => ({
+            beef_id: beef.id,
+            inviter_id: userId,
+            invitee_id: p.user_id,
+            status: 'sent',
+            expires_at: expiresAt.toISOString(),
+          }))
+        );
+        if (invErr) throw new Error(invErr.message);
+      }
+    }
+
+    await Promise.allSettled([
+      supabase.from('notifications').insert({
+        user_id: userId,
+        type: 'system',
+        title: beefData.intent === 'manifesto' ? 'Manifeste publié !' : 'Convocations envoyées !',
+        body:
+          beefData.intent === 'manifesto'
+            ? `Ton manifeste "${beefData.title}" est en attente d'un Ref.`
+            : `Ton beef "${beefData.title}" est prêt — en attente des confirmations.`,
+        link: `/arena/${beef.id}`,
+        metadata: {
+          subtype: 'beef_created',
           beef_id: beef.id,
-          inviter_id: userId,
-          invitee_id: p.user_id,
-          status: 'sent',
-          expires_at: expiresAt.toISOString(),
-        }))
-      );
-      if (invErr) throw new Error(invErr.message);
-      // ↑ Le trigger `trigger_notify_beef_invitation` (SECURITY DEFINER) envoie
-      //   automatiquement une notification 'invite' à chaque invitee lors de cet INSERT.
-    }
+          intent: beefData.intent,
+        },
+      }),
+    ]);
+
+    return beef as { id: string };
+  } finally {
+    _submitting = false;
   }
-
-  // Notification de confirmation pour le créateur (auth.uid() === userId → RLS OK).
-  // Les notifications invités sont gérées par le trigger DB ci-dessus.
-  await Promise.allSettled([
-    supabase.from('notifications').insert({
-      user_id: userId,
-      type: 'system',
-      title: beefData.intent === 'manifesto' ? 'Manifeste publié !' : 'Convocations envoyées !',
-      body:
-        beefData.intent === 'manifesto'
-          ? `Ton manifeste "${beefData.title}" est en attente d'un Ref.`
-          : `Ton beef "${beefData.title}" est prêt — en attente des confirmations.`,
-      link: `/arena/${beef.id}`,
-      metadata: {
-        subtype: 'beef_created',
-        beef_id: beef.id,
-        intent: beefData.intent,
-      },
-    }),
-  ]);
-
-  return beef as { id: string };
 }

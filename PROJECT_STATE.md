@@ -97,5 +97,13 @@
   - E2-05 : Suppression `delay: index * 0.04` sur FollowListModal et notifications (performance listes)
   - E2-06 : Escape handler FollowListModal, typo "démarrer", `aria-label` textarea DMs
 
+- **Audit Phase F.3** : Tunnel Création Beef & Édition — 4 ordres de frappe exécutés :
+  - F3-01 : Sanitisation XSS (`sanitize()`) sur title/description dans `submitNewBeef.ts` + fail-fast upload (throw si erreur) + validation taille 50Mo + `select('id')` au lieu de `select('*')`
+  - F3-02 : Échappement wildcards PostgREST recherche participants (`CreateBeefForm` + `EditBeefModal`) + debounce 300ms
+  - F3-03 : Anti-double-clic `useRef` sur soumission + limite tags 24 chars + validation taille fichier côté client 50Mo
+  - F3-04 : Alignement visuel teaser `object-cover` (cohérent avec le feed)
+
 ## Tâches en Cours (Next Steps)
-- [ ] Phases d'audit restantes (à identifier et enchaîner)
+- [ ] Audit Auth flow (Login, Signup, Onboarding)
+- [ ] Audit Résumé Beef + Points + Invitations
+- [ ] Audit Landing + Auth secondaire

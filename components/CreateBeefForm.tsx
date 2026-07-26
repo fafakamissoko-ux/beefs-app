@@ -425,7 +425,6 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
       console.error('Error creating beef:', error);
       const msg = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message) : 'Erreur inconnue. Réessaie.';
       setFieldErrors({ submit: msg });
-    } finally {
       isSubmittingRef.current = false;
       setLoading(false);
     }
@@ -966,6 +965,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                   crop={crop}
                   zoom={zoom}
                   aspect={3 / 4}
+                  objectFit="contain"
                   onCropChange={setCrop}
                   onZoomChange={setZoom}
                   onCropComplete={onCropComplete}
