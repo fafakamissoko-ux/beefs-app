@@ -88,6 +88,16 @@ function computeCanvasSize() {
   return { w: Math.max(w, 200), h: Math.max(h, 260) };
 }
 
+function dataURLtoBlob(dataURL: string): Blob {
+  const parts = dataURL.split(',');
+  const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+  const bstr = atob(parts[1]);
+  const n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
+  return new Blob([u8arr], { type: mime });
+}
+
 export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEditorProps) {
   const canvasElRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<FabricCanvas | null>(null);
@@ -102,6 +112,36 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
   const selectedTextRef = useRef<FabricObject | null>(null);
   const canvasSizeRef = useRef(computeCanvasSize());
   const gridLinesRef = useRef<FabricObject[]>([]);
+
+  const constrainBgImage = useCallback((obj: FabricObject) => {
+    const { w, h } = canvasSizeRef.current;
+    const imgW = (obj.width ?? 1) * (obj.scaleX ?? 1);
+    const imgH = (obj.height ?? 1) * (obj.scaleY ?? 1);
+    const minScale = Math.max(w / (obj.width ?? 1), h / (obj.height ?? 1));
+
+    if ((obj.scaleX ?? 1) < minScale) {
+      obj.set({ scaleX: minScale, scaleY: minScale });
+    }
+
+    const currentW = (obj.width ?? 1) * (obj.scaleX ?? 1);
+    const currentH = (obj.height ?? 1) * (obj.scaleY ?? 1);
+    const halfW = currentW / 2;
+    const halfH = currentH / 2;
+    const left = obj.left ?? w / 2;
+    const top = obj.top ?? h / 2;
+
+    let newLeft = left;
+    let newTop = top;
+
+    if (newLeft - halfW > 0) newLeft = halfW;
+    if (newLeft + halfW < w) newLeft = w - halfW;
+    if (newTop - halfH > 0) newTop = halfH;
+    if (newTop + halfH < h) newTop = h - halfH;
+
+    if (newLeft !== left || newTop !== top) {
+      obj.set({ left: newLeft, top: newTop });
+    }
+  }, []);
 
   useEffect(() => {
     if (!canvasElRef.current) return;
@@ -150,7 +190,18 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
         setEditText('');
       });
 
-      fabric.FabricImage.fromURL(rawImageUrl, { crossOrigin: 'anonymous' }).then((img) => {
+      canvas.on('object:moving', (e) => {
+        if (e.target === bgImageRef.current) constrainBgImage(e.target);
+      });
+
+      canvas.on('object:scaling', (e) => {
+        if (e.target === bgImageRef.current) constrainBgImage(e.target);
+      });
+
+      const isBlobUrl = rawImageUrl.startsWith('blob:');
+      const loadOpts = isBlobUrl ? undefined : { crossOrigin: 'anonymous' as const };
+
+      fabric.FabricImage.fromURL(rawImageUrl, loadOpts).then((img) => {
         if (disposed) return;
         const scale = Math.max(CANVAS_W / (img.width ?? 1), CANVAS_H / (img.height ?? 1));
         img.set({
@@ -180,7 +231,7 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
         fabricRef.current = null;
       }
     };
-  }, [rawImageUrl]);
+  }, [rawImageUrl, constrainBgImage]);
 
   const enterCropMode = useCallback(() => {
     const img = bgImageRef.current;
@@ -220,7 +271,7 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     canvas.renderAll();
   }, []);
 
-  const setCropPreset = useCallback((preset: 'fill' | 'fit' | 'center') => {
+  const setCropPreset = useCallback((preset: 'fill' | 'fit') => {
     const img = bgImageRef.current;
     const canvas = fabricRef.current;
     if (!img || !canvas) return;
@@ -231,8 +282,6 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     let scale: number;
     if (preset === 'fill') {
       scale = Math.max(w / imgW, h / imgH);
-    } else if (preset === 'fit') {
-      scale = Math.min(w / imgW, h / imgH);
     } else {
       scale = Math.max(w / imgW, h / imgH);
     }
@@ -252,7 +301,10 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     const img = bgImageRef.current;
     const canvas = fabricRef.current;
     if (!img || !canvas) return;
+    const { w, h } = canvasSizeRef.current;
     img.set({ angle: ((img.angle ?? 0) + 90) % 360 });
+    const minScale = Math.max(w / (img.width ?? 1), h / (img.height ?? 1)) * 1.5;
+    img.set({ scaleX: minScale, scaleY: minScale, left: w / 2, top: h / 2 });
     canvas.renderAll();
   }, []);
 
@@ -260,12 +312,15 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     const img = bgImageRef.current;
     const canvas = fabricRef.current;
     if (!img || !canvas) return;
-    img.set({
-      scaleX: (img.scaleX ?? 1) * factor,
-      scaleY: (img.scaleY ?? 1) * factor,
-    });
+    const newScaleX = (img.scaleX ?? 1) * factor;
+    const newScaleY = (img.scaleY ?? 1) * factor;
+    const { w, h } = canvasSizeRef.current;
+    const minScale = Math.max(w / (img.width ?? 1), h / (img.height ?? 1));
+    if (newScaleX < minScale) return;
+    img.set({ scaleX: newScaleX, scaleY: newScaleY });
+    constrainBgImage(img);
     canvas.renderAll();
-  }, []);
+  }, [constrainBgImage]);
 
   const addText = useCallback(() => {
     import('fabric').then((fabric) => {
@@ -368,24 +423,35 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     try {
       gridLinesRef.current.forEach((l) => canvas.remove(l));
       gridLinesRef.current = [];
+
+      const bg = bgImageRef.current;
+      if (bg) bg.set({ selectable: false, evented: false });
+
       canvas.discardActiveObject();
       canvas.renderAll();
 
-      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
-      const dataURL = canvas.toDataURL({ format: 'jpeg', quality: 0.92 } as never);
+      const { w, h } = canvasSizeRef.current;
+      const dataURL = canvas.toDataURL({
+        format: 'jpeg',
+        quality: 0.92,
+        width: w,
+        height: h,
+        left: 0,
+        top: 0,
+        multiplier: 1,
+      } as Parameters<typeof canvas.toDataURL>[0]);
 
       const filterCss = FILTERS[activeFilter].css;
 
       if (!filterCss) {
-        const res = await fetch(dataURL);
-        const blob = await res.blob();
+        const blob = dataURLtoBlob(dataURL);
         onSave(new File([blob], 'teaser-rich.jpg', { type: 'image/jpeg' }));
         return;
       }
 
       const img = new Image();
-      img.crossOrigin = 'anonymous';
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
         img.onerror = reject;
@@ -393,11 +459,10 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
       });
 
       const offscreen = document.createElement('canvas');
-      offscreen.width = img.width;
-      offscreen.height = img.height;
+      offscreen.width = w;
+      offscreen.height = h;
       const ctx = offscreen.getContext('2d');
       if (!ctx) return;
-
       ctx.filter = filterCss;
       ctx.drawImage(img, 0, 0);
 
@@ -546,16 +611,12 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
         {activeTool === 'crop' && (
           <div className="rounded-2xl bg-amber-500/5 border border-amber-500/20 p-3 space-y-3">
             <p className="text-[11px] text-amber-200/80 text-center">
-              D{'\u00e9'}place et redimensionne l{'\u0027'}image pour couper les bords. Tout ce qui d{'\u00e9'}passe le cadre sera coup{'\u00e9'}.
+              D{'\u00e9'}place l{'\u0027'}image pour choisir le cadrage. Elle remplit toujours le cadre.
             </p>
             <div className="flex items-center justify-center gap-2">
               <button type="button" onClick={() => setCropPreset('fill')} className="flex items-center gap-1.5 rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-[11px] font-medium text-white/70 hover:bg-white/20 transition-colors">
                 <Maximize className="h-3.5 w-3.5" />
-                Remplir
-              </button>
-              <button type="button" onClick={() => setCropPreset('fit')} className="flex items-center gap-1.5 rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-[11px] font-medium text-white/70 hover:bg-white/20 transition-colors">
-                <Minimize className="h-3.5 w-3.5" />
-                Voir tout
+                Recentrer
               </button>
               <button type="button" onClick={rotateBg} className="flex items-center gap-1.5 rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-[11px] font-medium text-white/70 hover:bg-white/20 transition-colors">
                 <RotateCw className="h-3.5 w-3.5" />
