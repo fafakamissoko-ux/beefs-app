@@ -20,9 +20,9 @@ import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/Toast';
 import { fetchUserPublicByIds, displayNameFromPublicRow } from '@/lib/fetch-user-public-profile';
-import Cropper from 'react-easy-crop';
-import 'react-easy-crop/react-easy-crop.css';
-import getCroppedImg from '@/utils/cropImage';
+import dynamic from 'next/dynamic';
+
+const TeaserEditor = dynamic(() => import('./TeaserEditor'), { ssr: false });
 
 interface EditBeefModalProps {
   beefId: string;
@@ -133,12 +133,8 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
   const teaserPreviewUrlRef = useRef<string | null>(null);
   const baselineMediaRef = useRef<{ video: string | null; thumb: string | null }>({ video: null, thumb: null });
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [isCropping, setIsCropping] = useState(false);
+  const [isEditingTeaser, setIsEditingTeaser] = useState(false);
   const [rawImageUrl, setRawImageUrl] = useState<string | null>(null);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [isProcessingCrop, setIsProcessingCrop] = useState(false);
 
   const restoreBaselineTeaserPreview = useCallback(() => {
     setTeaserFile(null);
@@ -297,7 +293,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
     if (file.type.startsWith('image/')) {
       const url = URL.createObjectURL(file);
       setRawImageUrl(url);
-      setIsCropping(true);
+      setIsEditingTeaser(true);
       e.target.value = '';
       return;
     }
@@ -310,44 +306,6 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
     const url = URL.createObjectURL(file);
     teaserPreviewUrlRef.current = url;
     setTeaserPreview(url);
-  };
-
-  const onCropComplete = (_croppedArea: unknown, croppedAreaPixelsOutput: { x: number; y: number; width: number; height: number }) => {
-    setCroppedAreaPixels(croppedAreaPixelsOutput);
-  };
-
-  const handleCropSave = async () => {
-    if (!rawImageUrl || !croppedAreaPixels) return;
-    setIsProcessingCrop(true);
-    try {
-      const croppedFile = await getCroppedImg(rawImageUrl, croppedAreaPixels, 'teaser-cropped.jpg');
-      setTeaserFile(croppedFile);
-      setRemotePreviewIsVideo(false);
-
-      if (teaserPreviewUrlRef.current) URL.revokeObjectURL(teaserPreviewUrlRef.current);
-      const url = URL.createObjectURL(croppedFile);
-      teaserPreviewUrlRef.current = url;
-      setTeaserPreview(url);
-
-      URL.revokeObjectURL(rawImageUrl);
-      setIsCropping(false);
-      setRawImageUrl(null);
-    } catch (e) {
-      console.error('Erreur lors du recadrage:', e);
-      toast('Erreur lors du recadrage', 'error');
-    } finally {
-      setIsProcessingCrop(false);
-    }
-  };
-
-  const handleCropCancel = () => {
-    if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
-    setRawImageUrl(null);
-    setIsCropping(false);
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
-    setCroppedAreaPixels(null);
-    restoreBaselineTeaserPreview();
   };
 
   const addTag = (tag: string) => {
@@ -1026,53 +984,27 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                 </button>
               </div>
             )}
-          {/* MODALE DE RECADRAGE */}
-          {isCropping && rawImageUrl && (
-            <div className="absolute inset-0 z-[10005] flex flex-col items-center justify-center rounded-[2rem] bg-slate-950/95 backdrop-blur-xl p-4 sm:p-6">
-              <div className="relative w-full flex-1 max-h-[70vh] bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10">
-                <Cropper
-                  image={rawImageUrl}
-                  crop={crop}
-                  zoom={zoom}
-                  aspect={3 / 4}
-                  objectFit="contain"
-                  onCropChange={setCrop}
-                  onZoomChange={setZoom}
-                  onCropComplete={onCropComplete}
-                />
-              </div>
-              <div className="w-full max-w-md mt-6 space-y-4">
-                <div className="flex items-center gap-4 px-4">
-                  <span className="text-xs text-white/50">Zoom</span>
-                  <input
-                    type="range"
-                    value={zoom}
-                    min={1}
-                    max={3}
-                    step={0.1}
-                    onChange={(e) => setZoom(Number(e.target.value))}
-                    className="flex-1 accent-cyan-500"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={handleCropCancel}
-                    className="flex-1 py-3.5 rounded-xl border border-white/10 text-white/70 font-bold text-sm hover:bg-white/5 transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleCropSave()}
-                    disabled={isProcessingCrop}
-                    className="flex-1 py-3.5 rounded-xl bg-cyan-500 text-black font-black uppercase tracking-widest text-sm hover:bg-cyan-400 transition-colors shadow-[0_0_20px_rgba(0,240,255,0.4)] disabled:opacity-50"
-                  >
-                    {isProcessingCrop ? 'Génération...' : 'Valider'}
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* ÉDITEUR DE TEASER */}
+          {isEditingTeaser && rawImageUrl && (
+            <TeaserEditor
+              rawImageUrl={rawImageUrl}
+              onSave={(file) => {
+                if (teaserPreviewUrlRef.current) URL.revokeObjectURL(teaserPreviewUrlRef.current);
+                const url = URL.createObjectURL(file);
+                teaserPreviewUrlRef.current = url;
+                setTeaserFile(file);
+                setRemotePreviewIsVideo(false);
+                setTeaserPreview(url);
+                setIsEditingTeaser(false);
+                setRawImageUrl(null);
+              }}
+              onCancel={() => {
+                if (rawImageUrl) URL.revokeObjectURL(rawImageUrl);
+                setIsEditingTeaser(false);
+                setRawImageUrl(null);
+                restoreBaselineTeaserPreview();
+              }}
+            />
           )}
         </Dialog.Content>
       </Dialog.Portal>
