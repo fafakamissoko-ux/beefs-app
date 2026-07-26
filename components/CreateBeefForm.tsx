@@ -542,7 +542,7 @@ export function CreateBeefForm({ onSubmit, onCancel }: CreateBeefFormProps) {
                       ) : (
                         <>
                           {/* eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob) */}
-                          <img src={teaserPreview} className="h-full w-full object-cover bg-black" alt="Aper\u00e7u teaser" />
+                          <img src={teaserPreview} className="h-full w-full object-cover bg-black" alt="Aperçu teaser" />
                           <button
                             type="button"
                             onClick={(e) => {

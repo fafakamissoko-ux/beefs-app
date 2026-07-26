@@ -371,28 +371,42 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
       canvas.discardActiveObject();
       canvas.renderAll();
 
-      const fabricCanvas = (canvas as unknown as { lowerCanvasEl: HTMLCanvasElement }).lowerCanvasEl;
-      const w = fabricCanvas.width;
-      const h = fabricCanvas.height;
+      await new Promise((r) => requestAnimationFrame(r));
+
+      const dataURL = canvas.toDataURL({ format: 'jpeg', quality: 0.92 } as never);
+
+      const filterCss = FILTERS[activeFilter].css;
+
+      if (!filterCss) {
+        const res = await fetch(dataURL);
+        const blob = await res.blob();
+        onSave(new File([blob], 'teaser-rich.jpg', { type: 'image/jpeg' }));
+        return;
+      }
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = dataURL;
+      });
 
       const offscreen = document.createElement('canvas');
-      offscreen.width = w;
-      offscreen.height = h;
+      offscreen.width = img.width;
+      offscreen.height = img.height;
       const ctx = offscreen.getContext('2d');
       if (!ctx) return;
 
-      const filterCss = FILTERS[activeFilter].css;
-      if (filterCss) ctx.filter = filterCss;
-
-      ctx.drawImage(fabricCanvas, 0, 0);
+      ctx.filter = filterCss;
+      ctx.drawImage(img, 0, 0);
 
       const blob = await new Promise<Blob | null>((resolve) =>
         offscreen.toBlob(resolve, 'image/jpeg', 0.92)
       );
       if (!blob) return;
 
-      const file = new File([blob], 'teaser-rich.jpg', { type: 'image/jpeg' });
-      onSave(file);
+      onSave(new File([blob], 'teaser-rich.jpg', { type: 'image/jpeg' }));
     } finally {
       setIsExporting(false);
     }

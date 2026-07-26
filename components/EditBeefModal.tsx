@@ -735,7 +735,7 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                         ) : (
                           <>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={teaserPreview} className="h-full w-full bg-black object-cover" alt="Aper\u00e7u teaser" />
+                            <img src={teaserPreview} className="h-full w-full bg-black object-cover" alt="Aperçu teaser" />
                             <button
                               type="button"
                               onClick={(e) => {
