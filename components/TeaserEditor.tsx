@@ -88,15 +88,6 @@ function computeCanvasSize() {
   return { w: Math.max(w, 200), h: Math.max(h, 260) };
 }
 
-function dataURLtoBlob(dataURL: string): Blob {
-  const parts = dataURL.split(',');
-  const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
-  const bstr = atob(parts[1]);
-  const n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
-  return new Blob([u8arr], { type: mime });
-}
 
 export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEditorProps) {
   const canvasElRef = useRef<HTMLCanvasElement>(null);
@@ -430,52 +421,90 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
       canvas.discardActiveObject();
       canvas.renderAll();
 
-      await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+      await new Promise<void>((r) => setTimeout(r, 50));
 
       const { w, h } = canvasSizeRef.current;
-      const dataURL = canvas.toDataURL({
-        format: 'jpeg',
-        quality: 0.92,
-        width: w,
-        height: h,
-        left: 0,
-        top: 0,
-        multiplier: 1,
-      } as Parameters<typeof canvas.toDataURL>[0]);
-
       const filterCss = FILTERS[activeFilter].css;
 
-      if (!filterCss) {
-        const blob = dataURLtoBlob(dataURL);
-        onSave(new File([blob], 'teaser-rich.jpg', { type: 'image/jpeg' }));
+      const srcCanvas = canvasElRef.current;
+      if (!srcCanvas) return;
+
+      const renderCanvas = document.createElement('canvas');
+      renderCanvas.width = w;
+      renderCanvas.height = h;
+      const rCtx = renderCanvas.getContext('2d');
+      if (!rCtx) return;
+
+      if (filterCss) rCtx.filter = filterCss;
+      rCtx.drawImage(srcCanvas, 0, 0, w, h);
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        renderCanvas.toBlob(resolve, 'image/jpeg', 0.92)
+      );
+      if (!blob || blob.size < 1000) {
+        console.warn('[TeaserEditor] canvas tainted, fallback to re-draw');
+        const fallback = document.createElement('canvas');
+        fallback.width = w;
+        fallback.height = h;
+        const fCtx = fallback.getContext('2d');
+        if (!fCtx) return;
+
+        const tmpImg = new Image();
+        tmpImg.src = rawImageUrl;
+        await new Promise<void>((res) => {
+          tmpImg.onload = () => res();
+          if (tmpImg.complete) res();
+        });
+        if (filterCss) fCtx.filter = filterCss;
+
+        const imgBg = bg as unknown as { left: number; top: number; scaleX: number; scaleY: number; width: number; height: number; angle: number; originX: string };
+        const drawW = imgBg.width * imgBg.scaleX;
+        const drawH = imgBg.height * imgBg.scaleY;
+        const drawX = imgBg.left - drawW / 2;
+        const drawY = imgBg.top - drawH / 2;
+
+        if (imgBg.angle) {
+          fCtx.save();
+          fCtx.translate(imgBg.left, imgBg.top);
+          fCtx.rotate((imgBg.angle * Math.PI) / 180);
+          fCtx.drawImage(tmpImg, -drawW / 2, -drawH / 2, drawW, drawH);
+          fCtx.restore();
+        } else {
+          fCtx.drawImage(tmpImg, drawX, drawY, drawW, drawH);
+        }
+
+        const objects = canvas.getObjects();
+        for (const obj of objects) {
+          if (obj === bg) continue;
+          if ('text' in obj) {
+            const t = obj as unknown as { text: string; left: number; top: number; fontSize: number; fill: string; fontFamily: string; scaleX: number; scaleY: number };
+            fCtx.save();
+            fCtx.font = `bold ${t.fontSize * (t.scaleX ?? 1)}px ${t.fontFamily || 'sans-serif'}`;
+            fCtx.fillStyle = t.fill || '#fff';
+            fCtx.textAlign = 'center';
+            fCtx.textBaseline = 'middle';
+            fCtx.shadowColor = 'rgba(0,0,0,0.9)';
+            fCtx.shadowBlur = 8;
+            fCtx.fillText(t.text, t.left, t.top);
+            fCtx.restore();
+          }
+        }
+
+        const fb = await new Promise<Blob | null>((resolve) =>
+          fallback.toBlob(resolve, 'image/jpeg', 0.92)
+        );
+        if (!fb) return;
+        onSave(new File([fb], 'teaser-rich.jpg', { type: 'image/jpeg' }));
         return;
       }
 
-      const img = new Image();
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = reject;
-        img.src = dataURL;
-      });
-
-      const offscreen = document.createElement('canvas');
-      offscreen.width = w;
-      offscreen.height = h;
-      const ctx = offscreen.getContext('2d');
-      if (!ctx) return;
-      ctx.filter = filterCss;
-      ctx.drawImage(img, 0, 0);
-
-      const blob = await new Promise<Blob | null>((resolve) =>
-        offscreen.toBlob(resolve, 'image/jpeg', 0.92)
-      );
-      if (!blob) return;
-
       onSave(new File([blob], 'teaser-rich.jpg', { type: 'image/jpeg' }));
+    } catch (err) {
+      console.error('[TeaserEditor] Export failed:', err);
     } finally {
       setIsExporting(false);
     }
-  }, [onSave, activeFilter]);
+  }, [onSave, activeFilter, rawImageUrl]);
 
   const switchTool = useCallback((tool: ToolMode) => {
     setActiveTool((prev) => {
