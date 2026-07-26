@@ -93,6 +93,7 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
   const canvasElRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<FabricCanvas | null>(null);
   const bgImageRef = useRef<FabricObject | null>(null);
+  const rawImgElRef = useRef<HTMLImageElement | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [activeTool, setActiveTool] = useState<ToolMode>('none');
@@ -189,13 +190,15 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
         if (e.target === bgImageRef.current) constrainBgImage(e.target);
       });
 
-      const isBlobUrl = rawImageUrl.startsWith('blob:');
-      const loadOpts = isBlobUrl ? undefined : { crossOrigin: 'anonymous' as const };
-
-      fabric.FabricImage.fromURL(rawImageUrl, loadOpts).then((img) => {
+      const htmlImg = new Image();
+      htmlImg.src = rawImageUrl;
+      htmlImg.onload = () => {
         if (disposed) return;
-        const scale = Math.max(CANVAS_W / (img.width ?? 1), CANVAS_H / (img.height ?? 1));
-        img.set({
+        rawImgElRef.current = htmlImg;
+
+        const fabricImg = new fabric.FabricImage(htmlImg, {});
+        const scale = Math.max(CANVAS_W / (fabricImg.width ?? 1), CANVAS_H / (fabricImg.height ?? 1));
+        fabricImg.set({
           originX: 'center',
           originY: 'center',
           left: CANVAS_W / 2,
@@ -207,12 +210,12 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
           hasControls: true,
           hasBorders: true,
         });
-        canvas.add(img);
-        canvas.sendObjectToBack(img);
-        bgImageRef.current = img;
+        canvas.add(fabricImg);
+        canvas.sendObjectToBack(fabricImg);
+        bgImageRef.current = fabricImg;
         canvas.renderAll();
         setIsReady(true);
-      });
+      };
     });
 
     return () => {
@@ -409,94 +412,76 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
 
   const handleExport = useCallback(async () => {
     const canvas = fabricRef.current;
-    if (!canvas) return;
+    const rawImg = rawImgElRef.current;
+    const bg = bgImageRef.current;
+    if (!canvas || !rawImg || !bg) return;
     setIsExporting(true);
     try {
       gridLinesRef.current.forEach((l) => canvas.remove(l));
       gridLinesRef.current = [];
-
-      const bg = bgImageRef.current;
-      if (bg) bg.set({ selectable: false, evented: false });
-
+      bg.set({ selectable: false, evented: false });
       canvas.discardActiveObject();
       canvas.renderAll();
-
-      await new Promise<void>((r) => setTimeout(r, 50));
 
       const { w, h } = canvasSizeRef.current;
       const filterCss = FILTERS[activeFilter].css;
 
-      const srcCanvas = canvasElRef.current;
-      if (!srcCanvas) return;
+      const out = document.createElement('canvas');
+      out.width = w;
+      out.height = h;
+      const ctx = out.getContext('2d');
+      if (!ctx) return;
 
-      const renderCanvas = document.createElement('canvas');
-      renderCanvas.width = w;
-      renderCanvas.height = h;
-      const rCtx = renderCanvas.getContext('2d');
-      if (!rCtx) return;
+      if (filterCss) ctx.filter = filterCss;
 
-      if (filterCss) rCtx.filter = filterCss;
-      rCtx.drawImage(srcCanvas, 0, 0, w, h);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, w, h);
+
+      const bgLeft = bg.left ?? w / 2;
+      const bgTop = bg.top ?? h / 2;
+      const bgScaleX = bg.scaleX ?? 1;
+      const bgScaleY = bg.scaleY ?? 1;
+      const bgAngle = bg.angle ?? 0;
+      const imgW = rawImg.naturalWidth;
+      const imgH = rawImg.naturalHeight;
+      const drawW = imgW * bgScaleX;
+      const drawH = imgH * bgScaleY;
+
+      ctx.save();
+      ctx.translate(bgLeft, bgTop);
+      if (bgAngle) ctx.rotate((bgAngle * Math.PI) / 180);
+      ctx.drawImage(rawImg, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
+
+      const objects = canvas.getObjects();
+      for (const obj of objects) {
+        if (obj === bg) continue;
+        if ('text' in obj) {
+          const t = obj as unknown as {
+            text: string; left: number; top: number;
+            fontSize: number; fill: string; fontFamily: string;
+            scaleX: number; scaleY: number; angle: number;
+          };
+          ctx.save();
+          ctx.translate(t.left, t.top);
+          if (t.angle) ctx.rotate((t.angle * Math.PI) / 180);
+          const size = Math.round(t.fontSize * (t.scaleX ?? 1));
+          ctx.font = `bold ${size}px ${t.fontFamily || 'sans-serif'}`;
+          ctx.fillStyle = t.fill || '#fff';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.shadowColor = 'rgba(0,0,0,0.9)';
+          ctx.shadowBlur = 8;
+          ctx.shadowOffsetY = 2;
+          ctx.fillText(t.text, 0, 0);
+          ctx.restore();
+        }
+      }
 
       const blob = await new Promise<Blob | null>((resolve) =>
-        renderCanvas.toBlob(resolve, 'image/jpeg', 0.92)
+        out.toBlob(resolve, 'image/jpeg', 0.92)
       );
-      if (!blob || blob.size < 1000) {
-        console.warn('[TeaserEditor] canvas tainted, fallback to re-draw');
-        const fallback = document.createElement('canvas');
-        fallback.width = w;
-        fallback.height = h;
-        const fCtx = fallback.getContext('2d');
-        if (!fCtx) return;
-
-        const tmpImg = new Image();
-        tmpImg.src = rawImageUrl;
-        await new Promise<void>((res) => {
-          tmpImg.onload = () => res();
-          if (tmpImg.complete) res();
-        });
-        if (filterCss) fCtx.filter = filterCss;
-
-        const imgBg = bg as unknown as { left: number; top: number; scaleX: number; scaleY: number; width: number; height: number; angle: number; originX: string };
-        const drawW = imgBg.width * imgBg.scaleX;
-        const drawH = imgBg.height * imgBg.scaleY;
-        const drawX = imgBg.left - drawW / 2;
-        const drawY = imgBg.top - drawH / 2;
-
-        if (imgBg.angle) {
-          fCtx.save();
-          fCtx.translate(imgBg.left, imgBg.top);
-          fCtx.rotate((imgBg.angle * Math.PI) / 180);
-          fCtx.drawImage(tmpImg, -drawW / 2, -drawH / 2, drawW, drawH);
-          fCtx.restore();
-        } else {
-          fCtx.drawImage(tmpImg, drawX, drawY, drawW, drawH);
-        }
-
-        const objects = canvas.getObjects();
-        for (const obj of objects) {
-          if (obj === bg) continue;
-          if ('text' in obj) {
-            const t = obj as unknown as { text: string; left: number; top: number; fontSize: number; fill: string; fontFamily: string; scaleX: number; scaleY: number };
-            fCtx.save();
-            fCtx.font = `bold ${t.fontSize * (t.scaleX ?? 1)}px ${t.fontFamily || 'sans-serif'}`;
-            fCtx.fillStyle = t.fill || '#fff';
-            fCtx.textAlign = 'center';
-            fCtx.textBaseline = 'middle';
-            fCtx.shadowColor = 'rgba(0,0,0,0.9)';
-            fCtx.shadowBlur = 8;
-            fCtx.fillText(t.text, t.left, t.top);
-            fCtx.restore();
-          }
-        }
-
-        const fb = await new Promise<Blob | null>((resolve) =>
-          fallback.toBlob(resolve, 'image/jpeg', 0.92)
-        );
-        if (!fb) return;
-        onSave(new File([fb], 'teaser-rich.jpg', { type: 'image/jpeg' }));
-        return;
-      }
+      if (!blob) return;
 
       onSave(new File([blob], 'teaser-rich.jpg', { type: 'image/jpeg' }));
     } catch (err) {
@@ -504,7 +489,7 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     } finally {
       setIsExporting(false);
     }
-  }, [onSave, activeFilter, rawImageUrl]);
+  }, [onSave, activeFilter]);
 
   const switchTool = useCallback((tool: ToolMode) => {
     setActiveTool((prev) => {
