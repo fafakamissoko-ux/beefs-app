@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   X, Type, Smile, SlidersHorizontal, Check, Trash2,
-  Move, RotateCw, ZoomIn, ZoomOut, Crop, Pencil,
+  RotateCw, ZoomIn, ZoomOut, Crop, Maximize, Minimize,
 } from 'lucide-react';
 
 export interface TeaserEditorProps {
@@ -68,7 +68,7 @@ const STICKER_CATEGORIES = [
   },
 ];
 
-type ToolMode = 'none' | 'text' | 'sticker' | 'filter';
+type ToolMode = 'none' | 'text' | 'sticker' | 'filter' | 'crop';
 
 function computeCanvasSize() {
   const pad = 24;
@@ -97,11 +97,11 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
   const [activeTool, setActiveTool] = useState<ToolMode>('none');
   const [activeFilter, setActiveFilter] = useState(0);
   const [stickerCat, setStickerCat] = useState(0);
-  const [bgLocked, setBgLocked] = useState(true);
   const [editText, setEditText] = useState('');
   const [hasTextSelected, setHasTextSelected] = useState(false);
   const selectedTextRef = useRef<FabricObject | null>(null);
   const canvasSizeRef = useRef(computeCanvasSize());
+  const gridLinesRef = useRef<FabricObject[]>([]);
 
   useEffect(() => {
     if (!canvasElRef.current) return;
@@ -122,7 +122,7 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
 
       canvas.on('selection:created', (e) => {
         const obj = e.selected?.[0];
-        if (obj && 'text' in obj && (obj as { editable?: boolean }).editable !== false) {
+        if (obj && 'text' in obj && obj !== bgImageRef.current && !gridLinesRef.current.includes(obj)) {
           selectedTextRef.current = obj;
           setEditText((obj as { text: string }).text);
           setHasTextSelected(true);
@@ -134,7 +134,7 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
 
       canvas.on('selection:updated', (e) => {
         const obj = e.selected?.[0];
-        if (obj && 'text' in obj && (obj as { editable?: boolean }).editable !== false) {
+        if (obj && 'text' in obj && obj !== bgImageRef.current && !gridLinesRef.current.includes(obj)) {
           selectedTextRef.current = obj;
           setEditText((obj as { text: string }).text);
           setHasTextSelected(true);
@@ -182,26 +182,77 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     };
   }, [rawImageUrl]);
 
-  const toggleBgLock = useCallback(() => {
+  const enterCropMode = useCallback(() => {
     const img = bgImageRef.current;
-    if (!img) return;
-    const next = !bgLocked;
-    setBgLocked(next);
-    img.set({
-      selectable: !next,
-      evented: !next,
+    const canvas = fabricRef.current;
+    if (!img || !canvas) return;
+    img.set({ selectable: true, evented: true });
+    canvas.setActiveObject(img);
+
+    import('fabric').then((fabric) => {
+      const { w, h } = canvasSizeRef.current;
+      const lines: FabricObject[] = [];
+      const lineProps = {
+        stroke: 'rgba(255,255,255,0.35)',
+        strokeWidth: 1,
+        selectable: false,
+        evented: false,
+        strokeDashArray: [6, 4],
+      };
+      lines.push(new fabric.Line([w / 3, 0, w / 3, h], lineProps));
+      lines.push(new fabric.Line([(w * 2) / 3, 0, (w * 2) / 3, h], lineProps));
+      lines.push(new fabric.Line([0, h / 3, w, h / 3], lineProps));
+      lines.push(new fabric.Line([0, (h * 2) / 3, w, (h * 2) / 3], lineProps));
+      lines.forEach((l) => canvas.add(l));
+      gridLinesRef.current = lines;
+      canvas.renderAll();
     });
-    fabricRef.current?.renderAll();
-  }, [bgLocked]);
+  }, []);
+
+  const exitCropMode = useCallback(() => {
+    const img = bgImageRef.current;
+    const canvas = fabricRef.current;
+    if (!img || !canvas) return;
+    img.set({ selectable: false, evented: false });
+    canvas.discardActiveObject();
+    gridLinesRef.current.forEach((l) => canvas.remove(l));
+    gridLinesRef.current = [];
+    canvas.renderAll();
+  }, []);
+
+  const setCropPreset = useCallback((preset: 'fill' | 'fit' | 'center') => {
+    const img = bgImageRef.current;
+    const canvas = fabricRef.current;
+    if (!img || !canvas) return;
+    const { w, h } = canvasSizeRef.current;
+    const imgW = img.width ?? 1;
+    const imgH = img.height ?? 1;
+
+    let scale: number;
+    if (preset === 'fill') {
+      scale = Math.max(w / imgW, h / imgH);
+    } else if (preset === 'fit') {
+      scale = Math.min(w / imgW, h / imgH);
+    } else {
+      scale = Math.max(w / imgW, h / imgH);
+    }
+    img.set({
+      scaleX: scale,
+      scaleY: scale,
+      left: w / 2,
+      top: h / 2,
+      angle: 0,
+      originX: 'center',
+      originY: 'center',
+    });
+    canvas.renderAll();
+  }, []);
 
   const rotateBg = useCallback(() => {
     const img = bgImageRef.current;
     const canvas = fabricRef.current;
     if (!img || !canvas) return;
-    const { w, h } = canvasSizeRef.current;
     img.set({ angle: ((img.angle ?? 0) + 90) % 360 });
-    const scale = Math.max(w / (img.width ?? 1), h / (img.height ?? 1));
-    img.set({ scaleX: scale * 1.5, scaleY: scale * 1.5, left: w / 2, top: h / 2 });
     canvas.renderAll();
   }, []);
 
@@ -240,7 +291,6 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
       selectedTextRef.current = text;
       setEditText('Texte');
       setHasTextSelected(true);
-      setActiveTool('text');
       canvas.renderAll();
     });
   }, []);
@@ -302,7 +352,7 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     const canvas = fabricRef.current;
     if (!canvas) return;
     const obj = canvas.getActiveObject();
-    if (obj && obj !== bgImageRef.current) {
+    if (obj && obj !== bgImageRef.current && !gridLinesRef.current.includes(obj)) {
       canvas.remove(obj);
       canvas.discardActiveObject();
       canvas.renderAll();
@@ -316,6 +366,8 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     if (!canvas) return;
     setIsExporting(true);
     try {
+      gridLinesRef.current.forEach((l) => canvas.remove(l));
+      gridLinesRef.current = [];
       canvas.discardActiveObject();
       canvas.renderAll();
 
@@ -346,9 +398,14 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     }
   }, [onSave, activeFilter]);
 
-  const toggleTool = useCallback((tool: ToolMode) => {
-    setActiveTool((prev) => (prev === tool ? 'none' : tool));
-  }, []);
+  const switchTool = useCallback((tool: ToolMode) => {
+    setActiveTool((prev) => {
+      if (prev === 'crop') exitCropMode();
+      const next = prev === tool ? 'none' : tool;
+      if (next === 'crop') enterCropMode();
+      return next;
+    });
+  }, [enterCropMode, exitCropMode]);
 
   return (
     <div className="absolute inset-0 z-[10005] flex flex-col bg-black">
@@ -373,46 +430,28 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
             style={{ filter: FILTERS[activeFilter].css || undefined }}
           />
 
-          {/* HUD */}
+          {/* HUD tools */}
           <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-10">
-            <button type="button" onClick={() => toggleTool('text')} className={`flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-sm border shadow-lg transition-colors ${activeTool === 'text' ? 'bg-cyan-500/40 border-cyan-500/50 text-cyan-300' : 'bg-black/60 border-white/20 text-white hover:bg-white/20'}`}>
+            <button type="button" onClick={() => switchTool('text')} className={`flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-sm border shadow-lg transition-colors ${activeTool === 'text' ? 'bg-cyan-500/40 border-cyan-500/50 text-cyan-300' : 'bg-black/60 border-white/20 text-white hover:bg-white/20'}`}>
               <Type className="h-4 w-4" />
             </button>
-            <button type="button" onClick={() => toggleTool('sticker')} className={`flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-sm border shadow-lg transition-colors ${activeTool === 'sticker' ? 'bg-cyan-500/40 border-cyan-500/50 text-cyan-300' : 'bg-black/60 border-white/20 text-white hover:bg-white/20'}`}>
+            <button type="button" onClick={() => switchTool('sticker')} className={`flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-sm border shadow-lg transition-colors ${activeTool === 'sticker' ? 'bg-cyan-500/40 border-cyan-500/50 text-cyan-300' : 'bg-black/60 border-white/20 text-white hover:bg-white/20'}`}>
               <Smile className="h-4 w-4" />
             </button>
-            <button type="button" onClick={() => toggleTool('filter')} className={`flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-sm border shadow-lg transition-colors ${activeTool === 'filter' ? 'bg-cyan-500/40 border-cyan-500/50 text-cyan-300' : 'bg-black/60 border-white/20 text-white hover:bg-white/20'}`}>
+            <button type="button" onClick={() => switchTool('filter')} className={`flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-sm border shadow-lg transition-colors ${activeTool === 'filter' ? 'bg-cyan-500/40 border-cyan-500/50 text-cyan-300' : 'bg-black/60 border-white/20 text-white hover:bg-white/20'}`}>
               <SlidersHorizontal className="h-4 w-4" />
             </button>
-            <div className="my-0.5 h-px bg-white/10" />
-            <button type="button" onClick={toggleBgLock} title={bgLocked ? 'Recadrer / repositionner le fond' : 'Terminer le recadrage'} className={`flex items-center justify-center rounded-full backdrop-blur-sm border shadow-lg transition-all ${!bgLocked ? 'w-auto h-10 gap-1.5 px-3 bg-amber-500/30 border-amber-500/40 text-amber-300' : 'w-10 h-10 bg-black/60 border-white/20 text-white hover:bg-white/20'}`}>
+            <button type="button" onClick={() => switchTool('crop')} className={`flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-sm border shadow-lg transition-colors ${activeTool === 'crop' ? 'bg-amber-500/40 border-amber-500/50 text-amber-300' : 'bg-black/60 border-white/20 text-white hover:bg-white/20'}`}>
               <Crop className="h-4 w-4" />
-              {!bgLocked && <span className="text-[10px] font-bold">OK</span>}
             </button>
-            {!bgLocked && (
-              <>
-                <button type="button" onClick={rotateBg} title="Pivoter" className="flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg text-white/70 hover:bg-white/20 transition-colors">
-                  <RotateCw className="h-4 w-4" />
-                </button>
-                <button type="button" onClick={() => scaleBg(1.15)} title="Zoom +" className="flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg text-white/70 hover:bg-white/20 transition-colors">
-                  <ZoomIn className="h-4 w-4" />
-                </button>
-                <button type="button" onClick={() => scaleBg(0.87)} title="Zoom -" className="flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg text-white/70 hover:bg-white/20 transition-colors">
-                  <ZoomOut className="h-4 w-4" />
-                </button>
-              </>
-            )}
             <div className="my-0.5 h-px bg-white/10" />
             <button type="button" onClick={deleteSelected} className="flex items-center justify-center w-10 h-10 rounded-full bg-red-500/20 backdrop-blur-sm border border-red-500/30 shadow-lg text-red-400 hover:bg-red-500/40 transition-colors">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
 
-          {!bgLocked && (
-            <div className="absolute bottom-2 left-2 right-14 z-10 flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-500/30 px-3 py-2">
-              <Move className="h-4 w-4 shrink-0 text-amber-300" />
-              <span className="text-[11px] font-medium text-amber-200">Mode recadrage : d{'\u00e9'}place et redimensionne l{'\u0027'}image avec tes doigts, puis appuie sur OK</span>
-            </div>
+          {activeTool === 'crop' && (
+            <div className="pointer-events-none absolute inset-0 z-[5] border-2 border-amber-400/60 rounded-sm" />
           )}
         </div>
       </div>
@@ -486,6 +525,36 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
                   {f.label}
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {activeTool === 'crop' && (
+          <div className="rounded-2xl bg-amber-500/5 border border-amber-500/20 p-3 space-y-3">
+            <p className="text-[11px] text-amber-200/80 text-center">
+              D{'\u00e9'}place et redimensionne l{'\u0027'}image pour couper les bords. Tout ce qui d{'\u00e9'}passe le cadre sera coup{'\u00e9'}.
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              <button type="button" onClick={() => setCropPreset('fill')} className="flex items-center gap-1.5 rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-[11px] font-medium text-white/70 hover:bg-white/20 transition-colors">
+                <Maximize className="h-3.5 w-3.5" />
+                Remplir
+              </button>
+              <button type="button" onClick={() => setCropPreset('fit')} className="flex items-center gap-1.5 rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-[11px] font-medium text-white/70 hover:bg-white/20 transition-colors">
+                <Minimize className="h-3.5 w-3.5" />
+                Voir tout
+              </button>
+              <button type="button" onClick={rotateBg} className="flex items-center gap-1.5 rounded-xl bg-white/10 border border-white/10 px-3 py-2 text-[11px] font-medium text-white/70 hover:bg-white/20 transition-colors">
+                <RotateCw className="h-3.5 w-3.5" />
+                Pivoter
+              </button>
+            </div>
+            <div className="flex items-center justify-center gap-3">
+              <button type="button" onClick={() => scaleBg(0.9)} className="flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5 text-[11px] text-white/60 hover:bg-white/20 transition-colors">
+                <ZoomOut className="h-3.5 w-3.5" /> Zoom -
+              </button>
+              <button type="button" onClick={() => scaleBg(1.12)} className="flex items-center gap-1 rounded-lg bg-white/10 px-3 py-1.5 text-[11px] text-white/60 hover:bg-white/20 transition-colors">
+                <ZoomIn className="h-3.5 w-3.5" /> Zoom +
+              </button>
             </div>
           </div>
         )}
