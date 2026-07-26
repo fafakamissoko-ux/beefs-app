@@ -743,10 +743,10 @@ export function EditBeefModal({ beefId, onClose, onSaved }: EditBeefModalProps) 
                                 setRawImageUrl(teaserPreview);
                                 setIsEditingTeaser(true);
                               }}
-                              className="absolute bottom-2 left-2 z-10 flex items-center gap-1.5 rounded-full bg-cyan-500/90 px-3 py-1.5 text-[11px] font-bold text-black shadow-lg hover:bg-cyan-400 transition-colors"
+                              className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-center gap-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 py-3 text-sm font-bold text-white hover:from-black/90 transition-all"
                             >
-                              <Type className="h-3 w-3" />
-                              {'\u00c9'}diter
+                              <Type className="h-4 w-4 text-cyan-400" />
+                              <span>{'\u00c9'}diter le teaser</span>
                             </button>
                           </>
                         )

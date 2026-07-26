@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   X, Type, Smile, SlidersHorizontal, Check, Trash2,
-  Move, RotateCw, ZoomIn, ZoomOut, Lock, Unlock,
+  Move, RotateCw, ZoomIn, ZoomOut, Crop, Pencil,
 } from 'lucide-react';
 
 export interface TeaserEditorProps {
@@ -385,18 +385,19 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
               <SlidersHorizontal className="h-4 w-4" />
             </button>
             <div className="my-0.5 h-px bg-white/10" />
-            <button type="button" onClick={toggleBgLock} title={bgLocked ? 'D\u00e9verrouiller le fond' : 'Verrouiller le fond'} className={`flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-sm border shadow-lg transition-colors ${!bgLocked ? 'bg-amber-500/30 border-amber-500/40 text-amber-300' : 'bg-black/60 border-white/20 text-white/50 hover:bg-white/20'}`}>
-              {bgLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+            <button type="button" onClick={toggleBgLock} title={bgLocked ? 'Recadrer / repositionner le fond' : 'Terminer le recadrage'} className={`flex items-center justify-center rounded-full backdrop-blur-sm border shadow-lg transition-all ${!bgLocked ? 'w-auto h-10 gap-1.5 px-3 bg-amber-500/30 border-amber-500/40 text-amber-300' : 'w-10 h-10 bg-black/60 border-white/20 text-white hover:bg-white/20'}`}>
+              <Crop className="h-4 w-4" />
+              {!bgLocked && <span className="text-[10px] font-bold">OK</span>}
             </button>
             {!bgLocked && (
               <>
-                <button type="button" onClick={rotateBg} className="flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg text-white/70 hover:bg-white/20 transition-colors">
+                <button type="button" onClick={rotateBg} title="Pivoter" className="flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg text-white/70 hover:bg-white/20 transition-colors">
                   <RotateCw className="h-4 w-4" />
                 </button>
-                <button type="button" onClick={() => scaleBg(1.15)} className="flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg text-white/70 hover:bg-white/20 transition-colors">
+                <button type="button" onClick={() => scaleBg(1.15)} title="Zoom +" className="flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg text-white/70 hover:bg-white/20 transition-colors">
                   <ZoomIn className="h-4 w-4" />
                 </button>
-                <button type="button" onClick={() => scaleBg(0.87)} className="flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg text-white/70 hover:bg-white/20 transition-colors">
+                <button type="button" onClick={() => scaleBg(0.87)} title="Zoom -" className="flex items-center justify-center w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg text-white/70 hover:bg-white/20 transition-colors">
                   <ZoomOut className="h-4 w-4" />
                 </button>
               </>
@@ -408,9 +409,9 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
           </div>
 
           {!bgLocked && (
-            <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 px-3 py-1">
-              <Move className="h-3 w-3 text-amber-300" />
-              <span className="text-[10px] font-medium text-amber-300">Fond d{'\u00e9'}verrouill{'\u00e9'} — d{'\u00e9'}place / redimensionne</span>
+            <div className="absolute bottom-2 left-2 right-14 z-10 flex items-center gap-1.5 rounded-xl bg-amber-500/20 border border-amber-500/30 px-3 py-2">
+              <Move className="h-4 w-4 shrink-0 text-amber-300" />
+              <span className="text-[11px] font-medium text-amber-200">Mode recadrage : d{'\u00e9'}place et redimensionne l{'\u0027'}image avec tes doigts, puis appuie sur OK</span>
             </div>
           )}
         </div>
