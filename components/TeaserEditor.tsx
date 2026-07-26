@@ -94,6 +94,16 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
       });
       fabricRef.current = canvas;
 
+      canvas.on('mouse:down', (e) => {
+        const target = e.target;
+        if (target && 'enterEditing' in target && (target as InstanceType<typeof fabric.IText>).editable) {
+          if (canvas.getActiveObject() === target) {
+            (target as InstanceType<typeof fabric.IText>).enterEditing();
+            canvas.requestRenderAll();
+          }
+        }
+      });
+
       fabric.FabricImage.fromURL(rawImageUrl, { crossOrigin: 'anonymous' }).then((img) => {
         if (disposed) return;
         const scale = Math.max(CANVAS_W / (img.width ?? 1), CANVAS_H / (img.height ?? 1));
