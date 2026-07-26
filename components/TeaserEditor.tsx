@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Type, Smile, SlidersHorizontal, Check, RotateCcw } from 'lucide-react';
+import { X, Type, Smile, SlidersHorizontal, Check, Trash2 } from 'lucide-react';
 
 export interface TeaserEditorProps {
   rawImageUrl: string;
@@ -12,34 +12,57 @@ export interface TeaserEditorProps {
 type FabricCanvas = import('fabric').Canvas;
 type FabricIText = import('fabric').IText;
 
-const FILTERS = [
-  { label: 'Normal', css: '' },
-  { label: 'N&B', css: 'grayscale(100%)' },
-  { label: 'Sépia', css: 'sepia(80%)' },
-  { label: 'Chaud', css: 'saturate(140%) hue-rotate(-10deg)' },
-  { label: 'Froid', css: 'saturate(110%) hue-rotate(20deg) brightness(105%)' },
-  { label: 'Contraste', css: 'contrast(130%) brightness(105%)' },
-  { label: 'Doux', css: 'brightness(110%) contrast(90%) saturate(85%)' },
-  { label: 'Vivid', css: 'saturate(180%) contrast(110%)' },
-] as const;
+interface FilterDef {
+  label: string;
+  css: string;
+  emoji: string;
+}
+
+const FILTERS: FilterDef[] = [
+  { label: 'Original', css: '', emoji: '🌄' },
+  { label: 'N&B', css: 'grayscale(100%)', emoji: '⬛' },
+  { label: 'S\u00e9pia', css: 'sepia(80%)', emoji: '🟤' },
+  { label: 'Chaud', css: 'saturate(140%) hue-rotate(-10deg)', emoji: '🔥' },
+  { label: 'Froid', css: 'saturate(110%) hue-rotate(20deg) brightness(105%)', emoji: '❄️' },
+  { label: 'Contraste', css: 'contrast(130%) brightness(105%)', emoji: '⚡' },
+  { label: 'Doux', css: 'brightness(110%) contrast(90%) saturate(85%)', emoji: '☁️' },
+  { label: 'Vivid', css: 'saturate(180%) contrast(110%)', emoji: '🌈' },
+  { label: 'Drama', css: 'contrast(150%) saturate(50%) brightness(90%)', emoji: '🎭' },
+  { label: 'R\u00e9tro', css: 'sepia(40%) saturate(130%) brightness(95%)', emoji: '📷' },
+];
 
 const FONT_FAMILIES = [
-  'sans-serif',
-  'serif',
-  'monospace',
-  'cursive',
-  'Impact',
-  'Georgia',
+  { id: 'sans-serif', label: 'Sans' },
+  { id: 'serif', label: 'Serif' },
+  { id: 'monospace', label: 'Mono' },
+  { id: 'cursive', label: 'Cursive' },
+  { id: 'Impact', label: 'Impact' },
+  { id: 'Georgia', label: 'Georgia' },
 ] as const;
 
 const TEXT_COLORS = [
-  '#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0000FF',
-  '#FFFF00', '#FF00FF', '#00FFFF', '#FF6B00', '#8B5CF6',
+  '#FFFFFF', '#000000', '#FF0000', '#FF6B00', '#FFFF00',
+  '#00FF00', '#00FFFF', '#0000FF', '#8B5CF6', '#FF00FF',
+  '#F472B6', '#A78BFA',
 ] as const;
 
-const STICKERS = [
-  '🔥', '💀', '😂', '💯', '🏆', '⚡', '👑', '🎯',
-  '💪', '🗣️', '😤', '🤡', '💰', '🎵', '❤️', '👀',
+const STICKER_CATEGORIES = [
+  {
+    label: 'Populaires',
+    items: ['🔥', '💀', '😂', '💯', '🏆', '⚡', '👑', '🎯', '💪', '🗣️', '😤', '🤡', '💰', '🎵', '❤️', '👀'],
+  },
+  {
+    label: 'Expressions',
+    items: ['😈', '🥶', '🤯', '😎', '🥱', '🤮', '💅', '🙄', '😏', '🤓', '👻', '🫠', '😭', '🤝', '🫡', '🤫'],
+  },
+  {
+    label: 'D\u00e9co',
+    items: ['⭐', '✨', '💫', '🌟', '💥', '🎪', '🎨', '🎬', '🎤', '🎧', '📢', '💣', '🛡️', '⚔️', '🏴', '🚨'],
+  },
+  {
+    label: 'Symboles',
+    items: ['❌', '✅', '⚠️', '🚫', '💢', '❓', '‼️', '🔴', '🟢', '🔵', '🟡', '⬜', '🔶', '💠', '♾️', '🏁'],
+  },
 ] as const;
 
 type ToolMode = 'none' | 'text' | 'sticker' | 'filter';
@@ -51,7 +74,7 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
   const [isExporting, setIsExporting] = useState(false);
   const [activeTool, setActiveTool] = useState<ToolMode>('none');
   const [activeFilter, setActiveFilter] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [stickerCat, setStickerCat] = useState(0);
 
   useEffect(() => {
     if (!canvasElRef.current) return;
@@ -104,20 +127,28 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     import('fabric').then((fabric) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
-      const text = new fabric.IText('Texte', {
+      const text = new fabric.IText('Tape ici', {
         left: 300,
         top: 400,
         fontFamily: 'sans-serif',
         fill: '#FFFFFF',
-        fontSize: 40,
+        fontSize: 36,
+        fontWeight: 'bold',
         originX: 'center',
         originY: 'center',
-        shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.8)', blur: 10, offsetX: 0, offsetY: 0 }),
+        textAlign: 'center',
+        shadow: new fabric.Shadow({ color: 'rgba(0,0,0,0.9)', blur: 8, offsetX: 0, offsetY: 2 }),
         editable: true,
+        padding: 8,
       });
       canvas.add(text);
       canvas.setActiveObject(text);
       canvas.renderAll();
+      setTimeout(() => {
+        text.enterEditing();
+        text.selectAll();
+        canvas.renderAll();
+      }, 100);
     });
   }, []);
 
@@ -125,16 +156,16 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     import('fabric').then((fabric) => {
       const canvas = fabricRef.current;
       if (!canvas) return;
-      const text = new fabric.IText(emoji, {
-        left: 300,
-        top: 400,
-        fontSize: 60,
+      const sticker = new fabric.IText(emoji, {
+        left: 250 + Math.random() * 100,
+        top: 350 + Math.random() * 100,
+        fontSize: 72,
         originX: 'center',
         originY: 'center',
         editable: false,
       });
-      canvas.add(text);
-      canvas.setActiveObject(text);
+      canvas.add(sticker);
+      canvas.setActiveObject(sticker);
       canvas.renderAll();
     });
   }, []);
@@ -159,27 +190,27 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     }
   }, []);
 
+  const updateSelectedTextSize = useCallback((delta: number) => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const obj = canvas.getActiveObject();
+    if (obj && 'fontSize' in obj) {
+      const t = obj as FabricIText;
+      const current = (t.fontSize ?? 36);
+      t.set('fontSize', Math.max(12, Math.min(120, current + delta)));
+      canvas.renderAll();
+    }
+  }, []);
+
   const deleteSelected = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     const obj = canvas.getActiveObject();
     if (obj) {
       canvas.remove(obj);
+      canvas.discardActiveObject();
       canvas.renderAll();
     }
-  }, []);
-
-  const applyFilter = useCallback((filterIndex: number) => {
-    setActiveFilter(filterIndex);
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-    const bg = canvas.getObjects()[0];
-    if (!bg) return;
-    const filterCss = FILTERS[filterIndex].css;
-    if (!filterCss) {
-      bg.set('filter' as string, undefined);
-    }
-    canvas.renderAll();
   }, []);
 
   const handleExport = useCallback(async () => {
@@ -189,32 +220,53 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
     try {
       canvas.discardActiveObject();
       canvas.renderAll();
-      const dataURL = canvas.toDataURL({ format: 'jpeg', quality: 0.9, multiplier: 1 });
-      const res = await fetch(dataURL);
-      const blob = await res.blob();
+
+      const fabricCanvas = (canvas as unknown as { lowerCanvasEl: HTMLCanvasElement }).lowerCanvasEl;
+      const w = fabricCanvas.width;
+      const h = fabricCanvas.height;
+
+      const offscreen = document.createElement('canvas');
+      offscreen.width = w;
+      offscreen.height = h;
+      const ctx = offscreen.getContext('2d');
+      if (!ctx) return;
+
+      const filterCss = FILTERS[activeFilter].css;
+      if (filterCss) ctx.filter = filterCss;
+
+      ctx.drawImage(fabricCanvas, 0, 0);
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        offscreen.toBlob(resolve, 'image/jpeg', 0.92)
+      );
+      if (!blob) return;
+
       const file = new File([blob], 'teaser-rich.jpg', { type: 'image/jpeg' });
       onSave(file);
     } finally {
       setIsExporting(false);
     }
-  }, [onSave]);
+  }, [onSave, activeFilter]);
 
   const toggleTool = useCallback((tool: ToolMode) => {
     setActiveTool((prev) => (prev === tool ? 'none' : tool));
   }, []);
 
   return (
-    <div className="absolute inset-0 z-[10005] flex flex-col items-center justify-center bg-slate-950/75 backdrop-blur-md border border-white/10 shadow-2xl">
+    <div className="absolute inset-0 z-[10005] flex flex-col bg-black">
       {/* Header */}
-      <div className="flex w-full items-center justify-between px-4 py-3">
+      <div className="flex shrink-0 items-center justify-between px-3 py-2 bg-black/80 backdrop-blur-sm">
         <button
           type="button"
           onClick={onCancel}
-          className="flex items-center gap-1.5 rounded-full bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg px-4 py-2 text-sm text-white/70 hover:bg-white/10 transition-colors"
+          className="flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2 text-sm text-white/80 hover:bg-white/20 transition-colors"
         >
           <X className="h-4 w-4" />
           Annuler
         </button>
+        <span className="text-xs font-bold uppercase tracking-widest text-white/40">
+          \u00c9diteur
+        </span>
         <button
           type="button"
           onClick={() => void handleExport()}
@@ -227,14 +279,14 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
       </div>
 
       {/* Canvas */}
-      <div ref={containerRef} className="relative flex-1 flex items-center justify-center w-full overflow-hidden px-4">
+      <div className="relative flex-1 flex items-center justify-center overflow-hidden">
         <div className="relative" style={{ maxWidth: '100%', maxHeight: '100%' }}>
           <canvas
             ref={canvasElRef}
-            className="rounded-2xl shadow-2xl border border-white/10"
+            className="block"
             style={{
               maxWidth: '100%',
-              maxHeight: 'calc(100vh - 220px)',
+              maxHeight: 'calc(100dvh - 180px)',
               objectFit: 'contain',
               filter: FILTERS[activeFilter].css || undefined,
             }}
@@ -245,49 +297,45 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
             <button
               type="button"
               onClick={() => toggleTool('text')}
-              className={`flex items-center justify-center w-11 h-11 rounded-full backdrop-blur-sm border border-white/10 shadow-lg transition-colors ${
-                activeTool === 'text' ? 'bg-cyan-500/40 text-cyan-300' : 'bg-slate-900/40 text-white hover:bg-white/20'
+              className={`flex items-center justify-center w-11 h-11 rounded-full backdrop-blur-sm border shadow-lg transition-colors ${
+                activeTool === 'text' ? 'bg-cyan-500/40 border-cyan-500/50 text-cyan-300' : 'bg-black/50 border-white/20 text-white hover:bg-white/20'
               }`}
-              title="Ajouter du texte"
             >
               <Type className="h-5 w-5" />
             </button>
             <button
               type="button"
               onClick={() => toggleTool('sticker')}
-              className={`flex items-center justify-center w-11 h-11 rounded-full backdrop-blur-sm border border-white/10 shadow-lg transition-colors ${
-                activeTool === 'sticker' ? 'bg-cyan-500/40 text-cyan-300' : 'bg-slate-900/40 text-white hover:bg-white/20'
+              className={`flex items-center justify-center w-11 h-11 rounded-full backdrop-blur-sm border shadow-lg transition-colors ${
+                activeTool === 'sticker' ? 'bg-cyan-500/40 border-cyan-500/50 text-cyan-300' : 'bg-black/50 border-white/20 text-white hover:bg-white/20'
               }`}
-              title="Ajouter un sticker"
             >
               <Smile className="h-5 w-5" />
             </button>
             <button
               type="button"
               onClick={() => toggleTool('filter')}
-              className={`flex items-center justify-center w-11 h-11 rounded-full backdrop-blur-sm border border-white/10 shadow-lg transition-colors ${
-                activeTool === 'filter' ? 'bg-cyan-500/40 text-cyan-300' : 'bg-slate-900/40 text-white hover:bg-white/20'
+              className={`flex items-center justify-center w-11 h-11 rounded-full backdrop-blur-sm border shadow-lg transition-colors ${
+                activeTool === 'filter' ? 'bg-cyan-500/40 border-cyan-500/50 text-cyan-300' : 'bg-black/50 border-white/20 text-white hover:bg-white/20'
               }`}
-              title="Filtres"
             >
               <SlidersHorizontal className="h-5 w-5" />
             </button>
             <button
               type="button"
               onClick={deleteSelected}
-              className="flex items-center justify-center w-11 h-11 rounded-full bg-red-900/40 backdrop-blur-sm border border-red-500/20 shadow-lg text-red-400 hover:bg-red-500/30 transition-colors"
-              title="Supprimer l'élément sélectionné"
+              className="flex items-center justify-center w-11 h-11 rounded-full bg-red-500/20 backdrop-blur-sm border border-red-500/30 shadow-lg text-red-400 hover:bg-red-500/40 transition-colors"
             >
-              <RotateCcw className="h-5 w-5" />
+              <Trash2 className="h-5 w-5" />
             </button>
           </div>
         </div>
       </div>
 
       {/* Panneau d'outils contextuel */}
-      <div className="w-full px-4 pb-4 pt-2">
+      <div className="shrink-0 w-full px-3 pb-3 pt-1 bg-black/80 backdrop-blur-sm">
         {activeTool === 'text' && (
-          <div className="rounded-2xl bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg p-4 space-y-3">
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-3">
             <button
               type="button"
               onClick={addText}
@@ -295,26 +343,31 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
             >
               + Ajouter un texte
             </button>
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => updateSelectedTextSize(-4)} className="w-8 h-8 rounded-lg bg-white/10 text-white/70 text-lg font-bold hover:bg-white/20">-</button>
+              <span className="text-xs text-white/50">Taille</span>
+              <button type="button" onClick={() => updateSelectedTextSize(4)} className="w-8 h-8 rounded-lg bg-white/10 text-white/70 text-lg font-bold hover:bg-white/20">+</button>
+            </div>
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
               {FONT_FAMILIES.map((font) => (
                 <button
-                  key={font}
+                  key={font.id}
                   type="button"
-                  onClick={() => updateSelectedTextFont(font)}
-                  className="shrink-0 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 transition-colors"
-                  style={{ fontFamily: font }}
+                  onClick={() => updateSelectedTextFont(font.id)}
+                  className="shrink-0 rounded-lg bg-white/5 border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/15 transition-colors"
+                  style={{ fontFamily: font.id }}
                 >
-                  {font === 'sans-serif' ? 'Sans' : font === 'monospace' ? 'Mono' : font}
+                  {font.label}
                 </button>
               ))}
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap">
               {TEXT_COLORS.map((color) => (
                 <button
                   key={color}
                   type="button"
                   onClick={() => updateSelectedTextColor(color)}
-                  className="w-7 h-7 rounded-full border-2 border-white/20 hover:border-white/60 transition-colors"
+                  className="w-7 h-7 rounded-full border-2 border-white/20 hover:border-white/60 transition-colors hover:scale-110"
                   style={{ backgroundColor: color }}
                 />
               ))}
@@ -323,14 +376,28 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
         )}
 
         {activeTool === 'sticker' && (
-          <div className="rounded-2xl bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg p-4">
-            <div className="grid grid-cols-8 gap-2">
-              {STICKERS.map((emoji) => (
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-3 space-y-2">
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              {STICKER_CATEGORIES.map((cat, i) => (
+                <button
+                  key={cat.label}
+                  type="button"
+                  onClick={() => setStickerCat(i)}
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    stickerCat === i ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-500/40' : 'bg-white/5 text-white/50 border border-white/10 hover:bg-white/10'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-8 gap-1.5">
+              {STICKER_CATEGORIES[stickerCat].items.map((emoji) => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => addSticker(emoji)}
-                  className="flex items-center justify-center h-10 rounded-lg bg-white/5 hover:bg-white/15 transition-colors text-xl"
+                  className="flex items-center justify-center h-11 rounded-xl bg-white/5 hover:bg-white/15 transition-all hover:scale-110 text-2xl"
                 >
                   {emoji}
                 </button>
@@ -340,23 +407,20 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
         )}
 
         {activeTool === 'filter' && (
-          <div className="rounded-2xl bg-slate-900/40 backdrop-blur-sm border border-white/10 shadow-lg p-4">
-            <div className="flex gap-3 overflow-x-auto pb-1">
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-3">
+            <div className="flex gap-2 overflow-x-auto pb-1">
               {FILTERS.map((f, i) => (
                 <button
                   key={f.label}
                   type="button"
-                  onClick={() => applyFilter(i)}
-                  className={`shrink-0 flex flex-col items-center gap-1.5 rounded-xl px-3 py-2 text-xs transition-colors ${
+                  onClick={() => setActiveFilter(i)}
+                  className={`shrink-0 flex flex-col items-center gap-1 rounded-xl px-2.5 py-2 text-[10px] font-medium transition-all ${
                     activeFilter === i
-                      ? 'bg-cyan-500/20 border border-cyan-500/40 text-cyan-300'
-                      : 'bg-white/5 border border-white/10 text-white/60 hover:bg-white/10'
+                      ? 'bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 scale-105'
+                      : 'bg-white/5 border border-white/10 text-white/50 hover:bg-white/10'
                   }`}
                 >
-                  <div
-                    className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-red-500"
-                    style={{ filter: f.css || undefined }}
-                  />
+                  <span className="text-lg">{f.emoji}</span>
                   {f.label}
                 </button>
               ))}
@@ -365,8 +429,8 @@ export default function TeaserEditor({ rawImageUrl, onSave, onCancel }: TeaserEd
         )}
 
         {activeTool === 'none' && (
-          <p className="text-center text-xs text-white/30">
-            Touche un outil pour ajouter du texte, des stickers ou un filtre
+          <p className="text-center text-[11px] text-white/25 py-1">
+            Double-tape sur un texte pour le modifier
           </p>
         )}
       </div>

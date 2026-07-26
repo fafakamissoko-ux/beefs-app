@@ -132,6 +132,14 @@ export function BeefCardMedia({
           className="z-10 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
           sizes="(max-width: 768px) 100vw, 384px"
         />
+      ) : videoUrl ? (
+        <video
+          src={videoUrl}
+          muted
+          playsInline
+          preload="metadata"
+          className="absolute inset-0 z-10 h-full w-full object-contain drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
+        />
       ) : (
         <div className="absolute inset-0 z-10 bg-gradient-to-b from-obsidian-900 to-black" />
       )}
